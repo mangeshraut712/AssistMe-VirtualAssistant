@@ -1,6 +1,5 @@
-const responseDiv = document.getElementById('response');
-
 document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Elements ---
     const commandInput = document.getElementById('commandInput');
     const speakButton = document.getElementById('speakButton');
     const chatHistory = document.getElementById('chat-history');
@@ -8,6 +7,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopVoiceBtn = document.getElementById('stopVoiceBtn');
     const darkModeToggle = document.getElementById('darkModeToggle');
 
+    // --- API Keys & Configuration ---
+    const NEWS_API_KEY = '7c0f446a765249edab2c14df05956792'; // Replace with your key
+    const NASA_API_KEY = 'AADXc64v1KehekFRHPZeqvR0mdD1DPwpSLUEsXhn'; // Replace with your key
+
+    // --- Initial Check ---
     if (!commandInput || !speakButton || !chatHistory) {
         alert("CRITICAL ERROR: HTML elements are missing. Please ensure your index.HTML file is correct and you have done a hard refresh (Cmd+Shift+R).");
         return;
@@ -85,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const thinkingBubble = document.getElementById('thinking-bubble');
         if (thinkingBubble) {
             thinkingBubble.textContent = text;
+            thinkingBubble.classList.remove('typing');
             thinkingBubble.id = '';
         } else {
             addMessageToChat('AssistMe', text);
@@ -95,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const utterance = new SpeechSynthesisUtterance(text);
                 speechSynthesis.speak(utterance);
             } catch (error) {
+                console.error("Speech synthesis error:", error);
                 addMessageToChat('AssistMe', 'Error: Could not play audio response.');
             }
         }
@@ -109,94 +115,59 @@ document.addEventListener('DOMContentLoaded', () => {
     async function getImprovedAnswer(query) {
         addMessageToChat('AssistMe', 'Thinking...', true);
 
-        // Hardcoded knowledge for common queries
-        if (query.includes('when did the iphone released') || query.includes('released date of iphone')) {
-            speakAndDisplay('The first iPhone was released on June 29, 2007.');
-            return;
-        }
-        if (query.includes('who is steve jobs')) {
-            speakAndDisplay('Steve Jobs was an American entrepreneur, inventor, and industrial designer. He co-founded Apple Inc. and served as its CEO.');
-            return;
-        }
-        if (query.includes('who is president of usa') || query.includes('president of united states of america')) {
-            speakAndDisplay('Joe Biden is the current President of the United States.');
-            return;
-        }
-        if (query.includes('who is prime minister of india')) {
-            speakAndDisplay('Narendra Modi is the current Prime Minister of India.');
-            return;
-        }
-        if (query.includes('who is first president of india')) {
-            speakAndDisplay('Dr. Rajendra Prasad was the first President of India, serving from 1950 to 1962.');
-            return;
-        }
-        if (query.includes('who is ceo of apple')) {
-            speakAndDisplay('Tim Cook is the CEO of Apple Inc.');
-            return;
-        }
-        if (query.includes('which country has world most population') || query.includes('country with most population')) {
-            speakAndDisplay('India is the most populous country in the world, with approximately 1.42 billion people.');
-            return;
-        }
-        if (query.includes('what is tesla')) {
-            speakAndDisplay('Tesla, Inc. is an American electric vehicle and clean energy company based in Palo Alto, California.');
-            return;
-        }
-        if (query.includes('best selling car in the world')) {
-            speakAndDisplay('The Toyota Corolla is the best-selling car model in the world, with over 50 million sold.');
-            return;
-        }
-        if (query.includes('best electric car in the world')) {
-            speakAndDisplay('Tesla Model S is often considered one of the best electric cars in the world due to its performance and range.');
-            return;
-        }
-
-        // Use Wikipedia Instant Summary API for general knowledge (free, accurate)
-        let processedQuery = query.replace(/[.?!\s]+$/, ''); // Remove punctuation at end
-        const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(processedQuery)}`;
-
+        // 1. Try to solve as a math problem first
         try {
-            const response = await fetch(wikiUrl);
-            const data = await response.json();
-            if (data.extract && !data.extract.includes('may refer to') && data.extract.length > 10) {
-                // Take first one or two sentences
-                const sentences = data.extract.split('. ');
-                speakAndDisplay(sentences[0] + (sentences[1] ? '. ' + sentences[1] + '.' : '.'));
-                return;
-            } else {
-                throw new Error('No summary found');
+            // Use math.js if the query looks like a calculation
+            if (/[0-9]/.test(query) && /[+\-*/.^]/.test(query)) {
+                const expression = query.replace(/^(what is|calculate|compute)\s*/i, '').replace(/[=?]$/, '').trim();
+                if (typeof math !== 'undefined') {
+                    const result = math.evaluate(expression);
+                    speakAndDisplay(`The answer is ${result}.`);
+                    return;
+                }
             }
         } catch (error) {
-            // Fallback to DuckDuckGo Instant Answers API (free, no key needed)
-            const duckduckgoUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(processedQuery)}&format=json&no_html=1&t=AssistMe`;
+            // Not a valid math expression, proceed to other APIs.
+            console.log("Math evaluation failed, trying APIs.");
+        }
 
-            try {
-                const response = await fetch(duckduckgoUrl);
-                const data = await response.json();
+        // 2. Use a generic knowledge API for other questions
+        const searchQuery = query.replace(/[.?!\s]+$/, '');
+        const duckduckgoUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(searchQuery)}&format=json&no_html=1&t=AssistMe`;
 
-                // Check for instant answer
-                if (data.Answer) {
-                    speakAndDisplay(data.Answer);
-                    return;
-                } else if (data.AbstractText && !data.AbstractText.includes('is the') && !data.AbstractText.includes('is a')) {
-                    speakAndDisplay(data.AbstractText);
-                    return;
-                } else if (data.Definition) {
-                    speakAndDisplay(data.Definition);
-                    return;
-                } else if (data.RelatedTopics && data.RelatedTopics.length > 0) {
-                    // Use first related topic if available
-                    const topic = data.RelatedTopics[0];
-                    if (topic.Text) {
-                        speakAndDisplay(topic.Text);
-                        return;
-                    }
-                } else {
-                    throw new Error('No instant answer found');
-                }
-            } catch (error2) {
-                speakAndDisplay(`Sorry, I couldn't find information for "${query}". Try rephrasing your question.`);
+        try {
+            const response = await fetch(duckduckgoUrl);
+            const data = await response.json();
+
+            // Prioritize Answer, then AbstractText, then Definition
+            let answer = data.Answer || data.AbstractText || data.Definition;
+
+            if (answer) {
+                // Clean up DuckDuckGo's source links if they exist
+                answer = answer.replace(/<a href=.*?>.*?<\/a>/g, '').trim();
+                speakAndDisplay(answer);
+                return;
             }
+
+            // 3. Fallback to Wikipedia if DuckDuckGo fails
+            const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchQuery)}`;
+            const wikiResponse = await fetch(wikiUrl);
+            const wikiData = await wikiResponse.json();
+
+            if (wikiData.extract && !wikiData.type.includes('disambiguation')) {
+                // Return the first one or two sentences for a concise summary
+                const sentences = wikiData.extract.split('. ');
+                const shortSummary = sentences[0] + (sentences[1] ? '. ' + sentences[1] : '') + '.';
+                speakAndDisplay(shortSummary);
+                return;
+            }
+
+            // 4. If all APIs fail, give a generic response
+            throw new Error('No answer found from any API.');
+
+        } catch (error) {
+            console.error("API fetch error:", error);
+            speakAndDisplay(`Sorry, I couldn't find information for "${query}". Please try rephrasing.`);
         }
     }
 
@@ -226,6 +197,59 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function getNews() {
+        addMessageToChat('AssistMe', 'Fetching latest news...', true);
+        try {
+            const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${NEWS_API_KEY}`);
+            if (!response.ok) throw new Error(`Network error (status: ${response.status})`);
+            const data = await response.json();
+            if (data.articles && data.articles.length > 0) {
+                let newsSummary = 'Here are some top headlines:\n';
+                for (let i = 0; i < Math.min(5, data.articles.length); i++) {
+                    const article = data.articles[i];
+                    newsSummary += `- ${article.title} (Source: ${article.source.name})\n`;
+                }
+                speakAndDisplay(newsSummary.trim());
+            } else {
+                speakAndDisplay('No news articles found.');
+            }
+        } catch (error) {
+            speakAndDisplay(`Sorry, I couldn't fetch the news: ${error.message}.`);
+        }
+    }
+
+    async function getNASAAPOD() {
+        addMessageToChat('AssistMe', 'Fetching NASA\'s Astronomy Picture of the Day...', true);
+        try {
+            const response = await fetch(`https://api.nasa.gov/planetary/apod?api_key=${NASA_API_KEY}`);
+            if (!response.ok) throw new Error(`Network error (status: ${response.status})`);
+            const data = await response.json();
+            speakAndDisplay(`NASA Astronomy Picture of the Day: ${data.title}. Explanation: ${data.explanation}`);
+        } catch (error) {
+            speakAndDisplay(`Sorry, I couldn't fetch NASA's APOD: ${error.message}.`);
+        }
+    }
+
+    async function getReddit(subreddit) {
+        addMessageToChat('AssistMe', `Fetching top posts from r/${subreddit}...`, true);
+        try {
+            const response = await fetch(`https://www.reddit.com/r/${encodeURIComponent(subreddit)}/.json?limit=5`);
+            if (!response.ok) throw new Error(`Network error (status: ${response.status})`);
+            const data = await response.json();
+            if (data.data && data.data.children.length > 0) {
+                let postsSummary = `Top 5 posts from r/${subreddit}:\n`;
+                data.data.children.forEach((post, i) => {
+                    postsSummary += `${i+1}. ${post.data.title} (Score: ${post.data.score})\n`;
+                });
+                speakAndDisplay(postsSummary.trim());
+            } else {
+                speakAndDisplay(`r/${subreddit} not found or no posts available.`);
+            }
+        } catch (error) {
+            speakAndDisplay(`Sorry, I couldn't fetch Reddit posts: ${error.message}.`);
+        }
+    }
+
     function openWebsite(url, name) {
         try {
             window.open(url, '_blank');
@@ -245,38 +269,85 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function processCommand(command) {
-        if (command === 'hello' || command === 'hi') {
-            speakAndDisplay("Hello! How can I help you today?");
-        } else if (command === 'who are you') {
-            speakAndDisplay("I am AssistMe, your web-based virtual assistant.");
-        } else if (command.includes('time')) {
-            const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' });
-            speakAndDisplay(`The current time is ${time}`);
-        } else if (command.includes('date')) {
-            const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-            speakAndDisplay(`Today is ${date}`);
-        } else if (command.includes('weather')) {
-            const cityMatch = command.match(/weather in (\w+)/i);
-            const city = cityMatch ? cityMatch[1] : 'your location';
-            await getWeather(city);
-        } else if (command.includes('joke') || command.includes('tell me a joke')) {
-            await getJoke();
-        } else if (command.startsWith('open google')) {
-            const query = command.replace('open google', '').trim();
-            if (query) {
-                await searchGoogle(query);
-            } else {
-                openWebsite('https://www.google.com', 'Google');
+    // --- Command Processing ---
+    const commands = [
+        {
+            keywords: ['hello', 'hi'],
+            handler: () => speakAndDisplay("Hello! How can I help you today?")
+        },
+        {
+            keywords: ['who are you', 'what are you'],
+            handler: () => speakAndDisplay("I am AssistMe, your web-based virtual assistant.")
+        },
+        {
+            keywords: ['time'],
+            handler: () => {
+                const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' });
+                speakAndDisplay(`The current time is ${time}.`);
             }
-        } else if (command.includes('open youtube')) {
-            openWebsite('https://www.youtube.com', 'YouTube');
-        } else if (command.includes('news') || command.includes('headline')) {
-            speakAndDisplay("Sorry, the news feature requires an API key. For now, ask me anything else!");
-    } else {
-        // Use improved answer function for all general questions
+        },
+        {
+            keywords: ['date', 'day'],
+            handler: () => {
+                const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+                speakAndDisplay(`Today is ${date}.`);
+            }
+        },
+        {
+            keywords: ['weather'],
+            handler: async (command) => {
+                const cityMatch = command.match(/weather in (\w+)/i);
+                await getWeather(cityMatch ? cityMatch[1] : 'your location');
+            }
+        },
+        {
+            keywords: ['joke'],
+            handler: getJoke
+        },
+        {
+            keywords: ['news', 'headline'],
+            handler: getNews
+        },
+        {
+            keywords: ['nasa', 'apod', 'astronomy'],
+            handler: getNASAAPOD
+        },
+        {
+            regex: /^open google(.*)/i,
+            handler: async (command, matches) => {
+                const query = matches[1].trim();
+                query ? await searchGoogle(query) : openWebsite('https://www.google.com', 'Google');
+            }
+        },
+        {
+            regex: /^open youtube/i,
+            handler: () => openWebsite('https://www.youtube.com', 'YouTube')
+        },
+        {
+            regex: /^reddit (.*)/i,
+            handler: async (command, matches) => {
+                const subreddit = matches[1].trim();
+                if (subreddit) await getReddit(subreddit);
+            }
+        }
+    ];
+
+    async function processCommand(command) {
+        for (const cmd of commands) {
+            if (cmd.keywords && cmd.keywords.some(k => command.includes(k))) {
+                await cmd.handler(command);
+                return;
+            }
+            if (cmd.regex) {
+                const matches = command.match(cmd.regex);
+                if (matches) {
+                    await cmd.handler(command, matches);
+                    return;
+                }
+            }
+        }
+        // Fallback for any command that doesn't match
         await getImprovedAnswer(command);
-    }
     }
 
     addMessageToChat('AssistMe', 'Hello! How can I help you?');
