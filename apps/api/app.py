@@ -1,13 +1,12 @@
-from fastapi import FastAPI, BackgroundTasks, WebSocket, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, WebSocket, Depends, HTTPException  # type: ignore[import]
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import]
+from pydantic import BaseModel  # type: ignore[import]
 from typing import List, Optional
 import logging
-import json
-from sqlalchemy.orm import Session
-from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session  # type: ignore[import]
 from .chat_client import grok_client
 from .database import get_db
-from .models import Conversation, Message
+from .models import Conversation, Message as MessageModel
 
 app = FastAPI(title="AssistMe API", version="1.0.0")
 
@@ -20,12 +19,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class Message(BaseModel):
+class ChatMessage(BaseModel):
     role: str
     content: str
 
 class TextChatRequest(BaseModel):
-    messages: List[Message]
+    messages: List[ChatMessage]
     model: Optional[str] = "grok-2"
     temperature: Optional[float] = 0.7
     max_tokens: Optional[int] = 1024
@@ -41,7 +40,7 @@ def root():
 
 @app.post("/api/chat/text")
 def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
-    logging.info(f"Chat API called with messages: {[m.content for m in request.messages]}")
+    logging.info("Chat API called with messages: %s", [m.content for m in request.messages])
     
     conversation = None
     if request.conversation_id:
@@ -58,7 +57,7 @@ def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
 
     # Save user messages
     for msg in request.messages:
-        db_msg = Message(conversation_id=conversation.id, role=msg.role, content=msg.content)
+        db_msg = MessageModel(conversation_id=conversation.id, role=msg.role, content=msg.content)
         db.add(db_msg)
     db.commit()
 
@@ -73,7 +72,7 @@ def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
         return {"error": result["error"]}
     
     # Save assistant response
-    assistant_msg = Message(conversation_id=conversation.id, role="assistant", content=result["response"])
+    assistant_msg = MessageModel(conversation_id=conversation.id, role="assistant", content=result["response"])
     db.add(assistant_msg)
     db.commit()
 
@@ -95,12 +94,24 @@ def get_conversation_messages(conversation_id: int, db: Session = Depends(get_db
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
-    messages = db.query(Message).filter(Message.conversation_id == conversation_id).all()
+    messages = (
+        db.query(MessageModel)
+        .filter(MessageModel.conversation_id == conversation_id)
+        .all()
+    )
     return {
         "id": conversation.id,
         "title": conversation.title,
         "created_at": conversation.created_at,
-        "messages": [{"id": m.id, "role": m.role, "content": m.content, "created_at": m.created_at} for m in messages]
+        "messages": [
+            {
+                "id": m.id,
+                "role": m.role,
+                "content": m.content,
+                "created_at": m.created_at,
+            }
+            for m in messages
+        ]
     }
 
 @app.websocket("/api/chat/voice")
@@ -118,5 +129,5 @@ async def voice_chat(websocket: WebSocket):
         await websocket.close()
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore[import]
     uvicorn.run(app, host="0.0.0.0", port=8001)

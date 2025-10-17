@@ -1,4 +1,3 @@
-import requests
 import os
 
 class Grok2Client:

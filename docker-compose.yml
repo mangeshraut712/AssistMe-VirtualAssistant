@@ -8,7 +8,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data_volume:/var/lib/postgresql/data
     networks:
       - backend
 
@@ -50,4 +50,4 @@ networks:
     driver: bridge
 
 volumes:
-  db_data:
+  db_data_volume: {}
