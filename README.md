@@ -1,5 +1,7 @@
 # AssistMe Virtual Assistant
 
+**🌐 Live Demo:** [https://assist-me-virtual-assistant.vercel.app/](https://assist-me-virtual-assistant.vercel.app/)
+
 AssistMe is an advanced web-based AI assistant featuring OpenRouter integration with multiple large language models. It offers intelligent conversation, voice commands, model testing/ranking, and a sleek Apple Intelligence-inspired interface.
 
 ## 🚀 Key Features
