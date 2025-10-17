@@ -4,109 +4,100 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AssistMe - AI Assistant</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%231a73e8'/%3E%3Cpath d='M12 10h8l-4-4z' fill='white'/%3E%3Ccircle cx='11' cy='15' r='2' fill='white'/%3E%3Ccircle cx='21' cy='15' r='2' fill='white'/%3E%3Crect x='14' y='18' width='4' height='6' rx='2' fill='white'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
 <body>
-    <div class="app-shell">
-        <header class="top-bar">
-            <div class="brand">
-                <div class="brand-icon" id="logoIcon"><i class="fas fa-robot"></i></div>
-                <span class="brand-name" id="brandName">AssistMe</span>
-            </div>
-            <div class="top-controls">
-                <button id="darkModeToggle" class="ghost-btn" aria-label="Toggle dark mode">
-                    <i class="fas fa-moon"></i>
-                </button>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-content">
+                <div class="model-selector">
+                    <button type="button" class="model-button" id="modelButton">
+                        <span class="model-name">Qwen Instruct ★</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="model-dropdown" id="modelDropdown">
+                        <button class="model-option active" data-model="qwen/qwen3-vl-8b-instruct">
+                            <span class="model-label">Qwen Instruct ★</span>
+                            <span class="model-desc">Top-ranked for complex tasks</span>
+                        </button>
+                        <button class="model-option" data-model="openai/gpt-4o-mini">
+                            <span class="model-label">GPT-4o Mini</span>
+                            <span class="model-desc">Best for clear explanations</span>
+                        </button>
+                        <button class="model-option" data-model="qwen/qwen3-vl-8b-thinking">
+                            <span class="model-label">Qwen Thinking</span>
+                            <span class="model-desc">Creative and thoughtful responses</span>
+                        </button>
+                        <button class="model-option" data-model="meta-llama/llama-4-scout">
+                            <span class="model-label">Llama Scout</span>
+                            <span class="model-desc">Fast and efficient fallback</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-button" id="testModelsBtn" title="Test model performance">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <button class="icon-button" id="darkModeToggle" title="Toggle theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
             </div>
         </header>
 
-        <main class="conversation-wrapper">
-            <div class="conversation" id="chat-history">
+        <main class="main-content">
+            <div class="welcome-message" id="welcomeMessage">
+                <div class="welcome-header">
+                    <h1>Hello! I'm AssistMe</h1>
+                    <p>Ask me anything or try these suggestions:</p>
+                </div>
+                <div class="suggestions">
+                    <button class="suggestion-button" data-prompt="Explain quantum computing in simple terms">
+                        <i class="fas fa-bolt"></i>
+                        Explain quantum computing
+                    </button>
+                    <button class="suggestion-button" data-prompt="Write a creative short story about space exploration">
+                        <i class="fas fa-rocket"></i>
+                        Write a space story
+                    </button>
+                    <button class="suggestion-button" data-prompt="What are the latest AI advancements this week?">
+                        <i class="fas fa-brain"></i>
+                        Latest AI news
+                    </button>
+                    <button class="suggestion-button" data-prompt="Help me plan a healthy meal prep for the week">
+                        <i class="fas fa-utensils"></i>
+                        Meal prep ideas
+                    </button>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
                 <!-- Messages will be dynamically inserted here -->
             </div>
+
+            <div class="message-input-container">
+                <div class="message-input-wrapper">
+                    <textarea
+                        id="messageInput"
+                        class="message-input"
+                        placeholder="Ask me anything..."
+                        rows="1"
+                    ></textarea>
+                    <button type="button" class="voice-button" id="voiceButton" title="Voice input">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button type="button" class="send-button disabled" id="sendButton" title="Send message">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+
+                <p class="disclaimer">
+                    AssistMe can make mistakes. Consider checking important information.
+                </p>
+            </div>
         </main>
-
-        <footer class="composer">
-            <div class="composer-inner">
-                <div class="composer-actions">
-                    <button class="ghost-btn" aria-label="Insert attachment" disabled>
-                        <i class="fas fa-plus"></i>
-                    </button>
-                    <div class="model-select-wrapper">
-                        <label class="sr-only" for="modelSelect">Choose AI model</label>
-                        <select id="modelSelect" class="model-select inline" aria-label="Choose AI model">
-                            <option value="qwen/qwen3-vl-8b-instruct">Qwen: Qwen3 VL 8B Instruct (Ranked 1 - Best)</option>
-                            <option value="openai/gpt-4o-mini">OpenAI GPT-4o Mini (Ranked 2 - Best Explanations)</option>
-                            <option value="qwen/qwen3-vl-8b-thinking">Qwen: Qwen3 VL 8B Thinking (Ranked 3 - Creative)</option>
-                            <option value="meta-llama/llama-4-scout">Meta Llama 4 Scout (Ranked 4 - Fallback)</option>
-                        </select>
-                    </div>
-                </div>
-                <textarea id="commandInput" placeholder="Message AssistMe..." rows="1" autocomplete="off"></textarea>
-                <div class="composer-controls">
-                    <button id="sendButton" class="ghost-btn send-btn" aria-label="Send message or toggle voice input">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-            <p class="composer-hint">AssistMe can make mistakes. Check important info.</p>
-        </footer>
-    </div>
-
-    <div id="architectureModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="architectureTitle">
-        <div class="modal-backdrop" data-close-modal></div>
-        <div class="modal-content" role="document">
-            <button class="modal-close" data-close-modal aria-label="Close architecture view">
-                <i class="fas fa-xmark"></i>
-            </button>
-            <header class="modal-header">
-                <div>
-                    <h2 id="architectureTitle">AssistMe Intelligence Stack</h2>
-                    <p class="modal-subtitle">Inspired by Apple Intelligence orchestration</p>
-                </div>
-                <span class="badge">Architecture</span>
-            </header>
-            <div class="modal-body">
-                <section>
-                    <h3>Systemwide Experiences</h3>
-                    <p>Voice commands, chat replies, and transcription features share the same assistant pipeline. Speech recognition stays in-browser, while chat, summarisation, and transformations leverage OpenRouter-hosted models.</p>
-                </section>
-                <section>
-                    <h3>Personal Intelligence System</h3>
-                    <div class="modal-grid">
-                        <article>
-                            <h4>Semantic Index</h4>
-                            <p>The client keeps recent conversation context and user preferences (voice + model selection) locally, enabling quick follow-ups with minimal network hops.</p>
-                        </article>
-                        <article>
-                            <h4>App Intents Toolbox</h4>
-                            <p>Command handlers route to weather, news, jokes, or AI completions. Each intent decides whether it can resolve on-device or needs the OpenRouter gateway.</p>
-                        </article>
-                    </div>
-                </section>
-                <section>
-                    <h3>On-Device Intelligence Stack</h3>
-                    <div class="modal-grid">
-                        <article>
-                            <h4>Language</h4>
-                            <p>Web Speech API handles recognition, while math.js evaluates arithmetic locally for instant responses.</p>
-                        </article>
-                        <article>
-                            <h4>Audio</h4>
-                            <p>MediaRecorder captures microphone input; audio blobs stay local until transcription is explicitly requested.</p>
-                        </article>
-                    </div>
-                </section>
-                <section>
-                    <h3>Private Cloud Compute</h3>
-                    <p>Serverless routes invoke OpenRouter models such as Llama 4 Scout or Nemotron 9B. Requests pass through our `/api/chat` and `/api/transcribe` endpoints, keeping the API key within Vercel.</p>
-                </section>
-            </div>
-            <footer class="modal-footer">
-                <p>AssistMe balances instant on-device actions with privacy-conscious cloud calls, mirroring the layered design of Apple Intelligence.</p>
-            </footer>
-        </div>
     </div>
 
     <script src="mathjs.js"></script>
