@@ -127,6 +127,77 @@ The UI is plain HTML/CSS/JS. Open `frontend/index.html` directly or serve the di
 
 For production deployment, update the `ASSISTME_API_BASE` variable in `frontend/script.js` to match your deployed backend API URL (e.g., `https://your-backend-api.com`).
 
+## Backend Deployment
+
+To deploy the FastAPI backend with Docker to use live features, follow these steps:
+
+### 1. Build and Run Backend Container Locally (for testing)
+
+If you want to test locally before deploying:
+
+```bash
+cd backend
+docker build -t assistme-backend .
+docker run -p 8001:8001 --env OPENROUTER_API_KEY=your-actual-api-key assistme-backend
+```
+
+This starts the FastAPI server on port 8001. Update `ASSISTME_API_BASE` in frontend script to `ASK_APPLI_API_BASE="http://localhost:8001";` and test locally.
+
+### 2. Deploy Backend to Production
+
+For production deployment, deploy the container to a platform like Heroku, Fly.io, Railway, or AWS ECS.
+
+#### Example with Fly.io (Simple and Free Tier Available):
+
+1. Install Fly.io CLI: `curl -L https://fly.io/install.sh | sh`
+
+2. Authenticate: `fly auth login`
+
+3. In the backend directory, create a `fly.toml` file:
+
+   ```toml
+   app = "assistme-backend"
+   primary_region = "iad"
+
+   [build]
+   builder = "paketobuildpacks/builder:noble-full"
+   buildpacks = ["paketobuildpacks/ca-certificates-helper", "paketobuildpacks/python"]
+
+   [env]
+     OPENROUTER_API_KEY = "your-actual-openrouter-key"
+     OPENROUTER_DEFAULT_MODEL = "meta-llama/llama-4-scout"
+     DATABASE_URL = "postgresql://your-db-url"  # Use a hosted DB like Supabase or Fly's PostgreSQL
+
+   [processes]
+   web = "uvicorn app.main:app --host=0.0.0.0 --port=$PORT"
+   ```
+
+4. Deploy: `fly deploy`
+
+5. Get the app URL: `fly info -a assistme-backend`
+
+6. Update frontend script: Change `ASSISTME_API_BASE` to your Fly.io URL, e.g., `window.ASSISTME_API_BASE="https://your-app.fly.dev";`
+
+### Other Platforms:
+
+- **Railway**: Connect GitHub repo, set environment vars in dashboard, deploy.
+
+- **Heroku**: Build Docker image or use Python buildpack.
+
+- **AWS ECS**: Use ECR for Docker image, Fargate for running.
+
+Ensure your deployed backend has access to a PostgreSQL database (e.g., Supabase, PlanetScale, or platform-provided).
+
+## Publishing the Website
+
+### Frontend (Already Deployed on Vercel)
+
+The frontend automatically deploys to Vercel from the GitHub repo. Ensure the `ASSISTME_API_BASE` in `script.js` points to your live backend URL. Vercel handles static deployment using the `vercel.json` config.
+
+### Backend
+
+Follow the deployment steps above to publish the backend API.
+
 ## ✨ **New Features in Latest Release**
 
 ### **📊 Response Metadata Display**
