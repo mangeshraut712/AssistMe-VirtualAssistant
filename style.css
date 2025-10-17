@@ -89,6 +89,12 @@ body {
     font-weight: 600;
 }
 
+.brand-icon {
+    font-size: 1.5rem;
+    color: var(--pill-text);
+    margin-right: 0.5rem;
+}
+
 .model-tag {
     font-size: 0.8rem;
     font-weight: 500;
