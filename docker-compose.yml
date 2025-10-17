@@ -42,6 +42,8 @@ services:
     depends_on:
       - redis
       - db
+    networks:
+      - backend
 
 networks:
   backend:
