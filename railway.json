@@ -1,0 +1,34 @@
+{
+  "build": {
+    "builder": "dockerfile",
+    "dockerfilePath": "backend/Dockerfile"
+  },
+  "deploy": {
+    "preDeployCommand": "cd backend && alembic upgrade head",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300
+  },
+  "environments": [
+    {
+      "name": "production",
+      "envVars": [
+        {
+          "name": "OPENROUTER_API_KEY",
+          "source": "secret"
+        },
+        {
+          "name": "OPENROUTER_DEFAULT_MODEL",
+          "value": "meta-llama/llama-4-scout:free"
+        },
+        {
+          "name": "DATABASE_URL",
+          "source": "railway"
+        },
+        {
+          "name": "APP_URL",
+          "value": "https://your.vercel.app-domain-here"
+        }
+      ]
+    }
+  ]
+}
