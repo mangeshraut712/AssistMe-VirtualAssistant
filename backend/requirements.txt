@@ -1,8 +1,9 @@
-# Pydantic v2 compatible with Python 3.13
+# Minimal requirements - no Rust compilation for Render
 fastapi==0.104.1
-uvicorn[standard]==0.24.0
+uvicorn==0.24.0
 sqlalchemy==1.4.52
 psycopg2-binary==2.9.9
 alembic==1.12.1
 pydantic==2.6.0
 requests==2.31.0
+preshed==3.0.9
