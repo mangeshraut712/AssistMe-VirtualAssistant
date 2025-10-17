@@ -3,13 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const commandInput = document.getElementById('commandInput');
     const speakButton = document.getElementById('speakButton');
     const chatHistory = document.getElementById('chat-history');
-    const voiceToggle = document.getElementById('voiceToggle');
-    const stopVoiceBtn = document.getElementById('stopVoiceBtn');
     const recordButton = document.getElementById('recordButton');
     const darkModeToggle = document.getElementById('darkModeToggle');
     const modelSelect = document.getElementById('modelSelect');
-    const architectureBtn = document.getElementById('architectureBtn');
-    const architectureModal = document.getElementById('architectureModal');
 
     // --- API Keys & Configuration ---
     const NEWS_API_KEY = '7c0f446a765249edab2c14df05956792'; // Replace with your key
@@ -83,10 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Default to send mode
     toggleMicSendMode(); // Start with send mode
-
-    stopVoiceBtn.addEventListener('click', () => {
-        speechSynthesis.cancel();
-    });
 
     if (recordButton) {
         if (!supportsMediaRecorder) {
@@ -195,34 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (architectureBtn && architectureModal) {
-        const openModal = () => {
-            architectureModal.classList.add('open');
-            architectureModal.setAttribute('aria-hidden', 'false');
-            setTimeout(() => {
-                const focusable = architectureModal.querySelector('button[data-close-modal]');
-                focusable?.focus();
-            }, 10);
-        };
 
-        const closeModal = () => {
-            architectureModal.classList.remove('open');
-            architectureModal.setAttribute('aria-hidden', 'true');
-            architectureBtn.focus();
-        };
-
-        architectureBtn.addEventListener('click', openModal);
-
-        architectureModal.querySelectorAll('[data-close-modal]').forEach((element) => {
-            element.addEventListener('click', closeModal);
-        });
-
-        architectureModal.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                closeModal();
-            }
-        });
-    }
 
     function addMessageToChat(sender, text, isThinking = false) {
         const messageDiv = document.createElement('div');
@@ -254,15 +219,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             addMessageToChat('AssistMe', text);
         }
-        if (voiceToggle.checked) {
-            try {
-                speechSynthesis.cancel(); // Cancel any previous speaking
-                const utterance = new SpeechSynthesisUtterance(text);
-                speechSynthesis.speak(utterance);
-            } catch (error) {
-                console.error("Speech synthesis error:", error);
-                addMessageToChat('AssistMe', 'Error: Could not play audio response.');
-            }
+        try {
+            speechSynthesis.cancel(); // Cancel any previous speaking
+            const utterance = new SpeechSynthesisUtterance(text);
+            speechSynthesis.speak(utterance);
+        } catch (error) {
+            console.error("Speech synthesis error:", error);
+            addMessageToChat('AssistMe', 'Error: Could not play audio response.');
         }
     }
 
