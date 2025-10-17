@@ -1,5 +1,5 @@
 import os
-import httpx  # type: ignore[import]
+import requests  # type: ignore[import]
 import logging
 
 class Grok2Client:
@@ -13,8 +13,7 @@ class Grok2Client:
         self.grok2_endpoint = os.getenv("GROK2_ENDPOINT")
         self.grok2_api_key = os.getenv("GROK2_API_KEY")
 
-        self.http_client = httpx.Client(timeout=float(os.getenv("OPENROUTER_TIMEOUT", "60.0")))
-
+        # No need for timeout variable since requests handles it per-request
         self.default_models = [
             {"id": "meta-llama/llama-4-scout:free", "name": "Meta Llama 4 Scout"},
             {"id": "qwen/qwen3-14b:free", "name": "Qwen 3 14B"},
@@ -67,7 +66,8 @@ class Grok2Client:
         }
 
         try:
-            response = self.http_client.post(f"{self.base_url}/chat/completions", json=payload, headers=self._headers())
+            response = requests.post(f"{self.base_url}/chat/completions", json=payload, headers=self._headers(),
+                                   timeout=float(os.getenv("OPENROUTER_TIMEOUT", "60.0")))
             response.raise_for_status()
             data = response.json()
             choice = (data.get("choices") or [{}])[0]
@@ -77,10 +77,10 @@ class Grok2Client:
                 text = "I wasn't able to produce a response. Please try again."
             tokens = data.get("usage", {}).get("total_tokens", len(text.split()))
             return {"response": text, "tokens": tokens}
-        except httpx.HTTPStatusError as exc:
+        except requests.exceptions.HTTPError as exc:
             logging.error("OpenRouter returned HTTP error %s: %s", exc.response.status_code, exc.response.text)
             return {"error": f"OpenRouter HTTP error {exc.response.status_code}: {exc.response.text}"}
-        except httpx.RequestError as exc:
+        except requests.exceptions.RequestException as exc:
             logging.error("Network error while calling OpenRouter: %s", exc)
             return {"error": f"Network error while calling OpenRouter: {exc}"}
         except Exception as exc:
@@ -90,11 +90,7 @@ class Grok2Client:
     def get_available_models(self):
         return self.default_models
 
-    def __del__(self):
-        try:
-            self.http_client.close()
-        except Exception:
-            pass
+    # No cleanup needed for requests library
 
 
 grok_client = Grok2Client()
