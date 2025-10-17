@@ -3,5 +3,6 @@
     "api/*.js": {
       "runtime": "nodejs24.x"
     }
-  }
+  },
+  "outputDirectory": "."
 }
