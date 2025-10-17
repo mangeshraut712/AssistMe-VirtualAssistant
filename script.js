@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessages: document.getElementById('chatMessages'),
 
         // Header Elements
+        modelSelector: document.querySelector('.model-selector'),
         modelButton: document.getElementById('modelButton'),
         modelDropdown: document.getElementById('modelDropdown'),
         testModelsBtn: document.getElementById('testModelsBtn'),
@@ -20,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- API Keys & Configuration ---
     const NEWS_API_KEY = '7c0f446a765249edab2c14df05956792';
     const NASA_API_KEY = 'AADXc64v1KehekFRHPZeqvR0mdD1DPwpSLUEsXhn';
-    const DEFAULT_MODEL = 'qwen/qwen3-vl-8b-instruct';
+    const DEFAULT_MODEL = 'meta-llama/llama-4-scout';
 
     let currentModel = DEFAULT_MODEL;
     let isRecording = false;
@@ -69,10 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupModelSelector() {
+        console.log('modelSelector element:', document.getElementById('modelSelector'));
+        console.log('modelButton element:', document.getElementById('modelButton'));
+
         // Model button click
         elements.modelButton.addEventListener('click', (e) => {
+            console.log('Model button clicked');
             e.stopPropagation();
-            elements.modelSelector.classList.toggle('open');
+            elements.modelSelector?.classList.toggle('open');
+            console.log('modelSelector open class:', elements.modelSelector?.classList.contains('open'));
         });
 
         // Model option clicks
@@ -86,8 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Close dropdown when clicking elsewhere
         document.addEventListener('click', (e) => {
-            if (!elements.modelSelector.contains(e.target)) {
-                elements.modelSelector.classList.remove('open');
+            if (!elements.modelSelector?.contains(e.target)) {
+                elements.modelSelector?.classList.remove('open');
             }
         });
 
@@ -220,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const message = elements.messageInput.value.trim();
         if (!message) return;
 
+        console.log('Sending message:', message);
         elements.messageInput.value = '';
         autoResizeTextarea();
         elements.sendButton.classList.add('disabled');
@@ -312,24 +319,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addMessage(text, role) {
+        console.log('Adding message:', role, text);
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${role}-message fade-in`;
 
-        messageDiv.innerHTML = `
-            <div class="message-avatar">
-                ${role === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>'}
-            </div>
-            <div class="message-content">
-                <div class="message-text">${escapeHtml(text)}</div>
-                <div class="message-actions">
-                    <button class="message-action-btn" title="Copy message" onclick="navigator.clipboard.writeText('${escapeHtml(text).replace(/'/g, "\\'")}')">
-                        <i class="fas fa-copy"></i>
-                    </button>
+        if (role === 'user') {
+            messageDiv.innerHTML = `
+                <div class="message-bubble user-bubble">
+                    <div class="message-text">${escapeHtml(text)}</div>
                 </div>
-            </div>
-        `;
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-bubble assistant-bubble">
+                    <div class="message-text">${escapeHtml(text)}</div>
+                    <div class="message-actions">
+                        <button class="message-action-btn" title="Copy message" onclick="navigator.clipboard.writeText('${escapeHtml(text).replace(/'/g, "\\'")}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
 
         elements.chatMessages.appendChild(messageDiv);
+        console.log('Message div added to DOM');
         scrollToBottom();
     }
 
@@ -344,10 +361,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="message-avatar">
                 <i class="fas fa-robot"></i>
             </div>
-            <div class="typing-dots">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
+            <div class="message-bubble assistant-bubble">
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
             </div>
         `;
 
@@ -398,6 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
+            console.log('API response data:', data); // Debug: check metadata
             const message = data.text || data.message || data.content || 'Sorry, I couldn\'t generate a response.';
 
             hideTypingIndicator();

@@ -155,7 +155,34 @@ body {
     padding: var(--spacing-lg);
     display: flex;
     align-items: center;
-    justify-content: space-between;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.logo {
+    height: 40px;
+}
+
+.header-center {
+    flex: 1;
+    text-align: center;
+}
+
+.app-name {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
 }
 
 /* Model Selector */
@@ -401,9 +428,35 @@ body {
     display: flex;
     gap: var(--spacing-lg);
     padding: var(--spacing-xl) 0;
-    opacity: 0;
-    transform: translateY(20px);
-    animation: messageSlideIn 0.4s ease-out forwards;
+    opacity: 1;
+}
+
+.user-message {
+    justify-content: flex-end;
+}
+
+.message-bubble {
+    max-width: 70%;
+    padding: 8px 12px;
+    border-radius: 18px;
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+.user-bubble {
+    background: #007AFF;
+    color: white;
+    margin-left: auto;
+}
+
+.assistant-bubble {
+    background: #E5E5EA;
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .assistant-bubble {
+    background: #3A3A3C;
+    color: var(--text-primary);
 }
 
 @keyframes messageSlideIn {

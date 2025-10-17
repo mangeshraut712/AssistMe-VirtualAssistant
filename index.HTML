@@ -12,37 +12,45 @@
     <div class="app-container">
         <header class="header">
             <div class="header-content">
-                <div class="model-selector">
-                    <button type="button" class="model-button" id="modelButton">
-                        <span class="model-name">Qwen Instruct ★</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
+                <div class="header-left">
+                    <img src="AssistMe logo.png" alt="AssistMe Logo" class="logo">
+                </div>
+                <div class="header-center">
+                    <h1 class="app-name">AssistMe</h1>
+                </div>
+                <div class="header-right">
+                    <div class="model-selector">
+                        <button type="button" class="model-button" id="modelButton">
+                            <span class="model-name">Qwen Instruct ★</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
                     <div class="model-dropdown" id="modelDropdown">
-                        <button class="model-option active" data-model="qwen/qwen3-vl-8b-instruct">
-                            <span class="model-label">Qwen Instruct ★</span>
-                            <span class="model-desc">Top-ranked for complex tasks</span>
+                        <button class="model-option active" data-model="meta-llama/llama-4-scout">
+                            <span class="model-label">Llama Scout ★</span>
+                            <span class="model-desc">Fast and efficient fallback</span>
                         </button>
                         <button class="model-option" data-model="openai/gpt-4o-mini">
                             <span class="model-label">GPT-4o Mini</span>
                             <span class="model-desc">Best for clear explanations</span>
                         </button>
-                        <button class="model-option" data-model="qwen/qwen3-vl-8b-thinking">
-                            <span class="model-label">Qwen Thinking</span>
-                            <span class="model-desc">Creative and thoughtful responses</span>
+                            <button class="model-option" data-model="qwen/qwen3-vl-8b-thinking">
+                                <span class="model-label">Qwen Thinking</span>
+                                <span class="model-desc">Creative and thoughtful responses</span>
+                            </button>
+                            <button class="model-option" data-model="qwen/qwen3-vl-8b-instruct">
+                                <span class="model-label">Qwen Instruct</span>
+                                <span class="model-desc">Top-ranked for complex tasks</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button class="icon-button" id="testModelsBtn" title="Test model performance">
+                            <i class="fas fa-chart-bar"></i>
                         </button>
-                        <button class="model-option" data-model="meta-llama/llama-4-scout">
-                            <span class="model-label">Llama Scout</span>
-                            <span class="model-desc">Fast and efficient fallback</span>
+                        <button class="icon-button" id="darkModeToggle" title="Toggle theme">
+                            <i class="fas fa-moon"></i>
                         </button>
                     </div>
-                </div>
-                <div class="header-actions">
-                    <button class="icon-button" id="testModelsBtn" title="Test model performance">
-                        <i class="fas fa-chart-bar"></i>
-                    </button>
-                    <button class="icon-button" id="darkModeToggle" title="Toggle theme">
-                        <i class="fas fa-moon"></i>
-                    </button>
                 </div>
             </div>
         </header>
