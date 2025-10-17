@@ -1,12 +1,12 @@
 const fetch = global.fetch;
 
 const models = [
-    { id: 'meta-llama/llama-4-scout', name: 'Meta Llama 4 Scout (Free)' },
-    { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'Meta Llama 3.1 8B (Free)' },
-    { id: 'meta-llama/llama-3.1-70b-instruct:free', name: 'Meta Llama 3.1 70B (Free)' },
-    { id: 'mistralai/mistral-7b-instruct-v0.1:free', name: 'Mistral 7B Instruct (Free)' },
-    { id: 'huggingface/zephyr-7b-beta:free', name: 'HuggingFace Zephyr 7B (Free)' },
-    { id: 'microsoft/wizardlm-2-8x22b:free', name: 'Microsoft WizardLM 2 8x22B (Free)' }
+    { id: 'qwen/qwen3-vl-8b-thinking', name: 'Qwen: Qwen3 VL 8B Thinking' },
+    { id: 'qwen/qwen3-vl-8b-instruct', name: 'Qwen: Qwen3 VL 8B Instruct' },
+    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1.5', name: 'NVIDIA Llama-3.3-Nemotron Super 49B' },
+    { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini' },
+    { id: 'meta-llama/llama-4-scout', name: 'Meta Llama 4 Scout' },
+    { id: 'deepseek/deepseek-v3-turbo', name: 'DeepSeek V3 Turbo' }
 ];
 
 const questions = [
