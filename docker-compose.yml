@@ -12,34 +12,18 @@ services:
     networks:
       - backend
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - backend
-
   api:
-    build: ./apps/api
+    build: ./backend
     ports:
       - "8001:8001"
+    env_file:
+      - ./secrets.env
     environment:
       DATABASE_URL: postgresql://assistme_user:assistme_password@db:5432/assistme_db
-      REDIS_URL: redis://redis:6379
+      APP_URL: http://localhost:3000
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_DEFAULT_MODEL: ${OPENROUTER_DEFAULT_MODEL:-meta-llama/llama-4-scout}
     depends_on:
-      - db
-      - redis
-    networks:
-      - backend
-
-  celery-worker:
-    build: ./apps/api
-    volumes:
-      - .:/app
-    working_dir: /app
-    command: ["python", "-c", "print('Celery worker placeholder - service ready')"]
-    depends_on:
-      - redis
       - db
     networks:
       - backend

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AssistMe - AI Assistant</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%231a73e8'/%3E%3Cpath d='M12 10h8l-4-4z' fill='white'/%3E%3Ccircle cx='11' cy='15' r='2' fill='white'/%3E%3Ccircle cx='21' cy='15' r='2' fill='white'/%3E%3Crect x='14' y='18' width='4' height='6' rx='2' fill='white'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h4 style="color: var(--text-primary); font-weight: 600; margin: 0; font-size: var(--font-size-sm);">History</h4>
+            </div>
+
+            <div class="conversations" id="conversations">
+                <!-- Conversation history will be dynamically inserted here -->
+            </div>
+
+            <div class="sidebar-middle">
+                <button class="new-chat-btn" id="newChatBtn">
+                    <i class="fas fa-plus"></i>
+                    <span>New Chat</span>
+                </button>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="sidebar-footer-btn" id="sidebarFooterBtn">
+                    <i class="fas fa-user"></i>
+                    <span>User</span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-wrapper">
+            <!-- Top Navigation -->
+            <nav class="top-nav">
+                <div class="nav-left">
+                    <button class="nav-logo-btn" onclick="location.reload()">
+                        <img src="assets/logo.png" alt="AssistMe Logo" class="nav-logo">
+                    </button>
+                    <h1 class="nav-title">AssistMe</h1>
+                </div>
+
+                <div class="nav-right">
+                    <div class="model-selector">
+                        <button type="button" class="model-button" id="modelButton">
+                            <span class="model-name">Meta Llama 4 Scout</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    <div class="model-dropdown" id="modelDropdown">
+                        <button class="model-option active" data-model="meta-llama/llama-4-scout:free">
+                            <span class="model-label">Meta Llama 4 Scout</span>
+                            <span class="model-desc">Balanced reasoning with low latency</span>
+                        </button>
+                        <button class="model-option" data-model="qwen/qwen3-14b:free">
+                            <span class="model-label">Qwen 3 14B</span>
+                            <span class="model-desc">Advanced multilingual understanding</span>
+                        </button>
+                        <button class="model-option" data-model="deepseek/deepseek-chat-v3.1:free">
+                            <span class="model-label">DeepSeek V3.1</span>
+                            <span class="model-desc">Efficient and capable reasoning</span>
+                        </button>
+                        <button class="model-option" data-model="mistralai/mistral-small-3.1-24b-instruct:free">
+                            <span class="model-label">Mistral Small 3.1 24B</span>
+                            <span class="model-desc">Strong general-purpose performance</span>
+                        </button>
+                        <button class="model-option" data-model="tngtech/deepseek-r1t-chimera:free">
+                            <span class="model-label">DeepSeek R1T Chimera</span>
+                            <span class="model-desc">Creative and exploratory thinking</span>
+                        </button>
+                        <button class="model-option" data-model="moonshotai/kimi-dev-72b:free">
+                            <span class="model-label">Moonshot Kimi Dev 72B</span>
+                            <span class="model-desc">Large-scale reasoning and development</span>
+                        </button>
+                        <button class="model-option" data-model="nvidia/nemotron-nano-9b-v2:free">
+                            <span class="model-label">NVIDIA Nemotron Nano 9B</span>
+                            <span class="model-desc">Optimized for efficiency and speed</span>
+                        </button>
+                        </div>
+                    </div>
+
+                    <button class="nav-btn" id="testModelsBtn" title="Model benchmarking">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+
+                    <button class="nav-btn" id="darkModeToggle" title="Toggle theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Chat Area -->
+            <main class="chat-area">
+                <div class="welcome-message" id="welcomeMessage">
+                    <div class="welcome-header">
+                        <h1>How can I help you today?</h1>
+                    </div>
+
+                    <div class="suggestions-grid">
+                        <div class="suggestion-card" data-prompt="Explain quantum computing in simple terms">
+                            <div class="suggestion-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <p class="suggestion-text">Explain quantum computing</p>
+                        </div>
+
+                        <div class="suggestion-card" data-prompt="Write a creative short story about space exploration">
+                            <div class="suggestion-icon">
+                                <i class="fas fa-rocket"></i>
+                            </div>
+                            <p class="suggestion-text">Write a space story</p>
+                        </div>
+
+                        <div class="suggestion-card" data-prompt="What are the latest AI advancements this week?">
+                            <div class="suggestion-icon">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <p class="suggestion-text">Latest AI news</p>
+                        </div>
+
+                        <div class="suggestion-card" data-prompt="Help me plan a healthy meal prep for the week">
+                            <div class="suggestion-icon">
+                                <i class="fas fa-utensils"></i>
+                            </div>
+                            <p class="suggestion-text">Meal prep ideas</p>
+                        </div>
+
+                        <div class="suggestion-card" data-prompt="Build me a todo app with React">
+                            <div class="suggestion-icon">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <p class="suggestion-text">Build a React todo app</p>
+                        </div>
+
+                        <div class="suggestion-card" data-prompt="Create a Python script for data analysis">
+                            <div class="suggestion-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <p class="suggestion-text">Python data analysis script</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="chatMessages"></div>
+
+                <!-- Input Area -->
+                <div class="input-area">
+                    <div class="input-container">
+                        <div class="input-wrapper">
+                            <textarea
+                                id="messageInput"
+                                class="message-input"
+                                placeholder="Message AssistMe..."
+                                rows="1"
+                            ></textarea>
+
+                            <input type="file" id="fileInput" style="display: none;" multiple>
+                            <button type="button" class="attach-btn" id="attachBtn" title="Attach file">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+
+                            <button type="button" class="voice-btn" id="voiceButton" title="Voice input">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+
+                            <button type="button" class="send-btn disabled" id="sendButton" title="Send message">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                        </div>
+
+                        <p class="disclaimer">AssistMe can make mistakes. Check important info.</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Model Benchmarking Page -->
+    <div class="benchmark-page" id="benchmarkPage">
+        <div class="benchmark-header">
+            <button class="benchmark-back-btn" id="benchmarkBackBtn">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Chat</span>
+            </button>
+            <h1 class="benchmark-title">
+                <i class="fas fa-chart-bar"></i>
+                AI Model Benchmarking
+            </h1>
+            <div class="gpu-indicator">
+                <i class="fas fa-microchip"></i>
+                <span>GPU Accelerated</span>
+            </div>
+        </div>
+
+        <div class="benchmark-controls">
+            <button class="start-benchmark-btn" id="startBenchmarkBtn">
+                <i class="fas fa-play"></i>
+                <span>Start Benchmark</span>
+            </button>
+            <div class="benchmark-stats">
+                <div class="stat-item">
+                    <div class="stat-number">7</div>
+                    <div class="stat-label">Models</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Tests</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">21</div>
+                    <div class="stat-label">Total Runs</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="benchmark-progress" id="benchmarkProgress">
+            <div class="progress-header">
+                <h3>Benchmarking in Progress...</h3>
+                <div class="progress-percentage" id="progressPercentage">0%</div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="current-test-info" id="currentTestInfo">Initializing...</div>
+        </div>
+
+        <div class="model-grid" id="modelGrid">
+            <!-- Model cards will be inserted here -->
+            <div class="model-card" data-model="meta-llama/llama-4-scout:free">
+                <div class="model-card-inner">
+                    <div class="model-avatar meta-llama">
+                        <div class="avatar-glow"></div>
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h4 class="model-name">Meta Llama 4 Scout</h4>
+                    <p class="model-desc">Balanced reasoning with low latency</p>
+                    <div class="model-metrics">
+                        <div class="metric response-time" id="meta-llama-time">-</div>
+                        <div class="metric accuracy" id="meta-llama-accuracy">-</div>
+                        <div class="metric gpu-usage" id="meta-llama-gpu">-</div>
+                    </div>
+                    <div class="model-status" id="meta-llama-status">Ready</div>
+                </div>
+            </div>
+
+            <div class="model-card" data-model="qwen/qwen3-14b:free">
+                <div class="model-card-inner">
+                    <div class="model-avatar qwen">
+                        <div class="avatar-glow"></div>
+                        <i class="fas fa-language"></i>
+                    </div>
+                    <h4 class="model-name">Qwen 3 14B</h4>
+                    <p class="model-desc">Advanced multilingual understanding</p>
+                    <div class="model-metrics">
+                        <div class="metric response-time" id="qwen-time">-</div>
+                        <div class="metric accuracy" id="qwen-accuracy">-</div>
+                        <div class="metric gpu-usage" id="qwen-gpu">-</div>
+                    </div>
+                    <div class="model-status" id="qwen-status">Ready</div>
+                </div>
+            </div>
+
+            <div class="model-card" data-model="deepseek/deepseek-chat-v3.1:free">
+                <div class="model-card-inner">
+                    <div class="model-avatar deepseek">
+                        <div class="avatar-glow"></div>
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h4 class="model-name">DeepSeek V3.1</h4>
+                    <p class="model-desc">Efficient and capable reasoning</p>
+                    <div class="model-metrics">
+                        <div class="metric response-time" id="deepseek-time">-</div>
+                        <div class="metric accuracy" id="deepseek-accuracy">-</div>
+                        <div class="metric gpu-usage" id="deepseek-gpu">-</div>
+                    </div>
+                    <div class="model-status" id="deepseek-status">Ready</div>
+                </div>
+            </div>
+
+            <div class="model-card" data-model="mistralai/mistral-small-3.1-24b-instruct:free">
+                <div class="model-card-inner">
+                    <div class="model-avatar mistral">
+                        <div class="avatar-glow"></div>
+                        <i class="fas fa-wind"></i>
+                    </div>
+                    <h4 class="model-name">Mistral Small 3.1 24B</h4>
+                    <p class="model-desc">Strong general-purpose performance</p>
+                    <div class="model-metrics">
+                        <div class="metric response-time" id="mistral-time">-</div>
+                        <div class="metric accuracy" id="mistral-accuracy">-</div>
+                        <div class="metric gpu-usage" id="mistral-gpu">-</div>
+                    </div>
+                    <div class="model-status" id="mistral-status">Ready</div>
+                </div>
+            </div>
+
+            <div class="model-card" data-model="tngtech/deepseek-r1t-chimera:free">
+                <div class="model-card-inner">
+                    <div class="model-avatar chimera">
+                        <div class="avatar-glow"></div>
+                        <i class="fas fa-ghost"></i>
+                    </div>
+                    <h4 class="model-name">DeepSeek R1T Chimera</h4>
+                    <p class="model-desc">Creative and exploratory thinking</p>
+                    <div class="model-metrics">
+                        <div class="metric response-time" id="chimera-time">-</div>
+                        <div class="metric accuracy" id="chimera-accuracy">-</div>
+                        <div class="metric gpu-usage" id="chimera-gpu">-</div>
+                    </div>
+                    <div class="model-status" id="chimera-status">Ready</div>
+                </div>
+            </div>
+
+            <div class="model-card" data-model="moonshotai/kimi-dev-72b:free">
+                <div class="model-card-inner">
+                    <div class="model-avatar kimi">
+                        <div class="avatar-glow"></div>
+                        <i class="fas fa-moon"></i>
+                    </div>
+                    <h4 class="model-name">Moonshot Kimi Dev 72B</h4>
+                    <p class="model-desc">Large-scale reasoning and development</p>
+                    <div class="model-metrics">
+                        <div class="metric response-time" id="kimi-time">-</div>
+                        <div class="metric accuracy" id="kimi-accuracy">-</div>
+                        <div class="metric gpu-usage" id="kimi-gpu">-</div>
+                    </div>
+                    <div class="model-status" id="kimi-status">Ready</div>
+                </div>
+            </div>
+
+            <div class="model-card" data-model="nvidia/nemotron-nano-9b-v2:free">
+                <div class="model-card-inner">
+                    <div class="model-avatar nemotron">
+                        <div class="avatar-glow"></div>
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <h4 class="model-name">NVIDIA Nemotron Nano 9B</h4>
+                    <p class="model-desc">Optimized for efficiency and speed</p>
+                    <div class="model-metrics">
+                        <div class="metric response-time" id="nemotron-time">-</div>
+                        <div class="metric accuracy" id="nemotron-accuracy">-</div>
+                        <div class="metric gpu-usage" id="nemotron-gpu">-</div>
+                    </div>
+                    <div class="model-status" id="nemotron-status">Ready</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="benchmark-charts" id="benchmarkCharts">
+            <div class="chart-container">
+                <h3 class="chart-title">⚡ Response Time Comparison</h3>
+                <div class="chart-wrapper">
+                    <canvas id="responseTimeChart" width="600" height="300"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">🎯 Accuracy Comparison</h3>
+                <div class="chart-wrapper">
+                    <canvas id="accuracyChart" width="600" height="300"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">🚀 GPU Usage Analysis</h3>
+                <div class="chart-wrapper">
+                    <canvas id="gpuUsageChart" width="600" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="benchmark-results-summary" id="benchmarkSummary">
+            <h3>Detailed Results</h3>
+            <div class="results-table" id="resultsTable">
+                <!-- Results will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js" defer></script>
+</body>
+</html>

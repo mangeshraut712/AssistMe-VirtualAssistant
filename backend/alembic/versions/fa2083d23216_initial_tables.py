@@ -23,8 +23,8 @@ def upgrade() -> None:
     op.create_table(
         'users',
         sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
-        sa.Column('username', sa.String(length=100, nullable=False, unique=True)),
-        sa.Column('email', sa.String(length=255, nullable=False, unique=True)),
+        sa.Column('username', sa.String(length=100), nullable=False, unique=True),
+        sa.Column('email', sa.String(length=255), nullable=False, unique=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, default=sa.func.now()),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('username'),
@@ -33,7 +33,7 @@ def upgrade() -> None:
     op.create_table(
         'conversations',
         sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
-        sa.Column('user_id', sa.Integer(), nullable=False),
+        sa.Column('user_id', sa.Integer(), nullable=True),
         sa.Column('title', sa.String(length=255), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=False, default=sa.func.now()),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),

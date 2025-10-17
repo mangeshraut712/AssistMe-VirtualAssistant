@@ -19,7 +19,7 @@ This blueprint turns the original multi-team roadmap into a realistic sequence f
    - Review Google S2R paper; identify required audio datasets and encoders.
 2. **Local Tooling**
    - Install CUDA toolkit, Docker, and NVIDIA Container Toolkit on a development GPU machine (cloud or local).
-   - Create a mono-repo structure: `apps/frontend`, `apps/api`, `services/llm`, `services/s2r`.
+   - Create a mono-repo structure: `frontend/`, `backend/`, and future `services/` folders for LLM + S2R experiments.
 3. **Infrastructure Boilerplate**
    - Draft docker-compose that runs PostgreSQL + Redis locally.
    - Write Terraform skeleton for GPU instance provisioning (optional, can use manual setup initially).
@@ -29,7 +29,7 @@ This blueprint turns the original multi-team roadmap into a realistic sequence f
 ---
 
 ### Phase 2 – Core Backend Prototype
-1. Scaffold a FastAPI service (`apps/api`) with `/health` endpoint.
+1. Scaffold a FastAPI service (`backend/app`) with `/health` endpoint.
 2. Spin up PostgreSQL; create migration scripts for `users`, `conversations`, `messages`.
 3. Implement `/api/chat/text` that echoes a stub response while logging payloads.
 4. Package service with Docker; confirm it runs locally alongside DB/Redis.
@@ -39,7 +39,7 @@ This blueprint turns the original multi-team roadmap into a realistic sequence f
 ---
 
 ### Phase 3 – Frontend Migration
-1. Create a new Next.js 14 project (`apps/frontend`) mirroring current AssistMe UI.
+1. Create a new Next.js 14 project (e.g. `frontend/app/next/`) mirroring the AssistMe UI.
 2. Port existing HTML/CSS/JS into React components, maintaining feature parity.
 3. Integrate Tailwind CSS and Zustand for state management.
 4. Wire API calls to the Phase 2 backend (still stubbed responses).

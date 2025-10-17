@@ -3,9 +3,10 @@ import sys
 import os
 
 # Ensure the project root is on sys.path so Alembic can import application modules.
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
-for path in (BASE_DIR, PROJECT_ROOT):
+BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(BACKEND_DIR, ".."))
+APP_DIR = os.path.join(BACKEND_DIR, "app")
+for path in (PROJECT_ROOT, BACKEND_DIR, APP_DIR):
     if path not in sys.path:
         sys.path.insert(0, path)
 
@@ -18,6 +19,11 @@ from alembic import context  # type: ignore[import]
 # access to the values within the .ini file in use.
 config = context.config
 
+# Allow DATABASE_URL to override the value from alembic.ini
+sqlalchemy_url = os.getenv("DATABASE_URL")
+if sqlalchemy_url:
+    config.set_main_option("sqlalchemy.url", sqlalchemy_url)
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
@@ -25,7 +31,7 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from apps.api.database import Base
+from app.database import Base
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

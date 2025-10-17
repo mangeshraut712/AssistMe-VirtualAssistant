@@ -4,6 +4,7 @@ from pydantic import BaseModel  # type: ignore[import]
 from typing import List, Optional
 import logging
 from sqlalchemy.orm import Session  # type: ignore[import]
+from starlette.concurrency import run_in_threadpool  # type: ignore[import]
 from .chat_client import grok_client
 from .database import get_db
 from .models import Conversation, Message as MessageModel
@@ -25,7 +26,7 @@ class ChatMessage(BaseModel):
 
 class TextChatRequest(BaseModel):
     messages: List[ChatMessage]
-    model: Optional[str] = "grok-2"
+    model: Optional[str] = None
     temperature: Optional[float] = 0.7
     max_tokens: Optional[int] = 1024
     conversation_id: Optional[int] = None
@@ -39,7 +40,7 @@ def root():
     return {"message": "AssistMe API is running"}
 
 @app.post("/api/chat/text")
-def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
+async def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
     logging.info("Chat API called with messages: %s", [m.content for m in request.messages])
     
     conversation = None
@@ -55,18 +56,33 @@ def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(conversation)
 
-    # Save user messages
     for msg in request.messages:
-        db_msg = MessageModel(conversation_id=conversation.id, role=msg.role, content=msg.content)
+        db_msg = MessageModel(
+            conversation_id=conversation.id,
+            role=msg.role,
+            content=msg.content,
+        )
         db.add(db_msg)
     db.commit()
 
-    # Call Grok-2 client
-    result = grok_client.generate_response(
-        request.messages,
+    conversation_history = (
+        db.query(MessageModel)
+        .filter(MessageModel.conversation_id == conversation.id)
+        .order_by(MessageModel.created_at.asc())
+        .all()
+    )
+
+    payload_messages = [
+        {"role": message.role, "content": message.content}
+        for message in conversation_history
+    ]
+
+    result = await run_in_threadpool(
+        grok_client.generate_response,
+        payload_messages,
         request.model,
         request.temperature,
-        request.max_tokens
+        request.max_tokens,
     )
     if "error" in result:
         return {"error": result["error"]}
@@ -97,6 +113,7 @@ def get_conversation_messages(conversation_id: int, db: Session = Depends(get_db
     messages = (
         db.query(MessageModel)
         .filter(MessageModel.conversation_id == conversation_id)
+        .order_by(MessageModel.created_at.asc())
         .all()
     )
     return {
