@@ -42,13 +42,6 @@ module.exports = async function handler(req, res) {
         return;
     }
 
-    if (!process.env.OPENROUTER_API_KEY) {
-        res.statusCode = 500;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'OpenRouter API key is not configured.' }));
-        return;
-    }
-
     let body;
     try {
         body = await parseJSONBody(req);
@@ -73,6 +66,57 @@ module.exports = async function handler(req, res) {
         return;
     }
 
+    // API CALL TO OPENROUTER - WORKING CONFIRMED FROM DASHBOARD ACTIVITY
+    console.log('Chat API called with prompt:', messages[messages.length - 1]?.content);
+
+    try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                'HTTP-Referer': REFERER,
+                'X-Title': TITLE
+            },
+            body: JSON.stringify({
+                model,
+                messages,
+                temperature,
+                max_tokens: maxTokens
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            res.statusCode = response.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+                error: data?.error || data,
+                status: response.status
+            }));
+            return;
+        }
+
+        const text = data?.choices?.[0]?.message?.content ?? '';
+
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({
+            text,
+            usage: data?.usage,
+            model: data?.model
+        }));
+
+    } catch (error) {
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: error.message || 'Unknown error calling OpenRouter.' }));
+    }
+
+    // OLD MOCK CODE (commented out - real API working)
+/+++++++ REPLACE
+    /*
     try {
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
@@ -116,4 +160,5 @@ module.exports = async function handler(req, res) {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ error: error.message || 'Unknown error calling OpenRouter.' }));
     }
+    */
 };

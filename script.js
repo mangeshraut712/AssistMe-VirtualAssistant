@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentModel = DEFAULT_MODEL;
     let isRecording = false;
     let isTypingIndicator = null;
+    let lastInputWasVoice = false;
 
     // --- Initialization ---
     initializeApp();
@@ -216,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleMessageKeydown(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
+            lastInputWasVoice = false; // Text input
             if (elements.messageInput.value.trim()) {
                 handleSendMessage();
             }
@@ -247,6 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleSuggestionClick(prompt) {
+        lastInputWasVoice = false; // Suggestion is text-based
         addUserMessage(prompt);
         showChat();
         processCommand(prompt);
@@ -276,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             recognition.onstart = () => {
                 isRecording = true;
+                lastInputWasVoice = true; // Set flag for voice input
                 elements.voiceButton.classList.add('recording');
                 showTemporaryMessage('Listening...', 'info');
             };
@@ -394,9 +398,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return div.innerHTML;
     }
 
+    // --- Text-to-Speech ---
+    function speakText(text) {
+        if ('speechSynthesis' in window) {
+            const synth = window.speechSynthesis;
+
+            // Cancel any ongoing speech
+            synth.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            utterance.volume = 0.8; // Slightly softer
+
+            synth.speak(utterance);
+        } else {
+            console.warn('Speech synthesis not supported in this browser');
+        }
+    }
+
     // --- API Integration ---
     async function fetchAICompletion(prompt) {
         try {
+            console.log('Starting API call for:', prompt, 'model:', currentModel);
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -409,8 +433,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         role: 'user',
                         content: prompt
                     }]
-                })
+                }),
+                signal: AbortSignal.timeout(30000) // 30 second timeout
             });
+            console.log('API call received response');
 
             if (!response.ok) {
                 throw new Error(`API error: ${response.status}`);
@@ -423,10 +449,22 @@ document.addEventListener('DOMContentLoaded', () => {
             hideTypingIndicator();
             addAssistantMessage(message);
 
+            // Text-to-speech for voice input
+            if (lastInputWasVoice) {
+                speakText(message.replace(/[*_`]/g, '')); // Clean markdown
+                lastInputWasVoice = false;
+            }
+
         } catch (error) {
             console.error('AI completion error:', error);
             hideTypingIndicator();
             addAssistantMessage('Sorry, I encountered an error while processing your request. Please try again.');
+
+            // Text-to-speech for voice input errors
+            if (lastInputWasVoice) {
+                speakText('Sorry, I encountered an error while processing your request. Please try again.');
+                lastInputWasVoice = false;
+            }
         }
     }
 

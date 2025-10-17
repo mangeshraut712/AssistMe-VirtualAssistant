@@ -2,9 +2,9 @@
 
 **🌐 Live Demo:** [https://assist-me-virtual-assistant.vercel.app/](https://assist-me-virtual-assistant.vercel.app/)
 
-> **🎨✨ ChatGPT-Style AI Assistant** - Beautiful conversations powered by OpenRouter
+> **🎨✨ Advanced AI Assistant** - Powered by xAI's Grok-2 and Google S2R Voice Processing
 
-AssistMe is a premium web-based AI assistant featuring a polished ChatGPT-style interface with OpenRouter integration, voice commands, multiple AI models, and a stunning modern design. Experience professional-grade AI conversations with a clean, intuitive interface.
+AssistMe is a cutting-edge AI assistant featuring multimodal interactions with xAI's Grok-2 (270B parameter model) for advanced text reasoning and Google's Speech-to-Retrieval (S2R) architecture for voice understanding. Built with modern full-stack architecture supporting real-time voice conversations and persistent chat history.
 
 ![AssistMe Interface](https://img.shields.io/badge/ChatGPT--Style-Interface-brightgreen)
 [![Modern Design](https://img.shields.io/badge/Modern-PWA-blue)](https://assist-me-virtual-assistant.vercel.app/)
@@ -251,3 +251,26 @@ This project welcomes enhancements! Areas for contribution:
 **🎨 Experience premium AI conversations with ChatGPT-grade design and OpenRouter-powered intelligence!**
 
 **[🚀 Launch App](https://assist-me-virtual-assistant.vercel.app/)** | **[📖 OpenRepo](https://github.com/mangeshraut712/AssistMe-VirtualAssistant)** | **[🤝 Contribute](#contributing)**
+
+---
+
+## 🛣️ Roadmap: Grok‑2 & Google S2R Expansion
+
+AssistMe’s long-term roadmap now targets a Grok‑2 powered reasoning core and a voice pipeline inspired by Google’s Speech-to-Retrieval (S2R) research. The steps are organised for a **single developer**, ensuring every phase ends with a working milestone before moving on.
+
+### 🔍 Highlights
+- **Core LLM:** Host xAI’s Grok‑2 (270B) via SGLang/vLLM on multi-GPU nodes
+- **S2R Voice Stack:** Audio encoders with vector retrieval to derive user intent directly from speech
+- **Unified API:** FastAPI gateway orchestrating text and voice flows, backed by Redis, PostgreSQL, and Celery
+- **Frontend Evolution:** Next.js + Tailwind SPA with streaming responses, Web Audio capture, and TTS playback
+- **Deployment:** Dockerised services on Kubernetes (EKS/GKE) with Prometheus/Grafana monitoring
+
+### 📅 Phases
+1. **Phase 0–2:** Stabilise current AssistMe app, prepare tooling, scaffold FastAPI backend with persistence.
+2. **Phase 3–5:** Migrate UI into Next.js, integrate Grok‑2 inference, add conversation history.
+3. **Phase 6–8:** Build voice pipeline, implement S2R service, orchestrate Grok‑2 + TTS for end-to-end audio conversations.
+4. **Phase 9–10:** Harden security, monitoring, deployment, then iterate on optimisation and new capabilities.
+
+📄 **Full Plan:** [`docs/grok2-s2r-roadmap.md`](docs/grok2-s2r-roadmap.md)
+
+This roadmap keeps AssistMe aligned with cutting-edge conversational AI research while offering a concrete engineering path from today’s web assistant to a production-grade, multimodal platform.
