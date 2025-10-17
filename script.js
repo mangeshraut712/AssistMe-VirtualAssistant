@@ -40,10 +40,49 @@ document.addEventListener('DOMContentLoaded', () => {
     recognition.lang = 'en-US';
     recognition.interimResults = false;
 
+    let isMicMode = false;
+
     speakButton.addEventListener('click', () => {
-        speakButton.classList.add('listening');
-        recognition.start();
+        if (isMicMode) {
+            // Mic mode: start stop cycle
+            if (recognition.continuous) {
+                recognition.abort();
+                speakButton.classList.remove('listening');
+            } else {
+                speakButton.classList.add('listening');
+                recognition.start();
+            }
+        } else {
+            // Send mode: send message
+            const message = commandInput.value.trim();
+            if (message) {
+                handleCommand(message);
+            }
+        }
     });
+
+    // Double click or right click to toggle mode? But user said "then mic then voicemode" perhaps click to toggle.
+
+    // Interpret as click to toggle between send and mic.
+
+    speakButton.addEventListener('dblclick', () => {
+        toggleMicSendMode();
+    });
+
+    function toggleMicSendMode() {
+        isMicMode = !isMicMode;
+        const icon = speakButton.querySelector('i');
+        if (isMicMode) {
+            icon.className = 'fas fa-microphone';
+            speakButton.title = 'Voice mode: click to start/stop listening';
+        } else {
+            icon.className = 'fas fa-paper-plane';
+            speakButton.title = 'Send mode: click to send message';
+        }
+    }
+
+    // Default to send mode
+    toggleMicSendMode(); // Start with send mode
 
     stopVoiceBtn.addEventListener('click', () => {
         speechSynthesis.cancel();
