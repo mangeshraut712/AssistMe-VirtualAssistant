@@ -6,7 +6,7 @@ AssistMe is a sophisticated AI chat experience featuring an exact ChatGPT.com-in
 
 🎉 **Live Demo Available!**
 
-Try the fully functional app: **[https://assistme-virtual-assistant.vercel.app](https://assistme-virtual-assistant.vercel.app)**
+Try the fully functional app: **[https://assist-me-virtual-assistant.vercel.app](https://assist-me-virtual-assistant.vercel.app)**
 
 **Features:**
 - 🤖 Chat with 7+ AI models (Grok-2, DeepSeek, Mistral, etc.)
@@ -17,7 +17,7 @@ Try the fully functional app: **[https://assistme-virtual-assistant.vercel.app](
 - 🌙 Dark/light theme toggle
 
 **Backend API:** `https://assistme-virtualassistant-production.up.railway.app`
-**Frontend URL:** `https://your-vercel-domain.vercel.app` (replace with your actual Vercel URL)
+**Frontend URL:** `https://assist-me-virtual-assistant.vercel.app`
 
 **How it works:**
 - Backend: FastAPI on Railway with PostgreSQL + OpenRouter integration
