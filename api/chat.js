@@ -115,7 +115,6 @@ module.exports = async function handler(req, res) {
     }
 
     // OLD MOCK CODE (commented out - real API working)
-/+++++++ REPLACE
     /*
     try {
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
