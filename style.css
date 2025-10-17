@@ -503,9 +503,6 @@ body {
     color: white;
     box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
 }
-    color: var(--pill-text);
-    border-color: rgba(16, 163, 127, 0.35);
-}
 
 #recordButton.recording {
     color: #ff5b5b;
