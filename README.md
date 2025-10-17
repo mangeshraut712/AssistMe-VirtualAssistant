@@ -45,32 +45,71 @@ AssistMe is a cutting-edge AI assistant featuring multimodal interactions with x
 
 ## 🎯 Quick Start
 
-### 🔥 Vercel Deployment (Recommended)
+### 🔥 Docker Compose (Recommended for Full Features)
+**Latest Approach**: Run the complete AI assistant with Grok-2 and database persistence
+
+#### 📋 Prerequisites
+- Docker & Docker Compose installed
+- Git for repository cloning
+- 4GB+ RAM available
+
+#### 🚀 Full Setup (5 minutes)
+```bash
+# 1. Clone repository
+git clone https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git
+cd AssistMe-VirtualAssistant
+
+# 2. Start all services (PostgreSQL, Redis, API, Frontend)
+docker-compose up -d
+
+# 3. Run database migrations
+docker-compose exec api alembic upgrade head
+
+# 4. Open browser
+open http://localhost:3000
+
+# Services will be available on:
+# - Frontend: http://localhost:3000
+# - API: http://localhost:8001
+# - Database: localhost:5432
+# - Redis: localhost:6379
+```
+
+#### 🔧 Advanced Configuration
+```bash
+# For Grok-2 integration, set API key:
+export GROK2_API_KEY=your_xai_grok2_key
+
+# For custom database settings:
+export DATABASE_URL=postgresql://user:pass@host:5432/db
+```
+
+### ⚡ Frontend Only Development
+```bash
+cd apps/frontend
+npm install
+npm run dev
+# → http://localhost:3000 (frontend only, no backend)
+```
+
+### 🐳 Backend Only Development
+```bash
+# Start just the backend services
+docker-compose up db redis -d
+docker-compose exec api alembic upgrade head
+
+# Run API server
+cd apps/api
+pip install -r requirements.txt
+uvicorn app:app --reload --host 0.0.0.0 --port 8001
+# → http://localhost:8001 (API docs available)
+```
+
+### 🔥 Legacy Vercel Deployment (Node.js Only)
 1. **Import to Vercel** from GitHub repository
 2. **Add Environment Variable**: `OPENROUTER_API_KEY=your_api_key`
 3. **Deploy** - Your app is live at `https://your-app.vercel.app/`
 4. **Enjoy** premium ChatGPT-style AI conversations!
-
-### 💻 Local Development
-1. **Clone Repository**:
-   ```bash
-   git clone https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git
-   cd AssistMe-VirtualAssistant
-   ```
-
-2. **Set API Key**:
-   ```bash
-   export OPENROUTER_API_KEY=your_openrouter_api_key_here
-   ```
-
-3. **Run Development Server**:
-   ```bash
-   npm install
-   npm start
-   ```
-
-4. **Open Browser**: `http://localhost:8000`
-5. **Test Everything**: Voice input, AI conversations, model testing
 
 ## 💬 Interface Tour
 
@@ -106,14 +145,51 @@ AssistMe is a cutting-edge AI assistant featuring multimodal interactions with x
 
 ## 🔧 Technical Architecture
 
+### 📁 Modern Mono-Repo Structure
 ```
-📁 Project Structure
-├── 📄 index.HTML          # Modern ChatGPT-style interface
-├── 🎨 style.css           # Premium design system with 530+ CSS properties
-├── ⚡ script.js           # 500+ lines of modern ES6+ JavaScript
-├── 🖥️ server.js           # Express server for local development
-├── 🔧 api/testmodels.js   # Model benchmarking endpoint
-└── 📜 README.md          # Comprehensive documentation
+assistme-virtual-assistant/
+├── 🐳 docker-compose.yml          # Multi-service orchestration
+├── apps/
+│   ├── frontend/                   # Next.js React application
+│   │   ├── src/app/               # App Router components
+│   │   ├── globals.css            # Tailwind + custom styles
+│   │   └── package.json
+│   └── api/                       # FastAPI backend service
+│       ├── app.py                 # FastAPI application
+│       ├── models.py             # SQLAlchemy database models
+│       ├── database.py           # Database configuration
+│       ├── chat_client.py        # Grok-2 integration client
+│       ├── alembic/              # Database migrations
+│       ├── Dockerfile            # Container definition
+│       └── requirements.txt      # Python dependencies
+├── docs/
+│   └── grok2-s2r-roadmap.md      # Development roadmap
+└── [Legacy Files]               # Original Node.js files
+    ├── index.HTML
+    ├── script.js
+    ├── style.css
+    └── server.js
+```
+
+### 🚀 Service Architecture
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Next.js       │────│   FastAPI       │────│ PostgreSQL     │
+│   Frontend      │    │   Backend       │    │ Database       │
+│   (React)       │    │   (Python)      │    │ (SQLAlchemy)   │
+│                 │    │                 │    │                 │
+│ - Chat UI       │    │ - REST API      │    │ - Conversations │
+│ - Real-time     │    │ - WebSockets    │    │ - Messages      │
+│ - State Mgmt    │    │ - CORS Enabled  │    │ - Users         │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌─────────────────┐    ┌─────────────────┐
+                    │   Redis         │    │   Celery        │
+                    │   Cache         │    │   Background    │
+                    │   (Fast KV)     │    │   Tasks         │
+                    └─────────────────┘    └─────────────────┘
 ```
 
 ### 🎨 **Design System**
