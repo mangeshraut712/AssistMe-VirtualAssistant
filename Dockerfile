@@ -12,4 +12,4 @@ ENV PORT=8001
 
 EXPOSE 8001
 
-CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+CMD python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
