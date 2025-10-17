@@ -1,12 +1,10 @@
 const fetch = global.fetch;
 
 const models = [
-    { id: 'qwen/qwen3-vl-8b-thinking', name: 'Qwen: Qwen3 VL 8B Thinking' },
-    { id: 'qwen/qwen3-vl-8b-instruct', name: 'Qwen: Qwen3 VL 8B Instruct' },
-    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1.5', name: 'NVIDIA Llama-3.3-Nemotron Super 49B' },
-    { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini' },
-    { id: 'meta-llama/llama-4-scout', name: 'Meta Llama 4 Scout' },
-    { id: 'deepseek/deepseek-v3-turbo', name: 'DeepSeek V3 Turbo' }
+    { id: 'qwen/qwen3-vl-8b-instruct', name: 'Qwen: Qwen3 VL 8B Instruct (Ranked 1 - Best)' },
+    { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini (Ranked 2 - Best Explanations)' },
+    { id: 'qwen/qwen3-vl-8b-thinking', name: 'Qwen: Qwen3 VL 8B Thinking (Ranked 3 - Creative)' },
+    { id: 'meta-llama/llama-4-scout', name: 'Meta Llama 4 Scout (Ranked 4 - Fallback)' }
 ];
 
 const questions = [
