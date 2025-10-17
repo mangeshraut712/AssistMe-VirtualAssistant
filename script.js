@@ -143,6 +143,45 @@ document.addEventListener('DOMContentLoaded', () => {
     adjustInputHeight();
     commandInput.addEventListener('input', adjustInputHeight);
 
+    // Test models button
+    const testModelsBtn = document.getElementById('testModelsBtn');
+    if (testModelsBtn) {
+        testModelsBtn.addEventListener('click', async () => {
+            addMessageToChat('AssistMe', 'Testing and ranking models...', true);
+
+            try {
+                const response = await fetch('/api/testmodels');
+                if (!response.ok) {
+                    throw new Error(`API error (${response.status}): ${await response.text()}`);
+                }
+                const data = await response.json();
+                const results = data.results;
+
+                let summary = 'Model Rankings (based on test questions):\n';
+                results.forEach((result, index) => {
+                    summary += `${index + 1}. ${result.model} - Score: ${result.score}/${data.questionsCount}\n`;
+                });
+                speakAndDisplay(summary);
+
+                // Update model select with ranked options
+                const modelSelect = document.getElementById('modelSelect');
+                if (modelSelect) {
+                    modelSelect.innerHTML = '';
+                    results.forEach((result, index) => {
+                        const option = document.createElement('option');
+                        option.value = result.id;
+                        option.textContent = `Rank ${index + 1}: ${result.model} (Score: ${result.score}/${data.questionsCount})`;
+                        modelSelect.appendChild(option);
+                    });
+                    localStorage.setItem('assistme:model', results[0].id); // Default to top ranked
+                    modelSelect.value = results[0].id;
+                }
+            } catch (error) {
+                speakAndDisplay(`Sorry, I couldn't test the models: ${error.message}`);
+            }
+        });
+    }
+
     if (modelSelect) {
         const savedModel = localStorage.getItem('assistme:model');
         if (savedModel) {

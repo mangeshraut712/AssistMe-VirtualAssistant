@@ -13,9 +13,11 @@
             <div class="brand">
                 <img src="AssistMe logo.png" alt="AssistMe Logo" class="brand-icon">
                 <span class="brand-name">AssistMe</span>
-                <span class="model-tag">OpenRouter Gateway</span>
             </div>
             <div class="top-controls">
+                <button id="testModelsBtn" class="ghost-btn" aria-label="Test and rank models">
+                    <i class="fas fa-chart-bar"></i> Test Models
+                </button>
                 <div class="model-select-wrapper">
                     <label class="sr-only" for="modelSelect">Choose AI model</label>
                     <select id="modelSelect" class="model-select" aria-label="Choose AI model">
@@ -28,15 +30,9 @@
                     </select>
                 </div>
                 <label class="toggle-item">
-                    <input type="checkbox" id="voiceToggle" checked>
+                    <input type="checkbox" id="voiceToggle">
                     <span>Voice</span>
                 </label>
-                <button id="stopVoiceBtn" class="ghost-btn" aria-label="Stop speaking">
-                    <i class="fas fa-volume-xmark"></i>
-                </button>
-                <button id="architectureBtn" class="ghost-btn" aria-label="View architecture">
-                    <i class="fas fa-diagram-project"></i>
-                </button>
                 <button id="darkModeToggle" class="ghost-btn" aria-label="Toggle dark mode">
                     <i class="fas fa-moon"></i>
                 </button>
