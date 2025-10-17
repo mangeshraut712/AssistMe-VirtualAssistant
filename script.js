@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const commandInput = document.getElementById('commandInput');
-    const speakButton = document.getElementById('speakButton');
+    const sendButton = document.getElementById('sendButton');
     const chatHistory = document.getElementById('chat-history');
     const recordButton = document.getElementById('recordButton');
     const darkModeToggle = document.getElementById('darkModeToggle');
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const DEFAULT_MODEL = 'meta-llama/llama-4-scout';
 
     // --- Initial Check ---
-    if (!commandInput || !speakButton || !chatHistory) {
+    if (!commandInput || !sendButton || !chatHistory) {
         alert("CRITICAL ERROR: HTML elements are missing. Please ensure your index.HTML file is correct and you have done a hard refresh (Cmd+Shift+R).");
         return;
     }
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isRecording = false;
 
     if (!recognition) {
-        speakButton.disabled = true;
+        sendButton.disabled = true;
         addMessageToChat('AssistMe', "Error: Speech recognition is not supported by your browser.");
         return;
     }
@@ -38,14 +38,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let isMicMode = false;
 
-    speakButton.addEventListener('click', () => {
+    sendButton.addEventListener('click', () => {
         if (isMicMode) {
             // Mic mode: start stop cycle
             if (recognition.continuous) {
                 recognition.abort();
-                speakButton.classList.remove('listening');
+                sendButton.classList.remove('listening');
             } else {
-                speakButton.classList.add('listening');
+                sendButton.classList.add('listening');
                 recognition.start();
             }
         } else {
@@ -61,19 +61,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Interpret as click to toggle between send and mic.
 
-    speakButton.addEventListener('dblclick', () => {
+    sendButton.addEventListener('dblclick', () => {
         toggleMicSendMode();
     });
 
     function toggleMicSendMode() {
         isMicMode = !isMicMode;
-        const icon = speakButton.querySelector('i');
+        const icon = sendButton.querySelector('i');
         if (isMicMode) {
             icon.className = 'fas fa-microphone';
-            speakButton.title = 'Voice mode: click to start/stop listening';
+            sendButton.title = 'Voice mode: click to start/stop listening';
         } else {
             icon.className = 'fas fa-paper-plane';
-            speakButton.title = 'Send mode: click to send message';
+            sendButton.title = 'Send mode: click to send message';
         }
     }
 
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    recognition.onend = () => speakButton.classList.remove('listening');
+    recognition.onend = () => sendButton.classList.remove('listening');
     recognition.onerror = (event) => addMessageToChat('AssistMe', `Speech Error: ${event.error}. Please check microphone permissions.`);
     recognition.onresult = (event) => handleCommand(event.results[0][0].transcript);
 
