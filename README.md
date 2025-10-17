@@ -6,7 +6,7 @@ AssistMe is a sophisticated AI chat experience featuring an exact ChatGPT.com-in
 
 🎉 **Live Demo Available!**
 
-Try the fully functional app: **[Your Vercel URL Here]**
+Try the fully functional app: **[https://assistme-virtual-assistant.vercel.app](https://assistme-virtual-assistant.vercel.app)**
 
 **Features:**
 - 🤖 Chat with 7+ AI models (Grok-2, DeepSeek, Mistral, etc.)
