@@ -15,24 +15,6 @@
                 <span class="brand-name">AssistMe</span>
             </div>
             <div class="top-controls">
-                <button id="testModelsBtn" class="ghost-btn" aria-label="Test and rank models">
-                    <i class="fas fa-chart-bar"></i> Test Models
-                </button>
-                <div class="model-select-wrapper">
-                    <label class="sr-only" for="modelSelect">Choose AI model</label>
-                    <select id="modelSelect" class="model-select" aria-label="Choose AI model">
-                        <option value="meta-llama/llama-4-scout">Meta Llama 4 Scout (Free)</option>
-                        <option value="meta-llama/llama-3.1-8b-instruct:free">Meta Llama 3.1 8B (Free)</option>
-                        <option value="meta-llama/llama-3.1-70b-instruct:free">Meta Llama 3.1 70B (Free)</option>
-                        <option value="mistralai/mistral-7b-instruct-v0.1:free">Mistral 7B Instruct (Free)</option>
-                        <option value="huggingface/zephyr-7b-beta:free">HuggingFace Zephyr 7B (Free)</option>
-                        <option value="microsoft/wizardlm-2-8x22b:free">Microsoft WizardLM 2 8x22B (Free)</option>
-                    </select>
-                </div>
-                <label class="toggle-item">
-                    <input type="checkbox" id="voiceToggle">
-                    <span>Voice</span>
-                </label>
                 <button id="darkModeToggle" class="ghost-btn" aria-label="Toggle dark mode">
                     <i class="fas fa-moon"></i>
                 </button>
@@ -51,6 +33,17 @@
                     <button class="ghost-btn" aria-label="Insert attachment" disabled>
                         <i class="fas fa-plus"></i>
                     </button>
+                    <div class="model-select-wrapper">
+                        <label class="sr-only" for="modelSelect">Choose AI model</label>
+                        <select id="modelSelect" class="model-select inline" aria-label="Choose AI model">
+                            <option value="meta-llama/llama-4-scout">Meta Llama 4 Scout (Free)</option>
+                            <option value="meta-llama/llama-3.1-8b-instruct:free">Meta Llama 3.1 8B (Free)</option>
+                            <option value="meta-llama/llama-3.1-70b-instruct:free">Meta Llama 3.1 70B (Free)</option>
+                            <option value="mistralai/mistral-7b-instruct-v0.1:free">Mistral 7B Instruct (Free)</option>
+                            <option value="huggingface/zephyr-7b-beta:free">HuggingFace Zephyr 7B (Free)</option>
+                            <option value="microsoft/wizardlm-2-8x22b:free">Microsoft WizardLM 2 8x22B (Free)</option>
+                        </select>
+                    </div>
                 </div>
                 <textarea id="commandInput" placeholder="Message AssistMe..." rows="1" autocomplete="off"></textarea>
                 <div class="composer-controls">
@@ -59,6 +52,9 @@
                     </button>
                     <button id="speakButton" class="ghost-btn" aria-label="Use microphone for command">
                         <i class="fas fa-microphone"></i>
+                    </button>
+                    <button id="testModelsBtn" class="ghost-btn" aria-label="Test and rank models">
+                        <i class="fas fa-chart-bar"></i>
                     </button>
                 </div>
             </div>
