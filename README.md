@@ -4,9 +4,26 @@ AssistMe is a sophisticated AI chat experience featuring an exact ChatGPT.com-in
 
 ## Demo
 
-Try the live demo: [https://assist-me-virtual-assistant.vercel.app/](https://assist-me-virtual-assistant.vercel.app/)
+🎉 **Live Demo Available!**
 
-Note: The demo frontend points to a local backend by default. For a fully functional online experience, set up the backend API with your own OpenRouter API key.
+Try the fully functional app: **[Your Vercel URL Here]**
+
+**Features:**
+- 🤖 Chat with 7+ AI models (Grok-2, DeepSeek, Mistral, etc.)
+- 🎤 Voice input support (Chrome/Edge/Safari)
+- 📁 File upload and processing
+- 📊 Model benchmarking with charts
+- 💾 Conversation persistence
+- 🌙 Dark/light theme toggle
+
+**Backend API:** `https://assistme-virtualassistant-production.up.railway.app`
+**Frontend URL:** `https://your-vercel-domain.vercel.app` (replace with your actual Vercel URL)
+
+**How it works:**
+- Backend: FastAPI on Railway with PostgreSQL + OpenRouter integration
+- Frontend: Vercel static hosting connecting to Railway API
+- Security: API key stored server-side, never exposed to browsers
+- Database: Railway-provided PostgreSQL for conversation persistence
 
 ## Project Structure
 
@@ -310,6 +327,21 @@ Each AI response now shows comprehensive metadata below the message:
 
 ### **Testing Commands**
 ```bash
+# Test Production Backend (Railway)
+PROD_URL="https://assistme-virtualassistant-production.up.railway.app"
+
+# Basic health check
+curl $PROD_URL/health
+
+# Simple chat test
+curl -X POST $PROD_URL/api/chat/text \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "model": "meta-llama/llama-4-scout:free"
+  }'
+
+# Local development (localhost)
 # Basic health check
 curl http://localhost:8001/health
 
@@ -320,12 +352,6 @@ curl -X POST http://localhost:8001/api/chat/text \
     "messages": [{"role": "user", "content": "Hello!"}],
     "model": "meta-llama/llama-4-scout:free"
   }'
-
-# Check available models
-curl http://localhost:8001/api/models
-
-# Test conversation persistence
-curl http://localhost:8001/api/conversations
 ```
 
 ## Cleaning Up
