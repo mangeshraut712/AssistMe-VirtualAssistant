@@ -14,4 +14,4 @@ ENV PORT=8001
 
 EXPOSE 8001
 
-CMD ./start.sh
+CMD ./backend/start.sh
