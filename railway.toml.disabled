@@ -1,0 +1,7 @@
+# Railway Docker Configuration
+# Railway auto-detects Dockerfile when present at root level
+# No explicit builder config needed
+
+[build]
+buildCommand = "echo 'Using Dockerfile - Railway auto-detects Docker builds'"
+startCommand = "echo 'Dockerfile provides CMD instruction'"

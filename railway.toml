@@ -1,6 +1,0 @@
-# Railway Docker Configuration
-# Force Railway to use Docker instead of nixpacks for better control
-
-[build]
-builder = "docker"
-dockerfilePath = "Dockerfile"
