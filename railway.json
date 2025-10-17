@@ -1,11 +1,9 @@
 {
   "build": {
-    "builder": "dockerfile",
-    "dockerfilePath": "backend/Dockerfile",
-    "context": "./backend"
+    "builder": "dockerfile"
   },
   "deploy": {
-    "preDeployCommand": "alembic upgrade head",
+    "preDeployCommand": "python -m alembic.upgrade head",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300
   }
