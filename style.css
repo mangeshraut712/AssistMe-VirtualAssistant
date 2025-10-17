@@ -81,7 +81,9 @@ body {
 .brand {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: center;
+    gap: 0.5rem;
+    flex: 1;
 }
 
 .brand-name {
@@ -90,8 +92,8 @@ body {
 }
 
 .brand-icon {
-    font-size: 1.5rem;
-    color: var(--pill-text);
+    max-width: 36px;
+    height: auto;
     margin-right: 0.5rem;
 }
 
