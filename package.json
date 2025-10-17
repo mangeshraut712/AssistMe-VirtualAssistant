@@ -1,0 +1,11 @@
+{
+  "name": "assistme-virtual-assistant",
+  "version": "1.0.0",
+  "description": "AI chat experience with modern UI",
+  "scripts": {
+    "test": "echo 'No tests specified'",
+    "build": "echo 'No build step'"
+  },
+  "author": "",
+  "license": "MIT"
+}
