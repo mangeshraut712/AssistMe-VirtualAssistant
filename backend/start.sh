@@ -53,9 +53,11 @@ else
 fi
 
 # Start the server with proper port handling
-PORT=${PORT:-8000}
-echo "⚡ Starting FastAPI server on port ${PORT}..."
+# Railway sets PORT env var, defaults to 8001 for Railway Docker mapping
+SERVER_PORT=${PORT:-8001}
+echo "⚡ Starting FastAPI server on port ${SERVER_PORT}..."
 echo "📡 Railway URL: https://assistme-virtualassistant-production.up.railway.app"
+echo "🔌 Railway PORT environment variable: '${PORT}' (defaults to 8001)"
 
 # Start uvicorn with more verbose output
-uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level info
+uvicorn app.main:app --host 0.0.0.0 --port $SERVER_PORT --log-level info
