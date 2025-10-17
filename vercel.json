@@ -1,8 +1,15 @@
 {
+  "framework": null,
   "functions": {
-    "api/*.js": {
+    "api/**/*.js": {
       "runtime": "nodejs20.x"
     }
   },
-  "outputDirectory": "."
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.HTML" }
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
 }

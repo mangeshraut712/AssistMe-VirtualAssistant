@@ -1,16 +1,18 @@
+const path = require('path');
 const express = require('express');
+
 const app = express();
-const port = 8000;
+const port = process.env.PORT || 8000;
 
-// Serve static files
-app.use(express.static('.'));
+// Serve static assets
+app.use(express.static(path.join(__dirname, '.')));
 
-// API routes
-app.use('/api', express.json());
+const chatHandler = require('./api/chat.js');
+const transcribeHandler = require('./api/transcribe.js');
 
-app.post('/api/chat', require('./api/chat.js'));
-app.get('/api/testmodels', require('./api/testmodels.js'));
+app.post('/api/chat', (req, res) => chatHandler(req, res));
+app.post('/api/transcribe', (req, res) => transcribeHandler(req, res));
 
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`AssistMe dev server running at http://localhost:${port}`);
 });

@@ -2,10 +2,11 @@ const { execSync } = require('child_process');
 
 const models = [
     'meta-llama/llama-4-scout',
-    'meta-llama/meta-llama-3.1-405b-instruct:free',
-    'microsoft/wizardlm-2-8x22b:free',
-    'huggingface/zephyr-7b-beta:free',
-    'openai/gpt-3.5-turbo:free'
+    'nvidia/nemotron-4-mini-9b-instruct',
+    'qwen/qwen3-coder-32b-a35b',
+    'openai/gpt-oss-20b',
+    'tongyi/deepresearch-30b-a3b',
+    'tng/deepseek-r1t2-chimera'
 ];
 
 const questions = [
@@ -83,7 +84,7 @@ async function testAll() {
 
             // Question 5: Nobel
             if (question.includes('Nobel Prize in Physics in 2023')) {
-                if (answer.toLowerCase().includes('izaak walton hertzberg') || answer.toLowerCase().includes('hertzberg') || answer.toLowerCase().includes('2001') || answer.toLowerCase().includes('teleportation')) qScore = 1; // Approximate check
+                if (answer.toLowerCase().includes('hertzberg') || answer.toLowerCase().includes('teleportation')) qScore = 1; // Approximate check
             }
 
             score += qScore;
