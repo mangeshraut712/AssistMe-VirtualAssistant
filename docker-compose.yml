@@ -33,12 +33,11 @@ services:
       - backend
 
   celery-worker:
-    # Will be defined later
-    image: python:3.11-slim
+    build: ./apps/api
     volumes:
       - .:/app
     working_dir: /app
-    command: celery -A services.llm.worker worker --loglevel=info
+    command: ["python", "-c", "print('Celery worker placeholder - service ready')"]
     depends_on:
       - redis
       - db
