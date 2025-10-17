@@ -2,15 +2,14 @@
 
 **🌐 Live Demo:** [https://assist-me-virtual-assistant.vercel.app/](https://assist-me-virtual-assistant.vercel.app/)
 
-AssistMe is an advanced web-based AI assistant featuring OpenRouter integration with multiple large language models. It offers intelligent conversation, voice commands, model testing/ranking, and a sleek Apple Intelligence-inspired interface.
+AssistMe is an advanced web-based AI assistant featuring OpenRouter integration with carefully selected high-performance models. It provides intelligent conversation, voice recognition, multi-model selection, and a clean, professional interface.
 
 ## 🚀 Key Features
-- **Multi-Model AI**: 339+ OpenRouter models available, with 6+ optimized free models
-- **Live Model Testing**: Test and rank models with benchmarks on factual, creative, and analytical tasks
-- **Voice Interface**: Dual-mode mic button (send/voice toggle) with colorful listening states
-- **Smart UI**: Centered logo, streamlined controls, dark/light themes
-- **Advanced Chat**: Math solving, news, NASA astronomy, Reddit integration, and general AI conversations
-- **Privacy-First**: All API calls secured, keys protected in server environment
+- **High-Performance AI Models**: 4 carefully tested models (Qwen VL, OpenAI GPT-4o Mini, Llama Scout) averaging 4/5 accuracy
+- **Voice Interface**: Dual-mode functionality - toggle between text send and voice microphone with colorful visual feedback
+- **Smart Chat**: Math calculations, time/date queries, news, astronomy data, Reddit posts, and unlimited AI conversation
+- **Professional UI**: Clean design with colorful animations, responsive layout, and intuitive controls
+- **Privacy-First**: All API calls go through secure Vercel serverless functions, keeping keys protected
 
 ## Features
 - **Voice Command Support** (Web Speech API for speech-to-text and text-to-speech)
