@@ -1,12 +1,12 @@
 const fetch = global.fetch;
 
 const models = [
-    { id: 'tongyi/deepresearch-30b-a3b', name: 'Tongyi DeepResearch 30B' },
-    { id: 'tng/deepseek-r1t2-chimera', name: 'TNG DeepSeek R1T2 Chimera' },
-    { id: 'qwen/qwen3-coder-32b-a35b', name: 'Qwen Qwen3 Coder 480B' },
-    { id: 'openai/gpt-oss-20b', name: 'OpenAI gpt-oss-20b' },
-    { id: 'nvidia/nemotron-4-mini-9b-instruct', name: 'NVIDIA Nemotron Nano 9B' },
-    { id: 'meta-llama/llama-4-scout', name: 'Meta Llama 4 Scout' }
+    { id: 'meta-llama/llama-4-scout', name: 'Meta Llama 4 Scout (Free)' },
+    { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'Meta Llama 3.1 8B (Free)' },
+    { id: 'meta-llama/llama-3.1-70b-instruct:free', name: 'Meta Llama 3.1 70B (Free)' },
+    { id: 'mistralai/mistral-7b-instruct-v0.1:free', name: 'Mistral 7B Instruct (Free)' },
+    { id: 'huggingface/zephyr-7b-beta:free', name: 'HuggingFace Zephyr 7B (Free)' },
+    { id: 'microsoft/wizardlm-2-8x22b:free', name: 'Microsoft WizardLM 2 8x22B (Free)' }
 ];
 
 const questions = [
