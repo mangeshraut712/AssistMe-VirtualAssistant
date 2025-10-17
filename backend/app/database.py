@@ -1,11 +1,11 @@
 from sqlalchemy import create_engine  # type: ignore[import]
 from sqlalchemy.ext.declarative import declarative_base  # type: ignore[import]
 from sqlalchemy.orm import sessionmaker  # type: ignore[import]
-import os
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://assistme_user:assistme_password@localhost:5432/assistme_db")
+from .settings import get_database_url
 
-engine = create_engine(DATABASE_URL)
+
+engine = create_engine(get_database_url())
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

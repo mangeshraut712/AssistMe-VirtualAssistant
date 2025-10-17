@@ -15,14 +15,15 @@ from sqlalchemy import pool  # type: ignore[import]
 
 from alembic import context  # type: ignore[import]
 
+from app.settings import get_database_url
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# Allow DATABASE_URL to override the value from alembic.ini
-sqlalchemy_url = os.getenv("DATABASE_URL")
-if sqlalchemy_url:
-    config.set_main_option("sqlalchemy.url", sqlalchemy_url)
+# Allow environment variables to override the alembic.ini value
+sqlalchemy_url = get_database_url()
+config.set_main_option("sqlalchemy.url", sqlalchemy_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

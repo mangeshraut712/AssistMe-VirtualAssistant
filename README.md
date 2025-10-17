@@ -86,7 +86,7 @@ Before trying to run the project locally, you must add your OpenRouter API key:
 
   Ensure the database is accessible and migrations are run.
 
-## Running with Docker Compose
+## Running with Docker Compose (local)
 
 1. Clone the repo and create a `secrets.env` file next to `docker-compose.yml`:
    ```bash
@@ -120,6 +120,19 @@ Before trying to run the project locally, you must add your OpenRouter API key:
    ```
 
 5. Open http://localhost:3001 in your browser and start chatting.
+
+## Deploying on Railway
+
+1. Create a new Railway project and add a **PostgreSQL** database plugin. Copy the connection string that Railway exposes (`DATABASE_URL` / `RAILWAY_DATABASE_URL`).
+2. Add a new service from this repository. In the service variables set:
+   - `OPENROUTER_API_KEY` – your OpenRouter key (required).
+   - `DATABASE_URL` – paste the PostgreSQL URL from step 1 (the code normalises `postgres://` to `postgresql://`).
+   - `APP_URL` – the public URL of your frontend (e.g. `https://assist-me-virtual-assistant.vercel.app`) so OpenRouter gets a valid referer header.
+3. Railway runs `alembic upgrade head` on deploy. Successful migrations mean the API is ready; failures usually indicate the DB URL isn’t set or reachable.
+4. Expose the API (Railway will give you a public HTTPS URL). Test it with `GET /health`.
+5. Host the static frontend (Railway Static Site or any CDN) and point it to the API URL.
+
+If migrations still fail with `could not translate host name "db"`, verify the service variable `DATABASE_URL` is set to the managed Postgres host— the default compose hostname `db` only works locally.
 
 ## Running the Backend without Docker
 
