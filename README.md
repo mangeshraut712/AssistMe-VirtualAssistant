@@ -1,7 +1,14 @@
-# AssistMe-Virtual-Assistant
-AssistMe is a web-based virtual assistant developed using HTML, CSS, and JavaScript. It provides a range of features including voice commands, current time and date display, simulated weather updates, random jokes, website opening, and comprehensive question answering for general knowledge. The app uses free APIs (Wikipedia, DuckDuckGo, Official Joke API) for accurate information without requiring API keys. It's designed for ease of use, with an Apple-inspired UI, dark mode support, and full voice input/output capabilities.
+# AssistMe Virtual Assistant
 
-The project demonstrates advanced front-end skills including asynchronous programming with fetch API, DOM manipulation, speech recognition and synthesis, local storage for preferences, and graceful error handling. It's fully self-contained and runs in any modern web browser.
+AssistMe is an advanced web-based AI assistant featuring OpenRouter integration with multiple large language models. It offers intelligent conversation, voice commands, model testing/ranking, and a sleek Apple Intelligence-inspired interface.
+
+## 🚀 Key Features
+- **Multi-Model AI**: 339+ OpenRouter models available, with 6+ optimized free models
+- **Live Model Testing**: Test and rank models with benchmarks on factual, creative, and analytical tasks
+- **Voice Interface**: Dual-mode mic button (send/voice toggle) with colorful listening states
+- **Smart UI**: Centered logo, streamlined controls, dark/light themes
+- **Advanced Chat**: Math solving, news, NASA astronomy, Reddit integration, and general AI conversations
+- **Privacy-First**: All API calls secured, keys protected in server environment
 
 ## Features
 - **Voice Command Support** (Web Speech API for speech-to-text and text-to-speech)
@@ -23,17 +30,20 @@ The project demonstrates advanced front-end skills including asynchronous progra
 - Internet connection for API calls (optional for offline features)
 - For full voice features: Serve files via HTTP (localhost) due to browser security policies
 
-## Installation and Usage
-1. **Download the Files**: Ensure you have `index.HTML`, `style.css`, and `script.js` in the same directory.
-2. **Run the Application**:
-   - **Option 1 (Recommended for full features)**: Serve via local HTTP server to enable speech features.
-     - Using Python: Run `python3 -m http.server 8000` (or `python -m http.server` if using Python 2)
-     - Open `http://localhost:8000/index.HTML` in your browser.
-   - **Option 2 (Basic features only)**: Open `index.HTML` directly in browser (speech features may not work).
-3. **Interact with AssistMe**:
-   - Type commands in the input field or use the microphone button for voice input.
-   - Toggle voice output with the "Voice" checkbox.
-   - Use the dark mode button (moon/sun icon) to switch themes.
+## 🚀 Quick Start
+
+### Option 1: Vercel Deployment (Recommended)
+1. Import to Vercel from GitHub repo
+2. Add `OPENROUTER_API_KEY` in Vercel Environment Variables
+3. Deploy - app runs at `https://your-app.vercel.app`
+4. Features working: AI chat (any model), voice, testing, all secure
+
+### Option 2: Local Development
+1. **Clone repo**: `git clone https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git`
+2. **Set up API key**: `export OPENROUTER_API_KEY=your_key_here`
+3. **Run server**: `npm install && node server.js`
+4. **Open app**: `http://localhost:8000`
+5. **Note**: Set the API key for full AI features. Without it, basic commands work but AI responses will fail.
 
 ## Command Examples
 - Basic Replies: "hello", "hi", "who are you", "what are you"
@@ -44,14 +54,26 @@ The project demonstrates advanced front-end skills including asynchronous progra
 - General Knowledge: "who is [person]?", "what is [topic]?", "when was [event]?", etc.
 - Any general question not covered above will be answered using online knowledge bases.
 
-## Architecture
-- **index.HTML**: Main interface with chat layout and form elements
-- **style.css**: Apple-inspired CSS with CSS variables for light/dark themes
-- **script.js**: Main logic including command parsing, API integration, and speech handling
-  - Supports exact string matches and keyword includes for command recognition
-  - Prioritizes hardcoded answers for accuracy on common queries
-  - Falls back to Wikipedia/DuckDuckGo APIs for unknown questions
-  - Uses SpeechRecognition for voice input and SpeechSynthesis for output
+## 📂 Project Structure
+- **index.HTML**: Main interface with centered logo, chat layout, and controls
+- **style.css**: Apple Intelligence-inspired CSS with colorful icons and themes
+- **script.js**: Frontend logic for chat, voice dual-mode, commands, and API calls
+- **api/testmodels.js**: Backend endpoint for testing and ranking AI models
+- **server.js**: Express server for local development and API routing
+- **.gitignore**: Excludes node_modules, Vercel files, and sensitive env vars
+
+## 🎯 How It Works
+1. **Model Selection**: Choose from pre-tested free models or test all models live
+2. **Smart Responses**: Commands get instant replies, questions use selected AI model
+3. **Voice Toggle**: Double-click mic to switch between send mode (paper-plane) and voice mode (microphone)
+4. **Testing**: "Test Models" button runs performance benchmarks and updates rankings
+5. **Security**: API keys protected in environment, no client-side exposure
+
+## 🤖 Model Testing
+- Tests 6+ models on factual accuracy, creative writing, and reasoning
+- Ranks models: Llama 4 Scout, Llama 3.1 variants, Mistral, HuggingFace, Microsoft (free priority)
+- Benchmarks: Capital cities, math problems, poems, quantum computing, Nobel prizes
+- Returns scored rankings: higher scores = better performance
 
 ## Supported Commands and Responses
 The app recognizes various phrasings of commands and provides accurate responses. For general questions, it leverages free APIs to ensure up-to-date and correct information.
