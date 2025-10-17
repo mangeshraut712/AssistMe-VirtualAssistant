@@ -16,7 +16,7 @@ fi
 
 # Start the server with proper port handling
 echo "⚡ Starting FastAPI server on port ${PORT:-8000}..."
-echo "📡 Railway URL: https://assistme-virtualassistant.up.railway.app"
+echo "📡 Railway URL: https://assistme-virtualassistant-production.up.railway.app"
 
 # Use Railway's PORT environment variable or default
 PORT=${PORT:-8000}
