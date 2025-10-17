@@ -8,30 +8,122 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            <h1>AssistMe</h1>
-            <div class="controls">
-                <button id="darkModeToggle" aria-label="Toggle dark mode">
+    <div class="app-shell">
+        <header class="top-bar">
+            <div class="brand">
+                <span class="brand-name">AssistMe</span>
+                <span class="model-tag">OpenRouter Gateway</span>
+            </div>
+            <div class="top-controls">
+                <div class="model-select-wrapper">
+                    <label class="sr-only" for="modelSelect">Choose AI model</label>
+                    <select id="modelSelect" class="model-select" aria-label="Choose AI model">
+                        <option value="tongyi/deepresearch-30b-a3b">Tongyi: DeepResearch 30B A3B (Ranked 1 - Excellent for research questions)</option>
+                        <option value="tng/deepseek-r1t2-chimera">TNG: DeepSeek R1T2 Chimera (Ranked 2 - Strong reasoning and analysis)</option>
+                        <option value="qwen/qwen3-coder-32b-a35b">Qwen: Qwen3 Coder 480B A35B (Ranked 3 - Best for coding and technical tasks)</option>
+                        <option value="openai/gpt-oss-20b">OpenAI: gpt-oss-20b (Ranked 4 - General purpose conversation)</option>
+                        <option value="nvidia/nemotron-4-mini-9b-instruct">NVIDIA: Nemotron Nano 9B V2 (Ranked 5 - Good general responses)</option>
+                        <option value="meta-llama/llama-4-scout">Meta: Llama 4 Scout (Ranked 6 - Basic functionality)</option>
+                    </select>
+                </div>
+                <label class="toggle-item">
+                    <input type="checkbox" id="voiceToggle" checked>
+                    <span>Voice</span>
+                </label>
+                <button id="stopVoiceBtn" class="ghost-btn" aria-label="Stop speaking">
+                    <i class="fas fa-volume-xmark"></i>
+                </button>
+                <button id="architectureBtn" class="ghost-btn" aria-label="View architecture">
+                    <i class="fas fa-diagram-project"></i>
+                </button>
+                <button id="darkModeToggle" class="ghost-btn" aria-label="Toggle dark mode">
                     <i class="fas fa-moon"></i>
                 </button>
-                <label>
-                    <input type="checkbox" id="voiceToggle" checked>
-                    Voice
-                </label>
-                <button id="stopVoiceBtn">Stop</button>
             </div>
-        </div>
-        <div class="chat-history" id="chat-history">
-            <!-- Messages will be dynamically inserted here -->
-        </div>
-        <div class="chat-input-area">
-            <input type="text" id="commandInput" placeholder="Message AssistMe..." autocomplete="off">
-            <button id="speakButton" aria-label="Use microphone">
-                <i class="fas fa-microphone"></i>
+        </header>
+
+        <main class="conversation-wrapper">
+            <div class="conversation" id="chat-history">
+                <!-- Messages will be dynamically inserted here -->
+            </div>
+        </main>
+
+        <footer class="composer">
+            <div class="composer-inner">
+                <div class="composer-actions">
+                    <button class="ghost-btn" aria-label="Insert attachment" disabled>
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <textarea id="commandInput" placeholder="Message AssistMe..." rows="1" autocomplete="off"></textarea>
+                <div class="composer-controls">
+                    <button id="recordButton" class="ghost-btn" aria-label="Start recording">
+                        <i class="fas fa-circle"></i>
+                    </button>
+                    <button id="speakButton" class="ghost-btn" aria-label="Use microphone for command">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                </div>
+            </div>
+            <p class="composer-hint">AssistMe can make mistakes. Check important info.</p>
+        </footer>
+    </div>
+
+    <div id="architectureModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="architectureTitle">
+        <div class="modal-backdrop" data-close-modal></div>
+        <div class="modal-content" role="document">
+            <button class="modal-close" data-close-modal aria-label="Close architecture view">
+                <i class="fas fa-xmark"></i>
             </button>
+            <header class="modal-header">
+                <div>
+                    <h2 id="architectureTitle">AssistMe Intelligence Stack</h2>
+                    <p class="modal-subtitle">Inspired by Apple Intelligence orchestration</p>
+                </div>
+                <span class="badge">Architecture</span>
+            </header>
+            <div class="modal-body">
+                <section>
+                    <h3>Systemwide Experiences</h3>
+                    <p>Voice commands, chat replies, and transcription features share the same assistant pipeline. Speech recognition stays in-browser, while chat, summarisation, and transformations leverage OpenRouter-hosted models.</p>
+                </section>
+                <section>
+                    <h3>Personal Intelligence System</h3>
+                    <div class="modal-grid">
+                        <article>
+                            <h4>Semantic Index</h4>
+                            <p>The client keeps recent conversation context and user preferences (voice + model selection) locally, enabling quick follow-ups with minimal network hops.</p>
+                        </article>
+                        <article>
+                            <h4>App Intents Toolbox</h4>
+                            <p>Command handlers route to weather, news, jokes, or AI completions. Each intent decides whether it can resolve on-device or needs the OpenRouter gateway.</p>
+                        </article>
+                    </div>
+                </section>
+                <section>
+                    <h3>On-Device Intelligence Stack</h3>
+                    <div class="modal-grid">
+                        <article>
+                            <h4>Language</h4>
+                            <p>Web Speech API handles recognition, while math.js evaluates arithmetic locally for instant responses.</p>
+                        </article>
+                        <article>
+                            <h4>Audio</h4>
+                            <p>MediaRecorder captures microphone input; audio blobs stay local until transcription is explicitly requested.</p>
+                        </article>
+                    </div>
+                </section>
+                <section>
+                    <h3>Private Cloud Compute</h3>
+                    <p>Serverless routes invoke OpenRouter models such as Llama 4 Scout or Nemotron 9B. Requests pass through our `/api/chat` and `/api/transcribe` endpoints, keeping the API key within Vercel.</p>
+                </section>
+            </div>
+            <footer class="modal-footer">
+                <p>AssistMe balances instant on-device actions with privacy-conscious cloud calls, mirroring the layered design of Apple Intelligence.</p>
+            </footer>
         </div>
     </div>
+
     <script src="mathjs.js"></script>
     <script src="script.js" defer></script>
 </body>

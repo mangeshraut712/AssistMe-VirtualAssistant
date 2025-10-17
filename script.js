@@ -5,11 +5,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatHistory = document.getElementById('chat-history');
     const voiceToggle = document.getElementById('voiceToggle');
     const stopVoiceBtn = document.getElementById('stopVoiceBtn');
+    const recordButton = document.getElementById('recordButton');
     const darkModeToggle = document.getElementById('darkModeToggle');
+    const modelSelect = document.getElementById('modelSelect');
+    const architectureBtn = document.getElementById('architectureBtn');
+    const architectureModal = document.getElementById('architectureModal');
 
     // --- API Keys & Configuration ---
     const NEWS_API_KEY = '7c0f446a765249edab2c14df05956792'; // Replace with your key
     const NASA_API_KEY = 'AADXc64v1KehekFRHPZeqvR0mdD1DPwpSLUEsXhn'; // Replace with your key
+    const DEFAULT_MODEL = 'meta-llama/llama-4-scout';
 
     // --- Initial Check ---
     if (!commandInput || !speakButton || !chatHistory) {
@@ -19,6 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+    const supportsMediaRecorder = !!(navigator.mediaDevices && window.MediaRecorder);
+
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let microphoneStream = null;
+    let isRecording = false;
 
     if (!recognition) {
         speakButton.disabled = true;
@@ -38,12 +49,28 @@ document.addEventListener('DOMContentLoaded', () => {
         speechSynthesis.cancel();
     });
 
+    if (recordButton) {
+        if (!supportsMediaRecorder) {
+            recordButton.disabled = true;
+            recordButton.title = 'Audio recording is not supported in this browser.';
+        } else {
+            recordButton.addEventListener('click', async () => {
+                if (isRecording) {
+                    stopRecording();
+                } else {
+                    await startRecording();
+                }
+            });
+        }
+    }
+
     recognition.onend = () => speakButton.classList.remove('listening');
     recognition.onerror = (event) => addMessageToChat('AssistMe', `Speech Error: ${event.error}. Please check microphone permissions.`);
     recognition.onresult = (event) => handleCommand(event.results[0][0].transcript);
 
     commandInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' && commandInput.value.trim()) {
+        if (event.key === 'Enter' && !event.shiftKey && commandInput.value.trim()) {
+            event.preventDefault();
             handleCommand(commandInput.value.trim());
         }
     });
@@ -56,6 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (savedMode === 'dark') {
             darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
         }
+    } else {
+        body.classList.add('dark');
+        darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        localStorage.setItem('theme', 'dark');
     }
     darkModeToggle.addEventListener('click', () => {
         body.classList.toggle('dark');
@@ -63,6 +94,57 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('theme', theme);
         darkModeToggle.innerHTML = theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     });
+
+    const adjustInputHeight = () => {
+        commandInput.style.height = 'auto';
+        const maxHeight = 240;
+        commandInput.style.height = `${Math.min(commandInput.scrollHeight, maxHeight)}px`;
+    };
+
+    adjustInputHeight();
+    commandInput.addEventListener('input', adjustInputHeight);
+
+    if (modelSelect) {
+        const savedModel = localStorage.getItem('assistme:model');
+        if (savedModel) {
+            const optionExists = Array.from(modelSelect.options).some((opt) => opt.value === savedModel);
+            if (optionExists) {
+                modelSelect.value = savedModel;
+            }
+        }
+        modelSelect.addEventListener('change', () => {
+            localStorage.setItem('assistme:model', modelSelect.value);
+        });
+    }
+
+    if (architectureBtn && architectureModal) {
+        const openModal = () => {
+            architectureModal.classList.add('open');
+            architectureModal.setAttribute('aria-hidden', 'false');
+            setTimeout(() => {
+                const focusable = architectureModal.querySelector('button[data-close-modal]');
+                focusable?.focus();
+            }, 10);
+        };
+
+        const closeModal = () => {
+            architectureModal.classList.remove('open');
+            architectureModal.setAttribute('aria-hidden', 'true');
+            architectureBtn.focus();
+        };
+
+        architectureBtn.addEventListener('click', openModal);
+
+        architectureModal.querySelectorAll('[data-close-modal]').forEach((element) => {
+            element.addEventListener('click', closeModal);
+        });
+
+        architectureModal.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+    }
 
     function addMessageToChat(sender, text, isThinking = false) {
         const messageDiv = document.createElement('div');
@@ -106,9 +188,140 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function startRecording() {
+        if (!supportsMediaRecorder || !recordButton) return;
+
+        try {
+            microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(microphoneStream);
+            recordedChunks = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onerror = (event) => {
+                console.error('MediaRecorder error:', event.error);
+                speakAndDisplay('Sorry, something went wrong while recording audio.');
+                resetRecordingState();
+            };
+
+            mediaRecorder.onstop = async () => {
+                const blob = recordedChunks.length
+                    ? new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' })
+                    : null;
+
+                resetRecordingState();
+
+                if (blob && blob.size > 0) {
+                    await transcribeAudio(blob);
+                } else {
+                    speakAndDisplay('I could not capture any audio. Please try again.');
+                }
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            updateRecordButton(true);
+            addMessageToChat('AssistMe', 'Recording... speak now!');
+        } catch (error) {
+            console.error('Unable to access microphone:', error);
+            speakAndDisplay('I could not access the microphone. Please check your permissions and try again.');
+            resetRecordingState();
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+        }
+    }
+
+    function resetRecordingState() {
+        if (microphoneStream) {
+            microphoneStream.getTracks().forEach((track) => track.stop());
+            microphoneStream = null;
+        }
+        mediaRecorder = null;
+        recordedChunks = [];
+        isRecording = false;
+        updateRecordButton(false);
+    }
+
+    function updateRecordButton(isActive) {
+        if (!recordButton) return;
+        recordButton.classList.toggle('recording', isActive);
+        const icon = recordButton.querySelector('i');
+        if (!icon) return;
+        if (isActive) {
+            icon.classList.remove('fa-circle');
+            icon.classList.add('fa-stop');
+        } else {
+            icon.classList.add('fa-circle');
+            icon.classList.remove('fa-stop');
+        }
+    }
+
+    async function transcribeAudio(audioBlob) {
+        addMessageToChat('AssistMe', 'Processing your recording...', true);
+
+        try {
+            const base64Audio = await blobToBase64(audioBlob);
+            const mimeType = (audioBlob.type || 'audio/webm').split(';')[0];
+
+            const response = await fetch('/api/transcribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    audioBase64: base64Audio,
+                    mimeType
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Transcription API error (${response.status}): ${errorText}`);
+            }
+
+            const data = await response.json();
+            const transcription = (data.text || data.transcription || data.result || '').trim();
+
+            if (transcription) {
+                speakAndDisplay(transcription);
+            } else {
+                throw new Error('No transcription returned from OpenRouter.');
+            }
+        } catch (error) {
+            console.error('Audio transcription failed:', error);
+            speakAndDisplay('Sorry, I could not transcribe that recording. Please try again.');
+        }
+    }
+
+    function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const result = reader.result;
+                if (typeof result === 'string') {
+                    const base64 = result.split(',')[1];
+                    resolve(base64);
+                } else {
+                    reject(new Error('Unable to convert audio blob to base64.'));
+                }
+            };
+            reader.onerror = () => reject(reader.error || new Error('Unknown FileReader error.'));
+            reader.readAsDataURL(blob);
+        });
+    }
+
     async function handleCommand(command) {
         addMessageToChat('user', command);
         commandInput.value = '';
+        adjustInputHeight();
         await processCommand(command.toLowerCase().trim());
     }
 
@@ -131,43 +344,47 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("Math evaluation failed, trying APIs.");
         }
 
-        // 2. Use a generic knowledge API for other questions
-        const searchQuery = query.replace(/[.?!\s]+$/, '');
-        const duckduckgoUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(searchQuery)}&format=json&no_html=1&t=AssistMe`;
+        await fetchAICompletion(query);
+    }
 
+    async function fetchAICompletion(prompt) {
         try {
-            const response = await fetch(duckduckgoUrl);
+            const selectedModel = (modelSelect && modelSelect.value) || DEFAULT_MODEL;
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: selectedModel,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are AssistMe, a helpful and concise virtual assistant embedded in a web app. Provide accurate answers and, when relevant, suggest follow-up actions.'
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ]
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`AI API error (${response.status}): ${errorText}`);
+            }
+
             const data = await response.json();
-
-            // Prioritize Answer, then AbstractText, then Definition
-            let answer = data.Answer || data.AbstractText || data.Definition;
-
-            if (answer) {
-                // Clean up DuckDuckGo's source links if they exist
-                answer = answer.replace(/<a href=.*?>.*?<\/a>/g, '').trim();
-                speakAndDisplay(answer);
-                return;
+            const message = data.text || data.message || data.output || data.choices?.[0]?.message?.content || '';
+            if (message.trim()) {
+                speakAndDisplay(message.trim());
+            } else {
+                throw new Error('Model returned an empty response.');
             }
-
-            // 3. Fallback to Wikipedia if DuckDuckGo fails
-            const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchQuery)}`;
-            const wikiResponse = await fetch(wikiUrl);
-            const wikiData = await wikiResponse.json();
-
-            if (wikiData.extract && !wikiData.type.includes('disambiguation')) {
-                // Return the first one or two sentences for a concise summary
-                const sentences = wikiData.extract.split('. ');
-                const shortSummary = sentences[0] + (sentences[1] ? '. ' + sentences[1] : '') + '.';
-                speakAndDisplay(shortSummary);
-                return;
-            }
-
-            // 4. If all APIs fail, give a generic response
-            throw new Error('No answer found from any API.');
-
         } catch (error) {
-            console.error("API fetch error:", error);
-            speakAndDisplay(`Sorry, I couldn't find information for "${query}". Please try rephrasing.`);
+            console.error('AI completion failed:', error);
+            speakAndDisplay(`Sorry, I ran into a problem getting an AI response. ${error.message || ''}`.trim());
         }
     }
 
@@ -328,6 +545,43 @@ document.addEventListener('DOMContentLoaded', () => {
             handler: async (command, matches) => {
                 const subreddit = matches[1].trim();
                 if (subreddit) await getReddit(subreddit);
+            }
+        },
+        {
+            keywords: ['test models', 'rank models'],
+            handler: async () => {
+                addMessageToChat('AssistMe', 'Testing and ranking models...', true);
+
+                try {
+                    const response = await fetch('/api/testmodels');
+                    if (!response.ok) {
+                        throw new Error(`API error (${response.status}): ${await response.text()}`);
+                    }
+                    const data = await response.json();
+                    const results = data.results;
+
+                    let summary = 'Model Rankings (based on test questions):\n';
+                    results.forEach((result, index) => {
+                        summary += `${index + 1}. ${result.model} - Score: ${result.score}/${data.questionsCount}\n`;
+                    });
+                    speakAndDisplay(summary);
+
+                    // Update model select with ranked options
+                    const modelSelect = document.getElementById('modelSelect');
+                    if (modelSelect) {
+                        modelSelect.innerHTML = '';
+                        results.forEach((result, index) => {
+                            const option = document.createElement('option');
+                            option.value = result.id;
+                            option.textContent = `Rank ${index + 1}: ${result.model} (Score: ${result.score}/${data.questionsCount})`;
+                            modelSelect.appendChild(option);
+                        });
+                        localStorage.setItem('assistme:model', results[0].id); // Default to top ranked
+                        modelSelect.value = results[0].id;
+                    }
+                } catch (error) {
+                    speakAndDisplay(`Sorry, I couldn't test the models: ${error.message}`);
+                }
             }
         }
     ];

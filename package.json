@@ -1,0 +1,24 @@
+{
+  "name": "assistme-virtualassistant",
+  "version": "1.0.0",
+  "description": "AssistMe is a web-based virtual assistant developed using HTML, CSS, and JavaScript. It provides a range of features including voice commands, current time and date display, simulated weather updates, random jokes, website opening, and comprehensive question answering for general knowledge. The app uses free APIs (Wikipedia, DuckDuckGo, Official Joke API) for accurate information without requiring API keys. It's designed for ease of use, with an Apple-inspired UI, dark mode support, and full voice input/output capabilities.",
+  "main": "mathjs.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues"
+  },
+  "homepage": "https://github.com/mangeshraut712/AssistMe-VirtualAssistant#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
