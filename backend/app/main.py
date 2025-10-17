@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket, Depends, HTTPException  # type: ignore[import]
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import]
-from pydantic.v1 import BaseModel  # type: ignore[import]
+from pydantic import BaseModel  # type: ignore[import]
 from typing import List, Optional
 import logging
 from sqlalchemy.orm import Session  # type: ignore[import]
