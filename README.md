@@ -2,6 +2,12 @@
 
 AssistMe is a sophisticated AI chat experience featuring an exact ChatGPT.com-inspired UI with advanced metadata display, conversation management, and a robust FastAPI backend that proxies requests to OpenRouter. It includes modern features like response metadata, voice input, file uploads, and comprehensive benchmarking tools.
 
+## Demo
+
+Try the live demo: [https://assist-me-virtual-assistant.vercel.app/](https://assist-me-virtual-assistant.vercel.app/)
+
+Note: The demo frontend points to a local backend by default. For a fully functional online experience, set up the backend API with your own OpenRouter API key.
+
 ## Project Structure
 
 ```
@@ -34,6 +40,34 @@ assistme-virtual-assistant/
 - Docker and Docker Compose (recommended for the full stack)
 - Python 3.11+ (if running the backend without Docker)
 - An OpenRouter API key (`https://openrouter.ai/`)
+
+## API Key Setup
+
+### For Local Development
+
+Before trying to run the project locally, you must add your OpenRouter API key:
+
+1. Get an API key from https://openrouter.ai/
+
+2. Create a `secrets.env` file in the root directory:
+
+   ```bash
+   echo "OPENROUTER_API_KEY=sk-or-v1-your-actual-api-key" > secrets.env
+   ```
+
+   Or use the provided `.env.example` as a template.
+
+### For Online/Deployment Users
+
+- **Vercel (Frontend only)**: The frontend is automatically deployed. To connect to a backend, update the `ASSISTME_API_BASE` variable in `frontend/script.js` to your deployed backend API URL (e.g., your FastAPI server URL).
+
+- **Docker FastAPI Backend**: When deploying the backend, set the `OPENROUTER_API_KEY` environment variable or mount a secrets file. For example:
+
+  ```bash
+  docker run -e OPENROUTER_API_KEY=your-key your-backend-image
+  ```
+
+  Ensure the database is accessible and migrations are run.
 
 ## Running with Docker Compose
 
@@ -90,6 +124,8 @@ Run a local PostgreSQL instance (Docker or native) before starting the API.
 ## Frontend Development
 
 The UI is plain HTML/CSS/JS. Open `frontend/index.html` directly or serve the directory through your favourite static server. The script automatically points to `http://localhost:8001` when running on `localhost`.
+
+For production deployment, update the `ASSISTME_API_BASE` variable in `frontend/script.js` to match your deployed backend API URL (e.g., `https://your-backend-api.com`).
 
 ## ✨ **New Features in Latest Release**
 
