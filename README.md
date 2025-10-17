@@ -129,7 +129,16 @@ For production deployment, update the `ASSISTME_API_BASE` variable in `frontend/
 
 ## Backend Deployment
 
-To deploy the FastAPI backend with Docker to use live features, follow these steps:
+The purpose of the Docker FastAPI backend is to handle AI requests securely server-side, keeping the OpenRouter API key protected (not exposed in client code). The frontend makes HTTP requests to the backend API, which then proxies to OpenRouter.
+
+This provides several benefits:
+- **Security**: API keys are not hardcoded in client-side JavaScript.
+- **Features**: Enables voice input, file uploads, conversation persistence, and all interactive AI features.
+- **Scalability**: Backend can handle rate limits, caching, and database persistence.
+
+Vercel environment variables cannot be used for the API key in a secure way for this architecture, as the backend runs separately. The API key must be set in the backend deployment environment.
+
+## Backend Deployment
 
 ### 1. Build and Run Backend Container Locally (for testing)
 
@@ -190,13 +199,31 @@ Ensure your deployed backend has access to a PostgreSQL database (e.g., Supabase
 
 ## Publishing the Website
 
-### Frontend (Already Deployed on Vercel)
+### Frontend Deployment Options
 
-The frontend automatically deploys to Vercel from the GitHub repo. Ensure the `ASSISTME_API_BASE` in `script.js` points to your live backend URL. Vercel handles static deployment using the `vercel.json` config.
+You do **not need Vercel** to publish the site. Vercel is just one free option; you can publish the frontend anywhere static sites are supported.
+
+#### Vercel (Current Setup):
+- Automatically deploys from GitHub repo.
+- Ensure `ASSISTME_API_BASE` in `script.js` points to your live backend URL.
+- Uses `vercel.json` config for output directory.
+
+#### Alternative Platforms (Vercel not required):
+- **GitHub Pages**: Free, no custom domain cost. Serve with any static server.
+- **Netlify**: Free tier available, drag-and-drop deploy.
+- **Render**: Free static site hosting.
+- **AWS S3 + CloudFront**: Low cost, global CDN.
+- **Firebase Hosting**: Free tier for small sites.
+
+For any static host:
+1. Upload the `frontend/` folder contents.
+2. Update `ASSISTME_API_BASE` in `script.js` to your deployed backend URL.
+
+**Note**: No API key is needed in the frontend; it remains secure in the backend.
 
 ### Backend
 
-Follow the deployment steps above to publish the backend API.
+Follow the deployment steps above to publish the backend API to platforms like Fly.io, Railway, Heroku, or AWS ECS.
 
 ## ✨ **New Features in Latest Release**
 
