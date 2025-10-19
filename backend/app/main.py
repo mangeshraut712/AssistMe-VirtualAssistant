@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import]
 from pydantic import BaseModel  # type: ignore[import]
 from typing import List, Optional
 import logging
+import os
 from sqlalchemy.orm import Session  # type: ignore[import]
 from starlette.concurrency import run_in_threadpool  # type: ignore[import]
 from .chat_client import grok_client
@@ -147,4 +148,7 @@ async def voice_chat(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn  # type: ignore[import]
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+
+    # Respect platform-provided PORT (e.g. Railway/Render); fall back to local default
+    port = int(os.getenv("PORT", "8001"))
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
