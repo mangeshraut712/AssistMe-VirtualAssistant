@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine  # type: ignore[import]
-from sqlalchemy.ext.declarative import declarative_base  # type: ignore[import]
-from sqlalchemy.orm import sessionmaker  # type: ignore[import]
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 from .settings import get_database_url
 

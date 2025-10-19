@@ -1,5 +1,5 @@
 import os
-import requests  # type: ignore[import]
+import requests
 import logging
 
 class Grok2Client:

@@ -10,10 +10,10 @@ for path in (PROJECT_ROOT, BACKEND_DIR, APP_DIR):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from sqlalchemy import engine_from_config  # type: ignore[import]
-from sqlalchemy import pool  # type: ignore[import]
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
 
-from alembic import context  # type: ignore[import]
+from alembic import context
 
 from app.settings import get_database_url
 

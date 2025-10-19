@@ -147,7 +147,7 @@ async def voice_chat(websocket: WebSocket):
         await websocket.close()
 
 if __name__ == "__main__":
-    import uvicorn  # type: ignore[import]
+    import uvicorn
 
     # Respect platform-provided PORT (e.g. Railway/Render); fall back to local default
     port = int(os.getenv("PORT", "8001"))
