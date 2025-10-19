@@ -808,6 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function sendVoiceTranscript(transcript) {
         showTypingIndicator();
+        const requestStartTime = Date.now();
 
         try {
             const conversationIdForPayload = getConversationIdForPayload();
@@ -826,6 +827,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
+
+            const responseEndTime = Date.now();
+            const runtime = responseEndTime - requestStartTime;
 
             if (!response.ok) {
                 throw new Error(`API error ${response.status}`);
