@@ -29,5 +29,9 @@ def get_database_url() -> str:
 def _normalise_db_url(url: str) -> str:
     """Ensure SQLAlchemy can consume the URL."""
     if url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql://", 1)
+        url = url.replace("postgres://", "postgresql://", 1)
+
+    # Add pg8000 driver for PostgreSQL URLs if not specified
+    if url.startswith("postgresql://") and "pg8000" not in url:
+        return url.replace("postgresql://", "postgresql+pg8000://", 1)
     return url
