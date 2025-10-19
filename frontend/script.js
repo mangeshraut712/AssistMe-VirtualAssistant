@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const API_BASE =
         window.ASSISTME_API_BASE ||
-        (location.hostname === 'localhost' ? 'http://localhost:8001' : 'https://assistme-backend.onrender.com '); // TODO: Replace with actual deployed backend URL
+        (location.hostname === 'localhost' ? 'http://localhost:8001' : '{{REPLACE_WITH_PRODUCTION_BACKEND_URL}}'); // Configure via NEXT_PUBLIC_API_BASE_URL environment variable in Vercel
 
     const endpoints = {
         chat: `${API_BASE}/api/chat/text`,
