@@ -14,7 +14,7 @@ if db_url:
     Base = declarative_base()
 
     # Import models to register them with SQLAlchemy for auto table creation
-    import_module(".models", package=__name__)
+    import app.models  # Register tables with SQLAlchemy
     Base.metadata.create_all(bind=engine)  # type: ignore  # Create tables automatically
 
 else:
