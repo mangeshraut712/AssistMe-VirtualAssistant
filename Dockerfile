@@ -13,4 +13,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8001
 
-CMD ./backend/start.sh
+CMD ./start.sh
