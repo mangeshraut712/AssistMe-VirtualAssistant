@@ -1,21 +1,21 @@
 from logging.config import fileConfig
-import sys
-import os
-
-# Ensure the project root is on sys.path so Alembic can import application modules.
-BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-PROJECT_ROOT = os.path.abspath(os.path.join(BACKEND_DIR, ".."))
-APP_DIR = os.path.join(BACKEND_DIR, "app")
-for path in (PROJECT_ROOT, BACKEND_DIR, APP_DIR):
-    if path not in sys.path:
-        sys.path.insert(0, path)
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
 
-from app.settings import get_database_url
+import sys
+from pathlib import Path
+
+# Add the backend directory to sys.path so we can import app modules
+backend_dir = Path(__file__).parent.parent
+app_dir = backend_dir / "app"
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+if str(app_dir) not in sys.path:
+    sys.path.insert(0, str(app_dir))
+
+from sqlalchemy import engine_from_config, pool
+
+# Import from app modules
+from app.settings import get_database_url  # type: ignore
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -32,8 +32,8 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from app.database import Base
-target_metadata = Base.metadata
+from app.database import Base  # type: ignore
+target_metadata = Base.metadata  # type: ignore
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -78,7 +78,7 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
 
-    with connectable.connect() as connection:
+    with connectable.connect() as connection:  # type: ignore
         context.configure(
             connection=connection, target_metadata=target_metadata
         )

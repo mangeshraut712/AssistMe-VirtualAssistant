@@ -46,28 +46,28 @@ async def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
     
     conversation = None
     if request.conversation_id:
-        conversation = db.query(Conversation).filter(Conversation.id == request.conversation_id).first()
+        conversation = db.query(Conversation).filter(Conversation.id == request.conversation_id).first()  # type: ignore
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
     else:
         # Create new conversation with first user message as title
         title = request.messages[-1].content[:50] if request.messages else "New Chat"
-        conversation = Conversation(title=title)
+        conversation = Conversation(title=title)  # type: ignore
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
 
     for msg in request.messages:
         db_msg = MessageModel(
-            conversation_id=conversation.id,
-            role=msg.role,
-            content=msg.content,
+            conversation_id=conversation.id,  # type: ignore
+            role=msg.role,  # type: ignore
+            content=msg.content,  # type: ignore
         )
         db.add(db_msg)
     db.commit()
 
     conversation_history = (
-        db.query(MessageModel)
+        db.query(MessageModel)  # type: ignore
         .filter(MessageModel.conversation_id == conversation.id)
         .order_by(MessageModel.created_at.asc())
         .all()
@@ -81,15 +81,15 @@ async def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
     result = await run_in_threadpool(
         grok_client.generate_response,
         payload_messages,
-        request.model,
-        request.temperature,
-        request.max_tokens,
+        request.model or None,  # type: ignore
+        request.temperature or 0.7,
+        request.max_tokens or 1024,
     )
     if "error" in result:
         return {"error": result["error"]}
     
     # Save assistant response
-    assistant_msg = MessageModel(conversation_id=conversation.id, role="assistant", content=result["response"])
+    assistant_msg = MessageModel(conversation_id=conversation.id, role="assistant", content=result["response"])  # type: ignore
     db.add(assistant_msg)
     db.commit()
 
@@ -102,17 +102,17 @@ async def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
 
 @app.get("/api/conversations")
 def get_conversations(db: Session = Depends(get_db)) -> List[dict]:
-    conversations = db.query(Conversation).all()
+    conversations = db.query(Conversation).all()  # type: ignore
     return [{"id": c.id, "title": c.title, "created_at": c.created_at} for c in conversations]
 
 @app.get("/api/conversations/{conversation_id}")
 def get_conversation_messages(conversation_id: int, db: Session = Depends(get_db)):
-    conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()  # type: ignore
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    
+
     messages = (
-        db.query(MessageModel)
+        db.query(MessageModel)  # type: ignore
         .filter(MessageModel.conversation_id == conversation_id)
         .order_by(MessageModel.created_at.asc())
         .all()

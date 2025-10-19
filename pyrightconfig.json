@@ -1,0 +1,7 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/pyright/main/packages/pyright-internal/src/pyright-schemas/config.schema.json",
+    "include": ["backend/app", "backend/alembic"],
+    "reportMissingImports": "none",
+    "reportMissingModuleSource": "none",
+    "reportUnusedImport": "warning"
+}

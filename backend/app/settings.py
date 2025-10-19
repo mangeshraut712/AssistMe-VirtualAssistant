@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import os
-from functools import lru_cache
 
 
-@lru_cache(maxsize=1)
 def get_database_url() -> str:
     """Resolve the database URL from environment variables.
 
@@ -32,5 +30,7 @@ def _normalise_db_url(url: str) -> str:
         url = url.replace("postgres://", "postgresql://", 1)
 
     if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+        scheme, rest = url.split("://", 1)
+        if "+" not in scheme:
+            return "postgresql+psycopg://" + rest
     return url
