@@ -46,7 +46,7 @@ class TextChatRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "assistme-api", "database": "available" if get_database_url() else "not configured"}
+    return {"status": "ok", "service": "assistme-api", "version": "1.0.0", "timestamp": datetime.now().isoformat()}
 
 @app.get("/")
 def root():
