@@ -23,7 +23,7 @@ def get_database_url() -> str:
             return _normalise_db_url(url)
 
     # Local default (docker-compose)
-    return "postgresql://assistme_user:assistme_password@db:5432/assistme_db"
+    return "postgresql+psycopg://assistme_user:assistme_password@db:5432/assistme_db"
 
 
 def _normalise_db_url(url: str) -> str:
@@ -31,7 +31,6 @@ def _normalise_db_url(url: str) -> str:
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
 
-    # Add pg8000 driver for PostgreSQL URLs if not specified
-    if url.startswith("postgresql://") and "pg8000" not in url:
-        return url.replace("postgresql://", "postgresql+pg8000://", 1)
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
     return url

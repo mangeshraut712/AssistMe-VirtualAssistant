@@ -2,7 +2,7 @@
 fastapi==0.100.1
 uvicorn==0.23.2
 sqlalchemy==1.4.52
-pg8000==1.31.2
+psycopg2-binary==2.9.9
 alembic==1.11.3
 pydantic==1.10.13
 requests==2.31.0
