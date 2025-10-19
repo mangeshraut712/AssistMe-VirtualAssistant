@@ -15,7 +15,7 @@ app = FastAPI(title="AssistMe API", version="1.0.0")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify frontend domain
+    allow_origins=["http://localhost:3000", "https://assist-me-virtual-assistant.vercel.app"],  # Frontend domains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
