@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const API_BASE =
         window.ASSISTME_API_BASE ||
-        (location.hostname === 'localhost' ? 'http://localhost:8001' : 'https://assistme-backend.onrender.com'); // TODO: Replace with actual deployed backend URL
+        (location.hostname === 'localhost' ? 'http://localhost:8001' : 'https://assistme-backend.onrender.com '); // TODO: Replace with actual deployed backend URL
 
     const endpoints = {
         chat: `${API_BASE}/api/chat/text`,
