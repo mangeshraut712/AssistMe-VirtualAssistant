@@ -8,33 +8,49 @@ from .settings import get_database_url
 
 db_url = get_database_url()
 
-if db_url:
-    engine = create_engine(db_url)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base = declarative_base()
+# Deferred database setup - only create when accessed
+engine = None
+SessionLocal = None
+Base = None
+_tables_created = False
 
-    # Import models to register them with SQLAlchemy for auto table creation
-    try:
-        import_module(".models", package=__name__)
-    except ImportError:
-        import_module("app.models")
-    try:
-        Base.metadata.create_all(bind=engine)  # type: ignore  # Create tables automatically
-    except Exception as e:
-        # Continue without database tables if creation fails
-        print(f"Warning: Database table creation failed: {e}")
-        pass
+def _ensure_database_setup():
+    global engine, SessionLocal, Base, _tables_created
+    if Base is None:
+        # First time setup
+        Base = declarative_base()
+        if db_url:
+            try:
+                engine = create_engine(db_url)
+                SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+            except Exception as e:
+                print(f"Warning: Database engine creation failed: {e}")
+                engine = None
+                SessionLocal = None
+                return False
 
-else:
-    engine = None
-    SessionLocal = None
-    Base = declarative_base()
+            # Try to create tables
+            if engine is not None and not _tables_created:
+                try:
+                    # Import models dynamically
+                    import_module(".models", package=__name__)
+                    Base.metadata.create_all(bind=engine)  # type: ignore
+                    _tables_created = True
+                except Exception as e:
+                    print(f"Warning: Database table creation failed: {e}")
+                    return False
+        else:
+            engine = None
+            SessionLocal = None
+            return False
+    return True
 
 # Dependency for FastAPI
 def get_db():
-    if SessionLocal is None:
-        # No database configured, return a mock session
-        return None  # Or raise dependency skip
+    if not _ensure_database_setup() or SessionLocal is None:
+        # Database setup failed or not configured, return None
+        return None  # App works without database
+
     db = SessionLocal()
     try:
         yield db
