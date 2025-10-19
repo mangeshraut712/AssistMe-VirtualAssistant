@@ -4,13 +4,22 @@ from sqlalchemy.orm import sessionmaker
 
 from .settings import get_database_url
 
-engine = create_engine(get_database_url())
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+db_url = get_database_url()
 
-Base = declarative_base()
+if db_url:
+    engine = create_engine(db_url)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base = declarative_base()
+else:
+    engine = None
+    SessionLocal = None
+    Base = declarative_base()
 
 # Dependency for FastAPI
 def get_db():
+    if SessionLocal is None:
+        # No database configured, return a mock session
+        return None  # Or raise dependency skip
     db = SessionLocal()
     try:
         yield db

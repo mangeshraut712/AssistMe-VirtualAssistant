@@ -7,11 +7,12 @@ from functools import lru_cache
 
 
 @lru_cache(maxsize=1)
-def get_database_url() -> str:
+def get_database_url() -> str | None:
     """Resolve the database URL from environment variables.
 
     Prefers deployment-provided values and falls back to the docker-compose
     connection string for local development.
+    Returns None if no database is configured (for Railway deployment without PG)
     """
     candidates = (
         os.getenv("DATABASE_URL"),
@@ -22,8 +23,13 @@ def get_database_url() -> str:
         if url:
             return _normalise_db_url(url)
 
-    # Local default (docker-compose)
-    return "postgresql+pg8000://assistme_user:assistme_password@db:5432/assistme_db"
+    # Only provide fallback for local development
+    if os.getenv("RAILWAY_PROJECT_ID") is None:
+        # Local default (docker-compose)
+        return "postgresql+pg8000://assistme_user:assistme_password@db:5432/assistme_db"
+
+    # In Railway without database, return None
+    return None
 
 
 def _normalise_db_url(url: str) -> str:

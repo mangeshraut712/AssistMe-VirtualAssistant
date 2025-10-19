@@ -4,10 +4,12 @@ from pydantic import BaseModel
 from typing import List, Optional
 import logging
 import os
+from datetime import datetime
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from .chat_client import grok_client
 from .database import get_db
+from .settings import get_database_url
 from .models import Conversation, Message as MessageModel
 
 app = FastAPI(title="AssistMe API", version="1.0.0")
@@ -41,42 +43,48 @@ def root():
     return {"message": "AssistMe API is running"}
 
 @app.post("/api/chat/text")
-async def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
+async def chat_text(request: TextChatRequest, db: Optional[Session] = Depends(get_db)):
     logging.info("Chat API called with messages: %s", [m.content for m in request.messages])
-    
-    conversation = None
-    if request.conversation_id:
-        conversation = db.query(Conversation).filter(Conversation.id == request.conversation_id).first()  # type: ignore
+
+    conversation_id = getattr(request, 'conversation_id', None) or None
+    conversation_history = []
+    conversation_title = f"Conversation {datetime.now().timestamp()}"
+    current_conversation_id = conversation_id
+
+    if db and conversation_id:
+        # Database is available
+        conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()  # type: ignore
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
-    else:
-        # Create new conversation with first user message as title
+
+        conversation_history = (
+            db.query(MessageModel)  # type: ignore
+            .filter(MessageModel.conversation_id == conversation.id)
+            .order_by(MessageModel.created_at.asc())
+            .all()
+        )
+        conversation_title = conversation.title
+        current_conversation_id = conversation.id
+    elif db and not conversation_id:
+        # Create new conversation only if database is available
         title = request.messages[-1].content[:50] if request.messages else "New Chat"
         conversation = Conversation(title=title)  # type: ignore
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
+        current_conversation_id = conversation.id
 
-    for msg in request.messages:
-        db_msg = MessageModel(
-            conversation_id=conversation.id,  # type: ignore
-            role=msg.role,  # type: ignore
-            content=msg.content,  # type: ignore
-        )
-        db.add(db_msg)
-    db.commit()
-
-    conversation_history = (
-        db.query(MessageModel)  # type: ignore
-        .filter(MessageModel.conversation_id == conversation.id)
-        .order_by(MessageModel.created_at.asc())
-        .all()
-    )
-
-    payload_messages = [
-        {"role": message.role, "content": message.content}
-        for message in conversation_history
-    ]
+    # Use existing messages or just the current request
+    if conversation_history:
+        payload_messages = [
+            {"role": message.role, "content": message.content}
+            for message in conversation_history
+        ]
+    else:
+        payload_messages = [
+            {"role": msg.role, "content": msg.content}
+            for msg in request.messages
+        ]
 
     result = await run_in_threadpool(
         grok_client.generate_response,
@@ -87,26 +95,47 @@ async def chat_text(request: TextChatRequest, db: Session = Depends(get_db)):
     )
     if "error" in result:
         return {"error": result["error"]}
-    
-    # Save assistant response
-    assistant_msg = MessageModel(conversation_id=conversation.id, role="assistant", content=result["response"])  # type: ignore
-    db.add(assistant_msg)
-    db.commit()
+
+    # Save to database if available, but don't fail if not
+    if db and current_conversation_id:
+        try:
+            # Save user message if not already saved
+            for msg in request.messages:
+                db_msg = MessageModel(
+                    conversation_id=current_conversation_id,  # type: ignore
+                    role=msg.role,  # type: ignore
+                    content=msg.content,  # type: ignore
+                )
+                db.add(db_msg)
+
+            # Save assistant response
+            assistant_msg = MessageModel(conversation_id=current_conversation_id, role="assistant", content=result["response"])  # type: ignore
+            db.add(assistant_msg)
+            db.commit()
+        except Exception as e:
+            logging.warning(f"Failed to save to database: {e}")
 
     return {
         "response": result["response"],
         "usage": {"tokens": result["tokens"]},
         "model": request.model,
-        "conversation_id": conversation.id
+        "conversation_id": current_conversation_id or 0
     }
 
 @app.get("/api/conversations")
-def get_conversations(db: Session = Depends(get_db)) -> List[dict]:
-    conversations = db.query(Conversation).all()  # type: ignore
-    return [{"id": c.id, "title": c.title, "created_at": c.created_at} for c in conversations]
+def get_conversations(db: Optional[Session] = Depends(get_db)) -> List[dict]:
+    if db:
+        conversations = db.query(Conversation).all()  # type: ignore
+        return [{"id": c.id, "title": c.title, "created_at": c.created_at} for c in conversations]
+    else:
+        # No database, return empty list
+        return []
 
 @app.get("/api/conversations/{conversation_id}")
-def get_conversation_messages(conversation_id: int, db: Session = Depends(get_db)):
+def get_conversation_messages(conversation_id: int, db: Optional[Session] = Depends(get_db)):
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
     conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()  # type: ignore
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
