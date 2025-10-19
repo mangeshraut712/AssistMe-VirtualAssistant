@@ -1,11 +1,11 @@
-from fastapi import FastAPI, WebSocket, Depends, HTTPException  # type: ignore[import]
-from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import]
-from pydantic import BaseModel  # type: ignore[import]
+from fastapi import FastAPI, WebSocket, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from typing import List, Optional
 import logging
 import os
-from sqlalchemy.orm import Session  # type: ignore[import]
-from starlette.concurrency import run_in_threadpool  # type: ignore[import]
+from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 from .chat_client import grok_client
 from .database import get_db
 from .models import Conversation, Message as MessageModel
