@@ -18,7 +18,12 @@ if db_url:
         import_module(".models", package=__name__)
     except ImportError:
         import_module("app.models")
-    Base.metadata.create_all(bind=engine)  # type: ignore  # Create tables automatically
+    try:
+        Base.metadata.create_all(bind=engine)  # type: ignore  # Create tables automatically
+    except Exception as e:
+        # Continue without database tables if creation fails
+        print(f"Warning: Database table creation failed: {e}")
+        pass
 
 else:
     engine = None
