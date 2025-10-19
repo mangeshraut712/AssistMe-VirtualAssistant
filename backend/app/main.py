@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from .chat_client import grok_client
 from .database import get_db
-from .settings import get_database_url
 from .models import Conversation, Message as MessageModel
 
 app = FastAPI(title="AssistMe API", version="1.0.0")
