@@ -18,23 +18,23 @@ sleep 5
 
 # Try database connection
 echo "🗄️ Testing database connection..."
-python3 -c "
-import os
+python3 - <<'PYTHON'
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
-db_url = os.getenv('DATABASE_URL')
-if db_url:
+
+from app.settings import get_database_url
+
+db_url = get_database_url()
+if not db_url:
+    print("❌ Database URL not configured")
+else:
     try:
         engine = create_engine(db_url)
         with engine.connect() as conn:
-            result = conn.execute(text('SELECT 1'))
-            print('✅ Database connection successful')
-            conn.close()
-    except Exception as e:
-        print(f'❌ Database connection failed: {e}')
-else:
-    print('❌ DATABASE_URL not set')
-"
+            conn.execute(text("SELECT 1"))
+        print("✅ Database connection successful")
+    except Exception as exc:
+        print(f"❌ Database connection failed: {exc}")
+PYTHON
 
 # Run database migrations with error handling
 echo "🗄️ Running database migrations..."
