@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from .chat_client import grok_client
 from .database import get_db
+from .settings import get_database_url
 from .models import Conversation, Message as MessageModel
 
 ALLOWED_ORIGINS = [
@@ -45,7 +46,7 @@ class TextChatRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "assistme-api"}
+    return {"status": "ok", "service": "assistme-api", "database": "available" if get_database_url() else "not configured"}
 
 @app.get("/")
 def root():
