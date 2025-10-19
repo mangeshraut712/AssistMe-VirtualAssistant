@@ -11,9 +11,9 @@ if db_url:
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base = declarative_base()
 
-    # Import models after Base is defined, then create tables
-    from .models import User, Conversation, Message  # noqa
-    Base.metadata.create_all(bind=engine)  # Create tables automatically
+    # Import models to register them with SQLAlchemy for auto table creation
+    from .models import User, Conversation, Message  # noqa: F401
+    Base.metadata.create_all(bind=engine)  # type: ignore  # Create tables automatically
 
 else:
     engine = None
