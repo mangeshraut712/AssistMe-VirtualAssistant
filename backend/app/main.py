@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -11,15 +12,24 @@ from .chat_client import grok_client
 from .database import get_db
 from .models import Conversation, Message as MessageModel
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8001",
+    "https://assist-me-virtual-assistant.vercel.app",
+    "https://assistme-virtualassistant-production.up.railway.app",
+]
+
 app = FastAPI(title="AssistMe API", version="1.0.0")
 
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://assist-me-virtual-assistant.vercel.app"],  # Frontend domains
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=86400,
 )
 
 class ChatMessage(BaseModel):
@@ -120,6 +130,12 @@ async def chat_text(request: TextChatRequest, db: Optional[Session] = Depends(ge
         "model": request.model,
         "conversation_id": current_conversation_id or 0
     }
+
+
+@app.options("/api/chat/text")
+async def chat_text_options() -> Response:
+    """Explicitly handle CORS preflight requests."""
+    return Response(status_code=204)
 
 @app.get("/api/conversations")
 def get_conversations(db: Optional[Session] = Depends(get_db)) -> List[dict]:
