@@ -21,8 +21,8 @@ services:
     environment:
       DATABASE_URL: postgresql://assistme_user:assistme_password@db:5432/assistme_db
       APP_URL: http://localhost:3000
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      OPENROUTER_DEFAULT_MODEL: ${OPENROUTER_DEFAULT_MODEL:-meta-llama/llama-4-scout}
+      OPENROUTER_API_KEY: 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
+      OPENROUTER_DEFAULT_MODEL: meta-llama/llama-4-scout:free
     depends_on:
       - db
     networks:
