@@ -1,5 +1,3 @@
-from importlib import import_module
-
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -14,8 +12,19 @@ if db_url:
     Base = declarative_base()
 
     # Import models to register them with SQLAlchemy for auto table creation
-    import app.models  # Register tables with SQLAlchemy
-    Base.metadata.create_all(bind=engine)  # type: ignore  # Create tables automatically
+    # This ensures tables are created automatically on startup
+    try:
+        from .models import User, Conversation, Message  # noqa: F401
+        Base.metadata.create_all(bind=engine)  # type: ignore
+    except ImportError:
+        # Fallback if relative import fails in deployment
+        try:
+            import importlib
+            importlib.import_module('app.models')
+            Base.metadata.create_all(bind=engine)  # type: ignore
+        except Exception:
+            # Tables might already exist or connection fails - continue anyway
+            pass
 
 else:
     engine = None
