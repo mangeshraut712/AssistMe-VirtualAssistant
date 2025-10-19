@@ -10,6 +10,11 @@ if db_url:
     engine = create_engine(db_url)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base = declarative_base()
+
+    # Import models after Base is defined, then create tables
+    from .models import User, Conversation, Message  # noqa
+    Base.metadata.create_all(bind=engine)  # Create tables automatically
+
 else:
     engine = None
     SessionLocal = None
