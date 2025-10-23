@@ -15,13 +15,15 @@ class Grok2Client:
 
         # No need for timeout variable since requests handles it per-request
         self.default_models = [
+            {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B"},
             {"id": "meta-llama/llama-4-scout:free", "name": "Meta Llama 4 Scout"},
-            {"id": "qwen/qwen3-14b:free", "name": "Qwen 3 14B"},
-            {"id": "deepseek/deepseek-chat-v3.1:free", "name": "DeepSeek V3.1"},
+            {"id": "meta-llama/llama-4-maverick:free", "name": "Meta Llama 4 Maverick"},
+            {"id": "deepseek/deepseek-r1:free", "name": "DeepSeek R1"},
+            {"id": "qwen/qwen3-14b:free", "name": "Qwen3 14B"},
+            {"id": "deepseek/deepseek-chat-v3.1:free", "name": "DeepSeek Chat V3.1"},
             {"id": "mistralai/mistral-small-3.1-24b-instruct:free", "name": "Mistral Small 3.1 24B"},
-            {"id": "tngtech/deepseek-r1t-chimera:free", "name": "DeepSeek R1T Chimera"},
-            {"id": "moonshotai/kimi-dev-72b:free", "name": "Moonshot Kimi Dev 72B"},
-            {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B"},
+            {"id": "moonshotai/kimi-dev-72b:free", "name": "MoonshotAI Kimi Dev 72B"},
+            {"id": "openai/gpt-oss-20b:free", "name": "OpenAI gpt-oss-20b"},
         ]
 
         self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip() or self.default_models[0]["id"]

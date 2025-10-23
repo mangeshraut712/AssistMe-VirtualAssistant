@@ -79,8 +79,7 @@
 
 /* Dark Mode */
 
-
-[data-theme="dark"] {
+html[data-theme="dark"] {
     /* Dark theme overrides */
     --bg-primary: var(--dark-bg-primary);
     --bg-secondary: var(--dark-bg-secondary);
@@ -137,85 +136,80 @@ body {
 }
 
 /* Advanced ChatGPT-Style Dark Mode Theme */
-[data-theme="dark"] {
-    /* Pure black backgrounds */
-    body {
-        background-color: #000000;
-        color: #ffffff;
-    }
+html[data-theme="dark"] body {
+    background-color: #000000;
+    color: #ffffff;
+}
 
-    /* White text for all headers and titles on dark backgrounds */
-    .welcome-header h1,
-    .nav-title,
-    .conversation-title,
-    .model-label,
-    .message-text,
-    .conversations .conversation-empty,
-    .conversation-date,
-    .modal-header h3,
-    .benchmark-page,
-    .benchmark-header,
-    .benchmark-title,
-    .progress-header h3,
-    .chart-title,
-    .benchmark-results-summary h3,
-    .result-model-name {
-        color: #ffffff !important;
-    }
+html[data-theme="dark"] .welcome-header h1,
+html[data-theme="dark"] .nav-title,
+html[data-theme="dark"] .conversation-title,
+html[data-theme="dark"] .model-label,
+html[data-theme="dark"] .message-text,
+html[data-theme="dark"] .conversations .conversation-empty,
+html[data-theme="dark"] .conversation-date,
+html[data-theme="dark"] .modal-header h3,
+html[data-theme="dark"] .benchmark-page,
+html[data-theme="dark"] .benchmark-header,
+html[data-theme="dark"] .benchmark-title,
+html[data-theme="dark"] .progress-header h3,
+html[data-theme="dark"] .chart-title,
+html[data-theme="dark"] .benchmark-results-summary h3,
+html[data-theme="dark"] .result-model-name {
+    color: #ffffff !important;
+}
 
-    /* Model card names in dark mode */
-    .model-name {
-        color: #000000 !important;
-    }
+html[data-theme="dark"] .model-name {
+    color: var(--dark-text-primary) !important;
+}
 
-    /* Fix model card UI colors in dark mode for better contrast */
-    .model-card {
-        background: rgba(255, 255, 255, 0.08) !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        backdrop-filter: blur(20px) !important;
-    }
+/* Fix model card UI colors in dark mode for better contrast */
+html[data-theme="dark"] .model-card {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(20px) !important;
+}
 
-    /* Model card descriptions and labels */
-    .model-desc {
-        color: rgba(255, 255, 255, 0.7) !important;
-    }
+/* Model card descriptions and labels */
+html[data-theme="dark"] .model-desc {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
 
-    .metric-label {
-        color: rgba(255, 255, 255, 0.6) !important;
-    }
+html[data-theme="dark"] .metric-label {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
 
-    .metric {
-        color: #ffffff !important;
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-    }
+html[data-theme="dark"] .metric {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
 
-    /* Status badges with better contrast */
-    .model-status {
-        background: linear-gradient(135deg, #10a37f, #059669) !important;
-        color: #ffffff !important;
-    }
+/* Status badges with better contrast */
+html[data-theme="dark"] .model-status {
+    background: linear-gradient(135deg, #10a37f, #059669) !important;
+    color: #ffffff !important;
+}
 
-    .model-status.ready {
-        background: linear-gradient(135deg, #64748B, #475569) !important;
-    }
+html[data-theme="dark"] .model-status.ready {
+    background: linear-gradient(135deg, #64748B, #475569) !important;
+}
 
-    /* Maintain proper readability for secondary text */
-    .conversation-empty,
-    .benchmark-metrics span,
-    .model-result span,
-    .current-test-info,
-    .stat-label,
-    .result-model-spec {
-        color: rgba(255, 255, 255, 0.8) !important;
-    }
+/* Maintain proper readability for secondary text */
+html[data-theme="dark"] .conversation-empty,
+html[data-theme="dark"] .benchmark-metrics span,
+html[data-theme="dark"] .model-result span,
+html[data-theme="dark"] .current-test-info,
+html[data-theme="dark"] .stat-label,
+html[data-theme="dark"] .result-model-spec {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
 
-    /* Keep specific accent colors for numbers */
-    .progress-percentage,
-    .stat-number,
-    .metric-value {
-        color: #10a37f !important;
-    }
+/* Keep specific accent colors for numbers */
+html[data-theme="dark"] .progress-percentage,
+html[data-theme="dark"] .stat-number,
+html[data-theme="dark"] .metric-value {
+    color: #10a37f !important;
 }
 
 /* Update all CSS variables to use new names */

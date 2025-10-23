@@ -6,3 +6,4 @@ pg8000==1.31.2
 alembic==1.11.3
 pydantic==1.10.13
 requests==2.31.0
+redis[hiredis]==5.0.1

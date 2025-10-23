@@ -32,6 +32,20 @@ def get_database_url() -> str | None:
     return None
 
 
+@lru_cache(maxsize=1)
+def get_redis_url() -> str:
+    """Resolve the Redis URL from environment variables.
+
+    Falls back to the docker-compose connection string for local development.
+    """
+    url = os.getenv("REDIS_URL")
+    if url:
+        return url
+
+    # Local default (docker-compose)
+    return "redis://redis:6379"
+
+
 def _normalise_db_url(url: str) -> str:
     """Ensure SQLAlchemy can consume the URL."""
     if url.startswith("postgres://"):
