@@ -12,11 +12,7 @@ echo "OPENROUTER_API_KEY=${OPENROUTER_API_KEY:+SET}" # Show if set, not the valu
 echo "PORT=${PORT:-not_set}"
 echo "APP_URL=${APP_URL}"
 
-# Wait for database to be ready (Railway provides PostgreSQL)
-echo "⏳ Waiting for database connection..."
-sleep 5
-
-# Try database connection
+# Try database connection (skip if no DB configured)
 echo "🗄️ Testing database connection..."
 python3 - <<'PYTHON'
 from sqlalchemy import create_engine, text
@@ -25,8 +21,10 @@ from app.settings import get_database_url
 
 db_url = get_database_url()
 if not db_url:
-    print("❌ Database URL not configured")
+    print("⚠️  Database URL not configured; skipping connectivity check.")
 else:
+    print("⏳ Waiting for database connection...")
+    sleep 5
     try:
         engine = create_engine(db_url)
         with engine.connect() as conn:
@@ -37,11 +35,22 @@ else:
 PYTHON
 
 # Run database migrations with error handling
-echo "🗄️ Running database migrations..."
-if alembic upgrade head; then
-  echo "✅ Database migrations completed successfully"
+if python3 - <<'PYTHON'
+from app.settings import get_database_url
+import sys
+
+if get_database_url() is None:
+    sys.exit(1)
+PYTHON
+then
+  echo "🗄️ Running database migrations..."
+  if alembic upgrade head; then
+    echo "✅ Database migrations completed successfully"
+  else
+    echo "❌ Migration failed, but continuing to start server..."
+  fi
 else
-  echo "❌ Migration failed, but continuing to start server..."
+  echo "ℹ️ No DATABASE_URL detected; skipping migrations."
 fi
 
 # Check if required env vars are set
