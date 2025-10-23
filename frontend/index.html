@@ -9,11 +9,38 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
 <body>
+    <div class="app-background"></div>
+    <div class="app-shell app-version-2">
+    <header class="app-header">
+        <div class="header-left">
+            <div class="version-badge">
+                <span class="badge-pill">AssistMe v2.0</span>
+                <span class="badge-meta">Aurora Release</span>
+            </div>
+            <div class="header-status">
+                <span class="status-dot live"></span>
+                <span class="status-text">Realtime services online</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn" id="openDocsBtn">
+                <i class="fas fa-book-open"></i>
+                <span>Docs</span>
+            </button>
+            <button class="header-btn" id="openRoadmapBtn">
+                <i class="fas fa-compass"></i>
+                <span>Roadmap</span>
+            </button>
+        </div>
+    </header>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h4 style="color: var(--text-primary); font-weight: 600; margin: 0; font-size: var(--font-size-sm);">History</h4>
+                <div class="sidebar-title">
+                    <span class="sidebar-label">History</span>
+                    <span class="sidebar-hint">Tap to revisit saved conversations</span>
+                </div>
             </div>
 
             <div class="conversations" id="conversations">
@@ -40,14 +67,18 @@
         <div class="main-wrapper">
             <!-- Top Navigation -->
             <nav class="top-nav">
-                <div class="nav-left">
-                    <button class="nav-logo-btn" onclick="location.reload()">
-                        <img src="assets/logo.png" alt="AssistMe Logo" class="nav-logo">
-                    </button>
-                    <h1 class="nav-title">AssistMe</h1>
-                </div>
+                <div class="nav-core">
+                    <div class="nav-left">
+                        <button class="nav-logo-btn" onclick="location.reload()">
+                            <img src="assets/logo.png" alt="AssistMe Logo" class="nav-logo">
+                        </button>
+                        <div class="nav-title-group">
+                            <h1 class="nav-title">AssistMe</h1>
+                            <span class="nav-subtitle">AI workspace for realtime ideation, benchmarking & experimentation</span>
+                        </div>
+                    </div>
 
-                <div class="nav-right">
+                    <div class="nav-right">
                     <div class="model-selector">
                         <button type="button" class="model-button" id="modelButton">
                             <span class="model-name">Meta Llama 4 Scout</span>
@@ -99,13 +130,79 @@
 
                     <button class="nav-btn" id="testModelsBtn" title="Model benchmarking">
                         <i class="fas fa-chart-bar"></i>
+                        <span class="nav-btn-label">Benchmark</span>
                     </button>
 
                     <button class="nav-btn" id="darkModeToggle" title="Toggle theme">
                         <i class="fas fa-moon"></i>
+                        <span class="nav-btn-label">Theme</span>
                     </button>
                 </div>
+                </div>
+
+                <div class="nav-metrics">
+                    <div class="metric-pill">
+                        <span class="metric-title">Latency</span>
+                        <span class="metric-value" id="latencyMetric">~480ms</span>
+                    </div>
+                    <div class="metric-pill">
+                        <span class="metric-title">Concurrency</span>
+                        <span class="metric-value" id="concurrencyMetric">12 sessions</span>
+                    </div>
+                    <div class="metric-pill">
+                        <span class="metric-title">Benchmarks</span>
+                        <span class="metric-value" id="benchmarkMetric">v2.0 Ready</span>
+                    </div>
+                </div>
             </nav>
+
+            <section class="app-kpis" id="appKpis">
+                <div class="kpi-card shine models">
+                    <div class="kpi-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-label">Live Models</span>
+                        <span class="kpi-value">10</span>
+                        <span class="kpi-meta">Orchestrated via OpenRouter free tier</span>
+                    </div>
+                </div>
+                <div class="kpi-card benchmarks">
+                    <div class="kpi-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-label">Benchmarks</span>
+                        <span class="kpi-value">Aurora Suite</span>
+                        <span class="kpi-meta">Realtime response, accuracy & GPU insight</span>
+                    </div>
+                </div>
+                <div class="kpi-card status">
+                    <div class="kpi-icon">
+                        <i class="fas fa-shield"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-label">System Health</span>
+                        <span class="kpi-value">Optimal</span>
+                        <span class="kpi-meta">Railway APIs, Vercel edge & Redis cache green</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="app-tip-strip">
+                <div class="tip-chip">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>Tip: Press <strong>Shift ⏎</strong> for multi-line prompts.</span>
+                </div>
+                <div class="tip-chip">
+                    <i class="fas fa-bolt"></i>
+                    <span>Voice mode captures ideas instantly with auto-transcription.</span>
+                </div>
+                <div class="tip-chip">
+                    <i class="fas fa-diagram-project"></i>
+                    <span>Use Benchmark v2.0 to compare reasoning depth across models.</span>
+                </div>
+            </section>
 
             <!-- Chat Area -->
             <main class="chat-area">
@@ -202,7 +299,7 @@
             </button>
             <h1 class="benchmark-title">
                 <i class="fas fa-chart-bar"></i>
-                AI Model Benchmarking v2.0
+                AI Model Benchmarking Aurora v2.0
             </h1>
             <div class="gpu-indicator">
                 <i class="fas fa-microchip"></i>
@@ -230,16 +327,16 @@
                 </label>
             </div>
             <div class="benchmark-stats">
-                <div class="stat-item">
-                    <div class="stat-number">10</div>
+                <div class="stat-item" data-stat="models">
+                    <div class="stat-number" data-stat="models">10</div>
                     <div class="stat-label">Models</div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-number">4</div>
+                <div class="stat-item" data-stat="categories">
+                    <div class="stat-number" data-stat="categories">4</div>
                     <div class="stat-label">Categories</div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-number">40</div>
+                <div class="stat-item" data-stat="tests">
+                    <div class="stat-number" data-stat="tests">40</div>
                     <div class="stat-label">Total Tests</div>
                 </div>
             </div>
@@ -303,5 +400,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js" defer></script>
+</div>
 </body>
 </html>
