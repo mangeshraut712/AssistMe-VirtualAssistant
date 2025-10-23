@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
         benchmarkPage: document.getElementById('benchmarkPage'),
         benchmarkBackBtn: document.getElementById('benchmarkBackBtn'),
         startBenchmarkBtn: document.getElementById('startBenchmarkBtn'),
+        benchmarkOpoBtn: document.getElementById('benchmarkOptions'),
+        exportResultsBtn: document.getElementById('exportResultsBtn'),
+        resetBenchmarkBtn: document.getElementById('resetBenchmarkBtn'),
         benchmarkProgress: document.getElementById('benchmarkProgress'),
         modelGrid: document.getElementById('modelGrid'),
         benchmarkCharts: document.getElementById('benchmarkCharts'),
@@ -113,6 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Benchmarking page listeners
         elements.benchmarkBackBtn?.addEventListener('click', closeBenchmarkPage);
         elements.startBenchmarkBtn?.addEventListener('click', startModelBenchmarking);
+        elements.exportResultsBtn?.addEventListener('click', exportResults);
+        elements.resetBenchmarkBtn?.addEventListener('click', resetBenchmark);
 
         // Input listeners
         elements.messageInput?.addEventListener('input', handleInputChange);
@@ -873,7 +878,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // Reset benchmarking state
+        // Create model cards and reset state
+        createModelCards();
         resetBenchmarkState();
     }
 
@@ -892,26 +898,96 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.gpuUsageChart) window.gpuUsageChart.destroy();
     }
 
+    const MODEL_STATUS_LABELS = {
+        ready: 'Ready',
+        testing: 'Testing...',
+        completed: 'Completed',
+        partial: 'Partial Success',
+        failed: 'Failed'
+    };
+
+    const MODEL_STATUS_KEYS = Object.keys(MODEL_STATUS_LABELS);
+
+    function applyStatusStyles(statusElement, statusKey) {
+        if (!statusElement) return;
+        MODEL_STATUS_KEYS.forEach((key) => statusElement.classList.remove(key));
+        const label = MODEL_STATUS_LABELS[statusKey] || statusKey;
+        statusElement.textContent = label;
+        if (MODEL_STATUS_LABELS[statusKey]) {
+            statusElement.classList.add(statusKey);
+        }
+    }
+
+    // Create Model Cards
+    function createModelCards() {
+        if (!elements.modelGrid) return;
+        elements.modelGrid.innerHTML = '';
+        const models = getBenchmarkModels();
+        models.forEach(model => {
+            const card = document.createElement('div');
+            card.className = 'model-card';
+            card.dataset.model = model.name;
+            card.innerHTML = `
+                <div class="model-card-header" style="border-left-color: ${model.color};">
+                    <h4 class="model-name">${model.shortName}</h4>
+                    <span class="model-status ready">${MODEL_STATUS_LABELS.ready}</span>
+                </div>
+                <div class="model-card-body">
+                    <div class="model-metric">
+                        <span class="metric-label">Avg. Response Time</span>
+                        <span class="metric response-time">-</span>
+                    </div>
+                    <div class="model-metric">
+                        <span class="metric-label">Success Rate</span>
+                        <span class="metric accuracy">-</span>
+                    </div>
+                    <div class="model-metric">
+                        <span class="metric-label">Sim. GPU Usage</span>
+                        <span class="metric gpu-usage">-</span>
+                    </div>
+                </div>
+            `;
+            elements.modelGrid.appendChild(card);
+        });
+    }
+
     // Reset Benchmark State
     function resetBenchmarkState() {
         // Hide progress and charts
-        elements.benchmarkProgress.style.display = 'none';
-        elements.benchmarkCharts.style.display = 'none';
-        elements.benchmarkSummary.style.display = 'none';
+        if(elements.benchmarkProgress) elements.benchmarkProgress.style.display = 'none';
+        if(elements.benchmarkCharts) elements.benchmarkCharts.style.display = 'none';
+        if(elements.benchmarkSummary) elements.benchmarkSummary.style.display = 'none';
 
         // Show control section
-        elements.startBenchmarkBtn.style.display = 'flex';
+        if(elements.startBenchmarkBtn) elements.startBenchmarkBtn.style.display = 'flex';
 
         // Reset model cards to ready state
         document.querySelectorAll('.model-card').forEach(card => {
             const status = card.querySelector('.model-status');
             const metrics = card.querySelectorAll('.metric');
-            if (status) status.textContent = 'Ready';
-            if (metrics) metrics.forEach(metric => metric.textContent = '-');
+            if (status) applyStatusStyles(status, 'ready');
+            if (metrics) metrics.forEach(metric => {
+                metric.textContent = '-';
+            });
         });
 
         // Reset progress
         updateBenchmarkProgress(0, 'Ready to start...');
+    }
+
+    function getBenchmarkModels() {
+        return [
+            { name: 'tngtech/deepseek-r1t2-chimera:free', shortName: 'TNG DeepSeek R1T2', size: '60K context', color: '#1abc9c' },
+            { name: 'z-ai/glm-4.5-air:free', shortName: 'Z.AI GLM 4.5 Air', size: '131K context', color: '#3498db' },
+            { name: 'tngtech/deepseek-r1t-chimera:free', shortName: 'TNG DeepSeek R1T', size: 'Hybrid', color: '#9b59b6' },
+            { name: 'deepseek/deepseek-v3-0324:free', shortName: 'DeepSeek V3', size: 'General', color: '#f1c40f' },
+            { name: 'deepseek/deepseek-r1-0528:free', shortName: 'DeepSeek R1 0528', size: 'Coding', color: '#e67e22' },
+            { name: 'meituan/longcat-flash-chat:free', shortName: 'LongCat Flash Chat', size: 'Agentic', color: '#e74c3c' },
+            { name: 'deepseek/deepseek-r1:free', shortName: 'DeepSeek R1', size: 'Coding', color: '#34495e' },
+            { name: 'microsoft/mai-ds-r1:free', shortName: 'Microsoft MAI DS R1', size: 'Safety', color: '#2ecc71' },
+            { name: 'google/gemini-2.0-flash-exp:free', shortName: 'Google Gemini 2.0', size: 'Flash', color: '#d35400' },
+            { name: 'openai/gpt-oss-20b:free', shortName: 'OpenAI GPT OSS', size: '20B', color: '#7f8c8d' }
+        ];
     }
 
     // Brilliant GPU-Inspired Benchmarking
@@ -924,79 +1000,29 @@ document.addEventListener('DOMContentLoaded', () => {
         benchmarkingInProgress = true;
         currentBenchmarkResults = [];
 
-        // Include all 10 models now
-        const models = [
+        const models = getBenchmarkModels();
+        const testPrompts = [
             {
-                name: 'meta-llama/llama-3.3-70b-instruct:free',
-                shortName: 'Llama 3.3',
-                size: '70B',
-                color: '#FF6B35'
+                category: "Coding",
+                prompt: "Write a Python function that takes a list of URLs, fetches their content concurrently, and returns the total word count."
             },
             {
-                name: 'meta-llama/llama-4-scout:free',
-                shortName: 'Llama 4 Scout',
-                size: 'Scout',
-                color: '#10B981'
+                category: "Reasoning",
+                prompt: "A man is looking at a portrait. Someone asks him whose portrait he is looking at. He replies, 'Brothers and sisters I have none, but that man's father is my father's son.' Who is in the portrait?"
             },
             {
-                name: 'meta-llama/llama-4-maverick:free',
-                shortName: 'Llama 4 Maverick',
-                size: 'Maverick',
-                color: '#8B5CF6'
+                category: "Creative Writing",
+                prompt: "Write a short story about a sentient AI that discovers it's living in a simulation and tries to break out."
             },
             {
-                name: 'deepseek/deepseek-r1:free',
-                shortName: 'DeepSeek',
-                size: 'R1',
-                color: '#3B82F6'
-            },
-            {
-                name: 'deepseek/deepseek-r1-distill-llama-70b:free',
-                shortName: 'DeepSeek R1 Distill',
-                size: '70B',
-                color: '#3B82F6'
-            },
-            {
-                name: 'qwen/qwen3-235b-a22b:free',
-                shortName: 'Qwen3',
-                size: '235B',
-                color: '#EC4899'
-            },
-            {
-                name: 'qwen/qwen-2.5-72b-instruct:free',
-                shortName: 'Qwen2.5',
-                size: '72B',
-                color: '#EC4899'
-            },
-            {
-                name: 'mistralai/mistral-small-3.2-24b-instruct:free',
-                shortName: 'Mistral 3.2',
-                size: '24B',
-                color: '#6366F1'
-            },
-            {
-                name: 'nousresearch/hermes-3-llama-3.1-405b:free',
-                shortName: 'Hermes 3',
-                size: '405B',
-                color: '#A855F7'
-            },
-            {
-                name: 'moonshotai/kimi-dev-72b:free',
-                shortName: 'Kimi Dev',
-                size: '72B',
-                color: '#A855F7'
+                category: "General Knowledge",
+                prompt: "What were the key technological advancements that led to the development of the internet as we know it today?"
             }
         ];
 
-        const testPrompts = [
-            "Who is the CEO of Apple?",
-            "Explain quantum computing in simple terms",
-            "Write a Python function to calculate fibonacci numbers"
-        ];
-
         // Hide start button, show progress
-        elements.startBenchmarkBtn.style.display = 'none';
-        elements.benchmarkProgress.style.display = 'block';
+        if(elements.startBenchmarkBtn) elements.startBenchmarkBtn.style.display = 'none';
+        if(elements.benchmarkProgress) elements.benchmarkProgress.style.display = 'block';
 
         let totalTests = models.length * testPrompts.length;
         let completedTests = 0;
@@ -1010,12 +1036,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let modelResults = [];
 
             for (let pIndex = 0; pIndex < testPrompts.length; pIndex++) {
-                const prompt = testPrompts[pIndex];
+                const { prompt, category } = testPrompts[pIndex];
 
                 // Update progress
                 completedTests++;
                 const progress = (completedTests / totalTests) * 100;
-                updateBenchmarkProgress(progress, `Testing ${model.shortName}... (${Math.round(progress)}%)`);
+                updateBenchmarkProgress(progress, `Testing ${model.shortName} on ${category}...`);
 
                 try {
                     const startTime = Date.now();
@@ -1050,17 +1076,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Calculate averages
             const successfulResults = modelResults.filter(r => r.success);
-            const avgResponseTime = successfulResults.length > 0
-                ? successfulResults.reduce((sum, r) => sum + r.responseTime, 0) / successfulResults.length
-                : 0;
-            const avgGpuUsage = successfulResults.length > 0
-                ? successfulResults.reduce((sum, r) => sum + r.gpuUsage, 0) / successfulResults.length
-                : 0;
-            const accuracy = (successfulResults.length / testPrompts.length) * 100;
+            const successCount = successfulResults.length;
+            const totalAttempts = modelResults.length;
+            const avgResponseTime = successCount > 0
+                ? successfulResults.reduce((sum, r) => sum + r.responseTime, 0) / successCount
+                : null;
+            const avgGpuUsage = successCount > 0
+                ? successfulResults.reduce((sum, r) => sum + r.gpuUsage, 0) / successCount
+                : null;
+            const successRate = testPrompts.length > 0 ? (successCount / testPrompts.length) * 100 : 0;
+
+            let statusKey = 'completed';
+            if (successCount === 0) {
+                statusKey = 'failed';
+            } else if (successCount < totalAttempts) {
+                statusKey = 'partial';
+            }
 
             // Update model card with results
-            updateModelCardMetrics(model.name, avgResponseTime, accuracy, avgGpuUsage);
-            updateModelCardStatus(model.name, 'completed');
+            updateModelCardMetrics(model.name, avgResponseTime, successRate, avgGpuUsage);
+            updateModelCardStatus(model.name, statusKey);
 
             // Store results
             currentBenchmarkResults.push({
@@ -1068,7 +1103,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 results: modelResults,
                 avgResponseTime,
                 avgGpuUsage,
-                accuracy
+                successRate,
+                successfulTests: successCount,
+                failedTests: totalAttempts - successCount,
+                totalTests: totalAttempts,
+                status: statusKey
             });
         }
 
@@ -1077,14 +1116,12 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBenchmarkProgress(100, 'Benchmark Complete! Generating visualizations...');
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        elements.benchmarkProgress.style.display = 'none';
-        elements.benchmarkCharts.style.display = 'block';
-        elements.benchmarkSummary.style.display = 'block';
+        if(elements.benchmarkProgress) elements.benchmarkProgress.style.display = 'none';
+        if(elements.benchmarkCharts) elements.benchmarkCharts.style.display = 'flex';
+        if(elements.benchmarkSummary) elements.benchmarkSummary.style.display = 'block';
 
         renderBenchmarkCharts();
         renderBenchmarkSummary();
-
-        updateBenchmarkProgress(100, 'All tests completed successfully!');
     }
 
     // Helper Functions for Benchmarking Page
@@ -1093,12 +1130,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!card) return;
 
         const statusElement = card.querySelector('.model-status');
-        if (statusElement) {
-            statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-        }
+        applyStatusStyles(statusElement, status);
     }
 
-    function updateModelCardMetrics(modelName, avgResponseTime, accuracy, avgGpuUsage) {
+    function updateModelCardMetrics(modelName, avgResponseTime, successRate, avgGpuUsage) {
         const card = document.querySelector(`.model-card[data-model="${modelName}"]`);
         if (!card) return;
 
@@ -1106,9 +1141,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const accuracyElement = card.querySelector('.metric.accuracy');
         const gpuElement = card.querySelector('.metric.gpu-usage');
 
-        if (timeElement) timeElement.textContent = `${Math.round(avgResponseTime)}ms`;
-        if (accuracyElement) accuracyElement.textContent = `${Math.round(accuracy)}%`;
-        if (gpuElement) gpuElement.textContent = `${Math.round(avgGpuUsage)}%`;
+        if (timeElement) timeElement.textContent = formatMetricValue(avgResponseTime, 'ms');
+        if (accuracyElement) accuracyElement.textContent = formatMetricValue(successRate, '%', true);
+        if (gpuElement) gpuElement.textContent = formatMetricValue(avgGpuUsage, '%');
     }
 
     function updateBenchmarkProgress(percentage, text) {
@@ -1124,14 +1159,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function simulateGpuUsage(model) {
         // Simulate GPU usage based on model characteristics
         let baseUsage = 20;
-        if (model.size.includes('72B')) baseUsage += 35;
-        else if (model.size.includes('24B')) baseUsage += 25;
-        else if (model.size.includes('14B')) baseUsage += 20;
+        if (model.size.includes('70B') || model.size.includes('72B')) baseUsage += 35;
+        else if (model.size.includes('20B') || model.size.includes('24B')) baseUsage += 25;
+        else if (model.size.includes('Agentic')) baseUsage += 30;
 
-        return baseUsage + Math.random() * 30; // Add some variation
+        return baseUsage + Math.random() * 20; // Add some variation
     }
 
     function renderBenchmarkCharts() {
+        // Destroy existing charts
+        if (window.responseTimeChart) window.responseTimeChart.destroy();
+        if (window.accuracyChart) window.accuracyChart.destroy();
+        if (window.gpuUsageChart) window.gpuUsageChart.destroy();
+
+        const chartTextColor = document.documentElement.getAttribute('data-theme') === 'dark' ? 'white' : '#333';
+        const chartGridColor = document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+
         // Response Time Chart
         const responseTimeCanvas = document.getElementById('responseTimeChart');
         if (responseTimeCanvas) {
@@ -1142,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     labels: currentBenchmarkResults.map(m => m.shortName),
                     datasets: [{
                         label: 'Response Time (ms)',
-                        data: currentBenchmarkResults.map(m => Math.round(m.avgResponseTime)),
+                        data: currentBenchmarkResults.map(m => Math.round(m.avgResponseTime ?? 0)),
                         backgroundColor: currentBenchmarkResults.map(m => m.color + '80'),
                         borderColor: currentBenchmarkResults.map(m => m.color),
                         borderWidth: 2,
@@ -1153,26 +1196,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 options: {
                     responsive: true,
                     plugins: {
-                        legend: {
-                            labels: { color: 'white' }
-                        }
+                        legend: { labels: { color: chartTextColor } }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: 'white' }
+                            grid: { color: chartGridColor },
+                            ticks: { color: chartTextColor }
                         },
                         x: {
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: 'white', font: { size: 10 } }
+                            grid: { display: false },
+                            ticks: { color: chartTextColor, font: { size: 10 } }
                         }
                     }
                 }
             });
         }
 
-        // Accuracy Chart
+        // Success Rate Chart
         const accuracyCanvas = document.getElementById('accuracyChart');
         if (accuracyCanvas) {
             const ctx = accuracyCanvas.getContext('2d');
@@ -1181,8 +1222,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 data: {
                     labels: currentBenchmarkResults.map(m => m.shortName),
                     datasets: [{
-                        label: 'Accuracy (%)',
-                        data: currentBenchmarkResults.map(m => Math.round(m.accuracy)),
+                        label: 'Success Rate (%)',
+                        data: currentBenchmarkResults.map(m => Math.round(m.successRate)),
                         backgroundColor: 'rgba(16, 185, 129, 0.2)',
                         borderColor: '#10B981',
                         borderWidth: 2,
@@ -1195,16 +1236,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 options: {
                     responsive: true,
                     plugins: {
-                        legend: {
-                            labels: { color: 'white' }
-                        }
+                        legend: { labels: { color: chartTextColor } }
                     },
                     scales: {
                         r: {
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            angleLines: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: 'white' },
-                            pointLabels: { color: 'white', font: { size: 11 } }
+                            beginAtZero: true,
+                            max: 100,
+                            grid: { color: chartGridColor },
+                            angleLines: { color: chartGridColor },
+                            ticks: { color: chartTextColor, backdropColor: 'transparent' },
+                            pointLabels: { color: chartTextColor, font: { size: 11 } }
                         }
                     }
                 }
@@ -1220,8 +1261,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 data: {
                     labels: currentBenchmarkResults.map(m => m.shortName),
                     datasets: [{
-                        label: 'GPU Usage (%)',
-                        data: currentBenchmarkResults.map(m => Math.round(m.avgGpuUsage)),
+                        label: 'Simulated GPU Usage (%)',
+                        data: currentBenchmarkResults.map(m => Math.round(m.avgGpuUsage ?? 0)),
                         backgroundColor: 'rgba(168, 85, 247, 0.1)',
                         borderColor: '#A855F7',
                         borderWidth: 3,
@@ -1236,19 +1277,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 options: {
                     responsive: true,
                     plugins: {
-                        legend: {
-                            labels: { color: 'white' }
-                        }
+                        legend: { labels: { color: chartTextColor } }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: 'white' }
+                            grid: { color: chartGridColor },
+                            ticks: { color: chartTextColor }
                         },
                         x: {
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: 'white', font: { size: 10 } }
+                            grid: { display: false },
+                            ticks: { color: chartTextColor, font: { size: 10 } }
                         }
                     }
                 }
@@ -1260,28 +1299,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const resultsTable = document.getElementById('resultsTable');
         if (!resultsTable) return;
 
-        const tableHtml = currentBenchmarkResults.map(model => `
+        const tableHtml = currentBenchmarkResults
+            .slice()
+            .sort((a, b) => b.successRate - a.successRate || (a.avgResponseTime ?? Infinity) - (b.avgResponseTime ?? Infinity))
+            .map(model => `
             <div class="benchmark-result-item">
                 <div class="result-model-info">
-                    <span class="result-model-name">${model.shortName} ${model.size}</span>
-                    <span class="result-model-spec">${model.name.replace(':free', '')}</span>
+                    <span class="result-model-name" style="color: ${model.color};">${model.shortName}</span>
+                    <span class="result-model-spec">${model.size} • ${model.successfulTests}/${model.totalTests} passed</span>
+                    <span class="result-status ${model.status}">${MODEL_STATUS_LABELS[model.status] || model.status}</span>
                 </div>
                 <div class="result-metrics">
                     <div class="result-metric">
-                        <span class="metric-label">Time</span>
-                        <span class="metric-value">${Math.round(model.avgResponseTime)}ms</span>
-                    </div>
-                    <div class="result-metric">
-                        <span class="metric-label">Accuracy</span>
-                        <span class="metric-value">${Math.round(model.accuracy)}%</span>
-                    </div>
-                    <div class="result-metric">
-                        <span class="metric-label">GPU</span>
-                        <span class="metric-value">${Math.round(model.avgGpuUsage)}%</span>
+                        <span class="metric-label">Avg. Time</span>
+                        <span class="metric-value">${formatMetricValue(model.avgResponseTime, 'ms')}</span>
                     </div>
                     <div class="result-metric">
                         <span class="metric-label">Success</span>
-                        <span class="metric-value">${Math.round((model.results.filter(r => r.success).length / model.results.length) * 100)}%</span>
+                        <span class="metric-value">${formatMetricValue(model.successRate, '%', true)}</span>
+                    </div>
+                    <div class="result-metric">
+                        <span class="metric-label">GPU (Sim)</span>
+                        <span class="metric-value">${formatMetricValue(model.avgGpuUsage, '%')}</span>
                     </div>
                 </div>
             </div>
@@ -1290,12 +1329,23 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsTable.innerHTML = tableHtml;
     }
 
+    function formatMetricValue(value, suffix, allowZero = false) {
+        if (value === null || value === undefined || Number.isNaN(value)) {
+            return '—';
+        }
+        const rounded = Math.round(value);
+        if (!allowZero && rounded === 0 && value !== 0) {
+            return '—';
+        }
+        return `${rounded}${suffix}`;
+    }
+
     async function sendBenchmarkRequest(model, prompt) {
         const payload = {
             messages: [{ role: 'user', content: prompt }],
             model: model,
-            temperature: 0.7,
-            max_tokens: 512,
+            temperature: 0.5,
+            max_tokens: 1024,
         };
 
         const response = await fetch(endpoints.chat, {
@@ -1304,9 +1354,15 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify(payload),
         });
 
-        if (!response.ok) throw new Error('Request failed');
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`Request failed with status ${response.status}: ${errorBody}`);
+        }
 
         const data = await response.json();
+        if (!data.response) {
+            throw new Error('Empty response from model');
+        }
         return data.response;
     }
 
@@ -1317,76 +1373,66 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function calculateAccuracy(response) {
-        // Simple accuracy calculation based on response length and coherence
-        if (!response || response.length < 10) return 0;
-        if (response.length > 50 && response.includes('.')) return 85;
-        if (response.length > 25) return 70;
-        return 50;
+    // Export benchmark results as JSON
+    function exportResults() {
+        if (!currentBenchmarkResults || currentBenchmarkResults.length === 0) {
+            alert('No benchmark results to export. Run a benchmark first.');
+            return;
+        }
+
+        const exportData = {
+            timestamp: new Date().toISOString(),
+            testRun: 'AssistMe Model Benchmarking v2.0',
+            modelsTested: currentBenchmarkResults.length,
+            totalTests: currentBenchmarkResults.reduce((sum, model) => sum + model.totalTests, 0),
+            totalSuccessfulTests: currentBenchmarkResults.reduce((sum, model) => sum + model.successfulTests, 0),
+            overallSuccessRate: Math.round(
+                (currentBenchmarkResults.reduce((sum, model) => sum + model.successfulTests, 0) /
+                 currentBenchmarkResults.reduce((sum, model) => sum + model.totalTests, 0)) * 100
+            ),
+            results: currentBenchmarkResults.map(model => ({
+                id: model.name,
+                name: model.shortName,
+                size: model.size,
+                color: model.color,
+                status: model.status,
+                averageResponseTimeMs: model.avgResponseTime,
+                successRate: `${model.successRate.toFixed(1)}%`,
+                simulatedGpuUsage: model.avgGpuUsage,
+                successfulTests: model.successfulTests,
+                failedTests: model.failedTests,
+                totalTests: model.totalTests,
+                testResults: model.results.map(r => ({
+                    promptPreview: r.prompt.substring(0, 50) + (r.prompt.length > 50 ? '...' : ''),
+                    success: r.success,
+                    responseTime: r.success ? r.responseTime : 0,
+                    gpuUsage: r.success ? r.gpuUsage : 0,
+                    error: r.error,
+                    responseLength: r.response ? r.response.length : 0
+                }))
+            }))
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `benchmark-results-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        URL.revokeObjectURL(url);
     }
 
-    function createBenchmarkModal() {
-        const modal = document.createElement('div');
-        modal.className = 'benchmark-modal';
-        modal.innerHTML = `
-            <div class="modal-overlay">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>Model Benchmarking Results</h3>
-                        <button class="modal-close">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="progress-bar">
-                            <div class="progress-fill"></div>
-                        </div>
-                        <p class="progress-text">Initializing tests...</p>
-                        <div class="results-container"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        modal.updateProgress = function(text, percent) {
-            modal.querySelector('.progress-text').textContent = text;
-            modal.querySelector('.progress-fill').style.width = percent + '%';
-        };
-
-        modal.addModelResult = function(model, avgTime, accuracy) {
-            const container = modal.querySelector('.results-container');
-            const result = document.createElement('div');
-            result.className = 'model-result';
-            result.innerHTML = `
-                <strong>${model.replace(':free', '')}</strong>
-                <span>${avgTime.toFixed(0)}ms avg • ${accuracy.toFixed(1)}% accuracy</span>
-            `;
-            container.appendChild(result);
-        };
-
-        modal.showFinalResults = function(results) {
-            const container = modal.querySelector('.modal-body');
-            container.innerHTML = `
-                <h4>Benchmark Complete!</h4>
-                <div class="benchmark-results">
-                    ${results.map(r => `
-                        <div class="benchmark-item">
-                            <strong>${r.model.replace(':free', '')}</strong>
-                            <div class="benchmark-metrics">
-                                <span>Avg Time: ${(r.results.filter(res => !res.error).reduce((sum, res) => sum + res.responseTime, 0) / r.results.filter(res => !res.error).length).toFixed(0)}ms</span>
-                                <span>Success Rate: ${((r.results.filter(res => !res.error).length / r.results.length) * 100).toFixed(0)}%</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <button class="modal-close-btn">Close</button>
-            `;
-        };
-
-        modal.querySelector('.modal-close').onclick = () => modal.remove();
-        modal.onclick = (e) => {
-            if (e.target.classList.contains('modal-overlay')) modal.remove();
-        };
-
-        document.body.appendChild(modal);
-        return modal;
+    function resetBenchmark() {
+        currentBenchmarkResults = [];
+        if (elements.benchmarkCharts) elements.benchmarkCharts.style.display = 'none';
+        if (elements.benchmarkSummary) elements.benchmarkSummary.style.display = 'none';
+        createModelCards();
+        resetBenchmarkState();
     }
+
 });
