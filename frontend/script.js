@@ -284,6 +284,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
             state.conversationId = data.conversation_id ? String(data.conversation_id) : state.conversationId;
+
+            // Handle errors from backend
+            if (data.error) {
+                const reply = `Error: ${data.error}`;
+                removeTypingIndicator();
+                appendMessage('assistant', reply);
+                saveCurrentConversation();
+                return;
+            }
+
             const reply = data.response || 'I could not produce a response. Please try again.';
 
             // Create metadata for the response
@@ -681,16 +691,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modelId) return 'Unknown';
 
     const modelMappings = {
-        'tngtech/deepseek-r1t2-chimera:free': 'TNG DeepSeek R1T2 Chimera',
+        'meta-llama/llama-3.1-8b-instruct:free': 'Llama 3.1 8B',
+        'meta-llama/llama-3.1-70b-instruct:free': 'Llama 3.1 70B',
+        'microsoft/wizardlm-2-8x22b:free': 'WizardLM 2 8x22B',
+        'google/gemma-7b:free': 'Google Gemma 7B',
+        'mistralai/codestral-mamba:free': 'Codestral Mamba',
         'z-ai/glm-4.5-air:free': 'Z.AI GLM 4.5 Air',
-        'tngtech/deepseek-r1t-chimera:free': 'TNG DeepSeek R1T Chimera',
-        'deepseek/deepseek-v3-0324:free': 'DeepSeek V3 0324',
-        'deepseek/deepseek-r1-0528:free': 'DeepSeek R1 0528',
-        'meituan/longcat-flash-chat:free': 'Meituan LongCat Flash Chat',
-        'deepseek/deepseek-r1:free': 'DeepSeek R1',
-        'microsoft/mai-ds-r1:free': 'Microsoft MAI DS R1',
-        'google/gemini-2.0-flash-exp:free': 'Google Gemini 2.0 Flash',
-        'openai/gpt-oss-20b:free': 'OpenAI GPT OSS 20B'
+        'deepseek/deepseek-v3-0324:free': 'DeepSeek V3',
+        'microsoft/fastcodellm-13b-instruct:free': 'FastCodeLLM 13B',
+        'meta-llama/llama-2-13b-chat:free': 'Llama 2 13B',
+        'rwkv-4-1.5b-chat:free': 'RWKV 4 1.5B'
     };
 
         return modelMappings[modelId] || modelId.replace(/[-_]/g, ' ').replace(':', ' ').replace(/\/.*:free/, '').trim();
@@ -977,16 +987,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getBenchmarkModels() {
         return [
-            { name: 'tngtech/deepseek-r1t2-chimera:free', shortName: 'TNG DeepSeek R1T2', size: '60K context', color: '#1abc9c' },
-            { name: 'z-ai/glm-4.5-air:free', shortName: 'Z.AI GLM 4.5 Air', size: '131K context', color: '#3498db' },
-            { name: 'tngtech/deepseek-r1t-chimera:free', shortName: 'TNG DeepSeek R1T', size: 'Hybrid', color: '#9b59b6' },
-            { name: 'deepseek/deepseek-v3-0324:free', shortName: 'DeepSeek V3', size: 'General', color: '#f1c40f' },
-            { name: 'deepseek/deepseek-r1-0528:free', shortName: 'DeepSeek R1 0528', size: 'Coding', color: '#e67e22' },
-            { name: 'meituan/longcat-flash-chat:free', shortName: 'LongCat Flash Chat', size: 'Agentic', color: '#e74c3c' },
-            { name: 'deepseek/deepseek-r1:free', shortName: 'DeepSeek R1', size: 'Coding', color: '#34495e' },
-            { name: 'microsoft/mai-ds-r1:free', shortName: 'Microsoft MAI DS R1', size: 'Safety', color: '#2ecc71' },
-            { name: 'google/gemini-2.0-flash-exp:free', shortName: 'Google Gemini 2.0', size: 'Flash', color: '#d35400' },
-            { name: 'openai/gpt-oss-20b:free', shortName: 'OpenAI GPT OSS', size: '20B', color: '#7f8c8d' }
+            { name: 'meta-llama/llama-3.1-8b-instruct:free', shortName: 'Llama 3.1 8B', size: '8B params', color: '#1abc9c' },
+            { name: 'meta-llama/llama-3.1-70b-instruct:free', shortName: 'Llama 3.1 70B', size: '70B params', color: '#3498db' },
+            { name: 'microsoft/wizardlm-2-8x22b:free', shortName: 'WizardLM 2', size: '8x22B MoE', color: '#9b59b6' },
+            { name: 'google/gemma-7b:free', shortName: 'Google Gemma', size: '7B params', color: '#f1c40f' },
+            { name: 'mistralai/codestral-mamba:free', shortName: 'Codestral Mamba', size: 'Code-specialist', color: '#e67e22' },
+            { name: 'z-ai/glm-4.5-air:free', shortName: 'Z.AI GLM', size: '131K context', color: '#e74c3c' },
+            { name: 'deepseek/deepseek-v3-0324:free', shortName: 'DeepSeek V3', size: 'General', color: '#34495e' },
+            { name: 'microsoft/fastcodellm-13b-instruct:free', shortName: 'FastCodeLLM', size: '13B coding', color: '#2ecc71' },
+            { name: 'meta-llama/llama-2-13b-chat:free', shortName: 'Llama 2 13B', size: '13B legacy', color: '#d35400' },
+            { name: 'rwkv-4-1.5b-chat:free', shortName: 'RWKV 4', size: 'Efficient RNN', color: '#7f8c8d' }
         ];
     }
 

@@ -15,16 +15,16 @@ class Grok2Client:
 
         # No need for timeout variable since requests handles it per-request
         self.default_models = [
-            {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "TNG DeepSeek R1T2 Chimera"},
+            {"id": "meta-llama/llama-3.1-8b-instruct:free", "name": "Llama 3.1 8B"},
+            {"id": "meta-llama/llama-3.1-70b-instruct:free", "name": "Llama 3.1 70B"},
+            {"id": "microsoft/wizardlm-2-8x22b:free", "name": "WizardLM 2 8x22B"},
+            {"id": "google/gemma-7b:free", "name": "Google Gemma 7B"},
+            {"id": "mistralai/codestral-mamba:free", "name": "Codestral Mamba"},
             {"id": "z-ai/glm-4.5-air:free", "name": "Z.AI GLM 4.5 Air"},
-            {"id": "tngtech/deepseek-r1t-chimera:free", "name": "TNG DeepSeek R1T Chimera"},
-            {"id": "deepseek/deepseek-v3-0324:free", "name": "DeepSeek V3 0324"},
-            {"id": "deepseek/deepseek-r1-0528:free", "name": "DeepSeek R1 0528"},
-            {"id": "meituan/longcat-flash-chat:free", "name": "Meituan LongCat Flash Chat"},
-            {"id": "deepseek/deepseek-r1:free", "name": "DeepSeek R1"},
-            {"id": "microsoft/mai-ds-r1:free", "name": "Microsoft MAI DS R1"},
-            {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash"},
-            {"id": "openai/gpt-oss-20b:free", "name": "OpenAI GPT OSS 20B"},
+            {"id": "deepseek/deepseek-v3-0324:free", "name": "DeepSeek V3"},
+            {"id": "microsoft/fastcodellm-13b-instruct:free", "name": "FastCodeLLM 13B"},
+            {"id": "meta-llama/llama-2-13b-chat:free", "name": "Llama 2 13B"},
+            {"id": "rwkv-4-1.5b-chat:free", "name": "RWKV 4 1.5B"},
         ]
 
         self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip() or self.default_models[0]["id"]
