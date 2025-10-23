@@ -949,10 +949,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const models = getBenchmarkModels();
         models.forEach(model => {
             const card = document.createElement('div');
-            card.className = 'model-card';
+            card.className = `model-card ${model.name.replace(/[^\w]/g, '-').toLowerCase()}`;
             card.dataset.model = model.name;
             card.innerHTML = `
-                <div class="model-card-header" style="border-left-color: ${model.color};">
+                <div class="model-card-header">
                     <h4 class="model-name">${model.shortName}</h4>
                     <span class="model-status ready">${MODEL_STATUS_LABELS.ready}</span>
                 </div>
@@ -1196,8 +1196,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.accuracyChart) window.accuracyChart.destroy();
         if (window.gpuUsageChart) window.gpuUsageChart.destroy();
 
-        const chartTextColor = document.documentElement.getAttribute('data-theme') === 'dark' ? 'white' : '#333';
-        const chartGridColor = document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+        const chartTextColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#ffffff';
+        const chartGridColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() || '#ffffff33';
 
         // Response Time Chart
         const responseTimeCanvas = document.getElementById('responseTimeChart');

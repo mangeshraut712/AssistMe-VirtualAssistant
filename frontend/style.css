@@ -75,6 +75,14 @@
     /* Transitions */
     --transition-fast: 0.15s ease;
     --transition-normal: 0.25s ease;
+
+    /* Benchmark UI Theme Variables */
+    --bench-bg-overlay: rgba(255, 255, 255, 0.05);
+    --bench-border-overlay: rgba(255, 255, 255, 0.1);
+    --bench-text-primary: var(--text-primary);
+    --bench-text-secondary: var(--text-secondary);
+    --bench-accent-primary: #10a37f;
+    --bench-accent-secondary: #059669;
 }
 
 /* Dark Mode */
@@ -2450,6 +2458,119 @@ html[data-theme="dark"] .metric-value {
     .benchmark-results-summary {
         padding: var(--spacing-xl) var(--spacing-lg);
     }
+}
+
+/* MODEL THEME COLORS - Theme-Aware */
+/* Group models by color for consistent theming */
+.model-card.rwkv-rwkv-6-world-clash-free .model-card-header,
+.model-card.rwkv-rwkv-6-world-godot-free .model-card-header,
+.model-card.rwkv-rwkv-6-world-ness-free .model-card-header {
+    border-left: 4px solid var(--bench-accent-primary);
+}
+
+.model-card.h2oai-h2o-danube-1-8b-chat-free .model-card-header {
+    border-left: 4px solid var(--bench-accent-secondary);
+}
+
+.model-card.thedrummer-unsloth-llama-3-8b-abliterated-free .model-card-header,
+.model-card.teknium-openhermes-2-5-mistral-7b-free .model-card-header,
+.model-card.microsoft-fastcodellm-13b-instruct-free .model-card-header {
+    border-left: 4px solid #d35400;
+}
+
+.model-card.meta-llama-llama-2-13b-chat-free .model-card-header {
+    border-left: 4px solid #1abc9c;
+}
+
+.model-card.openchat-openchat-7b-free .model-card-header {
+    border-left: 4px solid #f1c40f;
+}
+
+.model-card.google-gemma-7b-it-free .model-card-header {
+    border-left: 4px solid #3498db;
+}
+
+/* Model avatars with theme-aware colors */
+.model-card.rwkv-rwkv-6-world-clash-free .model-avatar {
+    background: linear-gradient(135deg, var(--bench-accent-primary), #d35400);
+}
+
+.model-card.rwkv-rwkv-6-world-godot-free .model-avatar {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.model-card.rwkv-rwkv-6-world-ness-free .model-avatar {
+    background: linear-gradient(135deg, #34495e, #2c3e50);
+}
+
+.model-card.h2oai-h2o-danube-1-8b-chat-free .model-avatar {
+    background: linear-gradient(135deg, var(--bench-accent-secondary), #27ae60);
+}
+
+.model-card.thedrummer-unsloth-llama-3-8b-abliterated-free .model-avatar {
+    background: linear-gradient(135deg, #7f8c8d, #95a5a6);
+}
+
+.model-card.teknium-openhermes-2-5-mistral-7b-free .model-avatar {
+    background: linear-gradient(135deg, #d35400, #e67e22);
+}
+
+.model-card.microsoft-fastcodellm-13b-instruct-free .model-avatar {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.model-card.meta-llama-llama-2-13b-chat-free .model-avatar {
+    background: linear-gradient(135deg, #1abc9c, #16a085);
+}
+
+.model-card.openchat-openchat-7b-free .model-avatar {
+    background: linear-gradient(135deg, #f1c40f, #f39c12);
+}
+
+.model-card.google-gemma-7b-it-free .model-avatar {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+/* Theme-aware status colors */
+html[data-theme="dark"] .model-status.ready {
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.8), rgba(75, 85, 99, 0.8));
+}
+
+html[data-theme="dark"] .model-status.testing {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.8), rgba(217, 119, 6, 0.8));
+}
+
+html[data-theme="dark"] .model-status.completed {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.8), rgba(5, 150, 105, 0.8));
+}
+
+html[data-theme="dark"] .model-status.partial {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(37, 99, 235, 0.8));
+}
+
+html[data-theme="dark"] .model-status.failed {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.8), rgba(185, 28, 28, 0.8));
+}
+
+/* Light mode status colors */
+html .model-status.ready {
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+}
+
+html .model-status.testing {
+    background: linear-gradient(135deg, #fef3c7, #fcd34d);
+}
+
+html .model-status.completed {
+    background: linear-gradient(135deg, #d1fae5, #10b981);
+}
+
+html .model-status.partial {
+    background: linear-gradient(135deg, #dbeafe, #3b82f6);
+}
+
+html .model-status.failed {
+    background: linear-gradient(135deg, #fee2e2, #ef4444);
 }
 
 /* UTILITY CLASSES */
