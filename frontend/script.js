@@ -287,9 +287,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Handle errors from backend
             if (data.error) {
-                const reply = `Error: ${data.error}`;
+                // Special handling for rate limit errors
+                if (data.error.includes("Rate limit exceeded") || data.error.includes("rate limit")) {
+                    appendMessage('assistant', data.error, {
+                        source: 'System',
+                        model: 'Rate Limited',
+                        category: 'Error',
+                        runtime: '0s'
+                    });
+                } else {
+                    appendMessage('assistant', `Error: ${data.error}`, {
+                        source: 'System',
+                        model: 'Error',
+                        category: 'Error',
+                        runtime: '0s'
+                    });
+                }
                 removeTypingIndicator();
-                appendMessage('assistant', reply);
                 saveCurrentConversation();
                 return;
             }

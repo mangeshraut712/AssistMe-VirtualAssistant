@@ -1,6 +1,8 @@
 import os
 import requests
 import logging
+import redis
+from typing import Optional
 
 class Grok2Client:
     def __init__(self):
@@ -12,6 +14,15 @@ class Grok2Client:
         # Fallback configuration for a future Grok-2 endpoint
         self.grok2_endpoint = os.getenv("GROK2_ENDPOINT")
         self.grok2_api_key = os.getenv("GROK2_API_KEY")
+
+        # Rate limiting configuration
+        self.redis_client: Optional[redis.Redis] = None
+        redis_url = os.getenv("REDIS_URL")
+        if redis_url:
+            try:
+                self.redis_client = redis.from_url(redis_url)
+            except Exception as e:
+                logging.warning(f"Failed to connect to Redis: {e}")
 
         # No need for timeout variable since requests handles it per-request
         self.default_models = [
@@ -51,6 +62,33 @@ class Grok2Client:
             formatted.append({"role": role, "content": content})
         return formatted
 
+    def _check_rate_limit(self, identifier: str = "global", max_requests: int = 45) -> bool:
+        """Check if we're within rate limits. Returns True if allowed, False if rate limited."""
+        if not self.redis_client:
+            logging.warning("Redis not available for rate limiting")
+            return True  # Allow if Redis is not configured
+
+        try:
+            key = f"ratelimit:{identifier}:day"
+            current = self.redis_client.get(key)
+
+            if current is None:
+                # First request today
+                self.redis_client.setex(key, 86400, 1)  # 24 hours
+                return True
+
+            current_count = int(current)
+            if current_count >= max_requests:
+                return False
+
+            # Increment counter
+            self.redis_client.incr(key)
+            return True
+
+        except Exception as e:
+            logging.error(f"Rate limiting error: {e}")
+            return True  # Allow on error to prevent breaking functionality
+
     def generate_response(self, messages, model=None, temperature=0.7, max_tokens=1024):
         model_name = model or self.default_model or self.default_models[0]["id"]
 
@@ -58,6 +96,13 @@ class Grok2Client:
             logging.warning("OPENROUTER_API_KEY not configured; returning placeholder response.")
             return {
                 "response": "OpenRouter API key is not configured. Please set OPENROUTER_API_KEY to enable live responses.",
+                "tokens": 0,
+            }
+
+        # Check rate limit
+        if not self._check_rate_limit():
+            return {
+                "error": "Rate limit exceeded. You've reached the daily limit for free model requests (45/day). This resets every 24 hours. To get more requests, consider upgrading your OpenRouter account to unlock 1000 requests/day for just $10.",
                 "tokens": 0,
             }
 
