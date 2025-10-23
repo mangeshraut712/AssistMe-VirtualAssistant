@@ -675,15 +675,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function getModelDisplayName(modelId) {
         if (!modelId) return 'Unknown';
 
-        const modelMappings = {
-            'meta-llama/llama-4-scout:free': 'Llama 4 Scout',
-            'qwen/qwen3-14b:free': 'Qwen 3 14B',
-            'deepseek/deepseek-chat-v3.1:free': 'DeepSeek V3.1',
-            'mistralai/mistral-small-3.1-24b-instruct:free': 'Mistral 24B',
-            'tngtech/deepseek-r1t-chimera:free': 'Chimera R1T',
-            'moonshotai/kimi-dev-72b:free': 'Kimi Dev 72B',
-            'nvidia/nemotron-nano-9b-v2:free': 'Nemotron 9B'
-        };
+    const modelMappings = {
+        'meta-llama/llama-3.3-70b-instruct:free': 'Llama 3.3 70B',
+        'meta-llama/llama-4-scout:free': 'Llama 4 Scout',
+        'meta-llama/llama-4-maverick:free': 'Llama 4 Maverick',
+        'deepseek/deepseek-r1:free': 'DeepSeek R1',
+        'qwen/qwen3-14b:free': 'Qwen3 14B',
+        'deepseek/deepseek-chat-v3.1:free': 'DeepSeek V3.1',
+        'mistralai/mistral-small-3.1-24b-instruct:free': 'Mistral 24B',
+        'moonshotai/kimi-dev-72b:free': 'Kimi Dev 72B',
+        'openai/gpt-oss-20b:free': 'GPT OSS 20B'
+    };
 
         return modelMappings[modelId] || modelId.replace(/[-_]/g, ' ').replace(':', ' ').replace(/\/.*:free/, '').trim();
     }
@@ -921,49 +923,61 @@ document.addEventListener('DOMContentLoaded', () => {
         benchmarkingInProgress = true;
         currentBenchmarkResults = [];
 
-        // Include all 7 models now
+        // Include all 9 models now
         const models = [
             {
-                name: 'meta-llama/llama-4-scout:free',
-                shortName: 'Meta Llama 4',
-                size: 'Scout',
+                name: 'meta-llama/llama-3.3-70b-instruct:free',
+                shortName: 'Llama 3.3',
+                size: '70B',
                 color: '#FF6B35'
             },
             {
-                name: 'qwen/qwen3-14b:free',
-                shortName: 'Qwen 3',
-                size: '14B',
+                name: 'meta-llama/llama-4-scout:free',
+                shortName: 'Llama 4 Scout',
+                size: 'Scout',
                 color: '#10B981'
+            },
+            {
+                name: 'meta-llama/llama-4-maverick:free',
+                shortName: 'Llama 4 Maverick',
+                size: 'Maverick',
+                color: '#8B5CF6'
+            },
+            {
+                name: 'deepseek/deepseek-r1:free',
+                shortName: 'DeepSeek',
+                size: 'R1',
+                color: '#3B82F6'
+            },
+            {
+                name: 'qwen/qwen3-14b:free',
+                shortName: 'Qwen3',
+                size: '14B',
+                color: '#EC4899'
             },
             {
                 name: 'deepseek/deepseek-chat-v3.1:free',
                 shortName: 'DeepSeek',
                 size: 'V3.1',
-                color: '#8B5CF6'
+                color: '#F59E0B'
             },
             {
                 name: 'mistralai/mistral-small-3.1-24b-instruct:free',
                 shortName: 'Mistral',
                 size: '24B',
-                color: '#3B82F6'
-            },
-            {
-                name: 'tngtech/deepseek-r1t-chimera:free',
-                shortName: 'Chimera',
-                size: 'R1T',
-                color: '#EC4899'
+                color: '#6366F1'
             },
             {
                 name: 'moonshotai/kimi-dev-72b:free',
                 shortName: 'Kimi Dev',
                 size: '72B',
-                color: '#F59E0B'
+                color: '#A855F7'
             },
             {
-                name: 'nvidia/nemotron-nano-9b-v2:free',
-                shortName: 'Nemotron',
-                size: '9B',
-                color: '#6366F1'
+                name: 'openai/gpt-oss-20b:free',
+                shortName: 'GPT OSS',
+                size: '20B',
+                color: '#FBBF24'
             }
         ];
 

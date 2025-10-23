@@ -4,8 +4,7 @@ import logging
 from importlib import import_module
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from .settings import get_database_url
 
@@ -47,7 +46,7 @@ def _ensure_database_setup() -> bool:
     if engine is not None and not _tables_initialized:
         try:
             _load_models()
-            Base.metadata.create_all(bind=engine)  # type: ignore[arg-type]
+            Base.metadata.create_all(bind=engine)
             _tables_initialized = True
         except Exception as exc:
             logging.warning("Automatic table creation failed: %s", exc)
