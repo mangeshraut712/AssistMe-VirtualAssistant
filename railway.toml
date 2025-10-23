@@ -1,0 +1,7 @@
+[build]
+buildCommand = "pip install -r backend/requirements.txt"
+
+[deploy]
+startCommand = "exec ./backend/start.sh"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
