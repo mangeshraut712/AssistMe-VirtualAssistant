@@ -2536,6 +2536,63 @@ html[data-theme="dark"] .model-status.ready {
     background: linear-gradient(135deg, rgba(100, 116, 139, 0.8), rgba(75, 85, 99, 0.8));
 }
 
+/* LIGHT MODE - Fix benchmarking page text colors */
+html:not([data-theme="dark"]) .benchmark-title {
+    color: var(--text-primary) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+html:not([data-theme="dark"]) .chart-title {
+    color: var(--text-primary) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+html:not([data-theme="dark"]) .benchmark-results-summary h3 {
+    color: var(--text-primary) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+html:not([data-theme="dark"]) .result-model-name {
+    color: var(--text-primary) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+html:not([data-theme="dark"]) .progress-header h3 {
+    color: var(--text-primary) !important;
+}
+
+/* Light mode overrides for benchmark page elements */
+html:not([data-theme="dark"]) .current-test-info {
+    color: var(--text-secondary) !important;
+}
+
+html:not([data-theme="dark"]) .result-model-spec {
+    color: var(--text-secondary) !important;
+}
+
+html:not([data-theme="dark"]) .stat-label {
+    color: var(--text-secondary) !important;
+}
+
+/* Fix model card text colors in light mode */
+html:not([data-theme="dark"]) .model-name {
+    color: var(--text-primary) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+html:not([data-theme="dark"]) .model-desc {
+    color: var(--text-secondary) !important;
+}
+
+/* Ensure proper contrast for stat colors in light mode */
+html:not([data-theme="dark"]) .progress-percentage {
+    color: var(--accent-color) !important;
+}
+
+html:not([data-theme="dark"]) .metric-value {
+    color: var(--accent-color) !important;
+}
+
 html[data-theme="dark"] .model-status.testing {
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.8), rgba(217, 119, 6, 0.8));
 }
