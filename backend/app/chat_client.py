@@ -15,16 +15,16 @@ class Grok2Client:
 
         # No need for timeout variable since requests handles it per-request
         self.default_models = [
-            {"id": "meta-llama/llama-3.1-8b-instruct:free", "name": "Llama 3.1 8B"},
-            {"id": "meta-llama/llama-3.1-70b-instruct:free", "name": "Llama 3.1 70B"},
+            {"id": "mistralai/mistral-7b-instruct:free", "name": "Mistral 7B"},
             {"id": "microsoft/wizardlm-2-8x22b:free", "name": "WizardLM 2 8x22B"},
-            {"id": "google/gemma-7b:free", "name": "Google Gemma 7B"},
-            {"id": "mistralai/codestral-mamba:free", "name": "Codestral Mamba"},
-            {"id": "z-ai/glm-4.5-air:free", "name": "Z.AI GLM 4.5 Air"},
-            {"id": "deepseek/deepseek-v3-0324:free", "name": "DeepSeek V3"},
-            {"id": "microsoft/fastcodellm-13b-instruct:free", "name": "FastCodeLLM 13B"},
-            {"id": "meta-llama/llama-2-13b-chat:free", "name": "Llama 2 13B"},
-            {"id": "rwkv-4-1.5b-chat:free", "name": "RWKV 4 1.5B"},
+            {"id": "google/gemma-7b-it:free", "name": "Google Gemma 7B"},
+            {"id": "openchat/openchat-7b:free", "name": "OpenChat 7B"},
+            {"id": "rwkv/rwkv-6-world-clash:free", "name": "RWKV Clash 1.6B"},
+            {"id": "rwkv/rwkv-6-world-godot:free", "name": "RWKV Godot 1.5B"},
+            {"id": "rwkv/rwkv-6-world-ness:free", "name": "RWKV Ness 1.4B"},
+            {"id": "h2oai/h2o-danube-1.8b-chat:free", "name": "H2O Danube 1.8B"},
+            {"id": "teknium/openhermes-2.5-mistral-7b:free", "name": "OpenHermes 2.5"},
+            {"id": "thedrummer/unsloth-llama-3-8b-abliterated:free", "name": "Unsloth Llama 3"},
         ]
 
         self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip() or self.default_models[0]["id"]

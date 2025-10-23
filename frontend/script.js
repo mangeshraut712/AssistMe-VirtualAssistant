@@ -691,16 +691,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modelId) return 'Unknown';
 
     const modelMappings = {
-        'meta-llama/llama-3.1-8b-instruct:free': 'Llama 3.1 8B',
-        'meta-llama/llama-3.1-70b-instruct:free': 'Llama 3.1 70B',
+        'mistralai/mistral-7b-instruct:free': 'Mistral 7B',
         'microsoft/wizardlm-2-8x22b:free': 'WizardLM 2 8x22B',
-        'google/gemma-7b:free': 'Google Gemma 7B',
-        'mistralai/codestral-mamba:free': 'Codestral Mamba',
-        'z-ai/glm-4.5-air:free': 'Z.AI GLM 4.5 Air',
-        'deepseek/deepseek-v3-0324:free': 'DeepSeek V3',
-        'microsoft/fastcodellm-13b-instruct:free': 'FastCodeLLM 13B',
-        'meta-llama/llama-2-13b-chat:free': 'Llama 2 13B',
-        'rwkv-4-1.5b-chat:free': 'RWKV 4 1.5B'
+        'google/gemma-7b-it:free': 'Google Gemma 7B',
+        'openchat/openchat-7b:free': 'OpenChat 7B',
+        'rwkv/rwkv-6-world-clash:free': 'RWKV Clash 1.6B',
+        'rwkv/rwkv-6-world-godot:free': 'RWKV Godot 1.5B',
+        'rwkv/rwkv-6-world-ness:free': 'RWKV Ness 1.4B',
+        'h2oai/h2o-danube-1.8b-chat:free': 'H2O Danube 1.8B',
+        'teknium/openhermes-2.5-mistral-7b:free': 'OpenHermes 2.5',
+        'thedrummer/unsloth-llama-3-8b-abliterated:free': 'Unsloth Llama 3'
     };
 
         return modelMappings[modelId] || modelId.replace(/[-_]/g, ' ').replace(':', ' ').replace(/\/.*:free/, '').trim();
@@ -987,16 +987,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getBenchmarkModels() {
         return [
-            { name: 'meta-llama/llama-3.1-8b-instruct:free', shortName: 'Llama 3.1 8B', size: '8B params', color: '#1abc9c' },
-            { name: 'meta-llama/llama-3.1-70b-instruct:free', shortName: 'Llama 3.1 70B', size: '70B params', color: '#3498db' },
-            { name: 'microsoft/wizardlm-2-8x22b:free', shortName: 'WizardLM 2', size: '8x22B MoE', color: '#9b59b6' },
-            { name: 'google/gemma-7b:free', shortName: 'Google Gemma', size: '7B params', color: '#f1c40f' },
-            { name: 'mistralai/codestral-mamba:free', shortName: 'Codestral Mamba', size: 'Code-specialist', color: '#e67e22' },
-            { name: 'z-ai/glm-4.5-air:free', shortName: 'Z.AI GLM', size: '131K context', color: '#e74c3c' },
-            { name: 'deepseek/deepseek-v3-0324:free', shortName: 'DeepSeek V3', size: 'General', color: '#34495e' },
-            { name: 'microsoft/fastcodellm-13b-instruct:free', shortName: 'FastCodeLLM', size: '13B coding', color: '#2ecc71' },
-            { name: 'meta-llama/llama-2-13b-chat:free', shortName: 'Llama 2 13B', size: '13B legacy', color: '#d35400' },
-            { name: 'rwkv-4-1.5b-chat:free', shortName: 'RWKV 4', size: 'Efficient RNN', color: '#7f8c8d' }
+            { name: 'mistralai/mistral-7b-instruct:free', shortName: 'Mistral 7B', size: '7B params', color: '#1abc9c' },
+            { name: 'microsoft/wizardlm-2-8x22b:free', shortName: 'WizardLM 2', size: '8x22B MoE', color: '#3498db' },
+            { name: 'google/gemma-7b-it:free', shortName: 'Google Gemma', size: '7B params', color: '#9b59b6' },
+            { name: 'openchat/openchat-7b:free', shortName: 'OpenChat 7B', size: 'Uncensored', color: '#f1c40f' },
+            { name: 'rwkv/rwkv-6-world-clash:free', shortName: 'RWKV Clash', size: '1.6B RNN', color: '#e67e22' },
+            { name: 'rwkv/rwkv-6-world-godot:free', shortName: 'RWKV Godot', size: '1.5B RNN', color: '#e74c3c' },
+            { name: 'rwkv/rwkv-6-world-ness:free', shortName: 'RWKV Ness', size: '1.4B RNN', color: '#34495e' },
+            { name: 'h2oai/h2o-danube-1.8b-chat:free', shortName: 'H2O Danube', size: '1.8B fine-tune', color: '#2ecc71' },
+            { name: 'teknium/openhermes-2.5-mistral-7b:free', shortName: 'OpenHermes 2.5', size: '7B fine-tune', color: '#d35400' },
+            { name: 'thedrummer/unsloth-llama-3-8b-abliterated:free', shortName: 'Unsloth Llama 3', size: '8B optimized', color: '#7f8c8d' }
         ];
     }
 
