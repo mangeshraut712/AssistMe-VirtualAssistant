@@ -23,6 +23,16 @@ def get_database_url() -> str | None:
         if url:
             return _normalise_db_url(url)
 
+    # Railway Postgres services expose PG* environment variables even when DATABASE_URL is unset
+    pg_host = os.getenv("PGHOST")
+    pg_user = os.getenv("PGUSER")
+    pg_password = os.getenv("PGPASSWORD")
+    pg_db = os.getenv("PGDATABASE")
+    pg_port = os.getenv("PGPORT", "5432")
+
+    if all([pg_host, pg_user, pg_password, pg_db]):
+        return f"postgresql+pg8000://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+
     # Only provide fallback for local development
     if os.getenv("RAILWAY_PROJECT_ID") is None:
         # Local default (docker-compose)

@@ -2201,6 +2201,14 @@ html[data-theme="dark"] .metric-value {
     background: linear-gradient(135deg, #10B981, #059669);
 }
 
+.model-status.partial {
+    background: linear-gradient(135deg, #3B82F6, #2563EB);
+}
+
+.model-status.failed {
+    background: linear-gradient(135deg, #EF4444, #B91C1C);
+}
+
 @keyframes pulseTesting {
     0%, 100% {
         opacity: 1;
@@ -2331,6 +2339,35 @@ html[data-theme="dark"] .metric-value {
     font-size: var(--font-size-sm);
     color: rgba(255, 255, 255, 0.6);
     font-weight: 500;
+}
+
+.result-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: var(--spacing-xs);
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.08);
+    width: fit-content;
+}
+
+.result-status.completed {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.25));
+}
+
+.result-status.partial {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.25));
+}
+
+.result-status.failed {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(185, 28, 28, 0.25));
 }
 
 .result-metrics {
