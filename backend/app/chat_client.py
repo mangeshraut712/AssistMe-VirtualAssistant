@@ -11,6 +11,9 @@ class Grok2Client:
         self.referer = os.getenv("APP_URL", "http://localhost:3001")
         self.title = os.getenv("APP_NAME", "AssistMe Virtual Assistant")
 
+        # Development mode for testing without API limits
+        self.dev_mode = os.getenv("DEV_MODE", "false").lower() == "true"
+
         # Fallback configuration for a future Grok-2 endpoint
         self.grok2_endpoint = os.getenv("GROK2_ENDPOINT")
         self.grok2_api_key = os.getenv("GROK2_API_KEY")
@@ -24,18 +27,18 @@ class Grok2Client:
             except Exception as e:
                 logging.warning(f"Failed to connect to Redis: {e}")
 
-        # No need for timeout variable since requests handles it per-request
+        # Models that might have different rate limits (different providers)
         self.default_models = [
-            {"id": "mistralai/mistral-7b-instruct:free", "name": "Mistral 7B"},
-            {"id": "microsoft/wizardlm-2-8x22b:free", "name": "WizardLM 2 8x22B"},
-            {"id": "google/gemma-7b-it:free", "name": "Google Gemma 7B"},
-            {"id": "openchat/openchat-7b:free", "name": "OpenChat 7B"},
-            {"id": "rwkv/rwkv-6-world-clash:free", "name": "RWKV Clash 1.6B"},
-            {"id": "rwkv/rwkv-6-world-godot:free", "name": "RWKV Godot 1.5B"},
-            {"id": "rwkv/rwkv-6-world-ness:free", "name": "RWKV Ness 1.4B"},
-            {"id": "h2oai/h2o-danube-1.8b-chat:free", "name": "H2O Danube 1.8B"},
-            {"id": "teknium/openhermes-2.5-mistral-7b:free", "name": "OpenHermes 2.5"},
+            {"id": "rwkv/rwkv-6-world-clash:free", "name": "RWKV Clash"},
+            {"id": "rwkv/rwkv-6-world-godot:free", "name": "RWKV Godot"},
+            {"id": "rwkv/rwkv-6-world-ness:free", "name": "RWKV Ness"},
+            {"id": "h2oai/h2o-danube-1.8b-chat:free", "name": "H2O Danube"},
             {"id": "thedrummer/unsloth-llama-3-8b-abliterated:free", "name": "Unsloth Llama 3"},
+            {"id": "teknium/openhermes-2.5-mistral-7b:free", "name": "OpenHermes"},
+            {"id": "microsoft/fastcodellm-13b-instruct:free", "name": "FastCodeLLM"},
+            {"id": "meta-llama/llama-2-13b-chat:free", "name": "Llama 2 13B"},
+            {"id": "openchat/openchat-7b:free", "name": "OpenChat 7B"},
+            {"id": "google/gemma-7b-it:free", "name": "Google Gemma 7B"},
         ]
 
         self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip() or self.default_models[0]["id"]
@@ -89,8 +92,32 @@ class Grok2Client:
             logging.error(f"Rate limiting error: {e}")
             return True  # Allow on error to prevent breaking functionality
 
+    def _get_mock_response(self, messages, model_name):
+        """Generate mock responses for development/testing without API limits."""
+        user_messages = [msg["content"] for msg in messages if msg["role"] == "user"]
+        last_message = user_messages[-1] if user_messages else "Hello"
+
+        # Generate a contextual mock response based on the message
+        if "hello" in last_message.lower() or "hi" in last_message.lower():
+            response = f"Hello! I'm {model_name}, responding from our development environment. Your message was: '{last_message}'. This is a mock response for testing purposes."
+        elif "code" in last_message.lower() or "python" in last_message.lower():
+            response = f"I see you asked about coding! In development mode, here's what you asked: '{last_message}'. I'd normally provide code examples and explanations here."
+        elif "help" in last_message.lower():
+            response = f"I'm here to help! In development mode, I can tell you that your message '{last_message}' has been received. Feel free to explore the chat interface!"
+        else:
+            response = f"Thanks for your message: '{last_message}'. This is a mock response using {model_name} in development mode. The real AI would provide a thoughtful response here!"
+
+        return {
+            "response": response,
+            "tokens": len(response.split())
+        }
+
     def generate_response(self, messages, model=None, temperature=0.7, max_tokens=1024):
         model_name = model or self.default_model or self.default_models[0]["id"]
+
+        # In development mode, return mock responses to avoid API limits
+        if self.dev_mode:
+            return self._get_mock_response(messages, model_name)
 
         if not self.api_key:
             logging.warning("OPENROUTER_API_KEY not configured; returning placeholder response.")
