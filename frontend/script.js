@@ -676,15 +676,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modelId) return 'Unknown';
 
     const modelMappings = {
-        'meta-llama/llama-3.3-70b-instruct:free': 'Llama 3.3 70B',
-        'meta-llama/llama-4-scout:free': 'Llama 4 Scout',
-        'meta-llama/llama-4-maverick:free': 'Llama 4 Maverick',
+        'tngtech/deepseek-r1t2-chimera:free': 'TNG DeepSeek R1T2 Chimera',
+        'z-ai/glm-4.5-air:free': 'Z.AI GLM 4.5 Air',
+        'tngtech/deepseek-r1t-chimera:free': 'TNG DeepSeek R1T Chimera',
+        'deepseek/deepseek-v3-0324:free': 'DeepSeek V3 0324',
+        'deepseek/deepseek-r1-0528:free': 'DeepSeek R1 0528',
+        'meituan/longcat-flash-chat:free': 'Meituan LongCat Flash Chat',
         'deepseek/deepseek-r1:free': 'DeepSeek R1',
-        'qwen/qwen3-14b:free': 'Qwen3 14B',
-        'deepseek/deepseek-chat-v3.1:free': 'DeepSeek V3.1',
-        'mistralai/mistral-small-3.1-24b-instruct:free': 'Mistral 24B',
-        'moonshotai/kimi-dev-72b:free': 'Kimi Dev 72B',
-        'openai/gpt-oss-20b:free': 'GPT OSS 20B'
+        'microsoft/mai-ds-r1:free': 'Microsoft MAI DS R1',
+        'google/gemini-2.0-flash-exp:free': 'Google Gemini 2.0 Flash',
+        'openai/gpt-oss-20b:free': 'OpenAI GPT OSS 20B'
     };
 
         return modelMappings[modelId] || modelId.replace(/[-_]/g, ' ').replace(':', ' ').replace(/\/.*:free/, '').trim();
@@ -923,7 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
         benchmarkingInProgress = true;
         currentBenchmarkResults = [];
 
-        // Include all 9 models now
+        // Include all 10 models now
         const models = [
             {
                 name: 'meta-llama/llama-3.3-70b-instruct:free',
@@ -950,34 +951,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 color: '#3B82F6'
             },
             {
-                name: 'qwen/qwen3-14b:free',
+                name: 'deepseek/deepseek-r1-distill-llama-70b:free',
+                shortName: 'DeepSeek R1 Distill',
+                size: '70B',
+                color: '#3B82F6'
+            },
+            {
+                name: 'qwen/qwen3-235b-a22b:free',
                 shortName: 'Qwen3',
-                size: '14B',
+                size: '235B',
                 color: '#EC4899'
             },
             {
-                name: 'deepseek/deepseek-chat-v3.1:free',
-                shortName: 'DeepSeek',
-                size: 'V3.1',
-                color: '#F59E0B'
+                name: 'qwen/qwen-2.5-72b-instruct:free',
+                shortName: 'Qwen2.5',
+                size: '72B',
+                color: '#EC4899'
             },
             {
-                name: 'mistralai/mistral-small-3.1-24b-instruct:free',
-                shortName: 'Mistral',
+                name: 'mistralai/mistral-small-3.2-24b-instruct:free',
+                shortName: 'Mistral 3.2',
                 size: '24B',
                 color: '#6366F1'
+            },
+            {
+                name: 'nousresearch/hermes-3-llama-3.1-405b:free',
+                shortName: 'Hermes 3',
+                size: '405B',
+                color: '#A855F7'
             },
             {
                 name: 'moonshotai/kimi-dev-72b:free',
                 shortName: 'Kimi Dev',
                 size: '72B',
                 color: '#A855F7'
-            },
-            {
-                name: 'openai/gpt-oss-20b:free',
-                shortName: 'GPT OSS',
-                size: '20B',
-                color: '#FBBF24'
             }
         ];
 

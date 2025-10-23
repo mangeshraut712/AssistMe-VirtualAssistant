@@ -54,37 +54,45 @@
                             <i class="fas fa-chevron-down"></i>
                         </button>
                     <div class="model-dropdown" id="modelDropdown">
-                        <button class="model-option active" data-model="meta-llama/llama-3.3-70b-instruct:free">
-                            <span class="model-label">Meta Llama 3.3 70B</span>
-                            <span class="model-desc">Latest flagship with exceptional reasoning</span>
+                        <button class="model-option active" data-model="tngtech/deepseek-r1t2-chimera:free">
+                            <span class="model-label">TNG DeepSeek R1T2 Chimera</span>
+                            <span class="model-desc">Second-generation MoE reasoning model</span>
                         </button>
-                        <button class="model-option" data-model="meta-llama/llama-4-scout:free">
-                            <span class="model-label">Meta Llama 4 Scout</span>
-                            <span class="model-desc">Balanced reasoning with low latency</span>
+                        <button class="model-option" data-model="z-ai/glm-4.5-air:free">
+                            <span class="model-label">Z.AI GLM 4.5 Air</span>
+                            <span class="model-desc">Lightweight agent-centric transformer</span>
                         </button>
-                        <button class="model-option" data-model="meta-llama/llama-4-maverick:free">
-                            <span class="model-label">Meta Llama 4 Maverick</span>
-                            <span class="model-desc">Advanced Llama 4 variant for exploration</span>
+                        <button class="model-option" data-model="tngtech/deepseek-r1t-chimera:free">
+                            <span class="model-label">TNG DeepSeek R1T Chimera</span>
+                            <span class="model-desc">Merged R1 and V3 for reasoning + efficiency</span>
+                        </button>
+                        <button class="model-option" data-model="deepseek/deepseek-v3-0324:free">
+                            <span class="model-label">DeepSeek V3 0324</span>
+                            <span class="model-desc">685B MoE flagship with strong capabilities</span>
+                        </button>
+                        <button class="model-option" data-model="deepseek/deepseek-r1-0528:free">
+                            <span class="model-label">DeepSeek R1 0528</span>
+                            <span class="model-desc">Updated open-source reasoning model</span>
+                        </button>
+                        <button class="model-option" data-model="meituan/longcat-flash-chat:free">
+                            <span class="model-label">Meituan LongCat Flash Chat</span>
+                            <span class="model-desc">560B MoE for conversational AI</span>
                         </button>
                         <button class="model-option" data-model="deepseek/deepseek-r1:free">
                             <span class="model-label">DeepSeek R1</span>
-                            <span class="model-desc">New reasoning model with strong capabilities</span>
+                            <span class="model-desc">671B MoE on par with OpenAI o1</span>
                         </button>
-                        <button class="model-option" data-model="qwen/qwen3-14b:free">
-                            <span class="model-label">Qwen3 14B</span>
-                            <span class="model-desc">Advanced multilingual understanding</span>
+                        <button class="model-option" data-model="microsoft/mai-ds-r1:free">
+                            <span class="model-label">Microsoft MAI DS R1</span>
+                            <span class="model-desc">Improved safety and response handling</span>
                         </button>
-                        <button class="model-option" data-model="deepseek/deepseek-chat-v3.1:free">
-                            <span class="model-label">DeepSeek Chat V3.1</span>
-                            <span class="model-desc">Efficient and capable reasoning</span>
+                        <button class="model-option" data-model="google/gemini-2.0-flash-exp:free">
+                            <span class="model-label">Google Gemini 2.0 Flash</span>
+                            <span class="model-desc">Fast multimodal with quality enhancement</span>
                         </button>
-                        <button class="model-option" data-model="mistralai/mistral-small-3.1-24b-instruct:free">
-                            <span class="model-label">Mistral Small 3.1 24B</span>
-                            <span class="model-desc">Strong general-purpose performance</span>
-                        </button>
-                        <button class="model-option" data-model="moonshotai/kimi-dev-72b:free">
-                            <span class="model-label">MoonshotAI Kimi Dev 72B</span>
-                            <span class="model-desc">Large-scale reasoning and development</span>
+                        <button class="model-option" data-model="openai/gpt-oss-20b:free">
+                            <span class="model-label">OpenAI GPT OSS 20B</span>
+                            <span class="model-desc">21B MoE from OpenAI's Harmony</span>
                         </button>
                         </div>
                     </div>
@@ -209,7 +217,7 @@
             </button>
             <div class="benchmark-stats">
                 <div class="stat-item">
-                    <div class="stat-number">8</div>
+                    <div class="stat-number">10</div>
                     <div class="stat-label">Models</div>
                 </div>
                 <div class="stat-item">
@@ -217,7 +225,7 @@
                     <div class="stat-label">Tests</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">24</div>
+                    <div class="stat-number">30</div>
                     <div class="stat-label">Total Runs</div>
                 </div>
             </div>
@@ -236,124 +244,6 @@
 
         <div class="model-grid" id="modelGrid">
             <!-- Model cards will be inserted here -->
-            <div class="model-card" data-model="meta-llama/llama-4-scout:free">
-                <div class="model-card-inner">
-                    <div class="model-avatar meta-llama">
-                        <div class="avatar-glow"></div>
-                        <i class="fas fa-brain"></i>
-                    </div>
-                    <h4 class="model-name">Meta Llama 4 Scout</h4>
-                    <p class="model-desc">Balanced reasoning with low latency</p>
-                    <div class="model-metrics">
-                        <div class="metric response-time" id="meta-llama-time">-</div>
-                        <div class="metric accuracy" id="meta-llama-accuracy">-</div>
-                        <div class="metric gpu-usage" id="meta-llama-gpu">-</div>
-                    </div>
-                    <div class="model-status" id="meta-llama-status">Ready</div>
-                </div>
-            </div>
-
-            <div class="model-card" data-model="qwen/qwen3-14b:free">
-                <div class="model-card-inner">
-                    <div class="model-avatar qwen">
-                        <div class="avatar-glow"></div>
-                        <i class="fas fa-language"></i>
-                    </div>
-                    <h4 class="model-name">Qwen 3 14B</h4>
-                    <p class="model-desc">Advanced multilingual understanding</p>
-                    <div class="model-metrics">
-                        <div class="metric response-time" id="qwen-time">-</div>
-                        <div class="metric accuracy" id="qwen-accuracy">-</div>
-                        <div class="metric gpu-usage" id="qwen-gpu">-</div>
-                    </div>
-                    <div class="model-status" id="qwen-status">Ready</div>
-                </div>
-            </div>
-
-            <div class="model-card" data-model="deepseek/deepseek-chat-v3.1:free">
-                <div class="model-card-inner">
-                    <div class="model-avatar deepseek">
-                        <div class="avatar-glow"></div>
-                        <i class="fas fa-search"></i>
-                    </div>
-                    <h4 class="model-name">DeepSeek V3.1</h4>
-                    <p class="model-desc">Efficient and capable reasoning</p>
-                    <div class="model-metrics">
-                        <div class="metric response-time" id="deepseek-time">-</div>
-                        <div class="metric accuracy" id="deepseek-accuracy">-</div>
-                        <div class="metric gpu-usage" id="deepseek-gpu">-</div>
-                    </div>
-                    <div class="model-status" id="deepseek-status">Ready</div>
-                </div>
-            </div>
-
-            <div class="model-card" data-model="mistralai/mistral-small-3.1-24b-instruct:free">
-                <div class="model-card-inner">
-                    <div class="model-avatar mistral">
-                        <div class="avatar-glow"></div>
-                        <i class="fas fa-wind"></i>
-                    </div>
-                    <h4 class="model-name">Mistral Small 3.1 24B</h4>
-                    <p class="model-desc">Strong general-purpose performance</p>
-                    <div class="model-metrics">
-                        <div class="metric response-time" id="mistral-time">-</div>
-                        <div class="metric accuracy" id="mistral-accuracy">-</div>
-                        <div class="metric gpu-usage" id="mistral-gpu">-</div>
-                    </div>
-                    <div class="model-status" id="mistral-status">Ready</div>
-                </div>
-            </div>
-
-            <div class="model-card" data-model="tngtech/deepseek-r1t-chimera:free">
-                <div class="model-card-inner">
-                    <div class="model-avatar chimera">
-                        <div class="avatar-glow"></div>
-                        <i class="fas fa-ghost"></i>
-                    </div>
-                    <h4 class="model-name">DeepSeek R1T Chimera</h4>
-                    <p class="model-desc">Creative and exploratory thinking</p>
-                    <div class="model-metrics">
-                        <div class="metric response-time" id="chimera-time">-</div>
-                        <div class="metric accuracy" id="chimera-accuracy">-</div>
-                        <div class="metric gpu-usage" id="chimera-gpu">-</div>
-                    </div>
-                    <div class="model-status" id="chimera-status">Ready</div>
-                </div>
-            </div>
-
-            <div class="model-card" data-model="moonshotai/kimi-dev-72b:free">
-                <div class="model-card-inner">
-                    <div class="model-avatar kimi">
-                        <div class="avatar-glow"></div>
-                        <i class="fas fa-moon"></i>
-                    </div>
-                    <h4 class="model-name">Moonshot Kimi Dev 72B</h4>
-                    <p class="model-desc">Large-scale reasoning and development</p>
-                    <div class="model-metrics">
-                        <div class="metric response-time" id="kimi-time">-</div>
-                        <div class="metric accuracy" id="kimi-accuracy">-</div>
-                        <div class="metric gpu-usage" id="kimi-gpu">-</div>
-                    </div>
-                    <div class="model-status" id="kimi-status">Ready</div>
-                </div>
-            </div>
-
-            <div class="model-card" data-model="nvidia/nemotron-nano-9b-v2:free">
-                <div class="model-card-inner">
-                    <div class="model-avatar nemotron">
-                        <div class="avatar-glow"></div>
-                        <i class="fas fa-cog"></i>
-                    </div>
-                    <h4 class="model-name">NVIDIA Nemotron Nano 9B</h4>
-                    <p class="model-desc">Optimized for efficiency and speed</p>
-                    <div class="model-metrics">
-                        <div class="metric response-time" id="nemotron-time">-</div>
-                        <div class="metric accuracy" id="nemotron-accuracy">-</div>
-                        <div class="metric gpu-usage" id="nemotron-gpu">-</div>
-                    </div>
-                    <div class="model-status" id="nemotron-status">Ready</div>
-                </div>
-            </div>
         </div>
 
         <div class="benchmark-charts" id="benchmarkCharts">

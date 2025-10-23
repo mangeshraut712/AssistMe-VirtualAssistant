@@ -15,14 +15,16 @@ class Grok2Client:
 
         # No need for timeout variable since requests handles it per-request
         self.default_models = [
-            {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B"},
-            {"id": "meta-llama/llama-4-scout:free", "name": "Meta Llama 4 Scout"},
-            {"id": "meta-llama/llama-4-maverick:free", "name": "Meta Llama 4 Maverick"},
+            {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "TNG DeepSeek R1T2 Chimera"},
+            {"id": "z-ai/glm-4.5-air:free", "name": "Z.AI GLM 4.5 Air"},
+            {"id": "tngtech/deepseek-r1t-chimera:free", "name": "TNG DeepSeek R1T Chimera"},
+            {"id": "deepseek/deepseek-v3-0324:free", "name": "DeepSeek V3 0324"},
+            {"id": "deepseek/deepseek-r1-0528:free", "name": "DeepSeek R1 0528"},
+            {"id": "meituan/longcat-flash-chat:free", "name": "Meituan LongCat Flash Chat"},
             {"id": "deepseek/deepseek-r1:free", "name": "DeepSeek R1"},
-            {"id": "qwen/qwen3-14b:free", "name": "Qwen3 14B"},
-            {"id": "deepseek/deepseek-chat-v3.1:free", "name": "DeepSeek Chat V3.1"},
-            {"id": "mistralai/mistral-small-3.1-24b-instruct:free", "name": "Mistral Small 3.1 24B"},
-            {"id": "moonshotai/kimi-dev-72b:free", "name": "MoonshotAI Kimi Dev 72B"},
+            {"id": "microsoft/mai-ds-r1:free", "name": "Microsoft MAI DS R1"},
+            {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash"},
+            {"id": "openai/gpt-oss-20b:free", "name": "OpenAI GPT OSS 20B"},
         ]
 
         self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip() or self.default_models[0]["id"]
