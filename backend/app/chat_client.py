@@ -23,7 +23,6 @@ class Grok2Client:
             {"id": "deepseek/deepseek-chat-v3.1:free", "name": "DeepSeek Chat V3.1"},
             {"id": "mistralai/mistral-small-3.1-24b-instruct:free", "name": "Mistral Small 3.1 24B"},
             {"id": "moonshotai/kimi-dev-72b:free", "name": "MoonshotAI Kimi Dev 72B"},
-            {"id": "openai/gpt-oss-20b:free", "name": "OpenAI gpt-oss-20b"},
         ]
 
         self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip() or self.default_models[0]["id"]
