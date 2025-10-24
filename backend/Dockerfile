@@ -1,15 +1,9 @@
 FROM python:3.11-slim
-
 WORKDIR /app
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
 COPY . .
-
-ENV PYTHONPATH=/app
-ENV PORT=8001
-
-EXPOSE 8001
-
-CMD ["python", "-m", "app.main"]
+# Make start.sh executable
+RUN chmod +x start.sh
+# Use exec form for Railway compatibility
+CMD ["./start.sh"]
