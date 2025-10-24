@@ -286,6 +286,12 @@ async def chat_text_stream(request: TextChatRequest, db: Optional[Session] = Dep
     return StreamingResponse(sync_event_generator(), media_type="text/event-stream")
 
 
+@app.options("/api/chat/stream")
+async def chat_text_stream_options() -> Response:
+    """Handle CORS preflight for the streaming endpoint."""
+    return Response(status_code=204)
+
+
 @app.get("/api/chat/text")
 def chat_text_info():
     """Get information about the chat text endpoint."""
@@ -318,6 +324,12 @@ def get_conversations(db: Optional[Session] = Depends(get_db)) -> List[dict]:
         # No database, return empty list
         return []
 
+
+@app.options("/api/conversations")
+async def conversations_options() -> Response:
+    return Response(status_code=204)
+
+
 @app.get("/api/conversations/{conversation_id}")
 def get_conversation_messages(conversation_id: int, db: Optional[Session] = Depends(get_db)):
     if not db:
@@ -347,6 +359,12 @@ def get_conversation_messages(conversation_id: int, db: Optional[Session] = Depe
             for m in messages
         ]
     }
+
+
+@app.options("/api/conversations/{conversation_id}")
+async def conversation_detail_options(conversation_id: int) -> Response:  # pragma: no cover - simple CORS response
+    return Response(status_code=204)
+
 
 @app.websocket("/api/chat/voice")
 async def voice_chat(websocket: WebSocket):
