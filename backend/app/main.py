@@ -1,58 +1,24 @@
-import importlib
 import json
 import logging
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 # Load environment variables from .env files
 try:
-    from dotenv import load_dotenv  # type: ignore[import]
+    from dotenv import load_dotenv
 except ImportError:  # pragma: no cover - optional in production
-    load_dotenv = None  # type: ignore[assignment]
+    pass  # dotenv not available, skip
 
-if load_dotenv:
-    load_dotenv('secrets.env')
-    load_dotenv('.env')
+load_dotenv('secrets.env')  # Load secrets.env first
+load_dotenv('.env')         # Override with .env if needed
 
-try:
-    _fastapi = importlib.import_module("fastapi")
-    FastAPI = _fastapi.FastAPI  # type: ignore[attr-defined]
-    WebSocket = _fastapi.WebSocket  # type: ignore[attr-defined]
-    Depends = _fastapi.Depends  # type: ignore[attr-defined]
-    HTTPException = _fastapi.HTTPException  # type: ignore[attr-defined]
-
-    _cors = importlib.import_module("fastapi.middleware.cors")
-    CORSMiddleware = _cors.CORSMiddleware  # type: ignore[attr-defined]
-
-    _responses = importlib.import_module("fastapi.responses")
-    Response = _responses.Response  # type: ignore[attr-defined]
-    StreamingResponse = _responses.StreamingResponse  # type: ignore[attr-defined]
-except ImportError as exc:  # pragma: no cover - hard failure without FastAPI
-    raise RuntimeError("FastAPI is required; install backend/requirements.txt") from exc
-
-try:
-    BaseModel = importlib.import_module("pydantic").BaseModel  # type: ignore[attr-defined]
-except ImportError as exc:  # pragma: no cover
-    raise RuntimeError("Pydantic is required; install backend/requirements.txt") from exc
-
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Session as SessionType  # type: ignore[attr-defined]
-else:
-    SessionType = Any  # type: ignore[assignment,misc]
-
-try:
-    _sqlalchemy_orm = importlib.import_module("sqlalchemy.orm")
-    Session = _sqlalchemy_orm.Session  # type: ignore[attr-defined]
-    if not TYPE_CHECKING:
-        SessionType = Session  # type: ignore[assignment,misc]
-except ImportError as exc:  # pragma: no cover
-    raise RuntimeError("SQLAlchemy is required; install backend/requirements.txt") from exc
-
-try:
-    run_in_threadpool = importlib.import_module("starlette.concurrency").run_in_threadpool  # type: ignore[attr-defined]
-except ImportError as exc:  # pragma: no cover
-    raise RuntimeError("Starlette is required; install backend/requirements.txt") from exc
+from fastapi import FastAPI, WebSocket, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response, StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy.orm import Session as SessionType
+from starlette.concurrency import run_in_threadpool
 
 # Import chat client with graceful error handling
 try:
@@ -433,10 +399,7 @@ async def voice_chat(websocket: WebSocket):
         await websocket.close()
 
 if __name__ == "__main__":
-    try:
-        uvicorn = importlib.import_module("uvicorn")  # type: ignore[assignment]
-    except ImportError as exc:  # pragma: no cover - optional CLI dependency
-        raise RuntimeError("uvicorn is required to run the development server. Install backend/requirements.txt") from exc
+    import uvicorn
 
     # Respect platform-provided PORT (e.g. Railway/Render); fall back to local default
     port = int(os.getenv("PORT", "8001"))
