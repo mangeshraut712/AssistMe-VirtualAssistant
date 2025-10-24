@@ -18,4 +18,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8001
 
-CMD ./start.sh
+CMD ["./start.sh"]
