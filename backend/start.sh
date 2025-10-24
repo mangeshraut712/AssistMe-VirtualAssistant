@@ -15,6 +15,8 @@ echo "APP_URL=${APP_URL}"
 # Try database connection (skip if no DB configured)
 echo "🗄️ Testing database connection..."
 python3 - <<'PYTHON'
+from time import sleep
+
 from sqlalchemy import create_engine, text
 
 from app.settings import get_database_url
@@ -24,7 +26,7 @@ if not db_url:
     print("⚠️  Database URL not configured; skipping connectivity check.")
 else:
     print("⏳ Waiting for database connection...")
-    sleep 5
+    sleep(5)
     try:
         engine = create_engine(db_url)
         with engine.connect() as conn:
