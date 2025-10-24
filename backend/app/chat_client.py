@@ -1,28 +1,21 @@
 import os
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional
 
-if TYPE_CHECKING:
-    import redis
-    import requests
-    RedisClient = redis.Redis
-else:
-    try:
-        import redis
-        HAS_REDIS = True
-        RedisClient = redis.Redis
-    except ImportError:
-        HAS_REDIS = False
-        redis = None
-        RedisClient = Any  # Fallback for runtime
+try:
+    import redis  # type: ignore
+    HAS_REDIS = True
+except ImportError:  # pragma: no cover - optional dependency
+    redis = None  # type: ignore[assignment]
+    HAS_REDIS = False
 
-    try:
-        import requests
-        HAS_REQUESTS = True
-    except ImportError:
-        HAS_REQUESTS = False
-        requests = None
+try:
+    import requests  # type: ignore
+    HAS_REQUESTS = True
+except ImportError:  # pragma: no cover - optional dependency
+    requests = None  # type: ignore[assignment]
+    HAS_REQUESTS = False
 
 class Grok2Client:
     def __init__(self):
@@ -38,14 +31,9 @@ class Grok2Client:
         self.grok2_endpoint = os.getenv("GROK2_ENDPOINT")
         self.grok2_api_key = os.getenv("GROK2_API_KEY")
 
-        # Rate limiting configuration
+        # Rate limiting configuration - lazy initialization
         self.redis_client: Optional[RedisClient] = None
-        redis_url = os.getenv("REDIS_URL")
-        if redis_url:
-            try:
-                self.redis_client = redis.from_url(redis_url)
-            except Exception as e:
-                logging.warning(f"Failed to connect to Redis: {e}")
+        self.redis_url = os.getenv("REDIS_URL")
 
         # TOP 10 CONFIRMED OPENROUTER MODELS (Rate-Limited But Functional)
         # All models verified to exist on OpenRouter - will work when rate limits reset
@@ -88,6 +76,12 @@ class Grok2Client:
 
     def _check_rate_limit(self, identifier: str = "global", max_requests: int = 45) -> bool:
         """Check if we're within rate limits. Returns True if allowed, False if rate limited."""
+        if not self.redis_client and self.redis_url and HAS_REDIS and redis:
+            try:
+                self.redis_client = redis.from_url(self.redis_url)
+            except Exception as e:
+                logging.warning(f"Failed to connect to Redis: {e}")
+
         if not self.redis_client:
             logging.warning("Redis not available for rate limiting")
             return True  # Allow if Redis is not configured
