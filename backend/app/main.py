@@ -1,3 +1,4 @@
+import importlib
 import json
 import logging
 import os
@@ -6,18 +7,44 @@ from typing import List, Optional, Tuple
 
 # Load environment variables from .env files
 try:
-    from dotenv import load_dotenv
-    load_dotenv('secrets.env')  # Load secrets.env first
-    load_dotenv('.env')         # Override with .env if needed
-except ImportError:
-    pass  # python-dotenv not available, but that's okay
+    from dotenv import load_dotenv  # type: ignore[import]
+except ImportError:  # pragma: no cover - optional in production
+    load_dotenv = None  # type: ignore[assignment]
 
-from fastapi import FastAPI, WebSocket, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from starlette.concurrency import run_in_threadpool
+if load_dotenv:
+    load_dotenv('secrets.env')
+    load_dotenv('.env')
+
+try:
+    _fastapi = importlib.import_module("fastapi")
+    FastAPI = _fastapi.FastAPI  # type: ignore[attr-defined]
+    WebSocket = _fastapi.WebSocket  # type: ignore[attr-defined]
+    Depends = _fastapi.Depends  # type: ignore[attr-defined]
+    HTTPException = _fastapi.HTTPException  # type: ignore[attr-defined]
+
+    _cors = importlib.import_module("fastapi.middleware.cors")
+    CORSMiddleware = _cors.CORSMiddleware  # type: ignore[attr-defined]
+
+    _responses = importlib.import_module("fastapi.responses")
+    Response = _responses.Response  # type: ignore[attr-defined]
+    StreamingResponse = _responses.StreamingResponse  # type: ignore[attr-defined]
+except ImportError as exc:  # pragma: no cover - hard failure without FastAPI
+    raise RuntimeError("FastAPI is required; install backend/requirements.txt") from exc
+
+try:
+    BaseModel = importlib.import_module("pydantic").BaseModel  # type: ignore[attr-defined]
+except ImportError as exc:  # pragma: no cover
+    raise RuntimeError("Pydantic is required; install backend/requirements.txt") from exc
+
+try:
+    Session = importlib.import_module("sqlalchemy.orm").Session  # type: ignore[attr-defined]
+except ImportError as exc:  # pragma: no cover
+    raise RuntimeError("SQLAlchemy is required; install backend/requirements.txt") from exc
+
+try:
+    run_in_threadpool = importlib.import_module("starlette.concurrency").run_in_threadpool  # type: ignore[attr-defined]
+except ImportError as exc:  # pragma: no cover
+    raise RuntimeError("Starlette is required; install backend/requirements.txt") from exc
 
 # Import chat client with graceful error handling
 try:
@@ -88,7 +115,7 @@ def _should_update_title(current_title: Optional[str]) -> bool:
 
 
 def _persist_messages(
-    db: Optional[Session],
+    db: Optional["Session"],
     conversation_id: Optional[int],
     user_messages: List[ChatMessage],
     assistant_content: Optional[str],
@@ -128,7 +155,7 @@ def _persist_messages(
         db.rollback()
 
 
-def _load_conversation_history(conversation_id: int, db: Session) -> List[MessageModel]:
+def _load_conversation_history(conversation_id: int, db: "Session") -> List["MessageModel"]:
     return (
         db.query(MessageModel)  # type: ignore
         .filter(MessageModel.conversation_id == conversation_id)
@@ -139,10 +166,10 @@ def _load_conversation_history(conversation_id: int, db: Session) -> List[Messag
 
 def _prepare_conversation_context(
     request: TextChatRequest,
-    db: Optional[Session],
+    db: Optional["Session"],
 ) -> Tuple[Optional[int], List[dict]]:
     conversation_id = getattr(request, "conversation_id", None)
-    history_records: List[MessageModel] = []
+    history_records: List["MessageModel"] = []
     current_conversation_id: Optional[int] = conversation_id
 
     if db and conversation_id:
@@ -197,7 +224,7 @@ def root():
     return {"message": "AssistMe API is running"}
 
 @app.post("/api/chat/text")
-async def chat_text(request: TextChatRequest, db: Optional[Session] = Depends(get_db)):
+async def chat_text(request: TextChatRequest, db: Optional["Session"] = Depends(get_db)):
     logging.info("Chat API called with messages: %s", [m.content for m in request.messages])
 
     if not CHAT_CLIENT_AVAILABLE or grok_client is None:
@@ -235,7 +262,7 @@ async def chat_text(request: TextChatRequest, db: Optional[Session] = Depends(ge
 
 
 @app.post("/api/chat/stream")
-async def chat_text_stream(request: TextChatRequest, db: Optional[Session] = Depends(get_db)):
+async def chat_text_stream(request: TextChatRequest, db: Optional["Session"] = Depends(get_db)):
     logging.info("Chat stream API called with messages: %s", [m.content for m in request.messages])
 
     if not CHAT_CLIENT_AVAILABLE or grok_client is None:
@@ -333,7 +360,7 @@ async def chat_text_options() -> Response:
     return Response(status_code=204)
 
 @app.get("/api/conversations")
-def get_conversations(db: Optional[Session] = Depends(get_db)) -> List[dict]:
+def get_conversations(db: Optional["Session"] = Depends(get_db)) -> List[dict]:
     if db:
         conversations = db.query(Conversation).all()  # type: ignore
         return [{"id": c.id, "title": c.title, "created_at": c.created_at} for c in conversations]
@@ -348,7 +375,7 @@ async def conversations_options() -> Response:
 
 
 @app.get("/api/conversations/{conversation_id}")
-def get_conversation_messages(conversation_id: int, db: Optional[Session] = Depends(get_db)):
+def get_conversation_messages(conversation_id: int, db: Optional["Session"] = Depends(get_db)):
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
@@ -398,7 +425,10 @@ async def voice_chat(websocket: WebSocket):
         await websocket.close()
 
 if __name__ == "__main__":
-    import uvicorn
+    try:
+        uvicorn = importlib.import_module("uvicorn")  # type: ignore[assignment]
+    except ImportError as exc:  # pragma: no cover - optional CLI dependency
+        raise RuntimeError("uvicorn is required to run the development server. Install backend/requirements.txt") from exc
 
     # Respect platform-provided PORT (e.g. Railway/Render); fall back to local default
     port = int(os.getenv("PORT", "8001"))
