@@ -57,8 +57,9 @@ def _ensure_database_setup() -> bool:
 
 def get_db():
     if not _ensure_database_setup() or SessionLocal is None:
-        # Database setup failed or not configured, allow endpoints to degrade gracefully
-        return None
+        # Database setup failed or not configured, yield None to allow endpoints to degrade gracefully
+        yield None
+        return
 
     db = SessionLocal()
     try:

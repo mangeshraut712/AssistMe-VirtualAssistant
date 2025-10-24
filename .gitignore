@@ -8,3 +8,7 @@ secrets.env
 credentials.json
 .vercel/
 backend/.venv/
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

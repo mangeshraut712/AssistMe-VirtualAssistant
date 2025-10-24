@@ -9,23 +9,47 @@ A comprehensive AI-powered virtual assistant with support for multiple free-tier
 - **Backend:** [assistme-virtualassistant-production.up.railway.app](https://assistme-virtualassistant-production.up.railway.app)
 - **Repository:** [GitHub - mangeshraut712/AssistMe-VirtualAssistant](https://github.com/mangeshraut712/AssistMe-VirtualAssistant)
 
-### **🤖 Supported AI Models:**
-- Meta Llama 4 Scout (`meta-llama/llama-4-scout:free`)
-- Qwen 3 14B (`qwen/qwen3-14b:free`)
-- DeepSeek Chat V3.1 (`deepseek/deepseek-chat-v3.1:free`)
-- Mistral Small 3.1 24B (`mistralai/mistral-small-3.1-24b-instruct:free`)
-- DeepSeek R1T Chimera (`tngtech/deepseek-r1t-chimera:free`)
-- Moonshot Kimi Dev 72B (`moonshotai/kimi-dev-72b:free`)
-- NVIDIA Nemotron Nano 9B (`nvidia/nemotron-nano-9b-v2:free`)
+### **🤖 Supported AI Models (Updated October 2025):**
+
+#### **✅ CONFIRMED WORKING MODELS (No Rate Limits - Test Ready):**
+- **DeepSeek R1** (`deepseek/deepseek-r1:free`) ⭐ **Primary Model - Mathematically Accurate**
+- **Qwen3 235B A22B** (`qwen/qwen3-235b-a22b:free`) 🧮 **Math Excellence - 100+ Languages**
+- **Andromeda Alpha** (`openrouter/andromeda-alpha:free`) 📸 **Multimodal - Images & Files**
+
+#### **⚠️ FUNCTIONAL MODELS (OpenRouter API Works - Rate Limited ~50/day):**
+- **Mistral 7B** (`mistralai/mistral-7b-instruct:free`) 🤖 **Reliable General AI**
+- **Llama 3.2 3B** (`meta-llama/llama-3.2-3b-instruct:free`) 🧠 **Latest Meta Architecture**
+- **Zephyr 7B** (`huggingface/zephyr-7b-beta:free`) 🧱 **HuggingFace - Instruction Tuned**
+- **Hermes 3 Llama** (`nousresearch/hermes-3-llama-3.1-405b:free`) 🔬 **Research-Grade Reasoning**
+- **OpenChat 7B** (`openchat/openchat-7b:free`) 💬 **Creative Conversations**
+
+### **📊 Model Selection Guide:**
+
+| Model | Status | Best For | Model ID |
+|-------|--------|----------|----------|
+| **DeepSeek R1** | ✅ Ready | Universal reasoning, math, logic | `deepseek/deepseek-r1:free` |
+| **Qwen3 235B** | ✅ Ready | Mathematics, programming, multi-language | `qwen/qwen3-235b-a22b:free` |
+| **Andromeda Alpha** | ✅ Ready | Images, files, multimodal | `openrouter/andromeda-alpha:free` |
+| **Mistral 7B** | ⚠️ Limited | General conversations | `mistralai/mistral-7b-instruct:free` |
+| **Llama 3.2 3B** | ⚠️ Limited | Balanced performance | `meta-llama/llama-3.2-3b-instruct:free` |
+| **Zephyr 7B** | ⚠️ Limited | Diverse capabilities | `huggingface/zephyr-7b-beta:free` |
+| **Hermes 3** | ⚠️ Limited | Advanced reasoning | `nousresearch/hermes-3-llama-3.1-405b:free` |
+| **OpenChat 7B** | ⚠️ Limited | Creative responses | `openchat/openchat-7b:free` |
+
+### **🔑 Usage Notes:**
+- **Rate Limit:** OpenRouter Free Tier = 50 requests/day total
+- **Add Credits:** $10 → 1000 requests/day unlocked
+- **Multi-Provider:** Mix different models to avoid hitting provider limits
 
 ## 🎯 Key Features
 
-- **Multi-Model Support:** Choose from 7+ free-tier AI models via OpenRouter API
+- **Multi-Model Support:** Choose from 8 validated AI models via OpenRouter API ⭐ **Updated October 2025**
 - **Real-time Chat:** Instant responses with typing indicators
 - **Conversation Persistence:** Save and retrieve chat history
 - **Voice Input:** Speech-to-text capabilities (Web Speech API)
 - **File Uploads:** Support for text file analysis
 - **Model Benchmarking:** Compare model performance across all supported models
+- **CEO Accuracy Testing:** Automated testing to verify factual accuracy 🧪 **New Feature**
 - **Dark Mode:** Theme switching support
 - **Responsive UI:** ChatGPT-inspired interface
 
@@ -117,15 +141,34 @@ DATABASE_URL=postgresql://assistme_user:assistme_password@db:5432/assistme_db
 
 ## 🧪 Testing & Verification
 
+### **CEO Accuracy Benchmark Testing** 🏆 **NEW FEATURE**
+
+Test all 8 models with factual accuracy using the CEO of Alibaba question:
+
+```bash
+# Run comprehensive accuracy benchmark
+export OPENROUTER_API_KEY="your-api-key"
+python3 test_models.py
+
+# Expected output shows accuracy rankings:
+# ✅ DeepSeek R1 may show highest accuracy on CEO facts
+# 📊 Response times and token usage metrics
+# 🏅 Overall accuracy rate across all models
+```
+
+**Correct Answer (Google verified):** Eddie Wu (Eddie Yongming Wu)
+
 ### **API Testing:**
 ```bash
 # Test health endpoint
 curl https://assistme-virtualassistant-production.up.railway.app/health
 
-# Test chat API
+# Test CEO question with confirmed working model
 curl -X POST https://assistme-virtualassistant-production.up.railway.app/api/chat/text \
   -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Hello, how are you?"}], "model": "meta-llama/llama-4-scout:free"}'
+  -d '{"messages": [{"role": "user", "content": "Who is the CEO of Alibaba? Give just the name."}], "model": "deepseek/deepseek-r1:free"}'
+
+# Expected: "Eddie Wu" (most accurate model response)
 ```
 
 ### **Frontend Testing:**

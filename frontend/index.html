@@ -3,403 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AssistMe - AI Assistant</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%231a73e8'/%3E%3Cpath d='M12 10h8l-4-4z' fill='white'/%3E%3Ccircle cx='11' cy='15' r='2' fill='white'/%3E%3Ccircle cx='21' cy='15' r='2' fill='white'/%3E%3Crect x='14' y='18' width='4' height='6' rx='2' fill='white'/%3E%3C/svg%3E">
+    <title>AssistMe · Intelligent Workspace</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g'%3E%3Cstop offset='0' stop-color='%2310a37f'/%3E%3Cstop offset='1' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230b1728'/%3E%3Cpath d='M16 6c5.5 0 10 4.5 10 10s-4.5 10-10 10S6 21.5 6 16 10.5 6 16 6zm0 3a7 7 0 100 14 7 7 0 000-14z' fill='url(%23g)'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.8.0/styles/github.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
 <body>
-    <div class="app-background"></div>
-    <div class="app-shell app-version-2">
-    <header class="app-header">
-        <div class="header-left">
-            <div class="version-badge">
-                <span class="badge-pill">AssistMe v2.0</span>
-                <span class="badge-meta">Aurora Release</span>
-            </div>
-            <div class="header-status">
-                <span class="status-dot live"></span>
-                <span class="status-text">Realtime services online</span>
-            </div>
-        </div>
-        <div class="header-actions">
-            <button class="header-btn" id="openDocsBtn">
-                <i class="fas fa-book-open"></i>
-                <span>Docs</span>
-            </button>
-            <button class="header-btn" id="openRoadmapBtn">
-                <i class="fas fa-compass"></i>
-                <span>Roadmap</span>
-            </button>
-        </div>
-    </header>
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
+    <div class="app" id="app">
+        <aside class="sidebar" id="sidebar" aria-label="Conversation history">
             <div class="sidebar-header">
-                <div class="sidebar-title">
-                    <span class="sidebar-label">History</span>
-                    <span class="sidebar-hint">Tap to revisit saved conversations</span>
-                </div>
-            </div>
-
-            <div class="conversations" id="conversations">
-                <!-- Conversation history will be dynamically inserted here -->
-            </div>
-
-            <div class="sidebar-middle">
-                <button class="new-chat-btn" id="newChatBtn">
-                    <i class="fas fa-plus"></i>
-                    <span>New Chat</span>
+                <button class="sidebar-btn primary" id="newChatBtn">
+                    <i class="fa-solid fa-square-plus" aria-hidden="true"></i>
+                    <span>New chat</span>
+                </button>
+                <button class="icon-btn mobile-only" id="sidebarCloseBtn" aria-label="Close sidebar">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                 </button>
             </div>
 
+            <div class="sidebar-search">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" id="conversationSearch" placeholder="Search conversations" autocomplete="off">
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-header">
+                    <span>Recent</span>
+                    <button class="text-btn" id="clearHistoryBtn">Clear</button>
+                </div>
+                <nav class="conversation-list" id="conversations" aria-live="polite"></nav>
+            </div>
+
+            <div class="sidebar-section pinned" id="pinnedSection">
+                <div class="sidebar-section-header">
+                    <span>Pinned prompts</span>
+                </div>
+                <div class="pinned-list" id="pinnedPrompts">
+                    <button class="pinned-item" data-prompt="Summarise the latest meeting notes and highlight key decisions.">
+                        <i class="fa-solid fa-thumbtack"></i>
+                        <span>Summarise meeting notes</span>
+                    </button>
+                    <button class="pinned-item" data-prompt="Draft an email updating the team on the project status towards the Q4 launch.">
+                        <i class="fa-solid fa-thumbtack"></i>
+                        <span>Project status update</span>
+                    </button>
+                    <button class="pinned-item" data-prompt="Generate a list of experiment ideas to increase onboarding completion by 15%.">
+                        <i class="fa-solid fa-thumbtack"></i>
+                        <span>Activation experiment ideas</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="sidebar-footer">
-                <button class="sidebar-footer-btn" id="sidebarFooterBtn">
-                    <i class="fas fa-user"></i>
-                    <span>User</span>
-                    <i class="fas fa-chevron-right"></i>
+                <button class="sidebar-footer-btn" id="settingsBtn">
+                    <i class="fa-solid fa-circle-user" aria-hidden="true"></i>
+                    <span>Workspace settings</span>
+                </button>
+                <button class="sidebar-footer-btn" id="themeToggleBtn">
+                    <i class="fa-solid fa-moon" aria-hidden="true"></i>
+                    <span>Toggle theme</span>
                 </button>
             </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <div class="main-wrapper">
-            <!-- Top Navigation -->
-            <nav class="top-nav">
-                <div class="nav-core">
-                    <div class="nav-left">
-                        <button class="nav-logo-btn" onclick="location.reload()">
-                            <img src="assets/logo.png" alt="AssistMe Logo" class="nav-logo">
+        <main class="workspace" id="workspace">
+            <header class="workspace-header">
+                <div class="workspace-brand">
+                    <button class="icon-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                    </button>
+                    <div class="brand-text">
+                        <span class="brand-title">AssistMe</span>
+                        <span class="brand-subtitle">Realtime assistant · Aurora build</span>
+                    </div>
+                </div>
+                <div class="workspace-actions">
+                    <div class="model-switcher" id="modelSelector">
+                        <button class="model-button" id="modelButton" aria-haspopup="listbox" aria-expanded="false">
+                            <div class="model-primary">
+                                <span class="model-name">Meta Llama 4 Scout</span>
+                                <span class="model-hint">Balanced reasoning · 8K context</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
                         </button>
-                        <div class="nav-title-group">
-                            <h1 class="nav-title">AssistMe</h1>
-                            <span class="nav-subtitle">AI workspace for realtime ideation, benchmarking & experimentation</span>
+                        <div class="model-dropdown" id="modelDropdown" role="listbox">
+                            <!-- Models populated by JavaScript -->
                         </div>
                     </div>
 
-                    <div class="nav-right">
-                    <div class="model-selector">
-                        <button type="button" class="model-button" id="modelButton">
-                            <span class="model-name">Meta Llama 4 Scout</span>
-                            <i class="fas fa-chevron-down"></i>
+                    <div class="header-buttons">
+                        <button class="icon-btn" id="benchmarkBtn" title="Open benchmarking">
+                            <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+                            <span>Benchmark</span>
                         </button>
-                    <div class="model-dropdown" id="modelDropdown">
-                        <button class="model-option active" data-model="rwkv/rwkv-6-world-clash:free">
-                            <span class="model-label">RWKV Clash</span>
-                            <span class="model-desc">Efficient RNN-based model for creative writing (No rate limit)</span>
+                        <button class="icon-btn" id="docsBtn" title="Open documentation">
+                            <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                            <span>Docs</span>
                         </button>
-                        <button class="model-option" data-model="rwkv/rwkv-6-world-godot:free">
-                            <span class="model-label">RWKV Godot</span>
-                            <span class="model-desc">Specialized for role-playing and creative content</span>
-                        </button>
-                        <button class="model-option" data-model="rwkv/rwkv-6-world-ness:free">
-                            <span class="model-label">RWKV Ness</span>
-                            <span class="model-desc">Compact, fast inference for general conversation</span>
-                        </button>
-                        <button class="model-option" data-model="h2oai/h2o-danube-1.8b-chat:free">
-                            <span class="model-label">H2O Danube</span>
-                            <span class="model-desc">H2O.ai's fine-tuned model for chat</span>
-                        </button>
-                        <button class="model-option" data-model="thedrummer/unsloth-llama-3-8b-abliterated:free">
-                            <span class="model-label">Unsloth Llama 3</span>
-                            <span class="model-desc">Optimized Llama 3 with enhanced capabilities</span>
-                        </button>
-                        <button class="model-option" data-model="teknium/openhermes-2.5-mistral-7b:free">
-                            <span class="model-label">OpenHermes</span>
-                            <span class="model-desc">Fine-tuned Mistral with strong knowledge base</span>
-                        </button>
-                        <button class="model-option" data-model="microsoft/fastcodellm-13b-instruct:free">
-                            <span class="model-label">FastCodeLLM</span>
-                            <span class="model-desc">Rapid code completion and programming assistance</span>
-                        </button>
-                        <button class="model-option" data-model="meta-llama/llama-2-13b-chat:free">
-                            <span class="model-label">Llama 2 13B</span>
-                            <span class="model-desc">Proven model with good conversational abilities</span>
-                        </button>
-                        <button class="model-option" data-model="openchat/openchat-7b:free">
-                            <span class="model-label">OpenChat 7B</span>
-                            <span class="model-desc">Uncensored ChatGPT alternative</span>
-                        </button>
-                        <button class="model-option" data-model="google/gemma-7b-it:free">
-                            <span class="model-label">Google Gemma 7B</span>
-                            <span class="model-desc">Google's lightweight model for helpful responses</span>
-                        </button>
-                        </div>
                     </div>
+                </div>
+            </header>
 
-                    <button class="nav-btn" id="testModelsBtn" title="Model benchmarking">
-                        <i class="fas fa-chart-bar"></i>
-                        <span class="nav-btn-label">Benchmark</span>
+            <section class="assistant-status" id="assistantStatus">
+                <span class="status-dot live"></span>
+                <span>All systems operational · Responses stream in realtime</span>
+            </section>
+
+            <section class="welcome" id="welcomePanel">
+                <div class="welcome-header">
+                    <h1>How can AssistMe help today?</h1>
+                    <p>Ask about strategy, code, designs or data. Pick a starter prompt to move faster.</p>
+                </div>
+                <div class="welcome-grid" id="starterGrid">
+                    <button class="welcome-card" data-prompt="Turn these product notes into a crisp launch brief with next steps.">
+                        <span class="card-category">Product</span>
+                        <p>Turn these product notes into a launch brief with next steps.</p>
+                        <span class="card-hint">Generates project-ready structure</span>
                     </button>
-
-                    <button class="nav-btn" id="darkModeToggle" title="Toggle theme">
-                        <i class="fas fa-moon"></i>
-                        <span class="nav-btn-label">Theme</span>
+                    <button class="welcome-card" data-prompt="Review this Python function for performance issues and suggest fixes.">
+                        <span class="card-category">Code review</span>
+                        <p>Review this Python function for performance issues and fix suggestions.</p>
+                        <span class="card-hint">Highlights risks and improvements</span>
                     </button>
-                </div>
-                </div>
-
-                <div class="nav-metrics">
-                    <div class="metric-pill">
-                        <span class="metric-title">Latency</span>
-                        <span class="metric-value" id="latencyMetric">~480ms</span>
-                    </div>
-                    <div class="metric-pill">
-                        <span class="metric-title">Concurrency</span>
-                        <span class="metric-value" id="concurrencyMetric">12 sessions</span>
-                    </div>
-                    <div class="metric-pill">
-                        <span class="metric-title">Benchmarks</span>
-                        <span class="metric-value" id="benchmarkMetric">v2.0 Ready</span>
-                    </div>
-                </div>
-            </nav>
-
-            <section class="app-kpis" id="appKpis">
-                <div class="kpi-card shine models">
-                    <div class="kpi-icon">
-                        <i class="fas fa-layer-group"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <span class="kpi-label">Live Models</span>
-                        <span class="kpi-value">10</span>
-                        <span class="kpi-meta">Orchestrated via OpenRouter free tier</span>
-                    </div>
-                </div>
-                <div class="kpi-card benchmarks">
-                    <div class="kpi-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <span class="kpi-label">Benchmarks</span>
-                        <span class="kpi-value">Aurora Suite</span>
-                        <span class="kpi-meta">Realtime response, accuracy & GPU insight</span>
-                    </div>
-                </div>
-                <div class="kpi-card status">
-                    <div class="kpi-icon">
-                        <i class="fas fa-shield"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <span class="kpi-label">System Health</span>
-                        <span class="kpi-value">Optimal</span>
-                        <span class="kpi-meta">Railway APIs, Vercel edge & Redis cache green</span>
-                    </div>
+                    <button class="welcome-card" data-prompt="Create a 4-week content calendar targeting growth-stage founders.">
+                        <span class="card-category">Marketing</span>
+                        <p>Create a 4-week content calendar targeting growth-stage founders.</p>
+                        <span class="card-hint">Outputs channel plan & cadence</span>
+                    </button>
+                    <button class="welcome-card" data-prompt="Explain this block of TypeScript to a new engineer on our team.">
+                        <span class="card-category">Explain</span>
+                        <p>Explain this block of TypeScript to a new engineer joining the team.</p>
+                        <span class="card-hint">Provides step-by-step clarity</span>
+                    </button>
                 </div>
             </section>
 
-            <section class="app-tip-strip">
-                <div class="tip-chip">
-                    <i class="fas fa-lightbulb"></i>
-                    <span>Tip: Press <strong>Shift ⏎</strong> for multi-line prompts.</span>
-                </div>
-                <div class="tip-chip">
-                    <i class="fas fa-bolt"></i>
-                    <span>Voice mode captures ideas instantly with auto-transcription.</span>
-                </div>
-                <div class="tip-chip">
-                    <i class="fas fa-diagram-project"></i>
-                    <span>Use Benchmark v2.0 to compare reasoning depth across models.</span>
-                </div>
+            <section class="chat-thread" id="chatThread" aria-live="polite">
+                <div class="message-stream" id="chatMessages"></div>
             </section>
 
-            <!-- Chat Area -->
-            <main class="chat-area">
-                <div class="welcome-message" id="welcomeMessage">
-                    <div class="welcome-header">
-                        <h1>How can I help you today?</h1>
+            <footer class="composer" id="composer">
+                <div class="composer-toolbar">
+                    <div class="composer-suggestions" id="inlineSuggestions">
+                        <button class="suggestion-pill" data-prompt="Summarise this conversation into key bullet points.">Summarise</button>
+                        <button class="suggestion-pill" data-prompt="Generate follow-up tasks from this chat.">Follow-up tasks</button>
+                        <button class="suggestion-pill" data-prompt="Turn this into customer-friendly language.">Customer friendly</button>
                     </div>
-
-                    <div class="suggestions-grid">
-                        <div class="suggestion-card" data-prompt="Explain quantum computing in simple terms">
-                            <div class="suggestion-icon">
-                                <i class="fas fa-bolt"></i>
-                            </div>
-                            <p class="suggestion-text">Explain quantum computing</p>
-                        </div>
-
-                        <div class="suggestion-card" data-prompt="Write a creative short story about space exploration">
-                            <div class="suggestion-icon">
-                                <i class="fas fa-rocket"></i>
-                            </div>
-                            <p class="suggestion-text">Write a space story</p>
-                        </div>
-
-                        <div class="suggestion-card" data-prompt="What are the latest AI advancements this week?">
-                            <div class="suggestion-icon">
-                                <i class="fas fa-brain"></i>
-                            </div>
-                            <p class="suggestion-text">Latest AI news</p>
-                        </div>
-
-                        <div class="suggestion-card" data-prompt="Help me plan a healthy meal prep for the week">
-                            <div class="suggestion-icon">
-                                <i class="fas fa-utensils"></i>
-                            </div>
-                            <p class="suggestion-text">Meal prep ideas</p>
-                        </div>
-
-                        <div class="suggestion-card" data-prompt="Build me a todo app with React">
-                            <div class="suggestion-icon">
-                                <i class="fas fa-code"></i>
-                            </div>
-                            <p class="suggestion-text">Build a React todo app</p>
-                        </div>
-
-                        <div class="suggestion-card" data-prompt="Create a Python script for data analysis">
-                            <div class="suggestion-icon">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-                            <p class="suggestion-text">Python data analysis script</p>
-                        </div>
+                    <div class="composer-metrics">
+                        <span id="latencyMetric">—</span>
+                        <span id="tokenMetric">— tokens</span>
                     </div>
                 </div>
 
-                <div class="chat-messages" id="chatMessages"></div>
-
-                <!-- Input Area -->
-                <div class="input-area">
-                    <div class="input-container">
-                        <div class="input-wrapper">
-                            <textarea
-                                id="messageInput"
-                                class="message-input"
-                                placeholder="Message AssistMe..."
-                                rows="1"
-                            ></textarea>
-
-                            <input type="file" id="fileInput" style="display: none;" multiple>
-                            <button type="button" class="attach-btn" id="attachBtn" title="Attach file">
-                                <i class="fas fa-paperclip"></i>
-                            </button>
-
-                            <button type="button" class="voice-btn" id="voiceButton" title="Voice input">
-                                <i class="fas fa-microphone"></i>
-                            </button>
-
-                            <button type="button" class="send-btn disabled" id="sendButton" title="Send message">
-                                <i class="fas fa-arrow-up"></i>
-                            </button>
-                        </div>
-
-                        <p class="disclaimer">AssistMe can make mistakes. Check important info.</p>
+                <div class="composer-box">
+                    <button class="icon-btn" id="uploadBtn" title="Attach file">
+                        <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+                    </button>
+                    <textarea id="messageInput" rows="1" placeholder="Message AssistMe" autocomplete="off"></textarea>
+                    <div class="composer-actions">
+                        <button class="icon-btn" id="voiceBtn" title="Start voice input">
+                            <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+                        </button>
+                        <button class="send-btn disabled" id="sendButton" disabled>
+                            <span class="send-label">Send</span>
+                            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                        </button>
                     </div>
                 </div>
-            </main>
-        </div>
+                <div class="composer-footnote">
+                    AssistMe can make mistakes. Consider checking important info.
+                </div>
+            </footer>
+        </main>
     </div>
 
-    <!-- Model Benchmarking Page -->
-    <div class="benchmark-page" id="benchmarkPage">
-        <div class="benchmark-header">
-            <button class="benchmark-back-btn" id="benchmarkBackBtn">
-                <i class="fas fa-arrow-left"></i>
-                <span>Back to Chat</span>
-            </button>
-            <h1 class="benchmark-title">
-                <i class="fas fa-chart-bar"></i>
-                AI Model Benchmarking Aurora v2.0
-            </h1>
-            <div class="gpu-indicator">
-                <i class="fas fa-microchip"></i>
-                <span>GPU Accelerated</span>
-            </div>
-        </div>
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-        <div class="benchmark-controls">
-            <button class="start-benchmark-btn" id="startBenchmarkBtn">
-                <i class="fas fa-play"></i>
-                <span>Start Benchmark</span>
-            </button>
-            <div class="benchmark-options" id="benchmarkOptions">
-                <label class="option-checkbox">
-                    <input type="checkbox" id="advancedMode" checked>
-                    <span>Advanced Testing</span>
-                </label>
-                <label class="option-checkbox">
-                    <input type="checkbox" id="realTimeMetrics" checked>
-                    <span>Real-time Metrics</span>
-                </label>
-                <label class="option-checkbox">
-                    <input type="checkbox" id="multiCategory" checked>
-                    <span>Multi-Category Tests</span>
-                </label>
-            </div>
-            <div class="benchmark-stats">
-                <div class="stat-item" data-stat="models">
-                    <div class="stat-number" data-stat="models">10</div>
-                    <div class="stat-label">Models</div>
-                </div>
-                <div class="stat-item" data-stat="categories">
-                    <div class="stat-number" data-stat="categories">4</div>
-                    <div class="stat-label">Categories</div>
-                </div>
-                <div class="stat-item" data-stat="tests">
-                    <div class="stat-number" data-stat="tests">40</div>
-                    <div class="stat-label">Total Tests</div>
-                </div>
-            </div>
-            <div class="benchmark-actions">
-                <button class="benchmark-action-btn" id="exportResultsBtn">
-                    <i class="fas fa-download"></i>
-                    <span>Export</span>
-                </button>
-                <button class="benchmark-action-btn" id="resetBenchmarkBtn">
-                    <i class="fas fa-refresh"></i>
-                    <span>Reset</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="benchmark-progress" id="benchmarkProgress">
-            <div class="progress-header">
-                <h3>Benchmarking in Progress...</h3>
-                <div class="progress-percentage" id="progressPercentage">0%</div>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-            <div class="current-test-info" id="currentTestInfo">Initializing...</div>
-        </div>
-
-        <div class="model-grid" id="modelGrid">
-            <!-- Model cards will be inserted here -->
-        </div>
-
-        <div class="benchmark-charts" id="benchmarkCharts">
-            <div class="chart-container">
-                <h3 class="chart-title">⚡ Response Time Comparison</h3>
-                <div class="chart-wrapper">
-                    <canvas id="responseTimeChart" width="600" height="300"></canvas>
-                </div>
-            </div>
-
-            <div class="chart-container">
-                <h3 class="chart-title">🎯 Accuracy Comparison</h3>
-                <div class="chart-wrapper">
-                    <canvas id="accuracyChart" width="600" height="300"></canvas>
-                </div>
-            </div>
-
-            <div class="chart-container">
-                <h3 class="chart-title">🚀 GPU Usage Analysis</h3>
-                <div class="chart-wrapper">
-                    <canvas id="gpuUsageChart" width="600" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="benchmark-results-summary" id="benchmarkSummary">
-            <h3>Detailed Results</h3>
-            <div class="results-table" id="resultsTable">
-                <!-- Results will be inserted here -->
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js" defer></script>
-</div>
+    <script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+    <script defer src="script.js"></script>
 </body>
 </html>

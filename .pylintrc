@@ -1,0 +1,3 @@
+[MASTER]
+# Skip non-Python build artifacts that Codacy still hands to pylint.
+ignore-patterns=^Dockerfile$
