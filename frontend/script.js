@@ -104,6 +104,7 @@ const elements = {
     chatMessages: document.getElementById('chatMessages'),
     chatThread: document.getElementById('chatThread'),
     messageInput: document.getElementById('messageInput'),
+    composer: document.getElementById('composer'),
     sendButton: document.getElementById('sendButton'),
     inlineSuggestions: document.getElementById('inlineSuggestions'),
     latencyMetric: document.getElementById('latencyMetric'),
@@ -763,12 +764,34 @@ function autoResizeInput() {
 }
 
 function handleInputChange() {
-    if (!elements.messageInput || !elements.sendButton) return;
+    if (!elements.messageInput || !elements.sendButton) {
+        console.warn('messageInput or sendButton not found');
+        return;
+    }
+
     autoResizeInput();
+
+    // Ensure textarea is editable and visible
+    elements.messageInput.disabled = false;
+    elements.messageInput.style.pointerEvents = 'auto';
+    elements.messageInput.style.opacity = '1';
+    elements.messageInput.style.display = 'block';
+    elements.messageInput.removeAttribute('readonly');
+
     const hasText = elements.messageInput.value.trim().length > 0;
     const ready = hasText && !state.isStreaming && Boolean(resolveModelId(state.currentModel));
+
     elements.sendButton.classList.toggle('disabled', !ready);
     elements.sendButton.disabled = !ready;
+
+    // Debug logging
+    console.log('Input change:', {
+        hasText,
+        ready,
+        value: elements.messageInput.value.slice(0, 20),
+        disabled: elements.messageInput.disabled,
+        visible: elements.messageInput.offsetParent !== null
+    });
 }
 
 function buildPayloadMessages(conversation, userMessage) {
