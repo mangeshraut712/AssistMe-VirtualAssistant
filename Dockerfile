@@ -28,6 +28,8 @@ RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /app
 USER app
 
+# Fix Railway deployment PATH issue - ensure app user has access to /bin
+ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 ENV PYTHONPATH=/app
 
 EXPOSE 8001
