@@ -1,10 +1,28 @@
 import os
 import json
 import logging
-from typing import Dict, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
 
-import redis
-import requests
+if TYPE_CHECKING:
+    import redis
+    import requests
+    RedisClient = redis.Redis
+else:
+    try:
+        import redis
+        HAS_REDIS = True
+        RedisClient = redis.Redis
+    except ImportError:
+        HAS_REDIS = False
+        redis = None
+        RedisClient = Any  # Fallback for runtime
+
+    try:
+        import requests
+        HAS_REQUESTS = True
+    except ImportError:
+        HAS_REQUESTS = False
+        requests = None
 
 class Grok2Client:
     def __init__(self):
@@ -21,7 +39,7 @@ class Grok2Client:
         self.grok2_api_key = os.getenv("GROK2_API_KEY")
 
         # Rate limiting configuration
-        self.redis_client: Optional[redis.Redis] = None
+        self.redis_client: Optional[RedisClient] = None
         redis_url = os.getenv("REDIS_URL")
         if redis_url:
             try:

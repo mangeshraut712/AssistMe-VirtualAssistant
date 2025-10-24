@@ -18,7 +18,16 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
-from .chat_client import grok_client
+
+# Import chat client with graceful error handling
+try:
+    from .chat_client import grok_client
+    CHAT_CLIENT_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Chat client import failed: {e}. Chat features will be disabled.")
+    grok_client = None
+    CHAT_CLIENT_AVAILABLE = False
+
 from .database import get_db
 from .models import Conversation, Message as MessageModel
 
@@ -191,6 +200,9 @@ def root():
 async def chat_text(request: TextChatRequest, db: Optional[Session] = Depends(get_db)):
     logging.info("Chat API called with messages: %s", [m.content for m in request.messages])
 
+    if not CHAT_CLIENT_AVAILABLE or grok_client is None:
+        return {"error": "Chat functionality is not available. Please check server configuration."}
+
     current_conversation_id, payload_messages = _prepare_conversation_context(request, db)
 
     result = await run_in_threadpool(
@@ -225,6 +237,11 @@ async def chat_text(request: TextChatRequest, db: Optional[Session] = Depends(ge
 @app.post("/api/chat/stream")
 async def chat_text_stream(request: TextChatRequest, db: Optional[Session] = Depends(get_db)):
     logging.info("Chat stream API called with messages: %s", [m.content for m in request.messages])
+
+    if not CHAT_CLIENT_AVAILABLE or grok_client is None:
+        def error_generator():
+            yield _sse_event("error", {"message": "Chat functionality is not available. Please check server configuration."})
+        return StreamingResponse(error_generator(), media_type="text/event-stream")
 
     current_conversation_id, payload_messages = _prepare_conversation_context(request, db)
     candidate_title = generate_conversation_title_from_messages(request.messages)
