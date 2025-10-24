@@ -34,5 +34,5 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8001
 
-# Use optimized exec form CMD for Railway
-CMD ["/bin/bash", "/app/start.sh"]
+# Let Railway use Dockerfile CMD directly - no competing startCommand in railway.toml
+CMD ./start.sh
