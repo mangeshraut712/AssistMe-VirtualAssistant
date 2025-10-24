@@ -21,14 +21,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application code
 COPY backend/ ./
-RUN chmod +x start.sh
 
-#
-
-ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 ENV PYTHONPATH=/app
 
 EXPOSE 8001
 
-# Let Railway use Dockerfile CMD directly - no competing startCommand in railway.toml
-CMD ./start.sh
+# Start FastAPI directly for Railway
+CMD ["python3", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--log-level", "info", "--access-log", "--lifespan", "on"]
