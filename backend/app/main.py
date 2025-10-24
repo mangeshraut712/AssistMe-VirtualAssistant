@@ -184,6 +184,12 @@ def _sse_event(event: str, data: dict) -> str:
 def health():
     return {"status": "ok", "service": "assistme-api", "version": "1.0.0", "timestamp": datetime.now().isoformat()}
 
+@app.get("/debug")
+def debug():
+    """Ultra simple debug endpoint with minimal dependencies."""
+    return "OK"
+
+
 @app.get("/env")
 def get_env():
     # Debug endpoint to check what env vars are loaded
