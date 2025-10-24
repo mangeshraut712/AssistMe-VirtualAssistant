@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 # Load environment variables from .env files
 try:
@@ -433,7 +433,7 @@ async def voice_chat(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            data = await websocket.receive_json()  # expecting audio data or command
+            _data = await websocket.receive_json()  # expecting audio data or command
             # Placeholder: Process audio with S2R and get response from Grok-2
             response_text = "Voice processed via S2R architecture and Grok-2 reasoning"
             await websocket.send_json({"response": response_text})

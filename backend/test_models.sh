@@ -117,6 +117,7 @@ EOF
     elif echo "$RESPONSE" | jq -e '.choices[0].message.content' >/dev/null 2>&1; then
         CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
         TOKENS=$(echo "$RESPONSE" | jq -r '.usage.total_tokens // "?"')
+        # Content available for debugging: echo "$CONTENT" | head -c 100
         echo "   ✅ WORKING: Response received ($TOKENS tokens)"
         RESULTS+=("$MODEL: WORKING")
     else
