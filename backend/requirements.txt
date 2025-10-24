@@ -8,9 +8,9 @@ pydantic==2.4.2
 httpx==0.25.2
 redis[hiredis]==4.5.5
 python-dotenv==1.0.0
-python-multipart==0.0.6
+python-multipart==0.0.18
 
 # Performance optimizations (Railway compatible)
 orjson==3.9.15
 aiofiles==22.1.0
-requests==2.31.0
+requests==2.32.4

@@ -447,4 +447,8 @@ if __name__ == "__main__":
 
     # Respect platform-provided PORT (e.g. Railway/Render); fall back to local default
     port = int(os.getenv("PORT", "8001"))
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+
+    # Bind to localhost for local development, all interfaces for containerized environments
+    host = "127.0.0.1" if os.getenv("DEV_MODE", "false").lower() == "true" else "0.0.0.0"
+
+    uvicorn.run(app, host=host, port=port, log_level="info")

@@ -143,8 +143,17 @@ const ALLOWED_ATTRS = {
 };
 
 function sanitizeHtml(html) {
+    // First pass: Remove potentially dangerous content
+    const sanitizedHtml = html.replace(/<script[^>]*>.*?<\/script>/gi, '')
+                               .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+                               .replace(/<object[^>]*>.*?<\/object>/gi, '')
+                               .replace(/<embed[^>]*>.*?<\/embed>/gi, '')
+                               .replace(/javascript:/gi, '#')
+                               .replace(/vbscript:/gi, '#')
+                               .replace(/data:(?!image\/(?:png|jpe?g|gif|svg\+xml|webp))(?:[^;]+);/gi, '#');
+
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
+    const doc = parser.parseFromString(sanitizedHtml, 'text/html');
     if (!doc || !doc.body) {
         return document.createDocumentFragment();
     }
