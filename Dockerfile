@@ -25,6 +25,3 @@ COPY backend/ ./
 ENV PYTHONPATH=/app
 
 EXPOSE 8001
-
-# Start FastAPI directly for Railway
-CMD ["python3", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--log-level", "info", "--access-log", "--lifespan", "on"]
