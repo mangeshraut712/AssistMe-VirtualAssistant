@@ -1,17 +1,25 @@
 import os
 import json
 import logging
-from typing import Any, Dict, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
+
+if TYPE_CHECKING:
+    try:
+        from redis import Redis as RedisType
+    except ImportError:  # pragma: no cover
+        RedisType = Any  # type: ignore[assignment]
+else:
+    RedisType = Any
 
 try:
-    import redis  # type: ignore
+    import redis  # type: ignore[import-not-found]
     HAS_REDIS = True
 except ImportError:  # pragma: no cover - optional dependency
     redis = None  # type: ignore[assignment]
     HAS_REDIS = False
 
 try:
-    import requests  # type: ignore
+    import requests  # type: ignore[import-not-found]
     HAS_REQUESTS = True
 except ImportError:  # pragma: no cover - optional dependency
     requests = None  # type: ignore[assignment]
@@ -19,9 +27,11 @@ except ImportError:  # pragma: no cover - optional dependency
 
 class Grok2Client:
     def __init__(self):
-        self.base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        raw_base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        self.base_url = raw_base_url.rstrip("/")
+        self.chat_endpoint = f"{self.base_url}/chat/completions"
         self.api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-        self.referer = os.getenv("APP_URL", "http://localhost:3001")
+        self.referer = os.getenv("APP_URL", "https://assist-me-virtual-assistant.vercel.app")
         self.title = os.getenv("APP_NAME", "AssistMe Virtual Assistant")
 
         # Development mode for testing without API limits
@@ -32,8 +42,13 @@ class Grok2Client:
         self.grok2_api_key = os.getenv("GROK2_API_KEY")
 
         # Rate limiting configuration - lazy initialization
-        self.redis_client: Optional[RedisClient] = None
+        self.redis_client: Optional[Any] = None
         self.redis_url = os.getenv("REDIS_URL")
+
+        try:
+            self.request_timeout = float(os.getenv("OPENROUTER_TIMEOUT", "60.0"))
+        except ValueError:
+            self.request_timeout = 60.0
 
         # ✅ TOP 10 RATE-LIMITED FREE MODELS FROM OPENROUTER API
         # (pricing.prompt == "0" - truly free, context length > 131k tokens)
@@ -51,8 +66,8 @@ class Grok2Client:
             {"id": "alibaba/tongyi-deepresearch-30b-a3b:free", "name": "Tongyi DeepResearch 30B"}, # 🏅 131K tokens
         ]
 
-        # NO DEFAULT MODEL: Users must choose from available free models
-        self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip()
+        configured_default = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip()
+        self.default_model = configured_default or self.default_models[0]["id"]
 
     def _headers(self) -> dict:
         return {
@@ -134,6 +149,13 @@ class Grok2Client:
         if self.dev_mode:
             return None
 
+        if not HAS_REQUESTS or requests is None:
+            logging.error("Python 'requests' package is required for OpenRouter calls.")
+            return {
+                "error": "Server is missing the 'requests' dependency. Please reinstall backend requirements.",
+                "tokens": 0,
+            }
+
         if not self.api_key:
             logging.warning("OPENROUTER_API_KEY not configured; returning placeholder response.")
             return {
@@ -178,8 +200,12 @@ class Grok2Client:
         payload = self._build_payload(messages, model_name, temperature, max_tokens)
 
         try:
-            response = requests.post(f"{self.base_url}/chat/completions", json=payload, headers=self._headers(),
-                                   timeout=float(os.getenv("OPENROUTER_TIMEOUT", "60.0")))
+            response = requests.post(
+                self.chat_endpoint,
+                json=payload,
+                headers=self._headers(),
+                timeout=self.request_timeout,
+            )
             response.raise_for_status()
             data = response.json()
             choice = (data.get("choices") or [{}])[0]
@@ -235,11 +261,11 @@ class Grok2Client:
 
         try:
             with requests.post(
-                f"{self.base_url}/chat/completions",
+                self.chat_endpoint,
                 json=payload,
                 headers=headers,
                 stream=True,
-                timeout=float(os.getenv("OPENROUTER_TIMEOUT", "60.0")),
+                timeout=self.request_timeout,
             ) as response:
                 response.raise_for_status()
                 accumulated = []
