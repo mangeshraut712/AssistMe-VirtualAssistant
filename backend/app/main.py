@@ -39,16 +39,15 @@ except ImportError as exc:  # pragma: no cover
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session as SessionType  # type: ignore[attr-defined]
 else:
-    SessionType = Any
+    SessionType = Any  # type: ignore[assignment,misc]
 
 try:
     _sqlalchemy_orm = importlib.import_module("sqlalchemy.orm")
     Session = _sqlalchemy_orm.Session  # type: ignore[attr-defined]
+    if not TYPE_CHECKING:
+        SessionType = Session  # type: ignore[assignment,misc]
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError("SQLAlchemy is required; install backend/requirements.txt") from exc
-
-# Set SessionType to the actual Session class for runtime
-SessionType = Session
 
 try:
     run_in_threadpool = importlib.import_module("starlette.concurrency").run_in_threadpool  # type: ignore[attr-defined]
