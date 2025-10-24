@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 # Load environment variables from .env files
 try:
@@ -36,10 +36,19 @@ try:
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError("Pydantic is required; install backend/requirements.txt") from exc
 
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session as SessionType  # type: ignore[attr-defined]
+else:
+    SessionType = Any
+
 try:
-    Session = importlib.import_module("sqlalchemy.orm").Session  # type: ignore[attr-defined]
+    _sqlalchemy_orm = importlib.import_module("sqlalchemy.orm")
+    Session = _sqlalchemy_orm.Session  # type: ignore[attr-defined]
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError("SQLAlchemy is required; install backend/requirements.txt") from exc
+
+# Set SessionType to the actual Session class for runtime
+SessionType = Session
 
 try:
     run_in_threadpool = importlib.import_module("starlette.concurrency").run_in_threadpool  # type: ignore[attr-defined]
@@ -115,7 +124,7 @@ def _should_update_title(current_title: Optional[str]) -> bool:
 
 
 def _persist_messages(
-    db: Optional["Session"],
+    db: Optional[SessionType],
     conversation_id: Optional[int],
     user_messages: List[ChatMessage],
     assistant_content: Optional[str],
@@ -155,7 +164,7 @@ def _persist_messages(
         db.rollback()
 
 
-def _load_conversation_history(conversation_id: int, db: "Session") -> List["MessageModel"]:
+def _load_conversation_history(conversation_id: int, db: SessionType) -> List["MessageModel"]:
     return (
         db.query(MessageModel)  # type: ignore
         .filter(MessageModel.conversation_id == conversation_id)
@@ -166,10 +175,10 @@ def _load_conversation_history(conversation_id: int, db: "Session") -> List["Mes
 
 def _prepare_conversation_context(
     request: TextChatRequest,
-    db: Optional["Session"],
+    db: Optional[SessionType],
 ) -> Tuple[Optional[int], List[dict]]:
     conversation_id = getattr(request, "conversation_id", None)
-    history_records: List["MessageModel"] = []
+    history_records: List[MessageModel] = []
     current_conversation_id: Optional[int] = conversation_id
 
     if db and conversation_id:
@@ -224,7 +233,7 @@ def root():
     return {"message": "AssistMe API is running"}
 
 @app.post("/api/chat/text")
-async def chat_text(request: TextChatRequest, db: Optional["Session"] = Depends(get_db)):
+async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depends(get_db)):
     logging.info("Chat API called with messages: %s", [m.content for m in request.messages])
 
     if not CHAT_CLIENT_AVAILABLE or grok_client is None:
@@ -262,7 +271,7 @@ async def chat_text(request: TextChatRequest, db: Optional["Session"] = Depends(
 
 
 @app.post("/api/chat/stream")
-async def chat_text_stream(request: TextChatRequest, db: Optional["Session"] = Depends(get_db)):
+async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] = Depends(get_db)):
     logging.info("Chat stream API called with messages: %s", [m.content for m in request.messages])
 
     if not CHAT_CLIENT_AVAILABLE or grok_client is None:
@@ -360,7 +369,7 @@ async def chat_text_options() -> Response:
     return Response(status_code=204)
 
 @app.get("/api/conversations")
-def get_conversations(db: Optional["Session"] = Depends(get_db)) -> List[dict]:
+def get_conversations(db: Optional[SessionType] = Depends(get_db)) -> List[dict]:
     if db:
         conversations = db.query(Conversation).all()  # type: ignore
         return [{"id": c.id, "title": c.title, "created_at": c.created_at} for c in conversations]
@@ -375,7 +384,7 @@ async def conversations_options() -> Response:
 
 
 @app.get("/api/conversations/{conversation_id}")
-def get_conversation_messages(conversation_id: int, db: Optional["Session"] = Depends(get_db)):
+def get_conversation_messages(conversation_id: int, db: Optional[SessionType] = Depends(get_db)):
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
