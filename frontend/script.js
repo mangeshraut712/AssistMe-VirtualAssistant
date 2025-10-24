@@ -99,8 +99,6 @@ const elements = {
     modelSelector: document.getElementById('modelSelector'),
     modelButton: document.getElementById('modelButton'),
     modelDropdown: document.getElementById('modelDropdown'),
-    benchmarkBtn: document.getElementById('benchmarkBtn'),
-    docsBtn: document.getElementById('docsBtn'),
     welcomePanel: document.getElementById('welcomePanel'),
     starterGrid: document.getElementById('starterGrid'),
     chatMessages: document.getElementById('chatMessages'),
