@@ -6,19 +6,20 @@ from typing import List, Optional, Tuple
 
 # Load environment variables from .env files
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover - optional in production
-    pass  # dotenv not available, skip
+    load_dotenv = None  # type: ignore[assignment]
 
-load_dotenv('secrets.env')  # Load secrets.env first
-load_dotenv('.env')         # Override with .env if needed
+if load_dotenv:
+    load_dotenv('secrets.env')  # Load secrets.env first
+    load_dotenv('.env')         # Override with .env if needed
 
-from fastapi import FastAPI, WebSocket, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel
-from sqlalchemy.orm import Session as SessionType
-from starlette.concurrency import run_in_threadpool
+from fastapi import FastAPI, WebSocket, Depends, HTTPException  # type: ignore[import-not-found]
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-not-found]
+from fastapi.responses import Response, StreamingResponse  # type: ignore[import-not-found]
+from pydantic import BaseModel  # type: ignore[import-not-found]
+from sqlalchemy.orm import Session as SessionType  # type: ignore[import-not-found]
+from starlette.concurrency import run_in_threadpool  # type: ignore[import-not-found]
 
 # Import chat client with graceful error handling
 try:
@@ -443,7 +444,7 @@ async def voice_chat(websocket: WebSocket):
         await websocket.close()
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore[import-not-found]
 
     # Respect platform-provided PORT (e.g. Railway/Render); fall back to local default
     port = int(os.getenv("PORT", "8001"))

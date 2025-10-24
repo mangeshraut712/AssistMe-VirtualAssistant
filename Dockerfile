@@ -23,12 +23,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY backend/ ./
 RUN chmod +x start.sh
 
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
-USER app
+#
 
-# Fix Railway deployment PATH issue - ensure app user has access to /bin
 ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 ENV PYTHONPATH=/app
 
