@@ -35,22 +35,16 @@ class Grok2Client:
         self.redis_client: Optional[RedisClient] = None
         self.redis_url = os.getenv("REDIS_URL")
 
-        # TOP 10 CONFIRMED OPENROUTER MODELS (Rate-Limited But Functional)
-        # All models verified to exist on OpenRouter - will work when rate limits reset
+        # UPDATED: Verified working OpenRouter models (post-comprehensive testing)
         self.default_models = [
-            {"id": "deepseek/deepseek-r1:free", "name": "DeepSeek R1"},       # ✅ TESTED - VERIFIED WORKING
-            {"id": "qwen/qwen3-235b-a22b:free", "name": "Qwen3 235B A22B"},  # ✅ Math excellence
-            {"id": "openrouter/andromeda-alpha:free", "name": "Andromeda Alpha"}, # ✅ Multimodal
-            {"id": "mistralai/mistral-7b-instruct:free", "name": "Mistral 7B"}, # ⚠️ Rate limited now
-            {"id": "meta-llama/llama-3.2-3b-instruct:free", "name": "Llama 3.2 3B"}, # ⚠️ Rate limited now
-            {"id": "huggingface/zephyr-7b-beta:free", "name": "Zephyr 7B"}, # ⚠️ Rate limited now
-            {"id": "nousresearch/hermes-3-llama-3.1-405b:free", "name": "Hermes 3 Llama"}, # ⚠️ Rate limited now
-            {"id": "openchat/openchat-7b:free", "name": "OpenChat 7B"}, # ⚠️ Rate limited now
-            {"id": "microsoft/dolphin-2.2-mixtral-8x7b:free", "name": "Dolphin Mixtral"}, # ⚠️ Rate limited now
-            {"id": "meta-llama/llama-3.1-8b-instruct:free", "name": "Llama 3.1 8B"}, # ⚠️ Rate limited now
+            {"id": "anthropic/claude-3-haiku:beta", "name": "Claude 3 Haiku"},   # ✅ VERIFIED WORKING - Primary model
+            {"id": "anthropic/claude-3-sonnet:beta", "name": "Claude 3 Sonnet"}, # ⚠️ May require credits - excellent quality
+            {"id": "groq/llama-3.1-8b-instant:free", "name": "Llama 3.1 Groq"},     # ⚠️ Variable availability - fast inference
+            {"id": "meta-llama/llama-3-8b-instruct:free", "name": "Llama 3 8B"},    # ⚠️ May require credits
+            {"id": "microsoft/wizardlm-2-8x22b:free", "name": "WizardLM 2"},        # ⚠️ Variable availability
         ]
 
-        self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip() or self.default_models[0]["id"]
+        self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip() or "anthropic/claude-3-haiku:beta"
 
     def _headers(self) -> dict:
         return {
