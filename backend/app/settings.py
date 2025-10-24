@@ -31,12 +31,12 @@ def get_database_url() -> str | None:
     pg_port = os.getenv("PGPORT", "5432")
 
     if all([pg_host, pg_user, pg_password, pg_db]):
-        return f"postgresql+pg8000://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+        return f"postgresql+psycopg://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
 
     # Only provide fallback for local development
     if os.getenv("RAILWAY_PROJECT_ID") is None:
         # Local default (docker-compose)
-        return "postgresql+pg8000://assistme_user:assistme_password@db:5432/assistme_db"
+        return "postgresql+psycopg://assistme_user:assistme_password@db:5432/assistme_db"
 
     # In Railway without database, return None
     return None
@@ -64,12 +64,12 @@ def _normalise_db_url(url: str) -> str:
     if url.startswith("postgresql://"):
         scheme, rest = url.split("://", 1)
         if "+" not in scheme:
-            return "postgresql+pg8000://" + rest
+            return "postgresql+psycopg://" + rest
 
     if url.startswith("postgresql+"):
         scheme, rest = url.split("://", 1)
         driver = scheme.split("+", 1)[1]
-        if driver != "pg8000":
-            return "postgresql+pg8000://" + rest
+        if driver not in ["psycopg", "asyncpg"]:
+            return "postgresql+psycopg://" + rest
 
     return url
