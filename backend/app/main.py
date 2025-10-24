@@ -26,6 +26,7 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:8001",
     "https://assist-me-virtual-assistant.vercel.app",
+    "https://assist-me-virtual-assistant.vercel.app",
     "https://assistme-virtualassistant-production.up.railway.app",
 ]
 
