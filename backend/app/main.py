@@ -197,12 +197,19 @@ def get_env():
 def root():
     return {"message": "AssistMe API is running"}
 
+
+def _ensure_chat_client() -> None:
+    if not CHAT_CLIENT_AVAILABLE or grok_client is None:
+        raise HTTPException(status_code=503, detail="Chat functionality is not available. Please check server configuration.")
+
 @app.post("/api/chat/text")
 async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depends(get_db)):
     logging.info("Chat API called with messages: %s", [m.content for m in request.messages])
 
-    if not CHAT_CLIENT_AVAILABLE or grok_client is None:
-        return {"error": "Chat functionality is not available. Please check server configuration."}
+    try:
+        _ensure_chat_client()
+    except HTTPException as exc:
+        return {"error": exc.detail}
 
     current_conversation_id, payload_messages = _prepare_conversation_context(request, db)
 
@@ -331,6 +338,43 @@ def chat_text_info():
 @app.options("/api/chat/text")
 async def chat_text_options() -> Response:
     """Explicitly handle CORS preflight requests."""
+    return Response(status_code=204)
+
+
+@app.get("/api/models")
+def list_models():
+    _ensure_chat_client()
+    return {
+        "models": grok_client.get_available_models(),
+        "default": grok_client.default_model,
+    }
+
+
+@app.options("/api/models")
+async def list_models_options() -> Response:
+    return Response(status_code=204)
+
+
+@app.get("/api/openrouter/status")
+def openrouter_status():
+    configured = CHAT_CLIENT_AVAILABLE and grok_client is not None
+    if not configured:
+        return {
+            "configured": False,
+            "message": "Chat client unavailable. Check server logs and environment variables.",
+        }
+
+    return {
+        "configured": True,
+        "base_url": getattr(grok_client, "base_url", "unknown"),
+        "has_api_key": bool(getattr(grok_client, "api_key", "")),
+        "default_model": getattr(grok_client, "default_model", None),
+        "dev_mode": getattr(grok_client, "dev_mode", False),
+    }
+
+
+@app.options("/api/openrouter/status")
+async def openrouter_status_options() -> Response:
     return Response(status_code=204)
 
 @app.get("/api/conversations")
