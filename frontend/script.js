@@ -21,66 +21,68 @@ const endpoints = {
 
 const MODEL_OPTIONS = [
     {
-        id: 'deepseek/deepseek-r1:free',
-        label: 'DeepSeek R1',
-        hint: 'Open reasoning, research-grade - TESTED ✅ WORKING',
-        context: '164k context',
+        id: 'google/gemini-2.0-flash-exp:free',
+        label: 'Google Gemini 2.0 Flash Experimental',
+        hint: 'Google flash tier · multimodal · free',
+        context: '1M context',
     },
     {
-        id: 'qwen/qwen3-235b-a22b:free',
-        label: 'Qwen3 235B A22B',
-        hint: 'Math excellence, 100+ languages - functional',
+        id: 'qwen/qwen3-coder:free',
+        label: 'Qwen3 Coder 480B A35B',
+        hint: 'Alibaba Qwen coder · 480B params',
+        context: '262k context',
+    },
+    {
+        id: 'tngtech/deepseek-r1t2-chimera:free',
+        label: 'DeepSeek R1T2 Chimera',
+        hint: 'TNGTech + DeepSeek hybrid reasoning',
+        context: '163k context',
+    },
+    {
+        id: 'microsoft/mai-ds-r1:free',
+        label: 'Microsoft MAI DS R1',
+        hint: 'Microsoft x DeepSeek research model',
+        context: '163k context',
+    },
+    {
+        id: 'openai/gpt-oss-20b:free',
+        label: 'OpenAI GPT OSS 20B',
+        hint: 'Open-source 20B preview, free tier',
+        context: '128k context',
+    },
+    {
+        id: 'z-ai/glm-4.5-air:free',
+        label: 'Zhipu GLM 4.5 Air',
+        hint: 'Zhipu AI lightweight flagship',
+        context: '128k context',
+    },
+    {
+        id: 'meta-llama/llama-3.3-70b-instruct:free',
+        label: 'Meta Llama 3.3 70B Instruct',
+        hint: 'Meta frontier instruct tuning',
         context: '131k context',
     },
     {
-        id: 'openrouter/andromeda-alpha:free',
-        label: 'Andromeda Alpha',
-        hint: 'Multimodal - images & files (trial use)',
+        id: 'nvidia/nemotron-nano-9b-v2:free',
+        label: 'NVIDIA Nemotron Nano 9B V2',
+        hint: 'NVIDIA RAG-ready small model',
+        context: '131k context',
+    },
+    {
+        id: 'mistralai/mistral-nemo:free',
+        label: 'Mistral Nemo',
+        hint: 'Mistral + NVIDIA collaboration',
         context: '128k context',
     },
     {
-        id: 'mistralai/mistral-7b-instruct:free',
-        label: 'Mistral 7B',
-        hint: 'Reliable general AI, active free model',
-        context: '32k context',
-    },
-    {
-        id: 'meta-llama/llama-3.2-3b-instruct:free',
-        label: 'Llama 3.2 3B',
-        hint: 'Latest Meta architecture, lenient limits',
-        context: '128k context',
-    },
-    {
-        id: 'huggingface/zephyr-7b-beta:free',
-        label: 'Zephyr 7B',
-        hint: 'HuggingFace - diverse capabilities, instruction-tuned',
-        context: '8k context',
-    },
-    {
-        id: 'nousresearch/hermes-3-llama-3.1-405b:free',
-        label: 'Hermes 3 Llama',
-        hint: 'Fine-tuned helpful responses, research-grade',
-        context: '128k context',
-    },
-    {
-        id: 'openchat/openchat-7b:free',
-        label: 'OpenChat 7B',
-        hint: 'Creative conversations, highly capable',
-        context: '8k context',
-    },
-    {
-        id: 'microsoft/dolphin-2.2-mixtral-8x7b:free',
-        label: 'Dolphin Mixtral',
-        hint: 'Mixture expert, strong reasoning',
-        context: '32k context',
-    },
-    {
-        id: 'meta-llama/llama-3.1-8b-instruct:free',
-        label: 'Llama 3.1 8B',
-        hint: 'Solid general-purpose, reliable performance',
+        id: 'moonshotai/kimi-dev-72b:free',
+        label: 'MoonshotAI Kimi Dev 72B',
+        hint: 'MoonshotAI developer-tuned',
         context: '128k context',
     },
 ];
+
+const DEFAULT_MODEL_ID = MODEL_OPTIONS[0]?.id || null;
 
 const elements = {
     app: document.getElementById('app'),
@@ -116,7 +118,7 @@ const elements = {
 const state = {
     conversations: [],
     activeConversation: null,
-    currentModel: null,
+    currentModel: DEFAULT_MODEL_ID,
     isStreaming: false,
     typingNode: null,
     abortController: null,
@@ -141,9 +143,17 @@ const ALLOWED_ATTRS = {
 };
 
 function sanitizeHtml(html) {
-    const template = document.createElement('template');
-    template.innerHTML = html;
-    const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT, null);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    if (!doc || !doc.body) {
+        return document.createDocumentFragment();
+    }
+
+    if (doc.querySelector('parsererror')) {
+        return document.createDocumentFragment();
+    }
+
+    const walker = document.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT, null);
     const toRemove = [];
 
     while (walker.nextNode()) {
@@ -154,10 +164,11 @@ function sanitizeHtml(html) {
             continue;
         }
 
-        [...element.attributes].forEach((attribute) => {
+        const allowedAttrs = ALLOWED_ATTRS[tag] ?? [];
+        Array.from(element.attributes).forEach((attribute) => {
             const name = attribute.name.toLowerCase();
             const value = attribute.value;
-            const allowed = (ALLOWED_ATTRS[tag] || []).includes(name);
+            const allowed = allowedAttrs.includes(name);
             if (!allowed) {
                 element.removeAttribute(attribute.name);
                 return;
@@ -186,10 +197,15 @@ function sanitizeHtml(html) {
     }
 
     toRemove.forEach((node) => {
-        node.replaceWith(document.createTextNode(node.textContent || ''));
+        const textNode = doc.createTextNode(node.textContent || '');
+        node.replaceWith(textNode);
     });
 
-    return template.innerHTML;
+    const fragment = document.createDocumentFragment();
+    while (doc.body.firstChild) {
+        fragment.appendChild(doc.body.firstChild);
+    }
+    return fragment;
 }
 
 function renderAssistantContent(target, content) {
@@ -197,7 +213,8 @@ function renderAssistantContent(target, content) {
     const source = content || '';
     const markdown = markedLib?.parse ? markedLib.parse(source) : source;
     const sanitized = sanitizeHtml(markdown);
-    target.innerHTML = sanitized;
+    target.replaceChildren();
+    target.appendChild(sanitized);
 
     if (hljsLib?.highlightElement) {
         target.querySelectorAll('pre code').forEach((block) => {
@@ -233,7 +250,7 @@ function newConversation(modelId = null) {
         localId,
         serverId: null,
         title: 'New chat',
-        model: modelId || state.currentModel,
+        model: modelId ?? state.currentModel ?? null,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         messages: [],
@@ -282,14 +299,14 @@ function escapeHtml(value) {
             '"': '&quot;',
             "'": '&#39;',
         };
-        return map[char] || char;
+        return Object.prototype.hasOwnProperty.call(map, char) ? map[char] : char;
     });
 }
 
 function renderConversations(filterText = '') {
     if (!elements.conversations) return;
     const query = filterText.trim().toLowerCase();
-    elements.conversations.innerHTML = '';
+    elements.conversations.replaceChildren();
 
     const items = state.conversations
         .slice()
@@ -353,14 +370,28 @@ function syncThemeToggleIcon(theme) {
     icon.classList.add(theme === 'dark' ? 'fa-sun' : 'fa-moon');
 }
 
+function resolveModelId(preferredId) {
+    if (!preferredId) return DEFAULT_MODEL_ID;
+    return MODEL_OPTIONS.some((option) => option.id === preferredId) ? preferredId : DEFAULT_MODEL_ID;
+}
+
 function populateModelDropdown() {
     if (!elements.modelDropdown) return;
-    elements.modelDropdown.innerHTML = '';
+    elements.modelDropdown.replaceChildren();
+    const header = document.createElement('div');
+    header.className = 'model-dropdown-header';
+    header.textContent = 'Select a model';
+    elements.modelDropdown.appendChild(header);
+
     MODEL_OPTIONS.forEach((option) => {
         const button = document.createElement('button');
         button.className = 'model-option';
         button.type = 'button';
         button.dataset.model = option.id;
+        button.setAttribute('role', 'option');
+        button.setAttribute('tabindex', '0');
+        const isActive = option.id === state.currentModel;
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
 
         const title = document.createElement('span');
         title.className = 'model-option-title';
@@ -378,7 +409,7 @@ function populateModelDropdown() {
         button.appendChild(desc);
         button.appendChild(meta);
 
-        if (option.id === state.currentModel) {
+        if (isActive) {
             button.classList.add('active');
         }
 
@@ -391,6 +422,7 @@ function populateModelDropdown() {
     });
 
     updateModelButton();
+    elements.modelDropdown.scrollTop = 0;
 }
 
 function updateModelButton() {
@@ -398,9 +430,11 @@ function updateModelButton() {
     const model = MODEL_OPTIONS.find((entry) => entry.id === state.currentModel) || MODEL_OPTIONS[0];
     const modelName = elements.modelButton.querySelector('.model-name');
     const modelHint = elements.modelButton.querySelector('.model-hint');
-    if (modelName) modelName.textContent = model.label;
-    if (modelHint) modelHint.textContent = model.hint;
-    localStorage.setItem(MODEL_KEY, state.currentModel);
+    if (modelName) modelName.textContent = model?.label || 'Select a model';
+    if (modelHint) modelHint.textContent = model?.hint || 'Pick any model to start chatting';
+    if (state.currentModel) {
+        localStorage.setItem(MODEL_KEY, state.currentModel);
+    }
 }
 
 function toggleModelDropdown(forceState) {
@@ -412,18 +446,26 @@ function toggleModelDropdown(forceState) {
     if (elements.modelButton) {
         elements.modelButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     }
+    if (isOpen) {
+        const targetOption = elements.modelDropdown.querySelector('.model-option.active')
+            || elements.modelDropdown.querySelector('.model-option');
+        targetOption?.focus();
+    } else {
+        elements.modelButton?.focus();
+    }
 }
 
 function setModel(modelId) {
-    state.currentModel = modelId;
+    state.currentModel = resolveModelId(modelId);
     if (state.activeConversation) {
-        state.activeConversation.model = modelId;
+        state.activeConversation.model = state.currentModel;
         if (state.activeConversation.messages.length > 0) {
             persistActiveConversation();
         }
     }
     updateModelButton();
     populateModelDropdown();
+    handleInputChange();
 }
 
 function handleClickOutside(event) {
@@ -450,9 +492,10 @@ function createMessageElement(role) {
 
     const avatar = document.createElement('div');
     avatar.className = 'message-avatar';
-    avatar.innerHTML = role === 'user'
-        ? '<i class="fa-solid fa-user"></i>'
-        : '<i class="fa-solid fa-robot"></i>';
+    const avatarIcon = document.createElement('i');
+    avatarIcon.className = role === 'user' ? 'fa-solid fa-user' : 'fa-solid fa-robot';
+    avatarIcon.setAttribute('aria-hidden', 'true');
+    avatar.appendChild(avatarIcon);
 
     const content = document.createElement('div');
     content.className = 'message-content';
@@ -472,7 +515,10 @@ function createMessageElement(role) {
     const copyButton = document.createElement('button');
     copyButton.className = 'message-action-btn';
     copyButton.title = 'Copy to clipboard';
-    copyButton.innerHTML = '<i class="fa-solid fa-copy"></i>';
+    const copyIcon = document.createElement('i');
+    copyIcon.className = 'fa-solid fa-copy';
+    copyIcon.setAttribute('aria-hidden', 'true');
+    copyButton.appendChild(copyIcon);
     copyButton.addEventListener('click', () => {
         navigator.clipboard?.writeText(text.textContent || '')
             .then(() => showToast('Copied to clipboard'))
@@ -484,7 +530,10 @@ function createMessageElement(role) {
         const speakBtn = document.createElement('button');
         speakBtn.className = 'message-action-btn';
         speakBtn.title = 'Listen to response';
-        speakBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+        const speakIcon = document.createElement('i');
+        speakIcon.className = 'fa-solid fa-volume-high';
+        speakIcon.setAttribute('aria-hidden', 'true');
+        speakBtn.appendChild(speakIcon);
         speakBtn.addEventListener('click', () => speakText(text.textContent || ''));
         actions.appendChild(speakBtn);
     }
@@ -509,7 +558,10 @@ function showTypingIndicator() {
 
     const avatar = document.createElement('div');
     avatar.className = 'message-avatar';
-    avatar.innerHTML = '<i class="fa-solid fa-robot"></i>';
+    const indicatorIcon = document.createElement('i');
+    indicatorIcon.className = 'fa-solid fa-robot';
+    indicatorIcon.setAttribute('aria-hidden', 'true');
+    avatar.appendChild(indicatorIcon);
 
     const dots = document.createElement('div');
     dots.className = 'typing-dots';
@@ -612,12 +664,12 @@ function highlightActiveConversation() {
 
 function setActiveConversation(conversation, { resetView = true } = {}) {
     state.activeConversation = conversation;
-    if (conversation.model) {
-        state.currentModel = conversation.model;
-    }
+    const resolvedModel = resolveModelId(conversation.model || state.currentModel);
+    state.currentModel = resolvedModel;
+    state.activeConversation.model = resolvedModel;
 
     if (resetView && elements.chatMessages) {
-        elements.chatMessages.innerHTML = '';
+        elements.chatMessages.replaceChildren();
     }
 
     removeTypingIndicator();
@@ -634,27 +686,56 @@ function setActiveConversation(conversation, { resetView = true } = {}) {
             fragment.text.textContent = message.content;
         }
         if (message.metadata) {
-            fragment.metadata.style.display = 'flex';
-            fragment.metadata.innerHTML = renderMetadata(message.metadata);
+            applyMetadata(fragment.metadata, message.metadata);
+        } else {
+            fragment.metadata.style.display = 'none';
+            fragment.metadata.replaceChildren();
         }
     });
 
     highlightActiveConversation();
     populateModelDropdown();
+    handleInputChange();
 }
 
-function renderMetadata(metadata) {
+function applyMetadata(container, metadata) {
+    if (!container) return;
+    container.replaceChildren();
     const defaults = {
         model: state.currentModel,
         latency: null,
         tokens: null,
     };
     const merged = { ...defaults, ...metadata };
-    const parts = [];
-    if (merged.model) parts.push(`<span class="meta-entry"><i class="fa-solid fa-robot"></i>${merged.model}</span>`);
-    if (merged.latency) parts.push(`<span class="meta-entry"><i class="fa-solid fa-gauge-high"></i>${merged.latency} ms</span>`);
-    if (merged.tokens) parts.push(`<span class="meta-entry"><i class="fa-solid fa-layer-group"></i>${merged.tokens} tok</span>`);
-    return parts.join('<span class="meta-separator">·</span>');
+    const entries = [];
+    if (merged.model) entries.push({ icon: 'fa-solid fa-robot', text: merged.model });
+    if (merged.latency) entries.push({ icon: 'fa-solid fa-gauge-high', text: `${merged.latency} ms` });
+    if (merged.tokens) entries.push({ icon: 'fa-solid fa-layer-group', text: `${merged.tokens} tok` });
+
+    if (entries.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    entries.forEach((entry, index) => {
+        if (index > 0) {
+            const separator = document.createElement('span');
+            separator.className = 'meta-separator';
+            separator.textContent = '·';
+            container.appendChild(separator);
+        }
+
+        const span = document.createElement('span');
+        span.className = 'meta-entry';
+        const icon = document.createElement('i');
+        icon.className = entry.icon;
+        icon.setAttribute('aria-hidden', 'true');
+        span.appendChild(icon);
+        span.appendChild(document.createTextNode(entry.text));
+        container.appendChild(span);
+    });
+
+    container.style.display = 'flex';
 }
 
 function loadConversationFromHistory(conversationId) {
@@ -678,8 +759,9 @@ function handleInputChange() {
     if (!elements.messageInput || !elements.sendButton) return;
     autoResizeInput();
     const hasText = elements.messageInput.value.trim().length > 0;
-    elements.sendButton.classList.toggle('disabled', !hasText || state.isStreaming);
-    elements.sendButton.disabled = !hasText || state.isStreaming;
+    const ready = hasText && !state.isStreaming && Boolean(resolveModelId(state.currentModel));
+    elements.sendButton.classList.toggle('disabled', !ready);
+    elements.sendButton.disabled = !ready;
 }
 
 function buildPayloadMessages(conversation, userMessage) {
@@ -696,6 +778,7 @@ function buildPayloadMessages(conversation, userMessage) {
 
 async function requestCompletionFallback(userMessage) {
     if (!state.activeConversation) return null;
+    state.currentModel = resolveModelId(state.currentModel);
 
     const payload = {
         messages: buildPayloadMessages(state.activeConversation, userMessage),
@@ -724,6 +807,7 @@ async function requestCompletionFallback(userMessage) {
 
 async function streamAssistantResponse(userMessage) {
     if (!state.activeConversation) return;
+    state.currentModel = resolveModelId(state.currentModel);
 
     const payload = {
         messages: buildPayloadMessages(state.activeConversation, userMessage),
@@ -824,8 +908,7 @@ async function streamAssistantResponse(userMessage) {
 
         renderAssistantContent(assistantFragment.text, assistantMessage.content);
 
-        assistantFragment.metadata.style.display = 'flex';
-        assistantFragment.metadata.innerHTML = renderMetadata(assistantMessage.metadata);
+        applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
         updateMetrics(latency, tokensUsed);
 
         ensureConversationVisible();
@@ -866,8 +949,7 @@ async function streamAssistantResponse(userMessage) {
                 tokens: tokensUsed,
             };
             renderAssistantContent(assistantFragment.text, assistantMessage.content);
-            assistantFragment.metadata.style.display = 'flex';
-            assistantFragment.metadata.innerHTML = renderMetadata(assistantMessage.metadata);
+            applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
             updateMetrics(latency, tokensUsed);
             ensureConversationVisible();
             state.isStreaming = false;
@@ -911,6 +993,7 @@ function parseSseEvent(rawEvent) {
 
 async function handleSend() {
     if (!elements.messageInput || !state.activeConversation || state.isStreaming) return;
+    state.currentModel = resolveModelId(state.currentModel);
     const text = elements.messageInput.value.trim();
     if (!text) return;
 
@@ -1104,10 +1187,7 @@ function restoreInitialState() {
         localStorage.removeItem(MODEL_KEY);
     }
 
-    // Ensure the stored model is in our current MODEL_OPTIONS list
-    state.currentModel = MODEL_OPTIONS.some((model) => model.id === storedModel)
-        ? storedModel
-        : MODEL_OPTIONS[0].id; // Default to Gemini 2.0 Flash Exp
+    state.currentModel = resolveModelId(storedModel);
 
     populateModelDropdown();
 
@@ -1117,6 +1197,7 @@ function restoreInitialState() {
         return {
             ...conversation,
             localId,
+            model: resolveModelId(conversation.model),
             messages: Array.isArray(conversation.messages)
                 ? conversation.messages
                 : [],

@@ -1,11 +1,11 @@
 import os
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
 
 if TYPE_CHECKING:
     try:
-        from redis import Redis as RedisType
+        from redis import Redis as RedisType  # type: ignore[import-not-found]
     except ImportError:  # pragma: no cover
         RedisType = Any  # type: ignore[assignment]
 else:
@@ -50,20 +50,19 @@ class Grok2Client:
         except ValueError:
             self.request_timeout = 60.0
 
-        # ✅ TOP 10 RATE-LIMITED FREE MODELS FROM OPENROUTER API
-        # (pricing.prompt == "0" - truly free, context length > 131k tokens)
-        # Users must choose their preferred model - no default set
+        # ✅ Curated free models from OpenRouter (pricing.prompt == "0")
+        # Gemini 2.0 Flash Exp is the default fallback unless overridden
         self.default_models = [
-            {"id": "google/gemini-2.0-flash-exp:free", "name": "Gemini 2.0 Flash Exp"}, # 🥇 1M+ tokens
-            {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B"},               # 🥈 262K tokens
-            {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "R1T2 Chimera"},     # 🥉 163K tokens
-            {"id": "deepseek/deepseek-r1-0528:free", "name": "DeepSeek R1 0528"},     # 🏅 163K tokens
-            {"id": "tngtech/deepseek-r1t-chimera:free", "name": "R1T Chimera"},       # 🏅 163K tokens
-            {"id": "microsoft/mai-ds-r1:free", "name": "MAI DS R1"},                   # 🏅 163K tokens
-            {"id": "deepseek/deepseek-chat-v3-0324:free", "name": "DeepSeek V3 0324"}, # 🏅 163K tokens
-            {"id": "deepseek/deepseek-r1:free", "name": "DeepSeek R1"},               # 🏅 163K tokens
-            {"id": "deepseek/deepseek-chat-v3.1:free", "name": "DeepSeek V3.1"},      # 🏅 163K tokens
-            {"id": "alibaba/tongyi-deepresearch-30b-a3b:free", "name": "Tongyi DeepResearch 30B"}, # 🏅 131K tokens
+            {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash Experimental"},  # 🥇 1M+ tokens
+            {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B A35B"},                            # 🥈 262K tokens
+            {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "DeepSeek R1T2 Chimera"},               # 🥉 163K tokens
+            {"id": "microsoft/mai-ds-r1:free", "name": "Microsoft MAI DS R1"},                           # 🏅 163K tokens
+            {"id": "openai/gpt-oss-20b:free", "name": "OpenAI GPT OSS 20B"},                             # 🏅 128K tokens
+            {"id": "z-ai/glm-4.5-air:free", "name": "Zhipu GLM 4.5 Air"},                                # 🏅 128K tokens
+            {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct"},     # 🏅 131K tokens
+            {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2"},             # 🏅 131K tokens
+            {"id": "mistralai/mistral-nemo:free", "name": "Mistral Nemo"},                               # 🏅 128K tokens
+            {"id": "moonshotai/kimi-dev-72b:free", "name": "MoonshotAI Kimi Dev 72B"},                   # 🏅 128K tokens
         ]
 
         configured_default = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip()
@@ -186,14 +185,24 @@ class Grok2Client:
             payload["stream"] = True
         return payload
 
-    def _normalise_error(self, response) -> Dict[str, Any]:
+    def _normalise_error(self, response, model_name: Optional[str] = None) -> Dict[str, Any]:
         try:
             data = response.json()
         except ValueError:  # pragma: no cover - non-JSON error
             data = {}
 
-        title = data.get("title")
-        message = data.get("message") or data.get("error") or response.text
+        error_payload = data.get("error")
+        metadata = {}
+        if isinstance(error_payload, dict):
+            metadata = error_payload.get("metadata") or {}
+
+        title = data.get("title") or (error_payload or {}).get("title")
+        message = (
+            data.get("message")
+            or (error_payload or {}).get("message")
+            or (error_payload or {}).get("error")
+            or response.text
+        )
         buy_credits_url = data.get("buyCreditsUrl")
 
         if response.status_code == 402 or (title and "Paid Model" in title):
@@ -206,52 +215,87 @@ class Grok2Client:
                 "detail": message,
                 "buyCreditsUrl": buy_credits_url,
                 "requires_credits": True,
+                "model": model_name,
             }
 
         return {
             "error": message or f"OpenRouter error {response.status_code}",
             "status_code": response.status_code,
+            "model": model_name,
+            "provider": metadata.get("provider_name"),
+            "detail": metadata.get("raw") or metadata.get("detail"),
+            "metadata": metadata or None,
         }
 
     def generate_response(self, messages, model=None, temperature=0.7, max_tokens=1024):
-        model_name = model or self.default_model or self.default_models[0]["id"]
+        def _candidate_models(requested: Optional[str]) -> List[str]:
+            if requested:
+                return [requested]
+
+            priority: List[str] = []
+            primary = self.default_model or (self.default_models[0]["id"] if self.default_models else None)
+            if primary:
+                priority.append(primary)
+
+            for entry in self.default_models:
+                mid = entry.get("id")
+                if mid and mid not in priority:
+                    priority.append(mid)
+            return priority
+
+        def _call_model(target_model: str) -> Dict[str, Any]:
+            payload = self._build_payload(messages, target_model, temperature, max_tokens)
+
+            try:
+                response = requests.post(
+                    self.chat_endpoint,
+                    json=payload,
+                    headers=self._headers(),
+                    timeout=self.request_timeout,
+                )
+                if response.status_code >= 400:
+                    return self._normalise_error(response, target_model)
+                data = response.json()
+                choice = (data.get("choices") or [{}])[0]
+                message = choice.get("message", {}) or {}
+                text = message.get("content", "").strip()
+                if not text:
+                    text = "I wasn't able to produce a response. Please try again."
+                tokens = data.get("usage", {}).get("total_tokens", len(text.split()))
+                return {"response": text, "tokens": tokens, "model": target_model}
+            except requests.exceptions.HTTPError as exc:
+                logging.error("OpenRouter returned HTTP error %s: %s", exc.response.status_code, exc.response.text)
+                return {"error": f"OpenRouter HTTP error {exc.response.status_code}: {exc.response.text}", "model": target_model}
+            except requests.exceptions.RequestException as exc:
+                logging.error("Network error while calling OpenRouter: %s", exc)
+                return {"error": f"Network error while calling OpenRouter: {exc}", "model": target_model}
+            except Exception as exc:
+                logging.exception("Unexpected error calling OpenRouter")
+                return {"error": f"Unexpected error calling OpenRouter: {exc}", "model": target_model}
 
         # In development mode, return mock responses to avoid API limits
+        primary_model = model or self.default_model or (self.default_models[0]["id"] if self.default_models else None)
         if self.dev_mode:
-            return self._get_mock_response(messages, model_name)
+            fallback_model = primary_model
+            if not fallback_model and self.default_models:
+                fallback_model = self.default_models[0]["id"]
+            fallback_model = fallback_model or "mock-openrouter-model"
+            return self._get_mock_response(messages, fallback_model)
 
         readiness_error = self._ensure_live_ready()
         if readiness_error:
             return readiness_error
 
-        payload = self._build_payload(messages, model_name, temperature, max_tokens)
-
-        try:
-            response = requests.post(
-                self.chat_endpoint,
-                json=payload,
-                headers=self._headers(),
-                timeout=self.request_timeout,
-            )
-            if response.status_code >= 400:
-                return self._normalise_error(response)
-            data = response.json()
-            choice = (data.get("choices") or [{}])[0]
-            message = choice.get("message", {}) or {}
-            text = message.get("content", "").strip()
-            if not text:
-                text = "I wasn't able to produce a response. Please try again."
-            tokens = data.get("usage", {}).get("total_tokens", len(text.split()))
-            return {"response": text, "tokens": tokens}
-        except requests.exceptions.HTTPError as exc:
-            logging.error("OpenRouter returned HTTP error %s: %s", exc.response.status_code, exc.response.text)
-            return {"error": f"OpenRouter HTTP error {exc.response.status_code}: {exc.response.text}"}
-        except requests.exceptions.RequestException as exc:
-            logging.error("Network error while calling OpenRouter: %s", exc)
-            return {"error": f"Network error while calling OpenRouter: {exc}"}
-        except Exception as exc:
-            logging.exception("Unexpected error calling OpenRouter")
-            return {"error": f"Unexpected error calling OpenRouter: {exc}"}
+        attempts = _candidate_models(model)
+        last_error: Dict[str, Any] = {"error": "No OpenRouter models available."}
+        for candidate in attempts:
+            result = _call_model(candidate)
+            if "response" in result:
+                if primary_model and candidate != primary_model:
+                    result.setdefault("notice", f"Primary model '{primary_model}' unavailable. Responded with '{candidate}'.")
+                return result
+            last_error = result
+        return last_error
 
     def get_available_models(self):
         return self.default_models
@@ -267,7 +311,12 @@ class Grok2Client:
     ) -> Iterator[Dict[str, object]]:
         """Yield incremental response chunks for realtime streaming."""
 
-        model_name = model or self.default_model or self.default_models[0]["id"]
+        model_name = model or self.default_model
+        if not model_name and self.default_models:
+            model_name = self.default_models[0]["id"]
+        if not model_name:
+            yield {"error": "No OpenRouter models configured.", "done": True}
+            return
 
         if self.dev_mode:
             mock = self._get_mock_response(messages, model_name)
@@ -296,9 +345,9 @@ class Grok2Client:
                 timeout=self.request_timeout,
             ) as response:
                 if response.status_code >= 400:
-                    yield {**self._normalise_error(response, self.default_models), "done": True}
+                    yield {**self._normalise_error(response, model_name), "done": True}
                     return
-                accumulated = []
+                accumulated: List[str] = []
                 usage_tokens = None
 
                 for raw_line in response.iter_lines(decode_unicode=True):
