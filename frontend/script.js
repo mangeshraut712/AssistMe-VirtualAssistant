@@ -1107,7 +1107,7 @@ function restoreInitialState() {
     // Ensure the stored model is in our current MODEL_OPTIONS list
     state.currentModel = MODEL_OPTIONS.some((model) => model.id === storedModel)
         ? storedModel
-        : MODEL_OPTIONS[0].id; // Default to DeepSeek R1
+        : MODEL_OPTIONS[0].id; // Default to Gemini 2.0 Flash Exp
 
     populateModelDropdown();
 

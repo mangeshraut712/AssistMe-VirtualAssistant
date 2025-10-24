@@ -35,16 +35,24 @@ class Grok2Client:
         self.redis_client: Optional[RedisClient] = None
         self.redis_url = os.getenv("REDIS_URL")
 
-        # UPDATED: Verified working OpenRouter models (post-comprehensive testing)
+        # ✅ TOP 10 RATE-LIMITED FREE MODELS FROM OPENROUTER API
+        # (pricing.prompt == "0" - truly free, context length > 131k tokens)
+        # Users must choose their preferred model - no default set
         self.default_models = [
-            {"id": "anthropic/claude-3-haiku:beta", "name": "Claude 3 Haiku"},   # ✅ VERIFIED WORKING - Primary model
-            {"id": "anthropic/claude-3-sonnet:beta", "name": "Claude 3 Sonnet"}, # ⚠️ May require credits - excellent quality
-            {"id": "groq/llama-3.1-8b-instant:free", "name": "Llama 3.1 Groq"},     # ⚠️ Variable availability - fast inference
-            {"id": "meta-llama/llama-3-8b-instruct:free", "name": "Llama 3 8B"},    # ⚠️ May require credits
-            {"id": "microsoft/wizardlm-2-8x22b:free", "name": "WizardLM 2"},        # ⚠️ Variable availability
+            {"id": "google/gemini-2.0-flash-exp:free", "name": "Gemini 2.0 Flash Exp"}, # 🥇 1M+ tokens
+            {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B"},               # 🥈 262K tokens
+            {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "R1T2 Chimera"},     # 🥉 163K tokens
+            {"id": "deepseek/deepseek-r1-0528:free", "name": "DeepSeek R1 0528"},     # 🏅 163K tokens
+            {"id": "tngtech/deepseek-r1t-chimera:free", "name": "R1T Chimera"},       # 🏅 163K tokens
+            {"id": "microsoft/mai-ds-r1:free", "name": "MAI DS R1"},                   # 🏅 163K tokens
+            {"id": "deepseek/deepseek-chat-v3-0324:free", "name": "DeepSeek V3 0324"}, # 🏅 163K tokens
+            {"id": "deepseek/deepseek-r1:free", "name": "DeepSeek R1"},               # 🏅 163K tokens
+            {"id": "deepseek/deepseek-chat-v3.1:free", "name": "DeepSeek V3.1"},      # 🏅 163K tokens
+            {"id": "alibaba/tongyi-deepresearch-30b-a3b:free", "name": "Tongyi DeepResearch 30B"}, # 🏅 131K tokens
         ]
 
-        self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip() or "anthropic/claude-3-haiku:beta"
+        # NO DEFAULT MODEL: Users must choose from available free models
+        self.default_model = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip()
 
     def _headers(self) -> dict:
         return {

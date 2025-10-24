@@ -5,3 +5,8 @@ buildCommand = "cd backend && pip install -r requirements.txt"
 startCommand = "bash start.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
+
+# REQUIRED ENVIRONMENT VARIABLES for OpenRouter integration:
+# OPENROUTER_API_KEY - Your OpenRouter API key (obtain from https://openrouter.ai/keys)
+# OPENROUTER_BASE_URL - Should be "https://openrouter.ai/api/v1" (default)
+# REDIS_URL - Optional, for rate limiting (can be left empty for basic usage)
