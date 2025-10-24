@@ -186,6 +186,33 @@ class Grok2Client:
             payload["stream"] = True
         return payload
 
+    def _normalise_error(self, response) -> Dict[str, Any]:
+        try:
+            data = response.json()
+        except ValueError:  # pragma: no cover - non-JSON error
+            data = {}
+
+        title = data.get("title")
+        message = data.get("message") or data.get("error") or response.text
+        buy_credits_url = data.get("buyCreditsUrl")
+
+        if response.status_code == 402 or (title and "Paid Model" in title):
+            friendly = (
+                "This OpenRouter model requires credits. "
+                "Please choose one of the free models or top up credits."
+            )
+            return {
+                "error": friendly,
+                "detail": message,
+                "buyCreditsUrl": buy_credits_url,
+                "requires_credits": True,
+            }
+
+        return {
+            "error": message or f"OpenRouter error {response.status_code}",
+            "status_code": response.status_code,
+        }
+
     def generate_response(self, messages, model=None, temperature=0.7, max_tokens=1024):
         model_name = model or self.default_model or self.default_models[0]["id"]
 
@@ -206,7 +233,8 @@ class Grok2Client:
                 headers=self._headers(),
                 timeout=self.request_timeout,
             )
-            response.raise_for_status()
+            if response.status_code >= 400:
+                return self._normalise_error(response)
             data = response.json()
             choice = (data.get("choices") or [{}])[0]
             message = choice.get("message", {}) or {}
@@ -267,7 +295,9 @@ class Grok2Client:
                 stream=True,
                 timeout=self.request_timeout,
             ) as response:
-                response.raise_for_status()
+                if response.status_code >= 400:
+                    yield {**self._normalise_error(response, self.default_models), "done": True}
+                    return
                 accumulated = []
                 usage_tokens = None
 
