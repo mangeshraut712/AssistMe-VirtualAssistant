@@ -1,16 +1,16 @@
 # Railway-compatible stable versions
-fastapi==0.109.2
-uvicorn[standard]==0.26.0
-sqlalchemy==2.0.16
-psycopg[binary]==3.1.18
-alembic==1.12.1
-pydantic==2.4.2
-httpx==0.25.2
-redis[hiredis]==4.5.5
-python-dotenv==1.0.0
-python-multipart==0.0.18
+fastapi==0.112.0
+uvicorn[standard]==0.30.6
+sqlalchemy==2.0.34
+psycopg[binary]==3.2.2
+alembic==1.13.2
+pydantic==2.8.2
+httpx==0.27.0
+redis[hiredis]==5.1.1
+python-dotenv==1.0.1
+python-multipart==0.0.17
 
 # Performance optimizations (Railway compatible)
-orjson==3.9.15
-aiofiles==22.1.0
+orjson==3.10.7
+aiofiles==24.1.0
 requests==2.32.4
