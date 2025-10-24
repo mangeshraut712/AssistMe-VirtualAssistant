@@ -2,10 +2,26 @@
   "name": "assistme-virtual-assistant",
   "version": "2.0.0",
   "description": "AI chat experience with modern UI",
+  "main": "frontend/index.html",
   "scripts": {
-    "test": "echo 'No tests specified'",
-    "build": "echo 'No build step'"
+    "dev": "npm-run-all --parallel serve:*",
+    "serve:frontend": "npx http-server frontend -p 3000 -c-1 --cors",
+    "serve:backend": "cd backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "echo 'No build step required - static frontend'",
+    "start": "npm run dev",
+    "backend:setup": "cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt",
+    "db:migrate": "cd backend && alembic upgrade head",
+    "test": "echo 'No tests specified'"
   },
+  "keywords": ["ai", "chat", "assistant", "frontend", "backend"],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "npm-run-all": "^4.1.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git"
+  }
 }

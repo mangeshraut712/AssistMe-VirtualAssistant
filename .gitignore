@@ -2,8 +2,8 @@ node_modules/
 venv/
 __pycache__/
 *.pyc
-.env*
 ! .env.example
+.env*
 secrets.env
 credentials.json
 .vercel/
