@@ -6,12 +6,29 @@ const STORAGE_KEY = 'assistme.conversations.v2';
 const THEME_KEY = 'assistme.theme';
 const MODEL_KEY = 'assistme.model';
 
-// Resolve API base URL — can be overridden via window.ASSISTME_API_BASE or the meta tag in index.html
-const API_BASE =
-    window.ASSISTME_API_BASE ||
-    (location.hostname === 'localhost'
-        ? 'http://localhost:8001'
-        : 'https://assistme-virtualassistant-production.up.railway.app');
+function resolveApiBase() {
+    // Always prefer localhost when detected
+    const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(location.hostname);
+    if (isLocalHost) {
+        return 'http://localhost:8001';
+    }
+
+    // Check if explicitly set via window
+    if (window.ASSISTME_API_BASE) {
+        return window.ASSISTME_API_BASE;
+    }
+
+    // Try meta tag
+    const meta = document.querySelector('meta[name="assistme-api-base"]');
+    const metaContent = meta?.content?.trim();
+    if (metaContent) {
+        return metaContent;
+    }
+
+    return 'https://assistme-virtualassistant-production.up.railway.app';
+}
+
+const API_BASE = resolveApiBase();
 
 const endpoints = {
     stream: `${API_BASE}/api/chat/stream`,
@@ -215,6 +232,7 @@ const elements = {
     starterGrid: document.getElementById('starterGrid'),
     chatMessages: document.getElementById('chatMessages'),
     chatThread: document.getElementById('chatThread'),
+    workspace: document.getElementById('workspace'),
     assistantStatus: document.getElementById('assistantStatus'),
     statusDot: document.querySelector('#assistantStatus .status-dot'),
     statusText: document.querySelector('#assistantStatus span:nth-of-type(2)'),
@@ -270,6 +288,9 @@ const ANCHOR_ATTRS = Object.freeze(['href', 'title', 'target', 'rel']);
 const CODE_ATTRS = Object.freeze(['class']);
 const TABLE_HEADER_ATTRS = Object.freeze(['colspan', 'rowspan']);
 const TABLE_CELL_ATTRS = Object.freeze(['colspan', 'rowspan']);
+const HEALTH_POLL_INTERVAL_MS = 30000;
+let healthPollTimer = null;
+let composerAutofocusInitialized = false;
 
 function getAllowedAttributes(tag) {
     switch (tag) {
@@ -378,44 +399,14 @@ function focusMessageInput() {
     });
 }
 
-function setBackendStatus(isHealthy, message) {
-    const previousStatus = state.backendHealthy;
-    state.backendHealthy = isHealthy;
-
-    if (elements.assistantStatus) {
-        elements.assistantStatus.classList.toggle('offline', !isHealthy);
+function ensureHealthMonitoring() {
+    if (healthPollTimer !== null) {
+        return;
     }
-    if (elements.composer) {
-        elements.composer.classList.toggle('offline', !isHealthy);
-    }
-    if (elements.statusDot) {
-        elements.statusDot.classList.toggle('live', isHealthy);
-        elements.statusDot.classList.toggle('error', !isHealthy);
-    }
-    if (elements.statusText) {
-        elements.statusText.textContent = isHealthy
-            ? 'All systems operational · Responses stream in realtime'
-            : 'Offline mode · Responses are simulated locally';
-    }
-
-    if (isHealthy && previousStatus === false) {
-        showToast('Reconnected to AssistMe backend. Live responses restored.', 'success');
-    } else if (!isHealthy && previousStatus !== false && message) {
-        showToast(message, 'warning');
-    }
-}
-
-async function checkBackendHealth() {
-    try {
-        const response = await fetch(`${API_BASE}/health`, { method: 'GET', mode: 'cors' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        setBackendStatus(true);
-        return true;
-    } catch (error) {
-        console.warn('Backend health check failed', error);
-        setBackendStatus(false, 'AssistMe backend is unreachable. Responses will be simulated locally.');
-        return false;
-    }
+    healthPollTimer = window.setInterval(() => {
+        // Ignore result; status updates handled inside checkBackendHealth
+        checkBackendHealth().catch(() => {});
+    }, HEALTH_POLL_INTERVAL_MS);
 }
 
 function generateOfflineResponse(prompt) {
@@ -909,6 +900,7 @@ function toggleModelDropdown(forceState) {
         targetOption?.focus();
     } else {
         elements.modelButton?.focus();
+        focusMessageInput();
     }
 }
 
@@ -923,6 +915,7 @@ function setModel(modelId) {
     updateModelButton();
     populateModelDropdown();
     handleInputChange();
+    focusMessageInput();
 }
 
 function handleClickOutside(event) {
@@ -1248,13 +1241,23 @@ function buildPayloadMessages(conversation, userMessage) {
     return history;
 }
 
+function resolveActiveModel() {
+    const conversationModel = state.activeConversation?.model;
+    const resolved = resolveModelId(conversationModel || state.currentModel);
+    state.currentModel = resolved;
+    if (state.activeConversation) {
+        state.activeConversation.model = resolved;
+    }
+    return resolved;
+}
+
 async function requestCompletionFallback(userMessage) {
     if (!state.activeConversation) return null;
-    state.currentModel = resolveModelId(state.currentModel);
+    const modelId = resolveActiveModel();
 
     const payload = {
         messages: buildPayloadMessages(state.activeConversation, userMessage),
-        model: state.currentModel,
+        model: modelId,
     };
 
     if (state.activeConversation.serverId) {
@@ -1280,11 +1283,11 @@ async function requestCompletionFallback(userMessage) {
 
 async function streamAssistantResponse(userMessage) {
     if (!state.activeConversation) return;
-    state.currentModel = resolveModelId(state.currentModel);
+    const modelId = resolveActiveModel();
 
     const payload = {
         messages: buildPayloadMessages(state.activeConversation, userMessage),
-        model: state.currentModel,
+        model: modelId,
     };
 
     if (state.activeConversation.serverId) {
@@ -1304,13 +1307,14 @@ async function streamAssistantResponse(userMessage) {
         role: 'assistant',
         content: '',
         createdAt: Date.now(),
-        metadata: { model: state.currentModel },
+        metadata: { model: modelId },
     };
     state.activeConversation.messages.push(assistantMessage);
     const assistantFragment = createMessageElement('assistant');
 
     const started = performance.now();
     let tokensUsed = null;
+    let effectiveModel = modelId;
 
     if (state.backendHealthy === false) {
         const recovered = await checkBackendHealth();
@@ -1325,7 +1329,7 @@ async function streamAssistantResponse(userMessage) {
         assistantFragment.text.textContent = assistantMessage.content;
         const latency = Math.round(performance.now() - started);
         assistantMessage.metadata = {
-            model: `${state.currentModel || 'offline/mock'}`,
+            model: `${modelId || 'offline/mock'}`,
             latency,
             tokens: offline.tokens,
         };
@@ -1366,16 +1370,34 @@ async function streamAssistantResponse(userMessage) {
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
 
-            let boundary;
-            while ((boundary = buffer.indexOf('\n\n')) >= 0) {
-                const rawEvent = buffer.slice(0, boundary);
-                buffer = buffer.slice(boundary + 2);
+            let boundaryIndex;
+            let boundaryLength;
+
+            while (true) {
+                boundaryIndex = buffer.indexOf('\n\n');
+                boundaryLength = 2;
+
+                if (boundaryIndex < 0) {
+                    boundaryIndex = buffer.indexOf('\r\n\r\n');
+                    boundaryLength = 4;
+                }
+
+                if (boundaryIndex < 0) {
+                    break;
+                }
+
+                const rawEvent = buffer.slice(0, boundaryIndex);
+                buffer = buffer.slice(boundaryIndex + boundaryLength);
+                console.log('Raw SSE event:', rawEvent); // Debug SSE events
                 const parsed = parseSseEvent(rawEvent);
+                console.log('Parsed SSE event:', parsed); // Debug parsed data
                 if (!parsed) continue;
 
                 if (parsed.event === 'delta' && parsed.data?.content) {
+                    console.log('Adding delta content:', parsed.data.content); // Debug content adding
                     assistantMessage.content += parsed.data.content;
                     assistantFragment.text.textContent = assistantMessage.content;
+                    console.log('Updated content:', assistantMessage.content); // Debug content display
                 }
 
                 if (parsed.event === 'error') {
@@ -1383,9 +1405,16 @@ async function streamAssistantResponse(userMessage) {
                 }
 
                 if (parsed.event === 'done') {
+                    console.log('Stream done, final data:', parsed.data); // Debug final data
                     assistantMessage.content = parsed.data?.response || assistantMessage.content;
                     assistantFragment.text.textContent = assistantMessage.content;
                     tokensUsed = parsed.data?.tokens || null;
+                     if (parsed.data?.model) {
+                        effectiveModel = parsed.data.model;
+                    }
+                    if (parsed.data?.notice) {
+                        showToast(parsed.data.notice, 'info');
+                    }
                     const conversationId = parsed.data?.conversation_id;
                     if (typeof conversationId === 'number' && conversationId > 0) {
                         state.activeConversation.localId = state.activeConversation.localId || state.activeConversation.id;
@@ -1402,9 +1431,30 @@ async function streamAssistantResponse(userMessage) {
             }
         }
 
+        buffer += decoder.decode();
+
+        if (buffer.trim()) {
+            const parsed = parseSseEvent(buffer);
+            if (parsed?.event === 'delta' && parsed.data?.content) {
+                assistantMessage.content += parsed.data.content;
+                assistantFragment.text.textContent = assistantMessage.content;
+            } else if (parsed?.event === 'done') {
+                assistantMessage.content = parsed.data?.response || assistantMessage.content;
+                assistantFragment.text.textContent = assistantMessage.content;
+                tokensUsed = parsed.data?.tokens || null;
+                if (parsed.data?.model) {
+                    effectiveModel = parsed.data.model;
+                }
+                if (parsed.data?.notice) {
+                    showToast(parsed.data.notice, 'info');
+                }
+            }
+            buffer = '';
+        }
+
         const latency = Math.round(performance.now() - started);
         assistantMessage.metadata = {
-            model: state.currentModel,
+            model: effectiveModel,
             latency,
             tokens: tokensUsed,
         };
@@ -1423,7 +1473,7 @@ async function streamAssistantResponse(userMessage) {
     } catch (error) {
         console.error(error);
         removeTypingIndicator();
-        setBackendStatus(false, 'AssistMe backend is unreachable. Using offline responses.');
+        setBackendStatus(false, 'AssistMe backend is unreachable. Using preview responses.');
 
         let fallbackData = null;
         try {
@@ -1436,6 +1486,9 @@ async function streamAssistantResponse(userMessage) {
             assistantMessage.content = fallbackData.response;
             assistantFragment.text.textContent = assistantMessage.content;
             tokensUsed = fallbackData?.usage?.tokens || null;
+            if (fallbackData?.notice) {
+                showToast(fallbackData.notice, 'info');
+            }
             const conversationId = fallbackData?.conversation_id;
             if (typeof conversationId === 'number' && conversationId > 0) {
                 state.activeConversation.localId = state.activeConversation.localId || state.activeConversation.id;
@@ -1449,7 +1502,7 @@ async function streamAssistantResponse(userMessage) {
             }
             const latency = Math.round(performance.now() - started);
             assistantMessage.metadata = {
-                model: state.currentModel,
+                model: fallbackData?.model || modelId,
                 latency,
                 tokens: tokensUsed,
             };
@@ -1469,7 +1522,7 @@ async function streamAssistantResponse(userMessage) {
         assistantFragment.text.textContent = assistantMessage.content;
         const latency = Math.round(performance.now() - started);
         assistantMessage.metadata = {
-            model: `${state.currentModel || 'offline/mock'}`,
+            model: `${modelId || 'offline/mock'}`,
             latency,
             tokens: offline.tokens,
         };
@@ -1814,8 +1867,11 @@ function restoreInitialState() {
 async function bootstrap() {
     restoreInitialState();
     initInlineHandlers();
+    initComposerAutofocus();
     initVoice();
+    setBackendStatus(true);
     await checkBackendHealth();
+    ensureHealthMonitoring();
     await preloadServerConversations();
     focusMessageInput();
 }
@@ -1871,7 +1927,7 @@ async function preloadServerConversations() {
         }
     } catch (error) {
         console.warn('Conversation preload failed', error);
-        setBackendStatus(false, 'AssistMe backend is unreachable. Responses will be simulated locally.');
+        setBackendStatus(false, 'AssistMe backend is unreachable. Using preview responses.');
     }
 }
 

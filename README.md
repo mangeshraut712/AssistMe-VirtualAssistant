@@ -102,6 +102,7 @@ DEV_MODE=false                             # Set to true for development mode
 REDIS_URL=redis://redis:6379              # Redis for rate limiting
 OPENROUTER_DEFAULT_MODEL=google/gemini-2.0-flash-exp:free
 FASTAPI_BIND_HOST=0.0.0.0                 # Optional: override bind host (default 127.0.0.1)
+CORS_ALLOW_ORIGINS=https://example.com    # Optional: extra comma-separated origins for CORS
 ```
 
 ## 🌐 CORS Configuration

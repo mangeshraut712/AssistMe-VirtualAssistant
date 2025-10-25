@@ -394,16 +394,17 @@ class Grok2Client:
     ) -> Iterator[Dict[str, object]]:
         """Yield incremental response chunks for realtime streaming."""
         models = type(self).DEFAULT_MODELS
-        model_name = model or self.config.get("default_model")
-        if not model_name and models:
-            model_name = models[0]["id"]
-        if not model_name:
+        primary_model = model or self.config.get("default_model")
+        if not primary_model and models:
+            primary_model = models[0]["id"]
+        if not primary_model:
             yield {"error": "No OpenRouter models configured.", "done": True}
             return
 
         # Handle development mode
         if self.config["dev_mode"]:
-            mock = self._get_mock_response(messages, model_name)
+            fallback_model = primary_model or (models[0]["id"] if models else "mock-openrouter-model")
+            mock = self._get_mock_response(messages, fallback_model)
             for chunk in self._stream_chunks(mock["response"]):
                 yield chunk
             return
@@ -414,50 +415,70 @@ class Grok2Client:
             yield {**readiness_error, "done": True}
             return
 
-        try:
-            response = self._setup_streaming_request(messages, model_name, temperature, max_tokens)
+        attempts = self._get_candidates(model)
+        last_error: Optional[Dict[str, object]] = None
+
+        for candidate in attempts:
+            try:
+                response = self._setup_streaming_request(messages, candidate, temperature, max_tokens)
+            except requests.exceptions.HTTPError as exc:
+                logging.error("OpenRouter returned HTTP error %s: %s", exc.response.status_code, exc.response.text)
+                last_error = {"error": f"OpenRouter HTTP error {exc.response.status_code}: {exc.response.text}", "done": True}
+                continue
+            except requests.exceptions.RequestException as exc:
+                logging.error("Network error while calling OpenRouter: %s", exc)
+                last_error = {"error": f"Network error while calling OpenRouter: {exc}", "done": True}
+                continue
+            except Exception as exc:
+                logging.exception("Unexpected error during streaming call")
+                last_error = {"error": f"Unexpected error calling OpenRouter: {exc}", "done": True}
+                continue
 
             if response.status_code >= 400:
-                yield {**self._normalise_error(response, model_name), "done": True}
-                return
+                response.close()
+                last_error = {**self._normalise_error(response, candidate), "done": True}
+                continue
 
             accumulated: List[str] = []
             usage_tokens = None
 
-            for raw_line in response.iter_lines(decode_unicode=True):
-                processed_data = self._process_streaming_chunk(raw_line, accumulated, usage_tokens)
-                accumulated, usage_tokens = processed_data
+            try:
+                for raw_line in response.iter_lines(decode_unicode=True):
+                    processed_data = self._process_streaming_chunk(raw_line, accumulated, usage_tokens)
+                    accumulated, usage_tokens = processed_data
 
-                # Check if we should yield content (if accumulated changed)
-                if len(accumulated) > 0 and accumulated[-1] and raw_line.startswith("data:"):
-                    try:
-                        chunk_data = json.loads(raw_line[5:].strip())
-                        choices = chunk_data.get("choices") or []
-                        if choices:
-                            delta = choices[0].get("delta") or {}
-                            content = delta.get("content")
-                            if content:
-                                yield {"content": content}
-                    except (json.JSONDecodeError, IndexError):
-                        continue
+                    # Check if we should yield content (if accumulated changed)
+                    if len(accumulated) > 0 and accumulated[-1] and raw_line.startswith("data:"):
+                        try:
+                            chunk_data = json.loads(raw_line[5:].strip())
+                            choices = chunk_data.get("choices") or []
+                            if choices:
+                                delta = choices[0].get("delta") or {}
+                                content = delta.get("content")
+                                if content:
+                                    yield {"content": content}
+                        except (json.JSONDecodeError, IndexError):
+                            continue
+            finally:
+                response.close()
 
             # Yield final result
             final_text = "".join(accumulated)
-            yield {
+            payload: Dict[str, object] = {
                 "done": True,
                 "response": final_text,
                 "tokens": usage_tokens or len(final_text.split()),
+                "model": candidate,
             }
+            if primary_model and candidate != primary_model:
+                payload["notice"] = (
+                    f"Primary model '{primary_model}' unavailable. Responded with '{candidate}'."
+                )
 
-        except requests.exceptions.HTTPError as exc:
-            logging.error("OpenRouter returned HTTP error %s: %s", exc.response.status_code, exc.response.text)
-            yield {"error": f"OpenRouter HTTP error {exc.response.status_code}: {exc.response.text}", "done": True}
-        except requests.exceptions.RequestException as exc:
-            logging.error("Network error while calling OpenRouter: %s", exc)
-            yield {"error": f"Network error while calling OpenRouter: {exc}", "done": True}
-        except Exception as exc:
-            logging.exception("Unexpected error during streaming call")
-            yield {"error": f"Unexpected error calling OpenRouter: {exc}", "done": True}
+            yield payload
+            return
+
+        yield last_error or {"error": "All OpenRouter model attempts failed.", "done": True}
 
     @staticmethod
     def _chunk_text(text: str, chunk_size: int = 32) -> Iterator[str]:
