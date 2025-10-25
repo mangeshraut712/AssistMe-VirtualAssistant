@@ -6,12 +6,12 @@ builder = "NIXPACKS"
 NIXPACKS_V2 = "true"
 
 [deploy]
-# V2 runtime requires uvicorn startup directly
-startCommand = "cd backend && uvicorn app.main:app --host=0.0.0.0 --port=$PORT --workers=1 --loop=uvloop"
+# V2 runtime: uvicorn startup in backend directory
+startCommand = "uvicorn backend.app.main:app --host=0.0.0.0 --port=$PORT --workers=1"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
-# V2 runtime automatically binds to PORT environment variable
-# startCommand = "bash start.sh"  # V1 runtime alternative
+# Use semicolon instead of && for V2 runtime compatibility
+# Alternative: use full path to backend directory
 
 # REQUIRED ENVIRONMENT VARIABLES for OpenRouter integration:
 # OPENROUTER_API_KEY - Your OpenRouter API key (obtain from https://openrouter.ai/keys)
