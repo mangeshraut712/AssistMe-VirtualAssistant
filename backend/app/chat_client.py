@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Iterator, List, Optional
 
 if TYPE_CHECKING:
     try:
@@ -26,54 +26,56 @@ except ImportError:  # pragma: no cover - optional dependency
     HAS_REQUESTS = False
 
 class Grok2Client:
+    DEFAULT_MODELS: ClassVar[List[Dict[str, str]]] = [
+        {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash Experimental"},  # 🥇 1M+ tokens
+        {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B A35B"},                            # 🥈 262K tokens
+        {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "DeepSeek R1T2 Chimera"},               # 🥉 163K tokens
+        {"id": "microsoft/mai-ds-r1:free", "name": "Microsoft MAI DS R1"},                           # 🏅 163K tokens
+        {"id": "openai/gpt-oss-20b:free", "name": "OpenAI GPT OSS 20B"},                             # 🏅 128K tokens
+        {"id": "z-ai/glm-4.5-air:free", "name": "Zhipu GLM 4.5 Air"},                                # 🏅 128K tokens
+        {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct"},     # 🏅 131K tokens
+        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2"},             # 🏅 131K tokens
+        {"id": "mistralai/mistral-nemo:free", "name": "Mistral Nemo"},                               # 🏅 128K tokens
+        {"id": "moonshotai/kimi-dev-72b:free", "name": "MoonshotAI Kimi Dev 72B"},                   # 🏅 128K tokens
+    ]
+
     def __init__(self):
-        raw_base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-        self.base_url = raw_base_url.rstrip("/")
-        self.chat_endpoint = f"{self.base_url}/chat/completions"
-        self.api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-        self.referer = os.getenv("APP_URL", "https://assist-me-virtual-assistant.vercel.app")
-        self.title = os.getenv("APP_NAME", "AssistMe Virtual Assistant")
-
-        # Development mode for testing without API limits
-        self.dev_mode = os.getenv("DEV_MODE", "false").lower() == "true"
-
-        # Fallback configuration for a future Grok-2 endpoint
-        self.grok2_endpoint = os.getenv("GROK2_ENDPOINT")
-        self.grok2_api_key = os.getenv("GROK2_API_KEY")
-
-        # Rate limiting configuration - lazy initialization
+        self.config = self._load_config()
         self.redis_client: Optional[Any] = None
-        self.redis_url = os.getenv("REDIS_URL")
 
-        try:
-            self.request_timeout = float(os.getenv("OPENROUTER_TIMEOUT", "60.0"))
-        except ValueError:
-            self.request_timeout = 60.0
-
-        # ✅ Curated free models from OpenRouter (pricing.prompt == "0")
-        # Gemini 2.0 Flash Exp is the default fallback unless overridden
-        self.default_models = [
-            {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash Experimental"},  # 🥇 1M+ tokens
-            {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B A35B"},                            # 🥈 262K tokens
-            {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "DeepSeek R1T2 Chimera"},               # 🥉 163K tokens
-            {"id": "microsoft/mai-ds-r1:free", "name": "Microsoft MAI DS R1"},                           # 🏅 163K tokens
-            {"id": "openai/gpt-oss-20b:free", "name": "OpenAI GPT OSS 20B"},                             # 🏅 128K tokens
-            {"id": "z-ai/glm-4.5-air:free", "name": "Zhipu GLM 4.5 Air"},                                # 🏅 128K tokens
-            {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct"},     # 🏅 131K tokens
-            {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2"},             # 🏅 131K tokens
-            {"id": "mistralai/mistral-nemo:free", "name": "Mistral Nemo"},                               # 🏅 128K tokens
-            {"id": "moonshotai/kimi-dev-72b:free", "name": "MoonshotAI Kimi Dev 72B"},                   # 🏅 128K tokens
-        ]
-
+    def _load_config(self) -> Dict[str, Any]:
+        """Load config values at instantiation to minimize instance attributes."""
+        base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
         configured_default = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip()
-        self.default_model = configured_default or self.default_models[0]["id"]
+        if not configured_default and type(self).DEFAULT_MODELS:
+            configured_default = type(self).DEFAULT_MODELS[0]["id"]
+        return {
+            "base_url": base_url,
+            "chat_endpoint": f"{base_url}/chat/completions",
+            "api_key": os.getenv("OPENROUTER_API_KEY", "").strip(),
+            "referrer": os.getenv("APP_URL", os.getenv("VERCEL_URL", "https://assist-me-virtual-assistant.vercel.app")),
+            "title": os.getenv("APP_NAME", "AssistMe Virtual Assistant"),
+            "dev_mode": os.getenv("DEV_MODE", "false").lower() == "true",
+            "redis_url": os.getenv("REDIS_URL"),
+            "timeout": self._get_timeout(),
+            "default_model": configured_default,
+        }
+
+    @staticmethod
+    def _get_timeout():
+        """Get request timeout with error handling."""
+        try:
+            return float(os.getenv("OPENROUTER_TIMEOUT", "60.0"))
+        except ValueError:
+            return 60.0
 
     def _headers(self) -> dict:
+        config = self.config
         return {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
-            "HTTP-Referer": self.referer,
-            "X-Title": self.title,
+            "Authorization": f"Bearer {config['api_key']}",
+            "HTTP-Referer": config["referrer"],
+            "X-Title": config["title"],
         }
 
     def _format_messages(self, messages):
@@ -92,18 +94,19 @@ class Grok2Client:
 
     def _check_rate_limit(self, identifier: str = "global", max_requests: int = 45) -> bool:
         """Check if we're within rate limits. Returns True if allowed, False if rate limited."""
-        if not self.redis_client and self.redis_url and HAS_REDIS and redis:
+        redis_url = self.config.get("redis_url")
+        if not self.redis_client and redis_url and HAS_REDIS and redis:
             try:
-                self.redis_client = redis.from_url(self.redis_url)
+                self.redis_client = redis.from_url(redis_url)
             except Exception as e:
-                logging.warning(f"Failed to connect to Redis: {e}")
+                logging.warning("Failed to connect to Redis: %s", e)
 
         if not self.redis_client:
             logging.warning("Redis not available for rate limiting")
             return True  # Allow if Redis is not configured
 
         try:
-            key = f"ratelimit:{identifier}:day"
+            key = "ratelimit:%s:day" % identifier
             current = self.redis_client.get(key)
 
             if current is None:
@@ -120,7 +123,7 @@ class Grok2Client:
             return True
 
         except Exception as e:
-            logging.error(f"Rate limiting error: {e}")
+            logging.error("Rate limiting error: %s", e)
             return True  # Allow on error to prevent breaking functionality
 
     def _get_mock_response(self, messages, model_name):
@@ -145,7 +148,8 @@ class Grok2Client:
 
     def _ensure_live_ready(self) -> Optional[dict]:
         """Validate API configuration and rate limits. Returns error dict if blocked."""
-        if self.dev_mode:
+        config = self.config
+        if config["dev_mode"]:
             return None
 
         if not HAS_REQUESTS or requests is None:
@@ -155,7 +159,7 @@ class Grok2Client:
                 "tokens": 0,
             }
 
-        if not self.api_key:
+        if not config["api_key"]:
             logging.warning("OPENROUTER_API_KEY not configured; returning placeholder response.")
             return {
                 "error": "OpenRouter API key is not configured. Please set OPENROUTER_API_KEY to enable live responses.",
@@ -174,14 +178,15 @@ class Grok2Client:
 
         return None
 
-    def _build_payload(self, messages, model_name, temperature, max_tokens, stream=False):
+    def _build_payload(self, messages, model_name, **kwargs):
+        """Build payload with flexible parameters to avoid too many positional args."""
         payload = {
             "model": model_name,
             "messages": self._format_messages(messages),
-            "temperature": temperature,
-            "max_tokens": max_tokens,
+            "temperature": kwargs.get("temperature", 0.7),
+            "max_tokens": kwargs.get("max_tokens", 1024),
         }
-        if stream:
+        if kwargs.get("stream", False):
             payload["stream"] = True
         return payload
 
@@ -227,58 +232,66 @@ class Grok2Client:
             "metadata": metadata or None,
         }
 
+    def _get_candidates(self, requested: Optional[str]) -> List[str]:
+        """Get list of models to try, prioritizing the requested one."""
+        if requested:
+            return [requested]
+
+        priority: List[str] = []
+        models = type(self).DEFAULT_MODELS
+        primary = self.config.get("default_model") or (models[0]["id"] if models else None)
+        if primary:
+            priority.append(primary)
+
+        for entry in models:
+            mid = entry.get("id")
+            if mid and mid not in priority:
+                priority.append(mid)
+        return priority
+
+    def _call_model_api(self, endpoint: str, payload: dict, target_model: str) -> Dict[str, Any]:
+        """Make actual API call to OpenRouter."""
+        try:
+            response = requests.post(
+                endpoint,
+                json=payload,
+                headers=self._headers(),
+                timeout=self.config["timeout"],
+            )
+            if response.status_code >= 400:
+                return self._normalise_error(response, target_model)
+
+            data = response.json()
+            choice = (data.get("choices") or [{}])[0]
+            message = choice.get("message", {}) or {}
+            text = message.get("content", "").strip()
+
+            if not text:
+                text = "I wasn't able to produce a response. Please try again."
+
+            tokens = data.get("usage", {}).get("total_tokens", len(text.split()))
+            return {"response": text, "tokens": tokens, "model": target_model}
+
+        except requests.exceptions.HTTPError as exc:
+            logging.error("OpenRouter returned HTTP error %s: %s", exc.response.status_code, exc.response.text)
+            return {"error": f"OpenRouter HTTP error {exc.response.status_code}: {exc.response.text}", "model": target_model}
+        except requests.exceptions.RequestException as exc:
+            logging.error("Network error while calling OpenRouter: %s", exc)
+            return {"error": f"Network error while calling OpenRouter: {exc}", "model": target_model}
+        except Exception as exc:
+            logging.exception("Unexpected error calling OpenRouter")
+            return {"error": f"Unexpected error calling OpenRouter: {exc}", "model": target_model}
+
     def generate_response(self, messages, model=None, temperature=0.7, max_tokens=1024):
-        def _candidate_models(requested: Optional[str]) -> List[str]:
-            if requested:
-                return [requested]
-
-            priority: List[str] = []
-            primary = self.default_model or (self.default_models[0]["id"] if self.default_models else None)
-            if primary:
-                priority.append(primary)
-
-            for entry in self.default_models:
-                mid = entry.get("id")
-                if mid and mid not in priority:
-                    priority.append(mid)
-            return priority
-
-        def _call_model(target_model: str) -> Dict[str, Any]:
-            payload = self._build_payload(messages, target_model, temperature, max_tokens)
-
-            try:
-                response = requests.post(
-                    self.chat_endpoint,
-                    json=payload,
-                    headers=self._headers(),
-                    timeout=self.request_timeout,
-                )
-                if response.status_code >= 400:
-                    return self._normalise_error(response, target_model)
-                data = response.json()
-                choice = (data.get("choices") or [{}])[0]
-                message = choice.get("message", {}) or {}
-                text = message.get("content", "").strip()
-                if not text:
-                    text = "I wasn't able to produce a response. Please try again."
-                tokens = data.get("usage", {}).get("total_tokens", len(text.split()))
-                return {"response": text, "tokens": tokens, "model": target_model}
-            except requests.exceptions.HTTPError as exc:
-                logging.error("OpenRouter returned HTTP error %s: %s", exc.response.status_code, exc.response.text)
-                return {"error": f"OpenRouter HTTP error {exc.response.status_code}: {exc.response.text}", "model": target_model}
-            except requests.exceptions.RequestException as exc:
-                logging.error("Network error while calling OpenRouter: %s", exc)
-                return {"error": f"Network error while calling OpenRouter: {exc}", "model": target_model}
-            except Exception as exc:
-                logging.exception("Unexpected error calling OpenRouter")
-                return {"error": f"Unexpected error calling OpenRouter: {exc}", "model": target_model}
-
-        # In development mode, return mock responses to avoid API limits
-        primary_model = model or self.default_model or (self.default_models[0]["id"] if self.default_models else None)
-        if self.dev_mode:
+        # In development mode, return mock responses
+        config = self.config
+        primary_model = model or config.get("default_model")
+        if not primary_model and type(self).DEFAULT_MODELS:
+            primary_model = type(self).DEFAULT_MODELS[0]["id"]
+        if config["dev_mode"]:
             fallback_model = primary_model
-            if not fallback_model and self.default_models:
-                fallback_model = self.default_models[0]["id"]
+            if not fallback_model and type(self).DEFAULT_MODELS:
+                fallback_model = type(self).DEFAULT_MODELS[0]["id"]
             fallback_model = fallback_model or "mock-openrouter-model"
             return self._get_mock_response(messages, fallback_model)
 
@@ -286,21 +299,87 @@ class Grok2Client:
         if readiness_error:
             return readiness_error
 
-        attempts = _candidate_models(model)
+        attempts = self._get_candidates(model)
         last_error: Dict[str, Any] = {"error": "No OpenRouter models available."}
+
         for candidate in attempts:
-            result = _call_model(candidate)
+            payload = self._build_payload(messages, candidate, temperature=temperature, max_tokens=max_tokens)
+            result = self._call_model_api(config["chat_endpoint"], payload, candidate)
+
             if "response" in result:
                 if primary_model and candidate != primary_model:
                     result.setdefault("notice", f"Primary model '{primary_model}' unavailable. Responded with '{candidate}'.")
                 return result
             last_error = result
+
         return last_error
 
     def get_available_models(self):
-        return self.default_models
+        return type(self).DEFAULT_MODELS
 
     # No cleanup needed for requests library
+
+    def _stream_chunks(self, response_text: str) -> Iterator[Dict[str, object]]:
+        """Stream mock response chunks in development mode."""
+        for chunk in self._chunk_text(response_text):
+            yield {"content": chunk}
+        yield {
+            "done": True,
+            "response": response_text,
+            "tokens": len(response_text.split())
+        }
+
+    def _setup_streaming_request(self, messages, model_name, temperature, max_tokens):
+        """Prepare streaming request and return necessary data."""
+        payload = self._build_payload(messages, model_name, temperature=temperature, max_tokens=max_tokens, stream=True)
+        headers = self._headers()
+        headers["Accept"] = "text/event-stream"
+
+        with requests.post(
+            self.config["chat_endpoint"],
+            json=payload,
+            headers=headers,
+            stream=True,
+            timeout=self.config["timeout"],
+        ) as response:
+            return response
+
+    def _process_streaming_chunk(self, raw_line: str, accumulated: List[str], usage_tokens) -> tuple:
+        """Process a single streaming chunk and return updated state."""
+        if not raw_line:
+            return accumulated, usage_tokens
+
+        if raw_line.startswith(":"):
+            return accumulated, usage_tokens  # SSE comment, ignore
+
+        if raw_line.startswith("data:"):
+            data_str = raw_line[5:].strip()
+            if not data_str or data_str == "[DONE]":
+                return accumulated, usage_tokens
+
+            try:
+                payload_json = json.loads(data_str)
+            except json.JSONDecodeError:
+                logging.debug("Unable to decode streaming payload: %s", data_str)
+                return accumulated, usage_tokens
+
+            choices = payload_json.get("choices") or []
+            if choices:
+                delta = choices[0].get("delta") or {}
+                content = delta.get("content")
+                if content:
+                    accumulated.append(content)
+
+                # Check for usage data
+                if choices[0].get("finish_reason"):
+                    usage = payload_json.get("usage") or {}
+                    usage_tokens = usage.get("total_tokens", usage_tokens)
+
+            # Check for usage data at payload level
+            if "usage" in payload_json:
+                usage_tokens = payload_json["usage"].get("total_tokens", usage_tokens)
+
+        return accumulated, usage_tokens
 
     def generate_response_stream(
         self,
@@ -310,87 +389,61 @@ class Grok2Client:
         max_tokens: int = 1024,
     ) -> Iterator[Dict[str, object]]:
         """Yield incremental response chunks for realtime streaming."""
-
-        model_name = model or self.default_model
-        if not model_name and self.default_models:
-            model_name = self.default_models[0]["id"]
+        models = type(self).DEFAULT_MODELS
+        model_name = model or self.config.get("default_model")
+        if not model_name and models:
+            model_name = models[0]["id"]
         if not model_name:
             yield {"error": "No OpenRouter models configured.", "done": True}
             return
 
-        if self.dev_mode:
+        # Handle development mode
+        if self.config["dev_mode"]:
             mock = self._get_mock_response(messages, model_name)
-            response_text = mock["response"]
-            # Stream artificial chunks to mirror live behaviour
-            for chunk in self._chunk_text(response_text):
-                yield {"content": chunk}
-            yield {"done": True, "response": response_text, "tokens": mock.get("tokens", len(response_text.split()))}
+            for chunk in self._stream_chunks(mock["response"]):
+                yield chunk
             return
 
+        # Check readiness
         readiness_error = self._ensure_live_ready()
         if readiness_error:
             yield {**readiness_error, "done": True}
             return
 
-        payload = self._build_payload(messages, model_name, temperature, max_tokens, stream=True)
-        headers = self._headers()
-        headers["Accept"] = "text/event-stream"
-
         try:
-            with requests.post(
-                self.chat_endpoint,
-                json=payload,
-                headers=headers,
-                stream=True,
-                timeout=self.request_timeout,
-            ) as response:
-                if response.status_code >= 400:
-                    yield {**self._normalise_error(response, model_name), "done": True}
-                    return
-                accumulated: List[str] = []
-                usage_tokens = None
+            response = self._setup_streaming_request(messages, model_name, temperature, max_tokens)
 
-                for raw_line in response.iter_lines(decode_unicode=True):
-                    if not raw_line:
-                        continue
+            if response.status_code >= 400:
+                yield {**self._normalise_error(response, model_name), "done": True}
+                return
 
-                    if raw_line.startswith(":"):
-                        # Comment line per SSE spec; ignore
-                        continue
+            accumulated: List[str] = []
+            usage_tokens = None
 
-                    if raw_line.startswith("data:"):
-                        data_str = raw_line[5:].strip()
-                        if not data_str or data_str == "[DONE]":
-                            continue
+            for raw_line in response.iter_lines(decode_unicode=True):
+                processed_data = self._process_streaming_chunk(raw_line, accumulated, usage_tokens)
+                accumulated, usage_tokens = processed_data
 
-                        try:
-                            payload_json = json.loads(data_str)
-                        except json.JSONDecodeError:
-                            logging.debug("Unable to decode streaming payload: %s", data_str)
-                            continue
-
-                        choices = payload_json.get("choices") or []
+                # Check if we should yield content (if accumulated changed)
+                if len(accumulated) > 0 and accumulated[-1] and raw_line.startswith("data:"):
+                    try:
+                        chunk_data = json.loads(raw_line[5:].strip())
+                        choices = chunk_data.get("choices") or []
                         if choices:
                             delta = choices[0].get("delta") or {}
                             content = delta.get("content")
                             if content:
-                                accumulated.append(content)
                                 yield {"content": content}
+                    except (json.JSONDecodeError, IndexError):
+                        continue
 
-                            finish_reason = choices[0].get("finish_reason")
-                            if finish_reason:
-                                usage = payload_json.get("usage") or {}
-                                usage_tokens = usage.get("total_tokens", usage_tokens)
-
-                        if "usage" in payload_json:
-                            usage_tokens = payload_json["usage"].get("total_tokens", usage_tokens)
-
-                final_text = "".join(accumulated)
-                yield {
-                    "done": True,
-                    "response": final_text,
-                    "tokens": usage_tokens or len(final_text.split()),
-                }
+            # Yield final result
+            final_text = "".join(accumulated)
+            yield {
+                "done": True,
+                "response": final_text,
+                "tokens": usage_tokens or len(final_text.split()),
+            }
 
         except requests.exceptions.HTTPError as exc:
             logging.error("OpenRouter returned HTTP error %s: %s", exc.response.status_code, exc.response.text)
