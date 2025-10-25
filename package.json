@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npm-run-all --parallel serve:*",
     "serve:frontend": "npx http-server frontend -p 3000 -c-1 --cors",
-    "serve:backend": "cd backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "serve:backend": "cd backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001",
     "build": "echo 'No build step required - static frontend'",
     "start": "npm run dev",
     "backend:setup": "cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt",

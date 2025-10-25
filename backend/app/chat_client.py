@@ -26,6 +26,7 @@ except ImportError:  # pragma: no cover - optional dependency
     HAS_REQUESTS = False
 
 class Grok2Client:
+    __slots__ = ("config", "redis_client")
     DEFAULT_MODELS: ClassVar[List[Dict[str, str]]] = [
         {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash Experimental"},  # 🥇 1M+ tokens
         {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B A35B"},                            # 🥈 262K tokens
@@ -318,6 +319,9 @@ class Grok2Client:
         return type(self).DEFAULT_MODELS
 
     # No cleanup needed for requests library
+
+    def get_default_model(self) -> Optional[str]:
+        return self.config.get("default_model")
 
     def _stream_chunks(self, response_text: str) -> Iterator[Dict[str, object]]:
         """Stream mock response chunks in development mode."""

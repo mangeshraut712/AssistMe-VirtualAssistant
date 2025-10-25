@@ -1,313 +1,235 @@
-# 🤖 AssistMe Virtual Assistant
+# AssistMe Virtual Assistant
 
-<img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&pause=1000&color=00D4AA&center=true&vCenter=true&multiline=true&width=435&lines=%F0%9F%A4%96+Chat+with+10%2B+AI+Models;Real-time+Streaming+Responses;Modern+UI+with+Voice+Support;%F0%9F%8F%8D+Production+Ready" alt="Typing SVG" />
+An AI-powered web assistant that integrates with OpenRouter to provide responses from premium AI models through a sleek web interface. Built with FastAPI backend and vanilla JavaScript frontend for modern, real-time streaming AI chat experiences.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Railway](https://img.shields.io/badge/Railway-131415?style=for-the-badge&logo=railway&logoColor=white)](https://railway.app/)
-[![OpenRouter](https://img.shields.io/badge/OpenRouter-0066CC?style=for-the-badge&logo=react&logoColor=white)](https://openrouter.ai/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+![Status](https://img.shields.io/badge/status-production--ready-green)
+![Models](https://img.shields.io/badge/AI%20Models-8/10%20working-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-> Modern, full-stack AI chat interface powered by 10+ Large Language Models. Built with cutting-edge technologies and deployed seamlessly on cloud infrastructure.
+## 🎯 Features
 
-<p align="center">
-  <a href="#-quick-start">🚀 Quick Start</a> •
-  <a href="#-api-documentation">📚 API Docs</a> •
-  <a href="#-features">✨ Features</a> •
-  <a href="#-tech-stack">🛠 Tech Stack</a> •
-  <a href="#-contributing">🤝 Contributing</a> •
-  <a href="#-license">📄 License</a>
-</p>
+### Core Capabilities
+- **Real-time AI Chat**: Streaming responses from premium AI models
+- **Multi-Model Support**: Choose from 10+ curated OpenRouter models
+- **Modern UI**: Sleek, responsive web interface with dark/light themes
+- **Offline Mode**: Graceful fallback with simulated responses
+- **Rate Limiting**: Built-in protection against API abuse
+- **CORS Ready**: Deployed across multiple domains (Vercel + Railway)
 
-<div align="center">
+### AI Models Supported
 
-## 🎯 Try It Live
-[<img src="https://img.shields.io/badge/🌐_Live_Demo-Deployed_on_Railway-00D4AA?style=for-the-badge&logo=railway&logoColor=white" alt="Live Demo">](https://assistme-virtualassistant-production.up.railway.app)
+| Model | Status | Provider | Context | Performance |
+|-------|--------|----------|---------|-------------|
+| **Google Gemini 2.0 Flash** | ✅ Working | Google | 1M tokens | Fast, multimodal |
+| **Meta Llama 3.3 70B** | ✅ Working | Meta | 131K tokens | Excellent quality |
+| **NVIDIA Nemotron Nano 9B** | ✅ Working | NVIDIA | 131K tokens | Balanced performance |
+| **Mistral Nemo** | ✅ Working | Mistral | 128K tokens | Consistent responses |
+| **DeepSeek R1** | ✅ Working | DeepSeek | 163K tokens | RAG-ready |
+| **Qwen3 Coder** | ✅ Working | Alibaba | 262K tokens | Code-focused |
+| **MoonshotAI Kimi Dev** | ✅ Working | MoonshotAI | 128K tokens | Creative writing |
+| **Zhipu GLM 4.5 Air** | ✅ Mixed | Zhipu AI | 128K tokens | Cost-effective |
+| **Microsoft MAI DS R1** | ❌ Failing | Microsoft | 163K tokens | Under maintenance |
+| **OpenAI GPT OSS 20B** | ❌ Failing | OpenAI | 128K tokens | Access issues |
 
-## 🏆 Project Stats
-[![GitHub Stars](https://img.shields.io/github/stars/mangeshraut712/AssistMe-VirtualAssistant?style=for-the-badge)](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/stargazers)
-[![GitHub Issues](https://img.shields.io/github/issues/mangeshraut712/AssistMe-VirtualAssistant?style=for-the-badge)](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues)
-[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/mangeshraut712/AssistMe-VirtualAssistant?style=for-the-badge)](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/pulls)
-[![Repo Size](https://img.shields.io/github/repo-size/mangeshraut712/AssistMe-VirtualAssistant?style=for-the-badge)](https://github.com/mangeshraut712/AssistMe-VirtualAssistant)
-
-</div>
-
-## ✨ Features
-
-- **Multi-Model Support**: Access 9+ free AI models including Google Gemini, Meta Llama, and more
-- **Real-time Streaming**: Live response streaming for instant feedback
-- **Conversation Management**: Save, load, and manage chat history
-- **Modern UI**: Responsive, dark/light theme capable interface
-- **Voice Integration**: Speech-to-text and text-to-speech support
-- **Offline Mode**: Graceful fallback when backend is unavailable
-- **Cross-Platform**: Works on desktop and mobile devices
-
-## 🎯 Available Models
-
-| Model | Provider | Context Size | Status |
-|-------|----------|--------------|---------|
-| Google Gemini 2.0 Flash Experimental | Google | 1M tokens | ✅ Preferred |
-| Qwen3 Coder 480B A35B | Alibaba | 262k tokens | ✅ Active |
-| DeepSeek R1T2 Chimera | TNGTech | 163k tokens | ✅ Active |
-| Microsoft MAI DS R1 | Microsoft | 163k tokens | ✅ Active |
-| OpenAI GPT OSS 20B | OpenAI | 128k tokens | ✅ Active |
-| Zhipu GLM 4.5 Air | Zhipu AI | 128k tokens | ✅ Active |
-| Meta Llama 3.3 70B | Meta | 131k tokens | ✅ Active |
-| NVIDIA Nemotron Nano | NVIDIA | 131k tokens | ✅ Active |
-| Mistral Nemo | Microsoft + NVIDIA | 128k tokens | ✅ Active |
-| MoonshotAI Kimi Dev | MoonshotAI | 128k tokens | ✅ Active |
-
-## 🛠 Tech Stack
-
-### Backend
-- **FastAPI**: Modern Python web framework
-- **SQLAlchemy**: Database ORM with PostgreSQL
-- **OpenRouter**: AI model API gateway
-- **Uvicorn**: ASGI server with WebSocket support
-- **Python 3.11+**: Latest Python features and optimizations
-
-### Frontend
-- **Vanilla JavaScript**: No framework dependencies
-- **HTML5/CSS3**: Modern responsive design
-- **FontAwesome**: Icon library
-- **Marked.js**: Markdown rendering
-- **Highlight.js**: Code syntax highlighting
-- **KaTeX**: Math formula rendering
-
-### Infrastructure
-- **Railway**: Cloud deployment and hosting
-- **SQLite/PostgreSQL**: Database options
-- **Docker**: Containerized deployment
-- **Git**: Version control
+**8/10 models operational** - includes top performers from Google, Meta, NVIDIA, and Mistral.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.11 or higher
-- Node.js 18+ and npm
+- Docker & Docker Compose
 - Git
-- OpenRouter API key ([get one here](https://openrouter.ai/keys))
+- OpenRouter API key (free: [openrouter.ai/keys](https://openrouter.ai/keys))
 
-### 1. Clone Repository
+### 1. Clone and Setup
 ```bash
 git clone https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git
 cd AssistMe-VirtualAssistant
 ```
 
-### 2. Set Up Environment
+### 2. Environment Configuration
 ```bash
-# Copy environment template
-cp backend/.env.example backend/.env
-cp .env.example .env
-
-# Edit environment files with your API keys
-# Required: OPENROUTER_API_KEY
-# Optional: DATABASE_URL (defaults to SQLite)
+cp .env.example secrets.env
+# Edit secrets.env with your OpenRouter API key
 ```
 
-### 3. Local Development
-
-#### Backend Setup
+### 3. Start Services
 ```bash
-cd backend
-pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+# Option A: Using Docker (recommended)
+docker compose up -d
+
+# Option B: Local development
+cd backend && pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
-#### Frontend Setup
-```bash
-cd frontend
-# Simple HTTP server (Python)
-python -m http.server 3000
+### 4. Access Application
+- **Frontend**: [http://localhost:3000](http://localhost:3000) (during development)
+- **API**: [http://localhost:8001](http://localhost:8001)
+- **Health Check**: [http://localhost:8001/health](http://localhost:8001/health)
 
-# Or using Node.js
-npx serve . -l 3000
+## 🏗️ Architecture
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Vercel    │    │   Railway   │    │ OpenRouter  │
+│  Frontend   │◄──►│   Backend   │◄──►│    API      │
+│             │    │             │    │             │
+│ - HTML/CSS/JS   │ FastAPI      │   - 10+ Models  │
+│ - Real-time UI  │ - PostgreSQL │   - Rate limits │
+│ - CORS ready    │ - Redis      │   - Streaming   │
+└─────────────┘    └─────────────┘    └─────────────┘
 ```
 
-Access the application at: `http://localhost:3000`
+### Services Overview
+- **Frontend (Vercel)**: Static web assets, real-time chat interface
+- **Backend (Railway)**: FastAPI server, AI model integration, database
+- **Database (PostgreSQL)**: Conversation history and user data
+- **Cache (Redis)**: Rate limiting and session management
 
-### 4. Production Deployment
+## 📖 Environment Variables
 
-#### Railway (Recommended)
+### Required
 ```bash
-# Setup environment variables in Railway dashboard:
-# - OPENROUTER_API_KEY: Your OpenRouter API key
-# - DATABASE_URL: PostgreSQL connection string (auto-provided)
-# - APP_URL: Auto-generated by Railway
+OPENROUTER_API_KEY=sk-or-v1-...          # Your OpenRouter API key
+DATABASE_URL=postgresql://...            # PostgreSQL connection
 ```
 
-#### Docker (Alternative)
+### Optional
 ```bash
-# Build and run
-docker build -t assistme .
-docker run -p 8001:8001 assistme
+APP_URL=https://your-vercel-app.vercel.app # Frontend URL (for OpenRouter referrer)
+APP_NAME=AssistMe Virtual Assistant        # App name
+DEV_MODE=false                             # Set to true for development mode
+REDIS_URL=redis://redis:6379              # Redis for rate limiting
+OPENROUTER_DEFAULT_MODEL=google/gemini-2.0-flash-exp:free
+FASTAPI_BIND_HOST=0.0.0.0                 # Optional: override bind host (default 127.0.0.1)
 ```
 
-## 📖 API Documentation
+## 🌐 CORS Configuration
 
-### Endpoints
+The FastAPI backend ships with Starlette's `CORSMiddleware` enabled so the hosted frontend and API can talk to each other without browser blocks.
 
-#### Core Functionality
-- `GET /health` - Health check
-- `GET /api/models` - List available AI models
-- `POST /api/chat/text` - Send text message
-- `POST /api/chat/stream` - Real-time streaming chat
-- `GET /api/conversations` - List conversations
-- `GET /api/conversations/{id}` - Get conversation details
+- Allowed origins include local dev hosts (`http://localhost:3000`, `http://127.0.0.1:3000`, etc.) and the deployed Vercel/Railway URLs. Update `ALLOWED_ORIGINS` or the regex in `backend/app/main.py` if you add another domain.
+- Credentials are enabled, and every GET/POST/OPTIONS handler returns per-request `Access-Control-Allow-Origin` headers through `_cors_headers()`, keeping `/health` and the streaming endpoints compliant with browser checks.
+- If you temporarily need to allow a new origin, add it to the list and redeploy; avoid using `"*"` in production.
+- After deploying CORS changes, hard-refresh or open an incognito window to clear cached 403s, and verify via the browser Network tab that `/health` responds with the expected headers.
 
-#### Utility Endpoints
-- `GET /env` - Environment variables status
-- `GET /debug` - Simple debug endpoint
+## ☁️ Hosting Configuration (Vercel + Railway)
 
-### Usage Examples
+To keep both platforms aligned with the codebase:
+- **Railway backend**
+  - `railway.toml` uses Nixpacks and runs `backend/start.sh`; that script binds Uvicorn to the `PORT` variable Railway injects (falling back to `8001` locally) and honours `FASTAPI_BIND_HOST` so you can explicitly set `0.0.0.0` in production.
+  - The deployment health check pings `/health`. If you move the endpoint, update `healthcheckPath` and redeploy.
+  - Set `APP_URL` to your Vercel domain (for example `https://assist-me-virtual-assistant.vercel.app`) alongside `OPENROUTER_API_KEY`, `DATABASE_URL`, and any cache credentials.
+- **Vercel frontend**
+  - The static app points to `https://assistme-virtualassistant-production.up.railway.app` by default and `http://localhost:8001` in development. If your API lives elsewhere, update the `<meta name="assistme-api-base">` content in `frontend/index.html`, or override it by defining `window.ASSISTME_API_BASE` before `script.js` loads.
+  - Keep the project connected to the `main` branch so new pushes trigger builds. For staging branches, disable auto-deploys or supply a staging backend URL.
+- After any deployment, confirm the Network tab shows `/health` succeeding without CORS warnings and that chat streaming requests reach the intended domain.
 
-#### Health Check
+## 🚀 Deployment
+
+### Frontend (Vercel)
 ```bash
-curl https://your-railway-url/health
-{"status":"ok","service":"assistme-api","version":"1.0.0"}
+# Deploy to Vercel
+npm install -g vercel
+vercel --prod
 ```
 
-#### Chat Request
+### Backend (Railway)
+1. Create Railway project
+2. Set environment variables in Railway dashboard
+3. Deploy from Git (auto-deploys on push)
+4. Configure custom domain if needed
+
+### Production URLs
+- **Production Frontend**: `https://assist-Me-virtual-assistant.vercel.app`
+- **Production Backend**: `https://assistme-virtualassistant-production.up.railway.app`
+
+## 🧪 Testing
+
+### Model Performance Testing
+Run comprehensive model tests:
 ```bash
-curl -X POST https://your-railway-url/api/chat/text \
+# Test all 10 models
+python test_models.py  # Development mode testing
+curl -X POST http://localhost:8001/api/chat/text \
   -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Hello!"}],"model":"google/gemini-2.0-flash-exp:free"}'
+  -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
-#### Models List
+### Health Checks
 ```bash
-curl https://your-railway-url/api/models
+# Backend health
+curl http://localhost:8001/health
+
+# API test
+curl -X POST http://localhost:8001/api/chat/text \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "What is the capital of France?"}], "model": "meta-llama/llama-3.3-70b-instruct:free"}'
+```
+
+## 📊 API Documentation
+
+### Chat Endpoints
+- `POST /api/chat/text` - Single chat completion
+- `POST /api/chat/stream` - Streaming chat completion
+- `GET /api/conversations` - List conversations
+- `GET /api/conversations/{id}` - Get specific conversation
+- `GET /api/models` - Available AI models
+
+### Request Format
+```json
 {
-  "models": [
-    {"id":"google/gemini-2.0-flash-exp:free","name":"Google Gemini 2.0 Flash Experimental"},
-    // ... additional models
-  ],
-  "default": "google/gemini-2.0-flash-exp:free"
+    "messages": [
+        {"role": "user", "content": "Your message here"}
+    ],
+    "model": "google/gemini-2.0-flash-exp:free",
+    "temperature": 0.7,
+    "max_tokens": 1024
 }
 ```
 
-## 🔧 Configuration
+## 🛠️ Development
 
-### Environment Variables
+### Code Quality
+- **Pylint compliant**: All backend code passes quality checks
+- **Type hints**: Full Python typing support
+- **Error handling**: Comprehensive exception management
+- **CORS**: Cross-origin support for multiple domains
 
-#### Required
-- `OPENROUTER_API_KEY` - OpenRouter API key for AI functionality
+### Testing
+```bash
+# Run Pylint checks
+pylint backend/app/
 
-#### Optional
-- `DATABASE_URL` - PostgreSQL connection string (SQLite fallback)
-- `PORT` - Server port (Railway auto-provides, defaults to 8001)
-- `DEV_MODE` - Development mode flag
-- `APP_URL` - Application URL for API calls
+# Test API endpoints
+pytest  # If you add tests
 
-### Railway Deployment
-
-1. Connect GitHub repository to Railway
-2. Enable auto-deployment
-3. Set environment variables in Railway dashboard
-4. Application will deploy automatically on commits
+# Manual testing
+curl -X POST localhost:8001/api/chat/text \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Test"}]}'
+```
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes and commit: `git commit -am 'Add feature'`
-4. Push to the branch: `git push origin feature-name`
-5. Submit a Pull Request
-
-### Development Guidelines
-- Use descriptive commit messages
-- Test locally before committing
-- Maintain code style consistency
-- Update documentation for new features
-
-## 📝 Project Structure
-
-```
-AssistMe-VirtualAssistant/
-├── backend/                 # FastAPI backend
-│   ├── app/               # Main application code
-│   │   ├── main.py       # FastAPI app & routes
-│   │   ├── chat_client.py # OpenRouter integration
-│   │   └── database.py   # Database models & setup
-│   ├── alembic/          # Database migrations
-│   └── requirements.txt  # Python dependencies
-├── frontend/              # React/JavaScript frontend
-│   ├── index.html       # Main HTML file
-│   ├── script.js       # Application logic
-│   └── style.css       # Styling
-├── Dockerfile           # Container configuration
-├── railway.toml        # Railway deployment config
-└── README.md          # This file
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### 502 Bad Gateway
-- Railway deployment hasn't updated
-- Click "Deploy" button in Railway dashboard
-- Wait 5-10 minutes for redeployment
-
-#### CORS Errors
-- Frontend can't connect to backend
-- Check Railway environment variables
-- Verify APP_URL is set correctly
-
-#### API Key Issues
-- Chat not working
-- Verify OPENROUTER_API_KEY is set
-- Check OpenRouter account balance
-
-#### Database Connection
-- SQLite fallback automatically used
-- For production: set DATABASE_URL to PostgreSQL
-
-### Railway Deployment Issues
-
-#### 502 Bad Gateway Error
-If you encounter "502 Bad Gateway" with "connection refused":
-1. Ensure Railway configuration uses script-based startup
-2. Check that `railway.toml` has `startCommand = "./start.sh"`
-3. Verify `backend/start.sh` uses proper PORT environment variable:
-   ```bash
-   SERVER_PORT=${PORT:-8001}
-   exec python3 -m uvicorn app.main:app --host 0.0.0.0 --port "${SERVER_PORT}"
-   ```
-4. Make sure `start.sh` is executable: `chmod +x backend/start.sh`
-5. Redeploy by pushing changes to trigger Railway rebuild
-
-#### Common Railway Startup Fixes
-- Avoid direct `uvicorn` commands in `startCommand` - use shell scripts
-- Never use `cd` commands in Railway startup (not executable in their environment)
-- Use shell scripts with proper environment variable expansion
-- Enable Railway V2 runtime: `NIXPACKS_V2 = "true"` in `railway.toml`
-
-### Debugging Tools
-- `/health` - Check backend health
-- `/env` - View environment variables
-- `/debug` - Simple connectivity test
-- Railway dashboard logs
+2. Create feature branch: `git checkout -b feature/new-feature`
+3. Make changes and ensure tests pass
+4. Commit: `git commit -m 'Add new feature'`
+5. Push: `git push origin feature/new-feature`
+6. Create Pull Request
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
-- **OpenRouter**: For unified AI model access
-- **Railway**: For cloud hosting and deployment
-- **FastAPI**: For the amazing web framework
-- **Contributors**: For code improvements and bug fixes
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/discussions)
-- **Documentation**: [Wiki](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/wiki)
+- **OpenRouter** for unified AI model access
+- **Vercel** for seamless frontend deployment
+- **Railway** for robust backend hosting
+- **FastAPI** for modern Python API framework
 
 ---
 
-**Made with ❤️ for the AI community**
+**Built with ❤️ for AI-powered conversations**

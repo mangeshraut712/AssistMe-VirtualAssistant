@@ -6,10 +6,11 @@ const STORAGE_KEY = 'assistme.conversations.v2';
 const THEME_KEY = 'assistme.theme';
 const MODEL_KEY = 'assistme.model';
 
+// Resolve API base URL — can be overridden via window.ASSISTME_API_BASE or the meta tag in index.html
 const API_BASE =
     window.ASSISTME_API_BASE ||
     (location.hostname === 'localhost'
-        ? 'http://localhost:8002'
+        ? 'http://localhost:8001'
         : 'https://assistme-virtualassistant-production.up.railway.app');
 
 const endpoints = {
@@ -264,49 +265,57 @@ const ALLOWED_TAGS = new Set([
     'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'HR', 'A', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'
 ]);
 
-const ALLOWED_ATTRS = {
-    A: ['href', 'title', 'target', 'rel'],
-    CODE: ['class'],
-    PRE: ['class'],
-    TH: ['colspan', 'rowspan'],
-    TD: ['colspan', 'rowspan'],
-};
+const EMPTY_ATTRS = Object.freeze([]);
+const ANCHOR_ATTRS = Object.freeze(['href', 'title', 'target', 'rel']);
+const CODE_ATTRS = Object.freeze(['class']);
+const TABLE_HEADER_ATTRS = Object.freeze(['colspan', 'rowspan']);
+const TABLE_CELL_ATTRS = Object.freeze(['colspan', 'rowspan']);
+
+function getAllowedAttributes(tag) {
+    switch (tag) {
+        case 'A':
+            return ANCHOR_ATTRS;
+        case 'CODE':
+        case 'PRE':
+            return CODE_ATTRS;
+        case 'TH':
+            return TABLE_HEADER_ATTRS;
+        case 'TD':
+            return TABLE_CELL_ATTRS;
+        default:
+            return EMPTY_ATTRS;
+    }
+}
 
 function sanitizeHtml(html) {
-    // First pass: Remove potentially dangerous content
-    const sanitizedHtml = html.replace(/<script[^>]*>.*?<\/script>/gi, '')
-                               .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
-                               .replace(/<object[^>]*>.*?<\/object>/gi, '')
-                               .replace(/<embed[^>]*>.*?<\/embed>/gi, '')
-                               .replace(/javascript:/gi, '#')
-                               .replace(/vbscript:/gi, '#')
-                               .replace(/data:(?!image\/(?:png|jpe?g|gif|svg\+xml|webp))(?:[^;]+);/gi, '#');
+    if (typeof html !== 'string' || html.trim() === '') {
+        return document.createDocumentFragment();
+    }
 
     const parser = new DOMParser();
-    const doc = parser.parseFromString(sanitizedHtml, 'text/html');
-    if (!doc || !doc.body) {
+    const doc = parser.parseFromString(html, 'text/html');
+    if (!doc?.body || doc.querySelector('parsererror')) {
         return document.createDocumentFragment();
     }
 
-    if (doc.querySelector('parsererror')) {
-        return document.createDocumentFragment();
-    }
+    // Remove explicitly dangerous nodes up-front
+    doc.querySelectorAll('script, iframe, object, embed, style, link').forEach((node) => node.remove());
 
     const walker = document.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT, null);
-    const toRemove = [];
+    const nodesToStrip = [];
 
     while (walker.nextNode()) {
         const element = walker.currentNode;
         const tag = element.tagName;
         if (!ALLOWED_TAGS.has(tag)) {
-            toRemove.push(element);
+            nodesToStrip.push(element);
             continue;
         }
 
-        const allowedAttrs = ALLOWED_ATTRS[tag] ?? [];
+        const allowedAttrs = getAllowedAttributes(tag);
         Array.from(element.attributes).forEach((attribute) => {
             const name = attribute.name.toLowerCase();
-            const value = attribute.value;
+            const value = attribute.value || '';
             const allowed = allowedAttrs.includes(name);
             if (!allowed) {
                 element.removeAttribute(attribute.name);
@@ -314,12 +323,20 @@ function sanitizeHtml(html) {
             }
 
             if (tag === 'A' && name === 'href') {
-                if (!/^https?:/i.test(value)) {
+                if (!/^(https?:|mailto:|tel:)/i.test(value)) {
                     element.removeAttribute(attribute.name);
-                } else {
-                    element.setAttribute('target', '_blank');
-                    element.setAttribute('rel', 'noopener noreferrer nofollow');
+                    return;
                 }
+                element.setAttribute('target', '_blank');
+                element.setAttribute('rel', 'noopener noreferrer nofollow');
+            }
+
+            if (tag === 'A' && name === 'target' && value !== '_blank') {
+                element.setAttribute('target', '_blank');
+            }
+
+            if (tag === 'A' && name === 'rel') {
+                element.setAttribute('rel', 'noopener noreferrer nofollow');
             }
 
             if ((tag === 'CODE' || tag === 'PRE') && name === 'class') {
@@ -335,7 +352,7 @@ function sanitizeHtml(html) {
         });
     }
 
-    toRemove.forEach((node) => {
+    nodesToStrip.forEach((node) => {
         const textNode = doc.createTextNode(node.textContent || '');
         node.replaceWith(textNode);
     });
@@ -446,20 +463,20 @@ function recallHistory(direction) {
     if (!elements.messageInput) return;
     const history = state.inputHistory;
     const items = history.items;
-    if (items.length === 0) return;
+    if (!Array.isArray(items) || items.length === 0) return;
 
     if (direction === 'up') {
         const nextIndex = history.index + 1;
         if (nextIndex >= items.length) return;
         history.index = nextIndex;
-        elements.messageInput.value = items[nextIndex];
+        elements.messageInput.value = String(items[nextIndex] ?? '');
     } else {
         if (history.index <= 0) {
             history.index = -1;
             elements.messageInput.value = '';
         } else {
             history.index -= 1;
-            elements.messageInput.value = items[history.index];
+            elements.messageInput.value = String(items[history.index] ?? '');
         }
     }
     autoResizeInput();
@@ -516,15 +533,23 @@ function getModelLabel(modelId) {
     return match ? match.label : modelId;
 }
 
+function getBenchmarkScenario(key) {
+    if (!key || !Object.prototype.hasOwnProperty.call(BENCHMARK_SCENARIOS, key)) {
+        return null;
+    }
+    return BENCHMARK_SCENARIOS[key];
+}
+
 function renderBenchmarkScenario(scenarioKey) {
-    const scenario = BENCHMARK_SCENARIOS[scenarioKey];
+    const scenario = getBenchmarkScenario(scenarioKey);
     if (!scenario || !elements.benchmarkTableBody) return;
 
-    state.activeBenchmarkScenario = scenarioKey;
+    const safeKey = String(scenarioKey);
+    state.activeBenchmarkScenario = safeKey;
 
     if (elements.benchmarkTabs) {
         elements.benchmarkTabs.querySelectorAll('.benchmark-tab').forEach((tab) => {
-            const isActive = tab.dataset.scenario === scenarioKey;
+            const isActive = tab.dataset.scenario === safeKey;
             tab.classList.toggle('active', isActive);
             tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
@@ -540,14 +565,34 @@ function renderBenchmarkScenario(scenarioKey) {
         if (index === 0) {
             row.classList.add('top-performer');
         }
-        row.innerHTML = `
-            <td class="model-name">${getModelLabel(entry.id)}</td>
-            <td>${entry.latency}</td>
-            <td>${entry.throughput}</td>
-            <td>${entry.context}</td>
-            <td>${entry.bestFor}</td>
-            <td>${entry.accelerator}</td>
-        `;
+
+        // Safe DOM creation to avoid XSS
+        const modelNameCell = document.createElement('td');
+        modelNameCell.className = 'model-name';
+        modelNameCell.textContent = getModelLabel(entry.id);
+
+        const latencyCell = document.createElement('td');
+        latencyCell.textContent = entry.latency;
+
+        const throughputCell = document.createElement('td');
+        throughputCell.textContent = entry.throughput;
+
+        const contextCell = document.createElement('td');
+        contextCell.textContent = entry.context;
+
+        const bestForCell = document.createElement('td');
+        bestForCell.textContent = entry.bestFor;
+
+        const acceleratorCell = document.createElement('td');
+        acceleratorCell.textContent = entry.accelerator;
+
+        row.appendChild(modelNameCell);
+        row.appendChild(latencyCell);
+        row.appendChild(throughputCell);
+        row.appendChild(contextCell);
+        row.appendChild(bestForCell);
+        row.appendChild(acceleratorCell);
+
         elements.benchmarkTableBody.appendChild(row);
     });
 
@@ -698,14 +743,20 @@ function formatRelative(timestamp) {
 
 function escapeHtml(value) {
     return value.replace(/[&<>"']/g, (char) => {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;',
-        };
-        return Object.prototype.hasOwnProperty.call(map, char) ? map[char] : char;
+        switch (char) {
+            case '&':
+                return '&amp;';
+            case '<':
+                return '&lt;';
+            case '>':
+                return '&gt;';
+            case '"':
+                return '&quot;';
+            case "'":
+                return '&#39;';
+            default:
+                return char;
+        }
     });
 }
 
@@ -1551,10 +1602,17 @@ function initInlineHandlers() {
 
             if (modifier) {
                 const key = event.key.toLowerCase();
-                if (key === 'b' || key === 'i' || key === 'e') {
+                let formatAction = null;
+                if (key === 'b') {
+                    formatAction = 'bold';
+                } else if (key === 'i') {
+                    formatAction = 'italic';
+                } else if (key === 'e') {
+                    formatAction = 'code';
+                }
+                if (formatAction) {
                     event.preventDefault();
-                    const mapping = { b: 'bold', i: 'italic', e: 'code' };
-                    applyFormatAction(mapping[key]);
+                    applyFormatAction(formatAction);
                     return;
                 }
             }

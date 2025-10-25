@@ -3,7 +3,7 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 # Load environment variables from .env files
 try:
@@ -28,11 +28,11 @@ try:
     CHAT_CLIENT_AVAILABLE = True
     logging.info("Successfully imported chat client")
 except ImportError as e:
-    logging.warning(f"Chat client import failed: {e}. Chat features will be disabled.")
+    logging.warning("Chat client import failed: %s. Chat features will be disabled.", e)
     grok_client = None
     CHAT_CLIENT_AVAILABLE = False
 except Exception as e:
-    logging.error(f"Chat client error: {e}. Features disabled.")
+    logging.error("Chat client error: %s. Features disabled.", e)
     grok_client = None
     CHAT_CLIENT_AVAILABLE = False
 
@@ -77,6 +77,24 @@ def _resolve_origin(request: Request) -> str:
         if origin in ALLOWED_ORIGINS or VERCEL_ORIGIN_PATTERN.fullmatch(origin):
             return origin
     return "*"
+
+
+def _cors_headers(request: Request, methods: Optional[str] = None) -> Dict[str, str]:
+    """Build CORS headers that respect the resolved origin."""
+    allow_origin = _resolve_origin(request)
+    headers = {
+        "Access-Control-Allow-Origin": allow_origin,
+        "Vary": "Origin",
+    }
+    if methods:
+        headers["Access-Control-Allow-Methods"] = methods
+        headers["Access-Control-Max-Age"] = "86400"
+        headers["Access-Control-Allow-Headers"] = request.headers.get(
+            "Access-Control-Request-Headers", "*"
+        )
+    if allow_origin != "*":
+        headers["Access-Control-Allow-Credentials"] = "true"
+    return headers
 
 class ChatMessage(BaseModel):
     role: str
@@ -206,11 +224,7 @@ def _sse_event(event: str, data: dict) -> str:
 
 @app.get("/health")
 def health(request: Request):
-    allow_origin = _resolve_origin(request)
-    headers = {
-        "Access-Control-Allow-Origin": allow_origin,
-        "Access-Control-Allow-Credentials": "true" if allow_origin != "*" else "false",
-    }
+    headers = _cors_headers(request)
     payload = {
         "status": "ok",
         "service": "assistme-api",
@@ -222,14 +236,7 @@ def health(request: Request):
 
 @app.options("/health")
 async def health_options(request: Request) -> Response:
-    allow_origin = _resolve_origin(request)
-    headers = {
-        "Access-Control-Allow-Origin": allow_origin,
-        "Access-Control-Allow-Credentials": "true" if allow_origin != "*" else "false",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": request.headers.get("Access-Control-Request-Headers", "*"),
-        "Access-Control-Max-Age": "86400",
-    }
+    headers = _cors_headers(request, methods="GET, OPTIONS")
     return Response(status_code=204, headers=headers)
 
 @app.get("/debug")
@@ -369,9 +376,10 @@ async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] =
 
 
 @app.options("/api/chat/stream")
-async def chat_text_stream_options() -> Response:
+async def chat_text_stream_options(request: Request) -> Response:
     """Handle CORS preflight for the streaming endpoint."""
-    return Response(status_code=204)
+    headers = _cors_headers(request, methods="POST, OPTIONS")
+    return Response(status_code=204, headers=headers)
 
 
 @app.get("/api/chat/text")
@@ -393,9 +401,10 @@ def chat_text_info():
 
 
 @app.options("/api/chat/text")
-async def chat_text_options() -> Response:
+async def chat_text_options(request: Request) -> Response:
     """Explicitly handle CORS preflight requests."""
-    return Response(status_code=204)
+    headers = _cors_headers(request, methods="POST, OPTIONS")
+    return Response(status_code=204, headers=headers)
 
 
 @app.get("/api/models")
@@ -403,13 +412,14 @@ def list_models():
     _ensure_chat_client()
     return {
         "models": grok_client.get_available_models(),
-        "default": grok_client.default_model,
+        "default": grok_client.get_default_model(),
     }
 
 
 @app.options("/api/models")
-async def list_models_options() -> Response:
-    return Response(status_code=204)
+async def list_models_options(request: Request) -> Response:
+    headers = _cors_headers(request, methods="GET, OPTIONS")
+    return Response(status_code=204, headers=headers)
 
 
 @app.get("/api/openrouter/status")
@@ -421,32 +431,34 @@ def openrouter_status():
             "message": "Chat client unavailable. Check server logs and environment variables.",
         }
 
+    config = getattr(grok_client, "config", {}) or {}
     return {
         "configured": True,
-        "base_url": getattr(grok_client, "base_url", "unknown"),
-        "has_api_key": bool(getattr(grok_client, "api_key", "")),
-        "default_model": getattr(grok_client, "default_model", None),
-        "dev_mode": getattr(grok_client, "dev_mode", False),
+        "base_url": config.get("base_url", "unknown"),
+        "has_api_key": bool(config.get("api_key")),
+        "default_model": grok_client.get_default_model(),
+        "dev_mode": config.get("dev_mode", False),
     }
 
 
 @app.options("/api/openrouter/status")
-async def openrouter_status_options() -> Response:
-    return Response(status_code=204)
+async def openrouter_status_options(request: Request) -> Response:
+    headers = _cors_headers(request, methods="GET, OPTIONS")
+    return Response(status_code=204, headers=headers)
 
 @app.get("/api/conversations")
 def get_conversations(db: Optional[SessionType] = Depends(get_db)) -> List[dict]:
-    if db:
-        conversations = db.query(Conversation).all()  # type: ignore
-        return [{"id": c.id, "title": c.title, "created_at": c.created_at} for c in conversations]
-    else:
+    if not db:
         # No database, return empty list
         return []
+    conversations = db.query(Conversation).all()  # type: ignore
+    return [{"id": c.id, "title": c.title, "created_at": c.created_at} for c in conversations]
 
 
 @app.options("/api/conversations")
-async def conversations_options() -> Response:
-    return Response(status_code=204)
+async def conversations_options(request: Request) -> Response:
+    headers = _cors_headers(request, methods="GET, OPTIONS")
+    return Response(status_code=204, headers=headers)
 
 
 @app.get("/api/conversations/{conversation_id}")
@@ -481,8 +493,11 @@ def get_conversation_messages(conversation_id: int, db: Optional[SessionType] = 
 
 
 @app.options("/api/conversations/{conversation_id}")
-async def conversation_detail_options(conversation_id: int) -> Response:  # pragma: no cover - simple CORS response
-    return Response(status_code=204)
+async def conversation_detail_options(
+    request: Request, conversation_id: int
+) -> Response:  # pragma: no cover - simple CORS response
+    headers = _cors_headers(request, methods="GET, OPTIONS")
+    return Response(status_code=204, headers=headers)
 
 
 @app.websocket("/api/chat/voice")
@@ -492,6 +507,7 @@ async def voice_chat(websocket: WebSocket):
         while True:
             _data = await websocket.receive_json()  # expecting audio data or command
             # Placeholder: Process audio with S2R and get response from Grok-2
+            # For now, just echo back a fixed response
             response_text = "Voice processed via S2R architecture and Grok-2 reasoning"
             await websocket.send_json({"response": response_text})
     except Exception as e:
@@ -505,7 +521,7 @@ if __name__ == "__main__":
     # Respect platform-provided PORT (e.g. Railway/Render); fall back to local default
     port = int(os.getenv("PORT", "8001"))
 
-    # Bind to localhost for local development, all interfaces for containerized environments
-    host = "127.0.0.1" if os.getenv("DEV_MODE", "false").lower() == "true" else "0.0.0.0"
+    # Allow overriding bind host; default to localhost for safety
+    host = os.getenv("FASTAPI_BIND_HOST", "127.0.0.1")
 
     uvicorn.run(app, host=host, port=port, log_level="info")

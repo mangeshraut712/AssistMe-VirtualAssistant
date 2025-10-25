@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.8.0/styles/github.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="style.css">
+    <meta name="assistme-api-base" content="https://assistme-virtualassistant-production.up.railway.app">
 </head>
 <body>
     <div class="app" id="app">
@@ -276,6 +277,14 @@
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+    <script>
+        (function () {
+            const meta = document.querySelector('meta[name="assistme-api-base"]');
+            if (meta && meta.content) {
+                window.ASSISTME_API_BASE = meta.content.trim();
+            }
+        }());
+    </script>
     <script defer src="script.js"></script>
 </body>
 </html>
