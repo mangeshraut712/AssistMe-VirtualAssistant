@@ -103,6 +103,9 @@ const elements = {
     starterGrid: document.getElementById('starterGrid'),
     chatMessages: document.getElementById('chatMessages'),
     chatThread: document.getElementById('chatThread'),
+    assistantStatus: document.getElementById('assistantStatus'),
+    statusDot: document.querySelector('#assistantStatus .status-dot'),
+    statusText: document.querySelector('#assistantStatus span:nth-of-type(2)'),
     messageInput: document.getElementById('messageInput'),
     composer: document.getElementById('composer'),
     sendButton: document.getElementById('sendButton'),
@@ -118,6 +121,7 @@ const state = {
     conversations: [],
     activeConversation: null,
     currentModel: DEFAULT_MODEL_ID,
+    backendHealthy: null,
     isStreaming: false,
     typingNode: null,
     abortController: null,
@@ -214,6 +218,86 @@ function sanitizeHtml(html) {
         fragment.appendChild(doc.body.firstChild);
     }
     return fragment;
+}
+
+function focusMessageInput() {
+    if (!elements.messageInput) return;
+    requestAnimationFrame(() => {
+        if (!elements.messageInput) return;
+        elements.messageInput.focus({ preventScroll: true });
+        try {
+            const length = elements.messageInput.value.length;
+            elements.messageInput.setSelectionRange(length, length);
+        } catch (error) {
+            // setSelectionRange may fail on some platforms; safe to ignore
+        }
+    });
+}
+
+function setBackendStatus(isHealthy, message) {
+    const previousStatus = state.backendHealthy;
+    state.backendHealthy = isHealthy;
+
+    if (elements.assistantStatus) {
+        elements.assistantStatus.classList.toggle('offline', !isHealthy);
+    }
+    if (elements.composer) {
+        elements.composer.classList.toggle('offline', !isHealthy);
+    }
+    if (elements.statusDot) {
+        elements.statusDot.classList.toggle('live', isHealthy);
+        elements.statusDot.classList.toggle('error', !isHealthy);
+    }
+    if (elements.statusText) {
+        elements.statusText.textContent = isHealthy
+            ? 'All systems operational · Responses stream in realtime'
+            : 'Offline mode · Responses are simulated locally';
+    }
+
+    if (isHealthy && previousStatus === false) {
+        showToast('Reconnected to AssistMe backend. Live responses restored.', 'success');
+    } else if (!isHealthy && previousStatus !== false && message) {
+        showToast(message, 'warning');
+    }
+}
+
+async function checkBackendHealth() {
+    try {
+        const response = await fetch(`${API_BASE}/health`, { method: 'GET', mode: 'cors' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setBackendStatus(true);
+        return true;
+    } catch (error) {
+        console.warn('Backend health check failed', error);
+        setBackendStatus(false, 'AssistMe backend is unreachable. Responses will be simulated locally.');
+        return false;
+    }
+}
+
+function generateOfflineResponse(prompt) {
+    const text = (prompt || '').trim();
+    if (!text) {
+        const fallback = "I'm in offline preview mode right now. Once the AssistMe backend reconnects I'll be able to fetch live answers again.";
+        return { response: fallback, tokens: fallback.split(/\s+/).length };
+    }
+
+    const lower = text.toLowerCase();
+    let response;
+
+    if (lower.includes('hello') || lower.includes('hi')) {
+        response = "Hello there! I'm running in offline preview mode, so this response is simulated. Try again soon for a live answer.";
+    } else if (lower.includes('code') || lower.includes('python') || lower.includes('bug')) {
+        response = "I'm currently offline, but here’s a quick tip: break the problem down, add logging, and once the backend is back you'll get full diagnostic help.";
+    } else if (lower.includes('help') || lower.includes('support')) {
+        response = "I've noted your request. While I'm offline you'll see a concise preview reply, and when AssistMe reconnects you'll receive a detailed answer.";
+    } else {
+        response = `I'm offline right now, so this is a lightweight preview response. Once AssistMe reconnects, I'll provide a complete answer to: "${text}".`;
+    }
+
+    return {
+        response,
+        tokens: response.split(/\s+/).length,
+    };
 }
 
 function renderAssistantContent(target, content) {
@@ -704,6 +788,7 @@ function setActiveConversation(conversation, { resetView = true } = {}) {
     highlightActiveConversation();
     populateModelDropdown();
     handleInputChange();
+    focusMessageInput();
 }
 
 function applyMetadata(container, metadata) {
@@ -783,15 +868,6 @@ function handleInputChange() {
 
     elements.sendButton.classList.toggle('disabled', !ready);
     elements.sendButton.disabled = !ready;
-
-    // Debug logging
-    console.log('Input change:', {
-        hasText,
-        ready,
-        value: elements.messageInput.value.slice(0, 20),
-        disabled: elements.messageInput.disabled,
-        visible: elements.messageInput.offsetParent !== null
-    });
 }
 
 function buildPayloadMessages(conversation, userMessage) {
@@ -832,6 +908,7 @@ async function requestCompletionFallback(userMessage) {
     if (data?.error) {
         throw new Error(data.error);
     }
+    setBackendStatus(true);
     return data;
 }
 
@@ -869,6 +946,34 @@ async function streamAssistantResponse(userMessage) {
     const started = performance.now();
     let tokensUsed = null;
 
+    if (state.backendHealthy === false) {
+        const recovered = await checkBackendHealth();
+        if (recovered) {
+            state.backendHealthy = true;
+        }
+    }
+
+    if (state.backendHealthy === false) {
+        const offline = generateOfflineResponse(userMessage.content);
+        assistantMessage.content = offline.response;
+        assistantFragment.text.textContent = assistantMessage.content;
+        const latency = Math.round(performance.now() - started);
+        assistantMessage.metadata = {
+            model: `${state.currentModel || 'offline/mock'}`,
+            latency,
+            tokens: offline.tokens,
+        };
+        applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
+        updateMetrics(latency, offline.tokens);
+        ensureConversationVisible();
+        removeTypingIndicator();
+        state.isStreaming = false;
+        handleInputChange();
+        persistActiveConversation();
+        focusMessageInput();
+        return;
+    }
+
     try {
         const response = await fetch(endpoints.stream, {
             method: 'POST',
@@ -880,6 +985,8 @@ async function streamAssistantResponse(userMessage) {
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
+
+        setBackendStatus(true);
 
         const reader = response.body?.getReader();
         if (!reader) throw new Error('Streaming not supported in this browser');
@@ -946,9 +1053,11 @@ async function streamAssistantResponse(userMessage) {
         state.isStreaming = false;
         handleInputChange();
         persistActiveConversation();
+        focusMessageInput();
     } catch (error) {
         console.error(error);
         removeTypingIndicator();
+        setBackendStatus(false, 'AssistMe backend is unreachable. Using offline responses.');
 
         let fallbackData = null;
         try {
@@ -985,16 +1094,28 @@ async function streamAssistantResponse(userMessage) {
             state.isStreaming = false;
             handleInputChange();
             persistActiveConversation();
+            focusMessageInput();
             return;
         }
 
+        const offline = generateOfflineResponse(userMessage.content);
+        assistantMessage.content = offline.response;
+        assistantFragment.text.textContent = assistantMessage.content;
+        const latency = Math.round(performance.now() - started);
+        assistantMessage.metadata = {
+            model: `${state.currentModel || 'offline/mock'}`,
+            latency,
+            tokens: offline.tokens,
+        };
+        applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
+        updateMetrics(latency, offline.tokens);
+
         state.isStreaming = false;
         handleInputChange();
-        assistantMessage.content = 'I hit an error while responding. Please try again.';
-        assistantFragment.text.textContent = assistantMessage.content;
-        showToast(error.message || 'Something went wrong', 'error');
-        updateMetrics(null, null);
+        showToast(error.message || 'Backend unreachable. Showing offline preview response.', 'warning');
+        ensureConversationVisible();
         persistActiveConversation();
+        focusMessageInput();
     }
 }
 
@@ -1029,6 +1150,7 @@ async function handleSend() {
 
     ensureConversationVisible();
     resetComposer();
+    focusMessageInput();
 
     const userMessage = {
         role: 'user',
@@ -1053,6 +1175,7 @@ function handleNewChat() {
     setActiveConversation(conversation);
     highlightActiveConversation();
     resetComposer();
+    focusMessageInput();
     if (elements.welcomePanel) {
         elements.welcomePanel.style.display = '';
     }
@@ -1245,10 +1368,16 @@ async function bootstrap() {
     restoreInitialState();
     initInlineHandlers();
     initVoice();
+    await checkBackendHealth();
     await preloadServerConversations();
+    focusMessageInput();
 }
 
 async function preloadServerConversations() {
+    if (state.backendHealthy === false) {
+        console.info('Skipping server conversation preload: backend offline');
+        return;
+    }
     try {
         const response = await fetch(endpoints.conversations, { method: 'GET' });
         if (!response.ok) return;
@@ -1295,6 +1424,7 @@ async function preloadServerConversations() {
         }
     } catch (error) {
         console.warn('Conversation preload failed', error);
+        setBackendStatus(false, 'AssistMe backend is unreachable. Responses will be simulated locally.');
     }
 }
 

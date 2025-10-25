@@ -29,6 +29,9 @@
     --accent-primary: #10a37f;
     --accent-secondary: #3b82f6;
     --accent-muted: rgba(16, 163, 127, 0.12);
+    --status-warning: #f97316;
+    --status-danger: #ef4444;
+    --status-warning-glow: rgba(249, 115, 22, 0.18);
 
     --shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.08);
     --shadow-hard: 0 18px 45px rgba(15, 23, 42, 0.12);
@@ -55,6 +58,9 @@ html[data-theme="dark"] {
 
     --border-subtle: rgba(255, 255, 255, 0.05);
     --border-strong: rgba(255, 255, 255, 0.15);
+    --status-warning: #fb923c;
+    --status-danger: #f87171;
+    --status-warning-glow: rgba(251, 146, 60, 0.24);
 
     --text-primary: #f4f4f8;
     --text-secondary: #cbd0df;
@@ -486,6 +492,13 @@ html[data-theme="dark"] .workspace-header {
     color: var(--text-secondary);
 }
 
+.assistant-status.offline {
+    background: var(--status-warning-glow);
+    border-radius: var(--radius-lg);
+    color: var(--status-warning);
+    padding: 10px 16px;
+}
+
 .status-dot {
     width: 10px;
     height: 10px;
@@ -496,6 +509,16 @@ html[data-theme="dark"] .workspace-header {
 .status-dot.live {
     background: #10b981;
     box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.15);
+}
+
+.status-dot.error {
+    background: var(--status-warning);
+    box-shadow: 0 0 0 6px var(--status-warning-glow);
+}
+
+.composer.offline {
+    border: 1px solid var(--status-warning);
+    box-shadow: 0 0 0 1px var(--status-warning-glow);
 }
 
 .welcome {
