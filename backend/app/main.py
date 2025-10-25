@@ -12,8 +12,8 @@ except ImportError:  # pragma: no cover - optional in production
     load_dotenv = None  # type: ignore[assignment]
 
 if load_dotenv:
-    load_dotenv('secrets.env')  # Load secrets.env first
-    load_dotenv('.env')         # Override with .env if needed
+    load_dotenv('../secrets.env')  # Load secrets.env from parent directory
+    load_dotenv('.env')            # Override with .env if needed
 
 from fastapi import FastAPI, WebSocket, Depends, HTTPException, Request  # type: ignore[import-not-found]
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-not-found]
@@ -39,6 +39,33 @@ except Exception as e:
 from .database import get_db
 from .models import Conversation, Message as MessageModel
 
+def _normalise_origin(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    origin = value.strip().rstrip("/")
+    if not origin:
+        return None
+    if not origin.startswith(("http://", "https://")):
+        origin = f"https://{origin}"
+    return origin
+
+
+def _env_configured_origins() -> List[str]:
+    configured: List[str] = []
+    for env_name in ("APP_URL", "VERCEL_URL"):
+        normalised = _normalise_origin(os.getenv(env_name))
+        if normalised:
+            configured.append(normalised)
+
+    raw_custom = os.getenv("CORS_ALLOW_ORIGINS", "")
+    if raw_custom:
+        for entry in raw_custom.split(","):
+            normalised = _normalise_origin(entry)
+            if normalised:
+                configured.append(normalised)
+    return configured
+
+
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
@@ -47,6 +74,9 @@ ALLOWED_ORIGINS = [
     "https://assist-me-virtual-assistant.vercel.app",
     "https://assistme-virtualassistant-production.up.railway.app",
 ]
+
+ALLOWED_ORIGINS.extend(_env_configured_origins())
+ALLOWED_ORIGINS = sorted({origin for origin in ALLOWED_ORIGINS if origin})
 VERCEL_ORIGIN_PATTERN = re.compile(r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app")
 
 app = FastAPI(title="AssistMe API", version="1.0.0")
