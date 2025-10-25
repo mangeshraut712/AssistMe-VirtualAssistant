@@ -1,14 +1,19 @@
 [build]
-buildCommand = "cd backend && pip install -r requirements.txt"
+builder = "NIXPACKS"
+
+[build.env]
+# Enable V2 runtime for better FastAPI support
+NIXPACKS_V2 = "true"
 
 [deploy]
-startCommand = "bash start.sh"
+# V2 runtime requires uvicorn startup directly
+startCommand = "cd backend && uvicorn app.main:app --host=0.0.0.0 --port=$PORT --workers=1 --loop=uvloop"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
+# V2 runtime automatically binds to PORT environment variable
+# startCommand = "bash start.sh"  # V1 runtime alternative
 
 # REQUIRED ENVIRONMENT VARIABLES for OpenRouter integration:
 # OPENROUTER_API_KEY - Your OpenRouter API key (obtain from https://openrouter.ai/keys)
-# OPENROUTER_BASE_URL - Should be "https://openrouter.ai/api/v1" (default)
-# REDIS_URL - Optional, for rate limiting (can be left empty for basic usage)
+# DATABASE_URL - PostgreSQL connection string (auto-provided by Railway)
 # APP_URL - Frontend URL for OpenRouter referrer (default: production Vercel URL)
-# APP_NAME - Application name for OpenRouter
