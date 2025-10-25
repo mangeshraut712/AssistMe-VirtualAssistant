@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 from datetime import datetime
 from typing import List, Optional, Tuple
 
@@ -14,9 +15,9 @@ if load_dotenv:
     load_dotenv('secrets.env')  # Load secrets.env first
     load_dotenv('.env')         # Override with .env if needed
 
-from fastapi import FastAPI, WebSocket, Depends, HTTPException  # type: ignore[import-not-found]
+from fastapi import FastAPI, WebSocket, Depends, HTTPException, Request  # type: ignore[import-not-found]
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-not-found]
-from fastapi.responses import Response, StreamingResponse  # type: ignore[import-not-found]
+from fastapi.responses import Response, StreamingResponse, JSONResponse  # type: ignore[import-not-found]
 from pydantic import BaseModel  # type: ignore[import-not-found]
 from sqlalchemy.orm import Session as SessionType  # type: ignore[import-not-found]
 from starlette.concurrency import run_in_threadpool  # type: ignore[import-not-found]
@@ -40,13 +41,13 @@ from .models import Conversation, Message as MessageModel
 
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://localhost:8001",
-    "https://assist-me-virtual-assistant.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
     "https://assist-me-virtual-assistant.vercel.app",
     "https://assistme-virtualassistant-production.up.railway.app",
-    "https://mangeshraut712.github.io",  # GitHub Pages deployment
-    "*",  # Allow all origins for development
 ]
+VERCEL_ORIGIN_PATTERN = re.compile(r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app")
 
 app = FastAPI(title="AssistMe API", version="1.0.0")
 
@@ -56,7 +57,7 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_origin_regex=r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=[
         "Accept",
         "Accept-Language",
@@ -68,6 +69,14 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=3600,  # 1 hour
 )
+
+
+def _resolve_origin(request: Request) -> str:
+    origin = request.headers.get("origin")
+    if origin:
+        if origin in ALLOWED_ORIGINS or VERCEL_ORIGIN_PATTERN.fullmatch(origin):
+            return origin
+    return "*"
 
 class ChatMessage(BaseModel):
     role: str
@@ -196,8 +205,32 @@ def _sse_event(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 @app.get("/health")
-def health():
-    return {"status": "ok", "service": "assistme-api", "version": "1.0.0", "timestamp": datetime.now().isoformat()}
+def health(request: Request):
+    allow_origin = _resolve_origin(request)
+    headers = {
+        "Access-Control-Allow-Origin": allow_origin,
+        "Access-Control-Allow-Credentials": "true" if allow_origin != "*" else "false",
+    }
+    payload = {
+        "status": "ok",
+        "service": "assistme-api",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat(),
+    }
+    return JSONResponse(content=payload, headers=headers)
+
+
+@app.options("/health")
+async def health_options(request: Request) -> Response:
+    allow_origin = _resolve_origin(request)
+    headers = {
+        "Access-Control-Allow-Origin": allow_origin,
+        "Access-Control-Allow-Credentials": "true" if allow_origin != "*" else "false",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": request.headers.get("Access-Control-Request-Headers", "*"),
+        "Access-Control-Max-Age": "86400",
+    }
+    return Response(status_code=204, headers=headers)
 
 @app.get("/debug")
 def debug():
