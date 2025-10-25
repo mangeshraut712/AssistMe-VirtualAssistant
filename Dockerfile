@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY backend/ ./
 
+# Ensure start.sh has execute permissions
+RUN chmod +x start.sh
+
 ENV PYTHONPATH=/app
 
 EXPOSE 8001
