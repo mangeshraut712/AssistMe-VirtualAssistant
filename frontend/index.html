@@ -92,6 +92,10 @@
                             <!-- Models populated by JavaScript -->
                         </div>
                     </div>
+                    <button class="icon-btn benchmark-btn" id="benchmarkBtn" aria-haspopup="dialog">
+                        <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+                        <span>Benchmark</span>
+                    </button>
                 </div>
             </header>
 
@@ -146,29 +150,127 @@
                     </div>
                 </div>
 
-                <div class="composer-box">
-                    <button class="icon-btn" id="uploadBtn" title="Attach file">
-                        <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
-                    </button>
-                    <textarea id="messageInput" rows="1" placeholder="Message AssistMe" autocomplete="off"></textarea>
-                    <div class="composer-actions">
-                        <button class="icon-btn" id="voiceBtn" title="Start voice input">
-                            <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+                    <div class="composer-box">
+                        <button class="icon-btn" id="uploadBtn" title="Attach files">
+                            <i class="fa-solid fa-plus" aria-hidden="true"></i>
                         </button>
-                        <button class="send-btn disabled" id="sendButton" disabled>
-                            <span class="send-label">Send</span>
-                            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-                        </button>
+                        <div class="textarea-wrapper">
+                            <div class="composer-quick" id="composerQuick">
+                                <button type="button" class="quick-btn" data-format="bold" title="Bold (⌘/Ctrl + B)">
+                                    <i class="fa-solid fa-bold" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" class="quick-btn" data-format="italic" title="Italic (⌘/Ctrl + I)">
+                                    <i class="fa-solid fa-italic" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" class="quick-btn" data-format="code" title="Inline code (⌘/Ctrl + E)">
+                                    <i class="fa-solid fa-code" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" class="quick-btn" data-format="clear" title="Clear input">
+                                    <i class="fa-solid fa-eraser" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <textarea id="messageInput" rows="1" placeholder="Message AssistMe" autocomplete="off"></textarea>
+                            <div class="input-hint desktop-hint">Shift + Enter for newline · Tap send to submit</div>
+                            <div class="input-hint mobile-hint">Tap mic to speak · Tap paper plane to send</div>
+                        </div>
+                        <div class="composer-actions">
+                            <button class="icon-btn" id="voiceBtn" title="Start voice input">
+                                <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+                            </button>
+                            <button class="send-btn disabled" id="sendButton" disabled aria-label="Send message">
+                                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <div class="composer-footnote">
-                    AssistMe can make mistakes. Consider checking important info.
+                    <div class="composer-footnote">
+                        AssistMe can make mistakes. Consider checking important info.
                 </div>
             </footer>
         </main>
     </div>
 
     <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <div class="modal" id="benchmarkModal" aria-hidden="true">
+        <div class="modal-backdrop" id="benchmarkBackdrop"></div>
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="benchmarkTitle" aria-describedby="benchmarkSummary">
+            <div class="modal-header">
+                <div>
+                    <h2 id="benchmarkTitle">Model benchmarking lab</h2>
+                    <p id="benchmarkSummary">Compare latency, throughput, and accelerator recommendations before you run long GPU jobs.</p>
+                </div>
+                <button class="modal-close" id="benchmarkClose" aria-label="Close benchmarking insights">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <section class="benchmark-section highlight">
+                    <h3>Run the AssistMe benchmark locally or in the cloud</h3>
+                    <p>Install our open benchmark pack, point it at your API key, and capture GPU metrics automatically.</p>
+                    <div class="benchmark-command-line">
+                        <code id="benchmarkCommand">curl -fsSL https://get.assistme.ai/bench.sh | bash</code>
+                        <button class="command-copy" id="benchmarkCopy" aria-label="Copy benchmark command">
+                            <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                            Copy
+                        </button>
+                    </div>
+                    <div class="benchmark-tags">
+                        <span class="badge">Supports A100 / H100 / RTX 4090</span>
+                        <span class="badge">Tracks cost + latency</span>
+                        <span class="badge">Exports to CSV &amp; Grafana</span>
+                    </div>
+                </section>
+
+                <section class="benchmark-section">
+                    <div class="section-heading">
+                        <h3>Compare scenarios</h3>
+                        <a class="benchmark-doc-link" href="https://github.com/mangeshraut712/AssistMe-VirtualAssistant/wiki/Benchmarking" target="_blank" rel="noopener">Read benchmarking guide<i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+                    </div>
+                    <div class="benchmark-tabs" id="benchmarkTabs" role="tablist">
+                        <button type="button" class="benchmark-tab" data-scenario="general" role="tab" aria-selected="true">General Q&amp;A</button>
+                        <button type="button" class="benchmark-tab" data-scenario="coding" role="tab" aria-selected="false">Coding &amp; reasoning</button>
+                        <button type="button" class="benchmark-tab" data-scenario="creative" role="tab" aria-selected="false">Creative writing</button>
+                    </div>
+                    <p class="benchmark-description" id="benchmarkDescription"></p>
+                    <div class="benchmark-table-wrapper">
+                        <table class="benchmark-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Model</th>
+                                    <th scope="col">Latency (p95)</th>
+                                    <th scope="col">Throughput</th>
+                                    <th scope="col">Context</th>
+                                    <th scope="col">Best for</th>
+                                    <th scope="col">Accelerator</th>
+                                </tr>
+                            </thead>
+                            <tbody id="benchmarkTableBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="benchmark-section">
+                    <h3>Accelerator recommendations</h3>
+                    <ul class="benchmark-accelerators" id="benchmarkAccelerators"></ul>
+                    <div class="benchmark-links">
+                        <a href="https://cloud.google.com/compute/docs/gpus" target="_blank" rel="noopener" class="badge-link">Reserve GPU on GCP</a>
+                        <a href="https://www.latent.space/p/benchmarking" target="_blank" rel="noopener" class="badge-link">Benchmark methodology</a>
+                        <a href="https://openrouter.ai/docs#benchmarks" target="_blank" rel="noopener" class="badge-link">OpenRouter model stats</a>
+                    </div>
+                </section>
+
+                <section class="benchmark-section fine-print">
+                    <h3>Pro tips</h3>
+                    <ul>
+                        <li>Warm the model for 3–5 requests before recording latency to avoid cold-start spikes.</li>
+                        <li>Use <code>--accelerator=H100</code> to test the same prompt set across different GPUs.</li>
+                        <li>Record both streaming latency and total completion time for a balanced comparison.</li>
+                        <li>Tag benchmark runs with <code>--label &quot;release-2025.02&quot;</code> to track regressions over time.</li>
+                    </ul>
+                </section>
+            </div>
+        </div>
+    </div>
 
     <script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" crossorigin="anonymous"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js" crossorigin="anonymous"></script>

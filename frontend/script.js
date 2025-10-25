@@ -82,6 +82,117 @@ const MODEL_OPTIONS = [
     },
 ];
 
+const BENCHMARK_SCENARIOS = {
+    general: {
+        label: 'General Q&A',
+        description: 'Balanced prompts covering product questions, support triage, and structured summaries. Measures first-token latency and sustained throughput across 256-token completions.',
+        command: 'assistme-bench run --scenario general --output logs/general.json',
+        accelerators: [
+            '1 × NVIDIA A100 80GB · 75% GPU util · 175 tok/s sustained',
+            '1 × NVIDIA H100 80GB · 85% GPU util · 215 tok/s sustained',
+            '2 × RTX 4090 · tensor parallel · 160 tok/s sustained'
+        ],
+        models: [
+            {
+                id: 'google/gemini-2.0-flash-exp:free',
+                latency: '0.82 s',
+                throughput: '180 tok/s',
+                context: '1M tokens',
+                bestFor: 'Multimodal answers & snippets',
+                accelerator: 'A100 80GB'
+            },
+            {
+                id: 'meta-llama/llama-3.3-70b-instruct:free',
+                latency: '1.14 s',
+                throughput: '142 tok/s',
+                context: '131k tokens',
+                bestFor: 'Structured responses',
+                accelerator: 'H100 80GB'
+            },
+            {
+                id: 'z-ai/glm-4.5-air:free',
+                latency: '0.96 s',
+                throughput: '128 tok/s',
+                context: '128k tokens',
+                bestFor: 'Low-cost multilingual',
+                accelerator: 'RTX 4090'
+            }
+        ]
+    },
+    coding: {
+        label: 'Coding & reasoning',
+        description: 'Stress test long-reasoning traces, code review, and unit test generation. Includes adversarial math + tool-use prompts.',
+        command: 'assistme-bench run --scenario coding --trace --compare --accelerator H100',
+        accelerators: [
+            '1 × NVIDIA H100 80GB · bf16 · 185 tok/s with streaming',
+            '1 × NVIDIA A100 40GB · fp16 · 128 tok/s',
+            '2 × NVIDIA L40S · tensor parallel · 150 tok/s'
+        ],
+        models: [
+            {
+                id: 'qwen/qwen3-coder:free',
+                latency: '1.06 s',
+                throughput: '168 tok/s',
+                context: '262k tokens',
+                bestFor: 'Code generation & debug',
+                accelerator: 'H100 80GB'
+            },
+            {
+                id: 'tngtech/deepseek-r1t2-chimera:free',
+                latency: '1.22 s',
+                throughput: '150 tok/s',
+                context: '163k tokens',
+                bestFor: 'Chain-of-thought reasoning',
+                accelerator: 'A100 80GB'
+            },
+            {
+                id: 'openai/gpt-oss-20b:free',
+                latency: '0.94 s',
+                throughput: '132 tok/s',
+                context: '128k tokens',
+                bestFor: 'Lightweight OSS baseline',
+                accelerator: 'L40S'
+            }
+        ]
+    },
+    creative: {
+        label: 'Creative writing',
+        description: 'Evaluates story continuity, tone matching, and multilingual output with 512-token completions.',
+        command: 'assistme-bench run --scenario creative --duration 300 --accelerator A100',
+        accelerators: [
+            '1 × NVIDIA A100 80GB · fp16 · 140 tok/s',
+            '1 × NVIDIA H100 80GB · fp8 · 195 tok/s',
+            '1 × RTX 6000 Ada · fp16 · 110 tok/s'
+        ],
+        models: [
+            {
+                id: 'moonshotai/kimi-dev-72b:free',
+                latency: '1.35 s',
+                throughput: '138 tok/s',
+                context: '128k tokens',
+                bestFor: 'Narrative tone & long form',
+                accelerator: 'A100 80GB'
+            },
+            {
+                id: 'mistralai/mistral-nemo:free',
+                latency: '1.02 s',
+                throughput: '152 tok/s',
+                context: '128k tokens',
+                bestFor: 'Creative ideation',
+                accelerator: 'L40S'
+            },
+            {
+                id: 'google/gemini-2.0-flash-exp:free',
+                latency: '0.88 s',
+                throughput: '176 tok/s',
+                context: '1M tokens',
+                bestFor: 'Storyboarding & imagery cues',
+                accelerator: 'H100 80GB'
+            }
+        ]
+    }
+};
+
 const DEFAULT_MODEL_ID = MODEL_OPTIONS[0]?.id || null;
 
 const elements = {
@@ -109,6 +220,17 @@ const elements = {
     messageInput: document.getElementById('messageInput'),
     composer: document.getElementById('composer'),
     sendButton: document.getElementById('sendButton'),
+    composerQuick: document.getElementById('composerQuick'),
+    benchmarkBtn: document.getElementById('benchmarkBtn'),
+    benchmarkModal: document.getElementById('benchmarkModal'),
+    benchmarkBackdrop: document.getElementById('benchmarkBackdrop'),
+    benchmarkClose: document.getElementById('benchmarkClose'),
+    benchmarkTabs: document.getElementById('benchmarkTabs'),
+    benchmarkTableBody: document.getElementById('benchmarkTableBody'),
+    benchmarkDescription: document.getElementById('benchmarkDescription'),
+    benchmarkCommand: document.getElementById('benchmarkCommand'),
+    benchmarkCopy: document.getElementById('benchmarkCopy'),
+    benchmarkAccelerators: document.getElementById('benchmarkAccelerators'),
     inlineSuggestions: document.getElementById('inlineSuggestions'),
     latencyMetric: document.getElementById('latencyMetric'),
     tokenMetric: document.getElementById('tokenMetric'),
@@ -130,6 +252,11 @@ const state = {
         listening: false,
         available: false,
     },
+    inputHistory: {
+        items: [],
+        index: -1,
+    },
+    activeBenchmarkScenario: 'general',
 };
 
 const ALLOWED_TAGS = new Set([
@@ -298,6 +425,193 @@ function generateOfflineResponse(prompt) {
         response,
         tokens: response.split(/\s+/).length,
     };
+}
+
+function pushInputHistory(value) {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const history = state.inputHistory;
+    if (history.items[0] === trimmed) {
+        history.index = -1;
+        return;
+    }
+    history.items.unshift(trimmed);
+    if (history.items.length > 50) {
+        history.items.pop();
+    }
+    history.index = -1;
+}
+
+function recallHistory(direction) {
+    if (!elements.messageInput) return;
+    const history = state.inputHistory;
+    const items = history.items;
+    if (items.length === 0) return;
+
+    if (direction === 'up') {
+        const nextIndex = history.index + 1;
+        if (nextIndex >= items.length) return;
+        history.index = nextIndex;
+        elements.messageInput.value = items[nextIndex];
+    } else {
+        if (history.index <= 0) {
+            history.index = -1;
+            elements.messageInput.value = '';
+        } else {
+            history.index -= 1;
+            elements.messageInput.value = items[history.index];
+        }
+    }
+    autoResizeInput();
+    handleInputChange();
+    focusMessageInput();
+}
+
+function wrapSelection(textarea, prefix, suffix, placeholder = '') {
+    const { selectionStart, selectionEnd, value } = textarea;
+    const hasSelection = selectionStart !== selectionEnd;
+    const selected = value.slice(selectionStart, selectionEnd);
+    const content = hasSelection ? selected : placeholder;
+    const before = value.slice(0, selectionStart);
+    const after = value.slice(selectionEnd);
+    const newValue = `${before}${prefix}${content}${suffix}${after}`;
+    const cursorStart = before.length + prefix.length;
+    const cursorEnd = cursorStart + content.length;
+    textarea.value = newValue;
+    textarea.setSelectionRange(cursorStart, cursorEnd);
+}
+
+function applyFormatAction(format) {
+    if (!elements.messageInput) return;
+    const textarea = elements.messageInput;
+
+    if (format === 'clear') {
+        textarea.value = '';
+        state.inputHistory.index = -1;
+        handleInputChange();
+        focusMessageInput();
+        return;
+    }
+
+    if (format === 'bold') {
+        wrapSelection(textarea, '**', '**', 'bold text');
+    } else if (format === 'italic') {
+        wrapSelection(textarea, '_', '_', 'italic text');
+    } else if (format === 'code') {
+        const { selectionStart, selectionEnd, value } = textarea;
+        const selected = value.slice(selectionStart, selectionEnd);
+        if (selected.includes('\n')) {
+            wrapSelection(textarea, '```\n', '\n```', selected || 'code block');
+        } else {
+            wrapSelection(textarea, '`', '`', selected || 'code');
+        }
+    }
+
+    handleInputChange();
+    focusMessageInput();
+}
+
+function getModelLabel(modelId) {
+    const match = MODEL_OPTIONS.find((model) => model.id === modelId);
+    return match ? match.label : modelId;
+}
+
+function renderBenchmarkScenario(scenarioKey) {
+    const scenario = BENCHMARK_SCENARIOS[scenarioKey];
+    if (!scenario || !elements.benchmarkTableBody) return;
+
+    state.activeBenchmarkScenario = scenarioKey;
+
+    if (elements.benchmarkTabs) {
+        elements.benchmarkTabs.querySelectorAll('.benchmark-tab').forEach((tab) => {
+            const isActive = tab.dataset.scenario === scenarioKey;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+    }
+
+    if (elements.benchmarkDescription) {
+        elements.benchmarkDescription.textContent = scenario.description;
+    }
+
+    elements.benchmarkTableBody.replaceChildren();
+    scenario.models.forEach((entry, index) => {
+        const row = document.createElement('tr');
+        if (index === 0) {
+            row.classList.add('top-performer');
+        }
+        row.innerHTML = `
+            <td class="model-name">${getModelLabel(entry.id)}</td>
+            <td>${entry.latency}</td>
+            <td>${entry.throughput}</td>
+            <td>${entry.context}</td>
+            <td>${entry.bestFor}</td>
+            <td>${entry.accelerator}</td>
+        `;
+        elements.benchmarkTableBody.appendChild(row);
+    });
+
+    if (elements.benchmarkCommand) {
+        elements.benchmarkCommand.textContent = scenario.command;
+    }
+
+    if (elements.benchmarkAccelerators) {
+        elements.benchmarkAccelerators.replaceChildren();
+        scenario.accelerators.forEach((item) => {
+            const li = document.createElement('li');
+            li.textContent = item;
+            elements.benchmarkAccelerators.appendChild(li);
+        });
+    }
+}
+
+function openBenchmarkModal() {
+    if (!elements.benchmarkModal) return;
+    elements.benchmarkModal.classList.add('open');
+    elements.benchmarkModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    renderBenchmarkScenario(state.activeBenchmarkScenario || 'general');
+    const focusTarget = elements.benchmarkClose || elements.benchmarkModal.querySelector('button');
+    focusTarget?.focus({ preventScroll: true });
+}
+
+function closeBenchmarkModal() {
+    if (!elements.benchmarkModal) return;
+    elements.benchmarkModal.classList.remove('open');
+    elements.benchmarkModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    elements.benchmarkBtn?.focus({ preventScroll: true });
+}
+
+function handleBenchmarkScenarioClick(event) {
+    const button = event.target.closest('.benchmark-tab');
+    if (!button?.dataset.scenario) return;
+    if (button.dataset.scenario === state.activeBenchmarkScenario) return;
+    renderBenchmarkScenario(button.dataset.scenario);
+}
+
+async function copyBenchmarkCommand() {
+    if (!elements.benchmarkCommand) return;
+    const command = elements.benchmarkCommand.textContent || '';
+    if (!command.trim()) return;
+    try {
+        await navigator.clipboard?.writeText(command.trim());
+        showToast('Benchmark command copied to clipboard', 'success');
+    } catch (error) {
+        console.warn('Clipboard copy failed', error);
+        showToast('Unable to copy command. Press ⌘/Ctrl + C instead.', 'error');
+    }
+}
+
+function isBenchmarkModalOpen() {
+    return Boolean(elements.benchmarkModal?.classList.contains('open'));
+}
+
+function handleGlobalKeydown(event) {
+    if (event.key === 'Escape' && isBenchmarkModalOpen()) {
+        event.preventDefault();
+        closeBenchmarkModal();
+    }
 }
 
 function renderAssistantContent(target, content) {
@@ -756,6 +1070,7 @@ function highlightActiveConversation() {
 
 function setActiveConversation(conversation, { resetView = true } = {}) {
     state.activeConversation = conversation;
+    state.inputHistory.index = -1;
     const resolvedModel = resolveModelId(conversation.model || state.currentModel);
     state.currentModel = resolvedModel;
     state.activeConversation.model = resolvedModel;
@@ -1145,9 +1460,11 @@ function parseSseEvent(rawEvent) {
 async function handleSend() {
     if (!elements.messageInput || !state.activeConversation || state.isStreaming) return;
     state.currentModel = resolveModelId(state.currentModel);
-    const text = elements.messageInput.value.trim();
+    const rawValue = elements.messageInput.value;
+    const text = rawValue.trim();
     if (!text) return;
 
+    pushInputHistory(rawValue);
     ensureConversationVisible();
     resetComposer();
     focusMessageInput();
@@ -1225,15 +1542,87 @@ function initInlineHandlers() {
     if (elements.messageInput) {
         elements.messageInput.addEventListener('input', handleInputChange);
         elements.messageInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
+            const textarea = elements.messageInput;
+            const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+            const modifier = isMac ? event.metaKey : event.ctrlKey;
+            const selectionStart = textarea.selectionStart;
+            const selectionEnd = textarea.selectionEnd;
+            const selectionCollapsed = selectionStart === selectionEnd;
+
+            if (modifier) {
+                const key = event.key.toLowerCase();
+                if (key === 'b' || key === 'i' || key === 'e') {
+                    event.preventDefault();
+                    const mapping = { b: 'bold', i: 'italic', e: 'code' };
+                    applyFormatAction(mapping[key]);
+                    return;
+                }
+            }
+
+            if (event.key === 'Enter' && !event.shiftKey && !modifier) {
                 event.preventDefault();
                 handleSend();
+                return;
+            }
+
+            if (event.key === 'ArrowUp' && !event.shiftKey && selectionCollapsed && selectionStart === 0) {
+                event.preventDefault();
+                recallHistory('up');
+                return;
+            }
+
+            if (event.key === 'ArrowDown' && !event.shiftKey && selectionCollapsed && selectionEnd === textarea.value.length) {
+                event.preventDefault();
+                recallHistory('down');
+                return;
+            }
+
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                const value = textarea.value;
+                if (event.shiftKey) {
+                    const before = value.slice(0, selectionStart);
+                    const after = value.slice(selectionEnd);
+                    const match = before.match(/(?:\n|^)([ \t]{1,4})$/);
+                    if (match) {
+                        const removeLength = match[1].length;
+                        const newStart = selectionStart - removeLength;
+                        textarea.value = before.slice(0, before.length - removeLength) + after;
+                        textarea.setSelectionRange(newStart, newStart);
+                    }
+                } else {
+                    const insert = '    ';
+                    textarea.value = `${value.slice(0, selectionStart)}${insert}${value.slice(selectionEnd)}`;
+                    const cursor = selectionStart + insert.length;
+                    textarea.setSelectionRange(cursor, cursor);
+                }
+                autoResizeInput();
+                handleInputChange();
+                return;
             }
         });
     }
 
+    if (elements.composerQuick) {
+        elements.composerQuick.querySelectorAll('.quick-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                const format = button.dataset.format;
+                if (format) {
+                    applyFormatAction(format);
+                }
+            });
+        });
+    }
+
     elements.modelButton?.addEventListener('click', () => toggleModelDropdown());
-    elements.benchmarkBtn?.addEventListener('click', () => window.open('https://github.com/mangeshraut712/AssistMe-VirtualAssistant/tree/main/docs', '_blank'));
+    elements.benchmarkBtn?.addEventListener('click', (event) => {
+        event.preventDefault();
+        openBenchmarkModal();
+    });
+    elements.benchmarkClose?.addEventListener('click', closeBenchmarkModal);
+    elements.benchmarkBackdrop?.addEventListener('click', closeBenchmarkModal);
+    elements.benchmarkTabs?.addEventListener('click', handleBenchmarkScenarioClick);
+    elements.benchmarkCopy?.addEventListener('click', copyBenchmarkCommand);
     elements.docsBtn?.addEventListener('click', () => window.open('https://github.com/mangeshraut712/AssistMe-VirtualAssistant', '_blank'));
 
     elements.conversations?.addEventListener('click', handleConversationClick);
@@ -1451,3 +1840,5 @@ if (markedLib && typeof markedLib.setOptions === 'function') {
         },
     });
 }
+
+document.addEventListener('keydown', handleGlobalKeydown);
