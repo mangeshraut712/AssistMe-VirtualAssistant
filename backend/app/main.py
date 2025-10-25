@@ -25,8 +25,13 @@ from starlette.concurrency import run_in_threadpool  # type: ignore[import-not-f
 try:
     from .chat_client import grok_client
     CHAT_CLIENT_AVAILABLE = True
+    logging.info("Successfully imported chat client")
 except ImportError as e:
     logging.warning(f"Chat client import failed: {e}. Chat features will be disabled.")
+    grok_client = None
+    CHAT_CLIENT_AVAILABLE = False
+except Exception as e:
+    logging.error(f"Chat client error: {e}. Features disabled.")
     grok_client = None
     CHAT_CLIENT_AVAILABLE = False
 
@@ -197,12 +202,14 @@ def get_env():
         "OPENROUTER_API_KEY": os.getenv("OPENROUTER_API_KEY", "NOT_SET")[:20] + "..." if os.getenv("OPENROUTER_API_KEY") else "NOT_SET",
         "DEV_MODE": os.getenv("DEV_MODE", "NOT_SET"),
         "APP_URL": os.getenv("APP_URL", "NOT_SET"),
-        "DATABASE_URL": os.getenv("DATABASE_URL", "NOT_SET")[:30] + "..." if os.getenv("DATABASE_URL") else "NOT_SET"
+        "DATABASE_URL": os.getenv("DATABASE_URL", "NOT_SET")[:30] + "..." if os.getenv("DATABASE_URL") else "NOT_SET",
+        "CHAT_AVAILABLE": CHAT_CLIENT_AVAILABLE,
+        "UPTIME": "Application responding"
     }
 
 @app.get("/")
 def root():
-    return {"message": "AssistMe API is running"}
+    return {"message": "AssistMe API is running", "status": "healthy"}
 
 
 def _ensure_chat_client() -> None:
