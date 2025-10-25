@@ -1,6 +1,38 @@
-# AssistMe Virtual Assistant 🤖
+# 🤖 AssistMe Virtual Assistant
 
-A modern, full-stack AI chat interface powered by multiple Large Language Models via OpenRouter. Built with FastAPI, React/JavaScript, and deployed on Railway.
+<img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&pause=1000&color=00D4AA&center=true&vCenter=true&multiline=true&width=435&lines=%F0%9F%A4%96+Chat+with+10%2B+AI+Models;Real-time+Streaming+Responses;Modern+UI+with+Voice+Support;%F0%9F%8F%8D+Production+Ready" alt="Typing SVG" />
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Railway](https://img.shields.io/badge/Railway-131415?style=for-the-badge&logo=railway&logoColor=white)](https://railway.app/)
+[![OpenRouter](https://img.shields.io/badge/OpenRouter-0066CC?style=for-the-badge&logo=react&logoColor=white)](https://openrouter.ai/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+
+> Modern, full-stack AI chat interface powered by 10+ Large Language Models. Built with cutting-edge technologies and deployed seamlessly on cloud infrastructure.
+
+<p align="center">
+  <a href="#-quick-start">🚀 Quick Start</a> •
+  <a href="#-api-documentation">📚 API Docs</a> •
+  <a href="#-features">✨ Features</a> •
+  <a href="#-tech-stack">🛠 Tech Stack</a> •
+  <a href="#-contributing">🤝 Contributing</a> •
+  <a href="#-license">📄 License</a>
+</p>
+
+<div align="center">
+
+## 🎯 Try It Live
+[<img src="https://img.shields.io/badge/🌐_Live_Demo-Deployed_on_Railway-00D4AA?style=for-the-badge&logo=railway&logoColor=white" alt="Live Demo">](https://assistme-virtualassistant-production.up.railway.app)
+
+## 🏆 Project Stats
+[![GitHub Stars](https://img.shields.io/github/stars/mangeshraut712/AssistMe-VirtualAssistant?style=for-the-badge)](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/mangeshraut712/AssistMe-VirtualAssistant?style=for-the-badge)](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/mangeshraut712/AssistMe-VirtualAssistant?style=for-the-badge)](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/pulls)
+[![Repo Size](https://img.shields.io/github/repo-size/mangeshraut712/AssistMe-VirtualAssistant?style=for-the-badge)](https://github.com/mangeshraut712/AssistMe-VirtualAssistant)
+
+</div>
 
 ## ✨ Features
 
