@@ -44,19 +44,29 @@ ALLOWED_ORIGINS = [
     "https://assist-me-virtual-assistant.vercel.app",
     "https://assist-me-virtual-assistant.vercel.app",
     "https://assistme-virtualassistant-production.up.railway.app",
+    "https://mangeshraut712.github.io",  # GitHub Pages deployment
+    "*",  # Allow all origins for development
 ]
 
 app = FastAPI(title="AssistMe API", version="1.0.0")
 
+# Configure CORS for cross-origin requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_origin_regex=r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Accept",
+        "Accept-Language",
+        "Content-Language",
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+    ],
     expose_headers=["*"],
-    max_age=86400,
+    max_age=3600,  # 1 hour
 )
 
 class ChatMessage(BaseModel):
