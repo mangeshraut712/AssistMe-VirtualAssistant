@@ -265,6 +265,26 @@ AssistMe-VirtualAssistant/
 - SQLite fallback automatically used
 - For production: set DATABASE_URL to PostgreSQL
 
+### Railway Deployment Issues
+
+#### 502 Bad Gateway Error
+If you encounter "502 Bad Gateway" with "connection refused":
+1. Ensure Railway configuration uses script-based startup
+2. Check that `railway.toml` has `startCommand = "./start.sh"`
+3. Verify `backend/start.sh` uses proper PORT environment variable:
+   ```bash
+   SERVER_PORT=${PORT:-8001}
+   exec python3 -m uvicorn app.main:app --host 0.0.0.0 --port "${SERVER_PORT}"
+   ```
+4. Make sure `start.sh` is executable: `chmod +x backend/start.sh`
+5. Redeploy by pushing changes to trigger Railway rebuild
+
+#### Common Railway Startup Fixes
+- Avoid direct `uvicorn` commands in `startCommand` - use shell scripts
+- Never use `cd` commands in Railway startup (not executable in their environment)
+- Use shell scripts with proper environment variable expansion
+- Enable Railway V2 runtime: `NIXPACKS_V2 = "true"` in `railway.toml`
+
 ### Debugging Tools
 - `/health` - Check backend health
 - `/env` - View environment variables
