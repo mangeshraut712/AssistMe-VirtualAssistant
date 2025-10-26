@@ -36,6 +36,17 @@ except Exception as e:
     grok_client = None
     CHAT_CLIENT_AVAILABLE = False
 
+# Import voice websocket functionality
+try:
+    from .voice_websocket import router as voice_router, voice_manager
+    VOICE_AVAILABLE = True
+    logging.info("Successfully imported voice WebSocket functionality")
+except ImportError as e:
+    logging.warning("Voice WebSocket import failed: %s. Voice features will be disabled.", e)
+    voice_router = None
+    voice_manager = None
+    VOICE_AVAILABLE = False
+
 from .database import get_db
 from .models import Conversation, Message as MessageModel
 
@@ -80,6 +91,20 @@ ALLOWED_ORIGINS = sorted({origin for origin in ALLOWED_ORIGINS if origin})
 VERCEL_ORIGIN_PATTERN = re.compile(r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app")
 
 app = FastAPI(title="AssistMe API", version="1.0.0")
+
+# Include voice WebSocket router if available
+if VOICE_AVAILABLE and voice_router:
+    app.include_router(voice_router)
+    logging.info("Voice WebSocket router included")
+else:
+    logging.warning("Voice WebSocket router not available")
+
+# Initialize voice manager on startup
+@app.on_event("startup")
+async def startup_event():
+    if VOICE_AVAILABLE and voice_manager:
+        await voice_manager.initialize_redis()
+        logging.info("Voice manager initialized")
 
 # Configure CORS for cross-origin requests
 app.add_middleware(
@@ -535,7 +560,7 @@ async def voice_chat(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            _data = await websocket.receive_json()  # expecting audio data or command
+            await websocket.receive_json()  # expecting audio data or command (placeholder)
             # Placeholder: Process audio with S2R and get response from Grok-2
             # For now, just echo back a fixed response
             response_text = "Voice processed via S2R architecture and Grok-2 reasoning"

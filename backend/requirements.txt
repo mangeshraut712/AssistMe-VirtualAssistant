@@ -8,9 +8,22 @@ pydantic==2.8.2
 httpx==0.27.0
 redis[hiredis]==5.1.1
 python-dotenv==1.0.1
-python-multipart==0.0.17
+python-multipart==0.0.18
 
 # Performance optimizations (Railway compatible)
 orjson==3.10.7
 aiofiles==24.1.0
 requests==2.32.4
+
+# Voice/Speech providers
+google-cloud-speech==2.27.0
+google-cloud-texttospeech==2.17.2
+google-auth==2.33.0
+assemblyai==0.30.0
+elevenlabs==1.9.0
+websockets==13.0.1
+python-socketio==5.11.3
+
+# Rich content APIs
+requests-cache==1.2.1
+aiohttp==3.10.5

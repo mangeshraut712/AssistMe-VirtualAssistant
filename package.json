@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "description": "AI chat experience with modern UI",
   "main": "frontend/index.html",
+  "type": "module",
   "scripts": {
     "dev": "npm-run-all --parallel serve:*",
     "serve:frontend": "npx http-server frontend -p 3000 -c-1 --cors",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "concurrently": "^9.0.1",
     "cross-env": "^7.0.3",
+    "dompurify": "^3.3.0",
     "eslint": "^9.38.0",
     "http-server": "^14.1.1",
     "live-server": "^1.2.2",

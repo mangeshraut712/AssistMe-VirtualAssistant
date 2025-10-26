@@ -1,3 +1,41 @@
 import eslintRecommended from '@eslint/js';
 
-export default [];
+export default [
+  eslintRecommended.configs.recommended,
+  {
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        location: 'readonly',
+        navigator: 'readonly',
+        console: 'readonly',
+        performance: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+        fetch: 'readonly',
+        AbortController: 'readonly',
+        TextDecoder: 'readonly',
+        TextEncoder: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        DOMParser: 'readonly',
+        NodeFilter: 'readonly',
+        SpeechRecognition: 'readonly',
+        webkitSpeechRecognition: 'readonly',
+        SpeechSynthesisUtterance: 'readonly',
+        speechSynthesis: 'readonly',
+      },
+    },
+    rules: {
+      // Allow DOMParser usage in sanitizeHtml function
+      'no-undef': 'off', // DOMParser and other globals are defined
+    },
+  },
+];

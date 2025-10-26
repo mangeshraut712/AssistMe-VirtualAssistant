@@ -1,6 +1,7 @@
 const markedLib = window.marked || null;
 const hljsLib = window.hljs || null;
 const katexAutoRender = window.renderMathInElement || null;
+const dompurifyLib = window.DOMPurify || null;
 
 const STORAGE_KEY = 'assistme.conversations.v2';
 const THEME_KEY = 'assistme.theme';
@@ -29,6 +30,41 @@ function resolveApiBase() {
 }
 
 const API_BASE = resolveApiBase();
+
+function getNow() {
+    return Date.now();
+}
+
+function updateSendButtonState() {
+    if (!elements.sendButton) return;
+
+    const resolvedModel = resolveModelId(state.currentModel);
+    if (resolvedModel !== state.currentModel) {
+        state.currentModel = resolvedModel;
+    }
+    const hasModel = Boolean(resolvedModel);
+    const now = getNow();
+
+    if (!state.composer.focusLock && state.composer.focusLockGrace !== null && now > state.composer.focusLockGrace) {
+        state.composer.focusLockGrace = null;
+    }
+
+    // Keep the send button active during brief focus transitions (dropdowns, clicks, etc.)
+    const focusGraceActive = state.composer.focusLock
+        || (state.composer.focusLockGrace !== null && now < state.composer.focusLockGrace);
+
+    const composerActive = state.composer.focused || focusGraceActive;
+    const canSend = hasModel && state.composer.hasText && !state.isStreaming && composerActive;
+
+    if (state.composer.canSend === canSend && elements.sendButton.disabled === !canSend) {
+        return;
+    }
+
+    state.composer.canSend = canSend;
+    elements.sendButton.disabled = !canSend;
+    elements.sendButton.classList.toggle('disabled', !canSend);
+    elements.sendButton.setAttribute('aria-disabled', canSend ? 'false' : 'true');
+}
 
 const endpoints = {
     stream: `${API_BASE}/api/chat/stream`,
@@ -276,6 +312,16 @@ const state = {
         index: -1,
     },
     activeBenchmarkScenario: 'general',
+    composer: {
+        focused: false,
+        hasText: false,
+        lastValue: '',
+        trimmedValue: '',
+        canSend: false,
+        focusLock: false,
+        focusLockGrace: null,
+        isComposing: false,
+    },
 };
 
 const ALLOWED_TAGS = new Set([
@@ -291,6 +337,89 @@ const TABLE_CELL_ATTRS = Object.freeze(['colspan', 'rowspan']);
 const HEALTH_POLL_INTERVAL_MS = 30000;
 let healthPollTimer = null;
 let composerAutofocusInitialized = false;
+
+const backendHealth = {
+    setStatus(isHealthy, message) {
+        const healthy = Boolean(isHealthy);
+        state.backendHealthy = healthy;
+
+        const statusContainer = elements.assistantStatus;
+        const statusDot = elements.statusDot;
+        const statusText = elements.statusText;
+
+        statusContainer?.classList.toggle('status-online', healthy);
+        statusContainer?.classList.toggle('status-offline', !healthy);
+
+        statusDot?.classList.toggle('online', healthy);
+        statusDot?.classList.toggle('offline', !healthy);
+
+        if (statusText) {
+            const fallback = healthy ? 'Online' : 'Offline';
+            statusText.textContent = (typeof message === 'string' && message.trim())
+                ? message.trim()
+                : fallback;
+        }
+    },
+    async check() {
+        try {
+            const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+            const timeoutId = controller ? window.setTimeout(() => controller.abort(), 5000) : null;
+
+            const response = await fetch(`${API_BASE}/health`, {
+                method: 'GET',
+                headers: { Accept: 'application/json' },
+                signal: controller?.signal,
+            });
+
+            if (timeoutId !== null) {
+                window.clearTimeout(timeoutId);
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json().catch(() => ({}));
+            const healthy = (data?.status || '').toLowerCase() === 'ok';
+            const message = healthy ? 'Online' : (data?.message || 'Unavailable');
+            this.setStatus(healthy, message);
+            return healthy;
+        } catch (error) {
+            console.warn('Health check failed', error);
+            this.setStatus(false, 'Offline');
+            return false;
+        }
+    },
+};
+
+const composerAutofocus = {
+    init() {
+        if (composerAutofocusInitialized || !elements.messageInput) return;
+
+        const applyFocus = () => {
+            focusMessageInput();
+            updateSendButtonState();
+        };
+
+        if (document.hasFocus()) {
+            applyFocus();
+        } else {
+            const handleWindowFocus = () => {
+                applyFocus();
+            };
+            const handleVisibility = () => {
+                if (document.visibilityState === 'visible') {
+                    applyFocus();
+                }
+            };
+            window.addEventListener('focus', handleWindowFocus, { once: true });
+            document.addEventListener('visibilitychange', handleVisibility, { once: true });
+        }
+
+        composerAutofocusInitialized = true;
+    },
+};
+
 
 function getAllowedAttributes(tag) {
     switch (tag) {
@@ -313,8 +442,25 @@ function sanitizeHtml(html) {
         return document.createDocumentFragment();
     }
 
+    // Use DOMPurify if available, fallback to basic parser-based sanitization
+    if (dompurifyLib?.sanitize) {
+        const sanitized = dompurifyLib.sanitize(html, {
+            ALLOWED_TAGS: Array.from(ALLOWED_TAGS),
+            ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class', 'colspan', 'rowspan'],
+            ALLOW_DATA_ATTR: false,
+            FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'style', 'link'],
+            FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onmouseout'],
+            SANITIZE_DOM: false,
+            RETURN_DOM_FRAGMENT: true,
+            IN_PLACE: false,
+        });
+        return sanitized;
+    }
+
+    // Fallback implementation if DOMPurify is not available
+    const sanitizedInput = html.replace(/<(\/?)(script|iframe|object|embed|style|link)\b[^>]*>/gi, '');
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
+    const doc = parser.parseFromString(sanitizedInput, 'text/html');
     if (!doc?.body || doc.querySelector('parsererror')) {
         return document.createDocumentFragment();
     }
@@ -385,6 +531,19 @@ function sanitizeHtml(html) {
     return fragment;
 }
 
+function getSafeArrayItem(list, index) {
+    if (!Array.isArray(list)) {
+        return undefined;
+    }
+    if (!Number.isInteger(index)) {
+        return undefined;
+    }
+    if (index < 0 || index >= list.length) {
+        return undefined;
+    }
+    return list[index];
+}
+
 function focusMessageInput() {
     if (!elements.messageInput) return;
     requestAnimationFrame(() => {
@@ -393,19 +552,21 @@ function focusMessageInput() {
         try {
             const length = elements.messageInput.value.length;
             elements.messageInput.setSelectionRange(length, length);
-        } catch (error) {
+        } catch {
             // setSelectionRange may fail on some platforms; safe to ignore
         }
     });
 }
+
+
 
 function ensureHealthMonitoring() {
     if (healthPollTimer !== null) {
         return;
     }
     healthPollTimer = window.setInterval(() => {
-        // Ignore result; status updates handled inside checkBackendHealth
-        checkBackendHealth().catch(() => {});
+        // Ignore result; status updates handled inside backendHealth.check
+        backendHealth.check().catch(() => {});
     }, HEALTH_POLL_INTERVAL_MS);
 }
 
@@ -458,16 +619,18 @@ function recallHistory(direction) {
 
     if (direction === 'up') {
         const nextIndex = history.index + 1;
-        if (nextIndex >= items.length) return;
+        const candidate = getSafeArrayItem(items, nextIndex);
+        if (typeof candidate === 'undefined') return;
         history.index = nextIndex;
-        elements.messageInput.value = String(items[nextIndex] ?? '');
+        elements.messageInput.value = String(candidate ?? '');
     } else {
         if (history.index <= 0) {
             history.index = -1;
             elements.messageInput.value = '';
         } else {
             history.index -= 1;
-            elements.messageInput.value = String(items[history.index] ?? '');
+            const candidate = getSafeArrayItem(items, history.index);
+            elements.messageInput.value = String(candidate ?? '');
         }
     }
     autoResizeInput();
@@ -525,10 +688,9 @@ function getModelLabel(modelId) {
 }
 
 function getBenchmarkScenario(key) {
-    if (!key || !Object.prototype.hasOwnProperty.call(BENCHMARK_SCENARIOS, key)) {
-        return null;
-    }
-    return BENCHMARK_SCENARIOS[key];
+    if (typeof key !== 'string' || !key) return null;
+    const scenarioEntry = Object.entries(BENCHMARK_SCENARIOS).find(([id]) => id === key);
+    return scenarioEntry ? scenarioEntry[1] : null;
 }
 
 function renderBenchmarkScenario(scenarioKey) {
@@ -732,6 +894,7 @@ function formatRelative(timestamp) {
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+// eslint-disable-next-line no-unused-vars
 function escapeHtml(value) {
     return value.replace(/[&<>"']/g, (char) => {
         switch (char) {
@@ -1277,7 +1440,7 @@ async function requestCompletionFallback(userMessage) {
     if (data?.error) {
         throw new Error(data.error);
     }
-    setBackendStatus(true);
+    backendHealth.setStatus(true);
     return data;
 }
 
@@ -1317,7 +1480,7 @@ async function streamAssistantResponse(userMessage) {
     let effectiveModel = modelId;
 
     if (state.backendHealthy === false) {
-        const recovered = await checkBackendHealth();
+        const recovered = await backendHealth.check();
         if (recovered) {
             state.backendHealthy = true;
         }
@@ -1356,7 +1519,7 @@ async function streamAssistantResponse(userMessage) {
             throw new Error(`HTTP ${response.status}`);
         }
 
-        setBackendStatus(true);
+        backendHealth.setStatus(true);
 
         const reader = response.body?.getReader();
         if (!reader) throw new Error('Streaming not supported in this browser');
@@ -1364,74 +1527,81 @@ async function streamAssistantResponse(userMessage) {
         const decoder = new TextDecoder();
         let buffer = '';
 
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
+        const processBuffer = () => {
+            let boundaryIndex = buffer.indexOf('\n\n');
+            let boundaryLength = 2;
 
-            let boundaryIndex;
-            let boundaryLength;
+            if (boundaryIndex < 0) {
+                boundaryIndex = buffer.indexOf('\r\n\r\n');
+                boundaryLength = 4;
+            }
 
-            while (true) {
-                boundaryIndex = buffer.indexOf('\n\n');
-                boundaryLength = 2;
-
-                if (boundaryIndex < 0) {
-                    boundaryIndex = buffer.indexOf('\r\n\r\n');
-                    boundaryLength = 4;
-                }
-
-                if (boundaryIndex < 0) {
-                    break;
-                }
-
+            while (boundaryIndex >= 0) {
                 const rawEvent = buffer.slice(0, boundaryIndex);
                 buffer = buffer.slice(boundaryIndex + boundaryLength);
                 console.log('Raw SSE event:', rawEvent); // Debug SSE events
                 const parsed = parseSseEvent(rawEvent);
                 console.log('Parsed SSE event:', parsed); // Debug parsed data
-                if (!parsed) continue;
+                if (parsed) {
+                    if (parsed.event === 'delta' && parsed.data?.content) {
+                        console.log('Adding delta content:', parsed.data.content); // Debug content adding
+                        assistantMessage.content += parsed.data.content;
+                        assistantFragment.text.textContent = assistantMessage.content;
+                        console.log('Updated content:', assistantMessage.content); // Debug content display
+                    }
 
-                if (parsed.event === 'delta' && parsed.data?.content) {
-                    console.log('Adding delta content:', parsed.data.content); // Debug content adding
-                    assistantMessage.content += parsed.data.content;
-                    assistantFragment.text.textContent = assistantMessage.content;
-                    console.log('Updated content:', assistantMessage.content); // Debug content display
+                    if (parsed.event === 'error') {
+                        throw new Error(parsed.data?.message || 'Streaming failed');
+                    }
+
+                    if (parsed.event === 'done') {
+                        console.log('Stream done, final data:', parsed.data); // Debug final data
+                        assistantMessage.content = parsed.data?.response || assistantMessage.content;
+                        assistantFragment.text.textContent = assistantMessage.content;
+                        tokensUsed = parsed.data?.tokens || null;
+                        if (parsed.data?.model) {
+                            effectiveModel = parsed.data.model;
+                        }
+                        if (parsed.data?.notice) {
+                            showToast(parsed.data.notice, 'info');
+                        }
+                        const conversationId = parsed.data?.conversation_id;
+                        if (typeof conversationId === 'number' && conversationId > 0) {
+                            state.activeConversation.localId = state.activeConversation.localId || state.activeConversation.id;
+                            state.activeConversation.serverId = conversationId;
+                            state.activeConversation.id = `server-${conversationId}`;
+                        }
+                        const providedTitle = parsed.data?.title;
+                        if (providedTitle) {
+                            state.activeConversation.title = providedTitle;
+                        } else {
+                            updateConversationTitle(state.activeConversation);
+                        }
+                    }
                 }
 
-                if (parsed.event === 'error') {
-                    throw new Error(parsed.data?.message || 'Streaming failed');
-                }
-
-                if (parsed.event === 'done') {
-                    console.log('Stream done, final data:', parsed.data); // Debug final data
-                    assistantMessage.content = parsed.data?.response || assistantMessage.content;
-                    assistantFragment.text.textContent = assistantMessage.content;
-                    tokensUsed = parsed.data?.tokens || null;
-                     if (parsed.data?.model) {
-                        effectiveModel = parsed.data.model;
-                    }
-                    if (parsed.data?.notice) {
-                        showToast(parsed.data.notice, 'info');
-                    }
-                    const conversationId = parsed.data?.conversation_id;
-                    if (typeof conversationId === 'number' && conversationId > 0) {
-                        state.activeConversation.localId = state.activeConversation.localId || state.activeConversation.id;
-                        state.activeConversation.serverId = conversationId;
-                        state.activeConversation.id = `server-${conversationId}`;
-                    }
-                    const providedTitle = parsed.data?.title;
-                    if (providedTitle) {
-                        state.activeConversation.title = providedTitle;
-                    } else {
-                        updateConversationTitle(state.activeConversation);
-                    }
+                boundaryIndex = buffer.indexOf('\n\n');
+                boundaryLength = 2;
+                if (boundaryIndex < 0) {
+                    boundaryIndex = buffer.indexOf('\r\n\r\n');
+                    boundaryLength = 4;
                 }
             }
+        };
+
+        let streamComplete = false;
+        while (!streamComplete) {
+            const { value, done } = await reader.read();
+            if (done) {
+                streamComplete = true;
+            } else if (value) {
+                buffer += decoder.decode(value, { stream: true });
+            }
+            processBuffer();
         }
 
         buffer += decoder.decode();
+        processBuffer();
 
         if (buffer.trim()) {
             const parsed = parseSseEvent(buffer);
@@ -1473,7 +1643,7 @@ async function streamAssistantResponse(userMessage) {
     } catch (error) {
         console.error(error);
         removeTypingIndicator();
-        setBackendStatus(false, 'AssistMe backend is unreachable. Using preview responses.');
+        backendHealth.setStatus(false, 'AssistMe backend is unreachable. Using preview responses.');
 
         let fallbackData = null;
         try {
@@ -1759,8 +1929,532 @@ function initInlineHandlers() {
     elements.voiceBtn?.addEventListener('click', toggleVoiceInput);
     elements.uploadBtn?.addEventListener('click', () => showToast('File uploads are coming soon.', 'info'));
 
+// ====================
+// Voice Controls & Rich Content Components
+// ====================
+
+// Voice controls elements
+const voiceControls = {
+    voiceToggleBtn: null,
+    voiceStatusIndicator: null,
+    interimTranscript: null,
+    recordingIndicator: null,
+};
+
+// Rich content containers
+let richContentContainer = null;
+let interimTranscriptContainer = null;
+
+// Voice WebSocket client
+let voiceWebsocket = null;
+let isVoiceModeActive = false;
+let mediaRecorder = null;
+let audioStream = null;
+
+// Initialize voice controls
+function initializeVoiceControls() {
+    // Create voice UI elements
+    createVoiceUI();
+
+    // Initialize voice WebSocket
+    initializeVoiceWebSocket();
+
+    // Add voice event listeners
+    setupVoiceEventListeners();
+}
+
+function createVoiceUI() {
+    // Create voice controls container
+    const voiceControlsContainer = document.createElement('div');
+    voiceControlsContainer.id = 'voiceControls';
+    voiceControlsContainer.className = 'voice-controls';
+    voiceControlsContainer.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 1000;
+    `;
+
+    // Voice toggle button
+    const voiceBtn = document.createElement('button');
+    voiceBtn.id = 'voiceToggleBtn';
+    voiceBtn.className = 'voice-btn';
+    voiceBtn.title = 'Toggle voice mode';
+    voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+    voiceBtn.style.cssText = `
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--accent-color, #007bff);
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    `;
+
+    // Voice status indicator
+    const statusIndicator = document.createElement('div');
+    statusIndicator.id = 'voiceStatusIndicator';
+    statusIndicator.className = 'voice-status';
+    statusIndicator.textContent = 'Voice off';
+    statusIndicator.style.cssText = `
+        padding: 4px 12px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        border-radius: 20px;
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    `;
+
+    voiceControlsContainer.appendChild(voiceBtn);
+    voiceControlsContainer.appendChild(statusIndicator);
+
+    // Create rich content container
+    richContentContainer = document.createElement('div');
+    richContentContainer.id = 'richContentContainer';
+    richContentContainer.className = 'rich-content-container';
+    richContentContainer.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        max-width: 400px;
+        z-index: 999;
+    `;
+
+    // Create interim transcript container
+    interimTranscriptContainer = document.createElement('div');
+    interimTranscriptContainer.id = 'interimTranscript';
+    interimTranscriptContainer.className = 'interim-transcript';
+    interimTranscriptContainer.style.cssText = `
+        display: none;
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--bg-secondary, rgba(0,0,0,0.9));
+        color: var(--text-primary, white);
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 16px;
+        max-width: 80%;
+        text-align: center;
+        z-index: 1001;
+    `;
+
+    // Add to DOM
+    document.body.appendChild(voiceControlsContainer);
+    document.body.appendChild(richContentContainer);
+    document.body.appendChild(interimTranscriptContainer);
+
+    // Store references
+    voiceControls.voiceToggleBtn = voiceBtn;
+    voiceControls.voiceStatusIndicator = statusIndicator;
+}
+
+function toggleVoiceMode() {
+    if (!voiceWebsocket || voiceWebsocket.readyState !== WebSocket.OPEN) {
+        showToast('Voice system not connected', 'error');
+        return;
+    }
+
+    isVoiceModeActive = !isVoiceModeActive;
+
+    if (isVoiceModeActive) {
+        startVoiceRecording();
+    } else {
+        stopVoiceRecording();
+    }
+
+    updateVoiceUI();
+}
+
+async function startVoiceRecording() {
+    try {
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(audioStream, {
+            mimeType: 'audio/webm;codecs=opus'
+        });
+
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0 && voiceWebsocket?.readyState === WebSocket.OPEN) {
+                // Send audio chunk to WebSocket
+                event.data.arrayBuffer().then(buffer => {
+                    voiceWebsocket.send(new Uint8Array(buffer));
+                });
+            }
+        };
+
+        mediaRecorder.start(100); // Collect data every 100ms
+        showToast('Voice recording started');
+    } catch (error) {
+        console.error('Error starting voice recording:', error);
+        showToast('Microphone access denied', 'error');
+        isVoiceModeActive = false;
+        updateVoiceUI();
+    }
+}
+
+function stopVoiceRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+    }
+
+    if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
+        audioStream = null;
+    }
+
+    showToast('Voice recording stopped');
+}
+
+function updateVoiceUI() {
+    const voiceBtn = voiceControls.voiceToggleBtn;
+    const statusIndicator = voiceControls.voiceStatusIndicator;
+
+    if (!voiceBtn || !statusIndicator) return;
+
+    if (isVoiceModeActive) {
+        voiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
+        voiceBtn.style.background = '#dc3545';
+        statusIndicator.textContent = 'Voice active';
+        statusIndicator.style.opacity = '1';
+    } else {
+        voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        voiceBtn.style.background = 'var(--accent-color, #007bff)';
+        statusIndicator.style.opacity = '0';
+    }
+}
+
+function initializeVoiceWebSocket() {
+    const voiceWsUrl = API_BASE.replace(/^http/, 'ws') + '/voice/stream/user_' + Date.now();
+
+    voiceWebsocket = new WebSocket(voiceWsUrl);
+
+    voiceWebsocket.onopen = () => {
+        console.log('Voice WebSocket connected');
+        updateVoiceStatus(true);
+    };
+
+    voiceWebsocket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            handleVoiceMessage(data);
+        } catch (error) {
+            console.error('Error parsing voice message:', error);
+        }
+    };
+
+    voiceWebsocket.onerror = (error) => {
+        console.error('Voice WebSocket error:', error);
+        updateVoiceStatus(false);
+    };
+
+    voiceWebsocket.onclose = () => {
+        console.log('Voice WebSocket closed');
+        updateVoiceStatus(false);
+    };
+}
+
+function updateVoiceStatus(connected) {
+    const statusIndicator = voiceControls.voiceStatusIndicator;
+    if (statusIndicator) {
+        statusIndicator.textContent = connected ? 'Voice connected' : 'Voice offline';
+        statusIndicator.style.opacity = connected ? '0.7' : '0';
+    }
+}
+
+function handleVoiceMessage(data) {
+    console.log('Received voice message:', data);
+
+    switch (data.type) {
+        case 'welcome':
+            showToast('Voice session started');
+            break;
+
+        case 'recording_started':
+            updateVoiceRecordingStatus(true);
+            break;
+
+        case 'recording_stopped':
+            updateVoiceRecordingStatus(false);
+            break;
+
+        case 'interim_transcript':
+            showInterimTranscript(data.transcript, data.confidence);
+            break;
+
+        case 'voice_response':
+            handleVoiceResponse(data);
+            break;
+
+        case 'error':
+            showToast(`Voice error: ${data.message}`, 'error');
+            break;
+
+        default:
+            console.log('Unhandled voice message type:', data.type);
+    }
+}
+
+function updateVoiceRecordingStatus(isRecording) {
+    const voiceBtn = voiceControls.voiceToggleBtn;
+    if (voiceBtn) {
+        voiceBtn.classList.toggle('recording', isRecording);
+    }
+}
+
+
+function showInterimTranscript(transcript) {
+    if (!interimTranscriptContainer) return;
+
+    interimTranscriptContainer.textContent = transcript || '';
+    interimTranscriptContainer.style.display = transcript ? 'block' : 'none';
+
+    // Auto-hide after 3 seconds
+    clearTimeout(window.interimTranscriptTimeout);
+    window.interimTranscriptTimeout = setTimeout(() => {
+        if (interimTranscriptContainer) {
+            interimTranscriptContainer.style.display = 'none';
+        }
+    }, 3000);
+}
+
+function handleVoiceResponse(data) {
+    // Hide interim transcript
+    if (interimTranscriptContainer) {
+        interimTranscriptContainer.style.display = 'none';
+    }
+
+    // Show recognized transcript
+    if (data.transcript?.transcript) {
+        showToast(`Heard: "${data.transcript.transcript}"`);
+    }
+
+    // Render response content
+    if (data.response) {
+        renderVoiceResponse(data.response);
+    }
+}
+
+function renderVoiceResponse(response) {
+    console.log('Rendering voice response:', response);
+
+    // Create assistant message
+    const assistantMessage = {
+        role: 'assistant',
+        content: response.text || 'Voice processing complete',
+    };
+
+    // Ensure conversation exists
+    if (!state.activeConversation) {
+        state.activeConversation = newConversation();
+        setActiveConversation(state.activeConversation);
+    }
+
+    // Add to conversation and render
+    state.activeConversation.messages.push({
+        ...assistantMessage,
+        createdAt: Date.now()
+    });
+
+    const messageElement = createMessageElement('assistant');
+    renderAssistantContent(messageElement.text, assistantMessage.content);
+
+    // Handle rich content
+    if (response.richContent) {
+        renderRichContent(response.richContent);
+    }
+
+    // Persist conversation
+    persistActiveConversation();
+
+    // Scroll to bottom
+    scrollToBottom();
+}
+
+function renderRichContent(richContent) {
+    console.log('Rendering rich content:', richContent);
+
+    if (!richContentContainer) return;
+
+    // Clear existing content
+    richContentContainer.innerHTML = '';
+
+    switch (richContent.type) {
+        case 'weather':
+            renderWeatherCard(richContent.data);
+            break;
+        case 'map':
+            renderMapCard(richContent.data);
+            break;
+        default:
+            console.log('Unknown rich content type:', richContent.type);
+    }
+
+    // Show container
+    richContentContainer.style.display = 'block';
+
+    // Auto-hide after 30 seconds
+    clearTimeout(window.richContentTimeout);
+    window.richContentTimeout = setTimeout(() => {
+        if (richContentContainer) {
+            richContentContainer.style.display = 'none';
+        }
+    }, 30000);
+}
+
+function renderWeatherCard(weatherData) {
+    const card = document.createElement('div');
+    card.className = 'rich-content-card weather-card';
+    card.style.cssText = `
+        background: var(--bg-secondary, white);
+        border: 1px solid var(--border-color, #e1e1e1);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        margin-bottom: 10px;
+        max-width: 350px;
+    `;
+
+    card.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <i class="fas fa-cloud-sun" style="font-size: 24px; margin-right: 10px; color: #007bff;"></i>
+            <div>
+                <h3 style="margin: 0; font-size: 18px;">${weatherData.city || 'Weather'}</h3>
+                <div style="font-size: 12px; opacity: 0.7;">${weatherData.condition || 'Current conditions'}</div>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <div style="font-size: 32px; font-weight: bold; margin-right: 15px;">${weatherData.temperature || '--'}°C</div>
+            <div>
+                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                    <i class="fas fa-tint" style="margin-right: 5px; color: #007bff;"></i>
+                    <span>${weatherData.humidity || '--'}% humidity</span>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <i class="fas fa-wind" style="margin-right: 5px; color: #007bff;"></i>
+                    <span>${weatherData.wind_speed || '--'} wind</span>
+                </div>
+            </div>
+        </div>
+
+        ${weatherData.forecast ? `
+        <div style="border-top: 1px solid var(--border-color, #f0f0f0); padding-top: 15px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px;">3-Day Forecast</h4>
+            ${weatherData.forecast.slice(0, 3).map(day => `
+                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                    <span style="font-weight: 500;">${day.day || 'Day'}</span>
+                    <span>${day.condition || '--'}</span>
+                    <span style="font-weight: 500;">${day.high || '--'}°/${day.low || '--'}°</span>
+                </div>
+            `).join('')}
+        </div>
+        ` : ''}
+    `;
+
+    richContentContainer.appendChild(card);
+}
+
+function renderMapCard(mapData) {
+    const card = document.createElement('div');
+    card.className = 'rich-content-card map-card';
+    card.style.cssText = `
+        background: var(--bg-secondary, white);
+        border: 1px solid var(--border-color, #e1e1e1);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        margin-bottom: 10px;
+        max-width: 350px;
+    `;
+
+    card.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <i class="fas fa-map-marked-alt" style="font-size: 24px; margin-right: 10px; color: #28a745;"></i>
+            <div>
+                <h3 style="margin: 0; font-size: 18px;">Map</h3>
+                <div style="font-size: 12px; opacity: 0.7;">${mapData.markerText || 'Location'}</div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 10px; font-size: 14px;">
+            <i class="fas fa-location-dot" style="margin-right: 5px; color: #dc3545;"></i>
+            ${mapData.address || 'Address not available'}
+        </div>
+
+        <div style="
+            width: 100%;
+            height: 200px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+        ">
+            <div style="text-align: center;">
+                <i class="fas fa-map" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;"></i>
+                <div>Interactive map would load here</div>
+                <div style="font-size: 12px; margin-top: 5px;">
+                    Coordinates: ${mapData.location?.lat?.toFixed(4) || '--'}, ${mapData.location?.lng?.toFixed(4) || '--'}
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 10px; text-align: center;">
+            <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapData.address || 'Pune, India')}"
+               target="_blank" style="color: #007bff; text-decoration: none; font-size: 14px;">
+                <i class="fas fa-external-link-alt" style="margin-right: 5px;"></i>
+                Open in Google Maps
+            </a>
+        </div>
+    `;
+
+    richContentContainer.appendChild(card);
+}
+
+function scrollToBottom() {
+    if (elements.chatMessages) {
+        elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+    }
+}
+
+function setupVoiceEventListeners() {
+    if (voiceControls.voiceToggleBtn) {
+        voiceControls.voiceToggleBtn.addEventListener('click', toggleVoiceMode);
+    }
+
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'v' && event.altKey) {
+            event.preventDefault();
+            toggleVoiceMode();
+        }
+    });
+}
+
+// Initialize voice controls when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    initializeVoiceControls();
+});
+
     document.addEventListener('click', handleClickOutside);
 }
+
+
 
 function initVoice() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1867,10 +2561,10 @@ function restoreInitialState() {
 async function bootstrap() {
     restoreInitialState();
     initInlineHandlers();
-    initComposerAutofocus();
+    composerAutofocus.init();
     initVoice();
-    setBackendStatus(true);
-    await checkBackendHealth();
+    backendHealth.setStatus(true);
+    await backendHealth.check();
     ensureHealthMonitoring();
     await preloadServerConversations();
     focusMessageInput();
@@ -1927,7 +2621,7 @@ async function preloadServerConversations() {
         }
     } catch (error) {
         console.warn('Conversation preload failed', error);
-        setBackendStatus(false, 'AssistMe backend is unreachable. Using preview responses.');
+        backendHealth.setStatus(false, 'AssistMe backend is unreachable. Using preview responses.');
     }
 }
 
