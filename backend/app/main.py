@@ -80,8 +80,11 @@ def _env_configured_origins() -> List[str]:
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
+    "http://localhost:8080",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    "http://127.0.0.1:8080",
+    "http://127.0.0.1:64609",  # Browser preview port
     "https://assist-me-virtual-assistant.vercel.app",
     "https://assistme-virtualassistant-production.up.railway.app",
 ]
@@ -109,18 +112,11 @@ async def startup_event():
 # Configure CORS for cross-origin requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],  # Allow all origins in development
     allow_origin_regex=r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
-    allow_headers=[
-        "Accept",
-        "Accept-Language",
-        "Content-Language",
-        "Content-Type",
-        "Authorization",
-        "X-Requested-With",
-    ],
+    allow_credentials=False,  # Must be False when allow_origins is ["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
+    allow_headers=["*"],  # Allow all headers
     expose_headers=["*"],
     max_age=3600,  # 1 hour
 )

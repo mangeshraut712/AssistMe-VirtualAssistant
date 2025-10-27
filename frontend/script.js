@@ -7,6 +7,43 @@ const STORAGE_KEY = 'assistme.conversations.v2';
 const THEME_KEY = 'assistme.theme';
 const MODEL_KEY = 'assistme.model';
 
+// Device detection
+const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isAndroid = /Android/.test(navigator.userAgent);
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+// Suppress browser extension errors in console
+window.addEventListener('error', function(e) {
+    // Ignore chrome extension errors
+    if (e.filename && e.filename.includes('chrome-extension://')) {
+        e.preventDefault();
+        return false;
+    }
+    // Ignore QuillBot extension errors
+    if (e.filename && e.filename.includes('quillbot-content.js')) {
+        e.preventDefault();
+        return false;
+    }
+    // Ignore other extension errors
+    if (e.message && (e.message.includes('extension') || e.message.includes('contentScript'))) {
+        e.preventDefault();
+        return false;
+    }
+}, true);
+
+// Suppress unhandled promise rejections from extensions
+window.addEventListener('unhandledrejection', function(e) {
+    if (e.reason && e.reason.message && 
+        (e.reason.message.includes('extension') || 
+         e.reason.message.includes('No resume URL') ||
+         e.reason.message.includes('chrome-extension'))) {
+        e.preventDefault();
+        return false;
+    }
+});
+
 function resolveApiBase() {
     // Always prefer localhost when detected
     const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(location.hostname);
@@ -290,9 +327,27 @@ const elements = {
     latencyMetric: document.getElementById('latencyMetric'),
     tokenMetric: document.getElementById('tokenMetric'),
     voiceBtn: document.getElementById('voiceBtn'),
+    voiceModeBtn: document.getElementById('voiceModeBtn'),
     toastContainer: document.getElementById('toastContainer'),
     uploadBtn: document.getElementById('uploadBtn'),
+    connectionStatus: document.getElementById('connectionStatus'),
+    connectionStatusText: document.getElementById('connectionStatusText'),
 };
+
+// Connection status helper
+function showConnectionStatus(status, message) {
+    if (!elements.connectionStatus || !elements.connectionStatusText) return;
+    
+    elements.connectionStatus.className = 'connection-status show ' + status;
+    elements.connectionStatusText.textContent = message;
+    
+    // Auto-hide after 3 seconds for success messages
+    if (status === 'connected') {
+        setTimeout(() => {
+            elements.connectionStatus.classList.remove('show');
+        }, 3000);
+    }
+}
 
 const state = {
     conversations: [],
@@ -359,8 +414,17 @@ const backendHealth = {
                 ? message.trim()
                 : fallback;
         }
+
+        // Show connection status
+        if (healthy) {
+            showConnectionStatus('connected', '✓ Connected to backend');
+        } else {
+            showConnectionStatus('error', '✗ Backend offline');
+        }
     },
     async check() {
+        showConnectionStatus('connecting', 'Connecting to backend...');
+        
         try {
             const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
             const timeoutId = controller ? window.setTimeout(() => controller.abort(), 5000) : null;
@@ -1541,13 +1605,16 @@ async function streamAssistantResponse(userMessage) {
                 buffer = buffer.slice(boundaryIndex + boundaryLength);
                 console.log('Raw SSE event:', rawEvent); // Debug SSE events
                 const parsed = parseSseEvent(rawEvent);
-                console.log('Parsed SSE event:', parsed); // Debug parsed data
                 if (parsed) {
                     if (parsed.event === 'delta' && parsed.data?.content) {
-                        console.log('Adding delta content:', parsed.data.content); // Debug content adding
                         assistantMessage.content += parsed.data.content;
-                        assistantFragment.text.textContent = assistantMessage.content;
-                        console.log('Updated content:', assistantMessage.content); // Debug content display
+                        // Batch DOM updates for better performance (update every 50ms)
+                        if (!assistantFragment.updateTimer) {
+                            assistantFragment.updateTimer = setTimeout(() => {
+                                assistantFragment.text.textContent = assistantMessage.content;
+                                assistantFragment.updateTimer = null;
+                            }, 50);
+                        }
                     }
 
                     if (parsed.event === 'error') {
@@ -1629,6 +1696,12 @@ async function streamAssistantResponse(userMessage) {
             tokens: tokensUsed,
         };
 
+        // Ensure content is displayed even if empty
+        if (!assistantMessage.content || assistantMessage.content.trim() === '') {
+            assistantMessage.content = '(No response generated - please try again)';
+            console.warn('Empty response received from model:', effectiveModel);
+        }
+
         renderAssistantContent(assistantFragment.text, assistantMessage.content);
 
         applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
@@ -1641,10 +1714,50 @@ async function streamAssistantResponse(userMessage) {
         persistActiveConversation();
         focusMessageInput();
     } catch (error) {
-        console.error(error);
+        console.error('Streaming error:', error);
         removeTypingIndicator();
+        state.isStreaming = false;
+        handleInputChange();
+
+        if (error.name === 'AbortError') {
+            console.log('Streaming aborted by user');
+            // If we have partial content, keep it
+            if (assistantMessage.content && assistantMessage.content.trim()) {
+                console.log('Keeping partial response:', assistantMessage.content);
+                renderAssistantContent(assistantFragment.text, assistantMessage.content);
+                const latency = Math.round(performance.now() - started);
+                assistantMessage.metadata = {
+                    model: effectiveModel,
+                    latency,
+                    tokens: tokensUsed,
+                };
+                applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
+                updateMetrics(latency, tokensUsed);
+                persistActiveConversation();
+            }
+            return;
+        }
+
         backendHealth.setStatus(false, 'AssistMe backend is unreachable. Using preview responses.');
 
+        // If we have partial content from before error, show it with error note
+        if (assistantMessage.content && assistantMessage.content.trim()) {
+            assistantMessage.content += `\n\n⚠️ (Stream interrupted: ${error.message || 'Unknown error'})`;
+            renderAssistantContent(assistantFragment.text, assistantMessage.content);
+            const latency = Math.round(performance.now() - started);
+            assistantMessage.metadata = {
+                model: effectiveModel,
+                latency,
+                tokens: tokensUsed,
+            };
+            applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
+            updateMetrics(latency, tokensUsed);
+            persistActiveConversation();
+            focusMessageInput();
+            return;
+        }
+
+        // Try fallback
         let fallbackData = null;
         try {
             fallbackData = await requestCompletionFallback(userMessage);
@@ -1654,7 +1767,7 @@ async function streamAssistantResponse(userMessage) {
 
         if (fallbackData?.response) {
             assistantMessage.content = fallbackData.response;
-            assistantFragment.text.textContent = assistantMessage.content;
+            renderAssistantContent(assistantFragment.text, assistantMessage.content);
             tokensUsed = fallbackData?.usage?.tokens || null;
             if (fallbackData?.notice) {
                 showToast(fallbackData.notice, 'info');
@@ -1676,33 +1789,26 @@ async function streamAssistantResponse(userMessage) {
                 latency,
                 tokens: tokensUsed,
             };
-            renderAssistantContent(assistantFragment.text, assistantMessage.content);
             applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
             updateMetrics(latency, tokensUsed);
             ensureConversationVisible();
-            state.isStreaming = false;
-            handleInputChange();
             persistActiveConversation();
             focusMessageInput();
             return;
         }
 
-        const offline = generateOfflineResponse(userMessage.content);
-        assistantMessage.content = offline.response;
-        assistantFragment.text.textContent = assistantMessage.content;
+        // Final fallback to offline response
+        assistantMessage.content = `⚠️ Error: ${error.message || 'Unknown error'}`;
+        renderAssistantContent(assistantFragment.text, assistantMessage.content);
+        
         const latency = Math.round(performance.now() - started);
         assistantMessage.metadata = {
-            model: `${modelId || 'offline/mock'}`,
+            model: effectiveModel,
             latency,
-            tokens: offline.tokens,
+            tokens: tokensUsed,
         };
         applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
-        updateMetrics(latency, offline.tokens);
-
-        state.isStreaming = false;
-        handleInputChange();
-        showToast(error.message || 'Backend unreachable. Showing offline preview response.', 'warning');
-        ensureConversationVisible();
+        updateMetrics(latency, tokensUsed);
         persistActiveConversation();
         focusMessageInput();
     }
@@ -1927,6 +2033,7 @@ function initInlineHandlers() {
     });
 
     elements.voiceBtn?.addEventListener('click', toggleVoiceInput);
+    elements.voiceModeBtn?.addEventListener('click', toggleVoiceMode);
     elements.uploadBtn?.addEventListener('click', () => showToast('File uploads are coming soon.', 'info'));
 
 // ====================
@@ -1964,68 +2071,13 @@ function initializeVoiceControls() {
 }
 
 function createVoiceUI() {
-    // Create voice controls container
-    const voiceControlsContainer = document.createElement('div');
-    voiceControlsContainer.id = 'voiceControls';
-    voiceControlsContainer.className = 'voice-controls';
-    voiceControlsContainer.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        z-index: 1000;
-    `;
-
-    // Voice toggle button
-    const voiceBtn = document.createElement('button');
-    voiceBtn.id = 'voiceToggleBtn';
-    voiceBtn.className = 'voice-btn';
-    voiceBtn.title = 'Toggle voice mode';
-    voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-    voiceBtn.style.cssText = `
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        background: var(--accent-color, #007bff);
-        color: white;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
-    `;
-
-    // Voice status indicator
-    const statusIndicator = document.createElement('div');
-    statusIndicator.id = 'voiceStatusIndicator';
-    statusIndicator.className = 'voice-status';
-    statusIndicator.textContent = 'Voice off';
-    statusIndicator.style.cssText = `
-        padding: 4px 12px;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        border-radius: 20px;
-        font-size: 12px;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        pointer-events: none;
-    `;
-
-    voiceControlsContainer.appendChild(voiceBtn);
-    voiceControlsContainer.appendChild(statusIndicator);
-
-    // Create rich content container
+    // Create rich content container for voice responses
     richContentContainer = document.createElement('div');
     richContentContainer.id = 'richContentContainer';
     richContentContainer.className = 'rich-content-container';
     richContentContainer.style.cssText = `
         position: fixed;
-        top: 20px;
+        top: 80px;
         right: 20px;
         max-width: 400px;
         z-index: 999;
@@ -2041,41 +2093,94 @@ function createVoiceUI() {
         bottom: 100px;
         left: 50%;
         transform: translateX(-50%);
-        background: var(--bg-secondary, rgba(0,0,0,0.9));
+        background: var(--surface-panel, rgba(0,0,0,0.9));
         color: var(--text-primary, white);
-        padding: 10px 20px;
-        border-radius: 20px;
+        padding: 12px 24px;
+        border-radius: 24px;
         font-size: 16px;
         max-width: 80%;
         text-align: center;
         z-index: 1001;
+        box-shadow: var(--shadow-hard);
+        border: 1px solid var(--border-subtle);
     `;
 
     // Add to DOM
-    document.body.appendChild(voiceControlsContainer);
     document.body.appendChild(richContentContainer);
     document.body.appendChild(interimTranscriptContainer);
-
-    // Store references
-    voiceControls.voiceToggleBtn = voiceBtn;
-    voiceControls.voiceStatusIndicator = statusIndicator;
 }
 
 function toggleVoiceMode() {
+    // Initialize WebSocket if not connected
     if (!voiceWebsocket || voiceWebsocket.readyState !== WebSocket.OPEN) {
-        showToast('Voice system not connected', 'error');
+        initializeVoiceWebSocket();
+        // Wait a bit for connection
+        setTimeout(() => {
+            if (voiceWebsocket && voiceWebsocket.readyState === WebSocket.OPEN) {
+                activateVoiceMode();
+            } else {
+                showToast('Connecting to voice system...', 'info');
+            }
+        }, 500);
         return;
     }
 
-    isVoiceModeActive = !isVoiceModeActive;
-
     if (isVoiceModeActive) {
-        startVoiceRecording();
+        deactivateVoiceMode();
     } else {
-        stopVoiceRecording();
+        activateVoiceMode();
     }
+}
 
-    updateVoiceUI();
+function activateVoiceMode() {
+    isVoiceModeActive = true;
+    
+    // Auto-select best model for voice mode (Gemini 2.0 Flash - fastest, best for conversation)
+    const previousModel = state.currentModel;
+    state.currentModel = 'google/gemini-2.0-flash-exp:free';
+    updateModelButton();
+    localStorage.setItem(MODEL_KEY, state.currentModel);
+    
+    // Store previous model to restore later if needed
+    state.voiceModeOriginalModel = previousModel;
+    
+    // Update UI with stop icon
+    if (elements.voiceModeBtn) {
+        elements.voiceModeBtn.classList.add('active');
+        elements.voiceModeBtn.innerHTML = '<i class="fa-solid fa-stop" aria-hidden="true"></i>';
+        elements.voiceModeBtn.title = 'Stop voice conversation';
+    }
+    
+    // Start recording
+    startVoiceRecording();
+    
+    // Send command to backend
+    if (voiceWebsocket && voiceWebsocket.readyState === WebSocket.OPEN) {
+        voiceWebsocket.send(JSON.stringify({ type: 'start_recording' }));
+    }
+    
+    showToast('🎙️ Voice mode active (using Gemini 2.0 Flash)', 'success');
+}
+
+function deactivateVoiceMode() {
+    isVoiceModeActive = false;
+    
+    // Update UI back to podcast icon
+    if (elements.voiceModeBtn) {
+        elements.voiceModeBtn.classList.remove('active');
+        elements.voiceModeBtn.innerHTML = '<i class="fa-solid fa-podcast" aria-hidden="true"></i>';
+        elements.voiceModeBtn.title = 'Voice conversation mode (like ChatGPT/Gemini Live)';
+    }
+    
+    // Stop recording
+    stopVoiceRecording();
+    
+    // Send command to backend
+    if (voiceWebsocket && voiceWebsocket.readyState === WebSocket.OPEN) {
+        voiceWebsocket.send(JSON.stringify({ type: 'stop_recording' }));
+    }
+    
+    showToast('Voice mode stopped', 'info');
 }
 
 async function startVoiceRecording() {
@@ -2094,13 +2199,24 @@ async function startVoiceRecording() {
             }
         };
 
+        mediaRecorder.onerror = (error) => {
+            console.error('MediaRecorder error:', error);
+            showToast('Recording error occurred', 'error');
+            deactivateVoiceMode();
+        };
+
         mediaRecorder.start(100); // Collect data every 100ms
-        showToast('Voice recording started');
+        console.log('Voice recording started');
+        
+        // Show interim transcript container
+        if (interimTranscriptContainer) {
+            interimTranscriptContainer.style.display = 'block';
+            interimTranscriptContainer.textContent = 'Listening...';
+        }
     } catch (error) {
         console.error('Error starting voice recording:', error);
-        showToast('Microphone access denied', 'error');
-        isVoiceModeActive = false;
-        updateVoiceUI();
+        showToast('Microphone access denied. Please allow microphone access.', 'error');
+        deactivateVoiceMode();
     }
 }
 
@@ -2114,26 +2230,14 @@ function stopVoiceRecording() {
         audioStream = null;
     }
 
-    showToast('Voice recording stopped');
-}
-
-function updateVoiceUI() {
-    const voiceBtn = voiceControls.voiceToggleBtn;
-    const statusIndicator = voiceControls.voiceStatusIndicator;
-
-    if (!voiceBtn || !statusIndicator) return;
-
-    if (isVoiceModeActive) {
-        voiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
-        voiceBtn.style.background = '#dc3545';
-        statusIndicator.textContent = 'Voice active';
-        statusIndicator.style.opacity = '1';
-    } else {
-        voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-        voiceBtn.style.background = 'var(--accent-color, #007bff)';
-        statusIndicator.style.opacity = '0';
+    // Hide interim transcript
+    if (interimTranscriptContainer) {
+        interimTranscriptContainer.style.display = 'none';
     }
+
+    console.log('Voice recording stopped');
 }
+
 
 function initializeVoiceWebSocket() {
     const voiceWsUrl = API_BASE.replace(/^http/, 'ws') + '/voice/stream/user_' + Date.now();
@@ -2166,11 +2270,17 @@ function initializeVoiceWebSocket() {
 }
 
 function updateVoiceStatus(connected) {
-    const statusIndicator = voiceControls.voiceStatusIndicator;
-    if (statusIndicator) {
-        statusIndicator.textContent = connected ? 'Voice connected' : 'Voice offline';
-        statusIndicator.style.opacity = connected ? '0.7' : '0';
+    // Update voice mode button availability
+    if (elements.voiceModeBtn) {
+        elements.voiceModeBtn.disabled = !connected;
+        if (!connected) {
+            elements.voiceModeBtn.title = 'Voice system offline - reconnecting...';
+        } else {
+            elements.voiceModeBtn.title = 'Voice mode (like ChatGPT/Gemini Live)';
+        }
     }
+    
+    console.log('Voice WebSocket status:', connected ? 'connected' : 'disconnected');
 }
 
 function handleVoiceMessage(data) {
@@ -2178,15 +2288,15 @@ function handleVoiceMessage(data) {
 
     switch (data.type) {
         case 'welcome':
-            showToast('Voice session started');
+            console.log('Voice session started');
             break;
 
         case 'recording_started':
-            updateVoiceRecordingStatus(true);
+            console.log('Recording started on server');
             break;
 
         case 'recording_stopped':
-            updateVoiceRecordingStatus(false);
+            console.log('Recording stopped on server');
             break;
 
         case 'interim_transcript':
@@ -2199,20 +2309,17 @@ function handleVoiceMessage(data) {
 
         case 'error':
             showToast(`Voice error: ${data.message}`, 'error');
+            deactivateVoiceMode();
+            break;
+
+        case 'ping':
+            // Keepalive ping, no action needed
             break;
 
         default:
             console.log('Unhandled voice message type:', data.type);
     }
 }
-
-function updateVoiceRecordingStatus(isRecording) {
-    const voiceBtn = voiceControls.voiceToggleBtn;
-    if (voiceBtn) {
-        voiceBtn.classList.toggle('recording', isRecording);
-    }
-}
-
 
 function showInterimTranscript(transcript) {
     if (!interimTranscriptContainer) return;
@@ -2229,7 +2336,18 @@ function showInterimTranscript(transcript) {
     }, 3000);
 }
 
+// Track last rendered response to prevent duplicates
+let lastVoiceResponseId = null;
+
 function handleVoiceResponse(data) {
+    // Deduplicate responses using timestamp
+    const responseId = data.timestamp || `${data.session_id}-${Date.now()}`;
+    if (responseId === lastVoiceResponseId) {
+        console.log('Skipping duplicate voice response');
+        return;
+    }
+    lastVoiceResponseId = responseId;
+
     // Hide interim transcript
     if (interimTranscriptContainer) {
         interimTranscriptContainer.style.display = 'none';
@@ -2433,13 +2551,10 @@ function scrollToBottom() {
 }
 
 function setupVoiceEventListeners() {
-    if (voiceControls.voiceToggleBtn) {
-        voiceControls.voiceToggleBtn.addEventListener('click', toggleVoiceMode);
-    }
-
-    // Add keyboard shortcuts
+    // Add keyboard shortcuts for voice mode
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'v' && event.altKey) {
+        // Alt+V for voice mode toggle
+        if (event.key === 'v' && event.altKey && !event.shiftKey) {
             event.preventDefault();
             toggleVoiceMode();
         }
@@ -2561,6 +2676,7 @@ function restoreInitialState() {
 async function bootstrap() {
     restoreInitialState();
     initInlineHandlers();
+    initMobileOptimizations();
     composerAutofocus.init();
     initVoice();
     backendHealth.setStatus(true);
@@ -2568,6 +2684,82 @@ async function bootstrap() {
     ensureHealthMonitoring();
     await preloadServerConversations();
     focusMessageInput();
+}
+
+function initMobileOptimizations() {
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then((registration) => {
+                    console.log('ServiceWorker registered:', registration.scope);
+                })
+                .catch((error) => {
+                    console.log('ServiceWorker registration failed:', error);
+                });
+        });
+    }
+
+    // Add device class to body for CSS targeting
+    if (isMobile) document.body.classList.add('mobile-device');
+    if (isIOS) document.body.classList.add('ios-device');
+    if (isAndroid) document.body.classList.add('android-device');
+    if (isTouchDevice) document.body.classList.add('touch-device');
+
+    // Prevent zoom on iOS when focusing inputs
+    if (isIOS && elements.messageInput) {
+        elements.messageInput.addEventListener('touchstart', function() {
+            const fontSize = window.getComputedStyle(this).fontSize;
+            if (parseInt(fontSize) < 16) {
+                this.style.fontSize = '16px';
+            }
+        });
+    }
+
+    // Handle viewport height changes on mobile (keyboard appearance)
+    if (isMobile) {
+        let lastHeight = window.innerHeight;
+        window.addEventListener('resize', () => {
+            const currentHeight = window.innerHeight;
+            if (currentHeight < lastHeight) {
+                // Keyboard likely opened
+                document.body.classList.add('keyboard-open');
+            } else {
+                // Keyboard likely closed
+                document.body.classList.remove('keyboard-open');
+            }
+            lastHeight = currentHeight;
+        });
+    }
+
+    // Improve scrolling on mobile
+    if (isMobile && elements.chatMessages) {
+        elements.chatMessages.addEventListener('touchmove', function(e) {
+            e.stopPropagation();
+        }, { passive: true });
+    }
+
+    // Prevent pull-to-refresh on mobile browsers
+    document.body.addEventListener('touchmove', function(e) {
+        if (e.touches.length > 1 || window.scrollY > 0) return;
+        e.preventDefault();
+    }, { passive: false });
+
+    // Add active state for touch devices
+    if (isTouchDevice) {
+        document.addEventListener('touchstart', function() {}, { passive: true });
+    }
+
+    // Fix for iOS Safari bottom bar
+    if (isIOS) {
+        const setVH = () => {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        };
+        setVH();
+        window.addEventListener('resize', setVH);
+        window.addEventListener('orientationchange', setVH);
+    }
 }
 
 async function preloadServerConversations() {

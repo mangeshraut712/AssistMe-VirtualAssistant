@@ -26,23 +26,36 @@ except ImportError:  # pragma: no cover - optional dependency
     HAS_REQUESTS = False
 
 class Grok2Client:
-    __slots__ = ("config", "redis_client")
+    __slots__ = ("config", "redis_client", "session")
     DEFAULT_MODELS: ClassVar[List[Dict[str, str]]] = [
-        {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash Experimental"},  # 🥇 1M+ tokens
-        {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B A35B"},                            # 🥈 262K tokens
-        {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "DeepSeek R1T2 Chimera"},               # 🥉 163K tokens
-        {"id": "microsoft/mai-ds-r1:free", "name": "Microsoft MAI DS R1"},                           # 🏅 163K tokens
-        {"id": "openai/gpt-oss-20b:free", "name": "OpenAI GPT OSS 20B"},                             # 🏅 128K tokens
-        {"id": "z-ai/glm-4.5-air:free", "name": "Zhipu GLM 4.5 Air"},                                # 🏅 128K tokens
-        {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct"},     # 🏅 131K tokens
-        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2"},             # 🏅 131K tokens
-        {"id": "mistralai/mistral-nemo:free", "name": "Mistral Nemo"},                               # 🏅 128K tokens
-        {"id": "moonshotai/kimi-dev-72b:free", "name": "MoonshotAI Kimi Dev 72B"},                   # 🏅 128K tokens
+        # Ordered by speed/performance for optimal user experience
+        {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash Experimental"},  # Fastest, 1M context
+        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2"},             # Very fast, 131K
+        {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct"},     # Accurate, 131K
+        {"id": "mistralai/mistral-nemo:free", "name": "Mistral Nemo"},                               # Fast, 128K
+        {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B A35B"},                            # Best for code, 262K
+        {"id": "z-ai/glm-4.5-air:free", "name": "Zhipu GLM 4.5 Air"},                                # Multilingual, 128K
+        {"id": "openai/gpt-oss-20b:free", "name": "OpenAI GPT OSS 20B"},                             # Good quality, 128K
+        {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "DeepSeek R1T2 Chimera"},               # Reasoning, 163K
+        {"id": "microsoft/mai-ds-r1:free", "name": "Microsoft MAI DS R1"},                           # Research, 163K
+        {"id": "moonshotai/kimi-dev-72b:free", "name": "MoonshotAI Kimi Dev 72B"},                   # Long context, 128K
     ]
 
     def __init__(self):
         self.config = self._load_config()
         self.redis_client: Optional[Any] = None
+        # Connection pooling for faster requests
+        if HAS_REQUESTS and requests:
+            self.session = requests.Session()
+            adapter = requests.adapters.HTTPAdapter(
+                pool_connections=10,
+                pool_maxsize=20,
+                max_retries=2
+            )
+            self.session.mount('http://', adapter)
+            self.session.mount('https://', adapter)
+        else:
+            self.session = None
 
     def _load_config(self) -> Dict[str, Any]:
         """Load config values at instantiation to minimize instance attributes."""
@@ -96,14 +109,19 @@ class Grok2Client:
     def _check_rate_limit(self, identifier: str = "global", max_requests: int = 45) -> bool:
         """Check if we're within rate limits. Returns True if allowed, False if rate limited."""
         redis_url = self.config.get("redis_url")
-        if not self.redis_client and redis_url and HAS_REDIS and redis:
+        
+        # If no Redis URL configured, skip rate limiting
+        if not redis_url:
+            return True
+            
+        if not self.redis_client and HAS_REDIS and redis:
             try:
                 self.redis_client = redis.from_url(redis_url)
             except Exception as e:
-                logging.warning("Failed to connect to Redis: %s", e)
+                logging.debug("Redis not available for rate limiting: %s", e)
+                return True  # Allow if Redis connection fails
 
         if not self.redis_client:
-            logging.warning("Redis not available for rate limiting")
             return True  # Allow if Redis is not configured
 
         try:
@@ -124,7 +142,9 @@ class Grok2Client:
             return True
 
         except Exception as e:
-            logging.error("Rate limiting error: %s", e)
+            logging.debug("Rate limiting check failed: %s", e)
+            # Reset redis_client on connection error
+            self.redis_client = None
             return True  # Allow on error to prevent breaking functionality
 
     def _get_mock_response(self, messages, model_name):
@@ -181,11 +201,21 @@ class Grok2Client:
 
     def _build_payload(self, messages, model_name, **kwargs):
         """Build payload with flexible parameters to avoid too many positional args."""
+        formatted_messages = self._format_messages(messages)
+        
+        # Add optimized system message for speed and accuracy
+        if not any(msg.get("role") == "system" for msg in formatted_messages):
+            system_msg = {
+                "role": "system",
+                "content": "You are a fast, accurate AI assistant. Provide concise, direct answers. Be specific and factual. Avoid unnecessary elaboration unless asked."
+            }
+            formatted_messages.insert(0, system_msg)
+        
         payload = {
             "model": model_name,
-            "messages": self._format_messages(messages),
-            "temperature": kwargs.get("temperature", 0.7),
-            "max_tokens": kwargs.get("max_tokens", 1024),
+            "messages": formatted_messages,
+            "temperature": kwargs.get("temperature", 0.3),  # Lower for more focused responses
+            "max_tokens": kwargs.get("max_tokens", 1024),  # Optimized for speed
         }
         if kwargs.get("stream", False):
             payload["stream"] = True
@@ -211,6 +241,16 @@ class Grok2Client:
         )
         buy_credits_url = data.get("buyCreditsUrl")
 
+        # Handle rate limiting (429)
+        if response.status_code == 429:
+            return {
+                "error": f"Rate limited on {model_name}. Trying alternative model...",
+                "status_code": 429,
+                "model": model_name,
+                "should_retry": True,  # Signal to try another model
+                "rate_limited": True,
+            }
+
         if response.status_code == 402 or (title and "Paid Model" in title):
             friendly = (
                 "This OpenRouter model requires credits. "
@@ -235,25 +275,32 @@ class Grok2Client:
 
     def _get_candidates(self, requested: Optional[str]) -> List[str]:
         """Get list of models to try, prioritizing the requested one."""
-        if requested:
-            return [requested]
-
         priority: List[str] = []
         models = type(self).DEFAULT_MODELS
+        
+        # If specific model requested, try it first
+        if requested:
+            priority.append(requested)
+        
+        # Add default model if not already in list
         primary = self.config.get("default_model") or (models[0]["id"] if models else None)
-        if primary:
+        if primary and primary not in priority:
             priority.append(primary)
 
+        # Add all other models as fallbacks
         for entry in models:
             mid = entry.get("id")
             if mid and mid not in priority:
                 priority.append(mid)
+        
         return priority
 
     def _call_model_api(self, endpoint: str, payload: dict, target_model: str) -> Dict[str, Any]:
         """Make actual API call to OpenRouter."""
         try:
-            response = requests.post(
+            # Use session for connection pooling if available
+            http_client = self.session if self.session else requests
+            response = http_client.post(
                 endpoint,
                 json=payload,
                 headers=self._headers(),
@@ -338,15 +385,18 @@ class Grok2Client:
         payload = self._build_payload(messages, model_name, temperature=temperature, max_tokens=max_tokens, stream=True)
         headers = self._headers()
         headers["Accept"] = "text/event-stream"
+        headers["Connection"] = "keep-alive"  # Keep connection alive for faster streaming
 
-        with requests.post(
+        # Use session for connection pooling if available
+        http_client = self.session if self.session else requests
+        response = http_client.post(
             self.config["chat_endpoint"],
             json=payload,
             headers=headers,
             stream=True,
             timeout=self.config["timeout"],
-        ) as response:
-            return response
+        )
+        return response
 
     def _process_streaming_chunk(self, raw_line: str, accumulated: List[str], usage_tokens) -> tuple:
         """Process a single streaming chunk and return updated state."""
@@ -417,8 +467,18 @@ class Grok2Client:
 
         attempts = self._get_candidates(model)
         last_error: Optional[Dict[str, object]] = None
+        rate_limited_models = []
+
+        logging.info(f"Attempting models in order: {attempts}")
 
         for candidate in attempts:
+            # Skip if this model was already rate limited
+            if candidate in rate_limited_models:
+                logging.info(f"Skipping {candidate} - already rate limited")
+                continue
+            
+            logging.info(f"Trying model: {candidate}")
+                
             try:
                 response = self._setup_streaming_request(messages, candidate, temperature, max_tokens)
             except requests.exceptions.HTTPError as exc:
@@ -435,8 +495,18 @@ class Grok2Client:
                 continue
 
             if response.status_code >= 400:
+                error_info = self._normalise_error(response, candidate)
                 response.close()
-                last_error = {**self._normalise_error(response, candidate), "done": True}
+                
+                # If rate limited, try next model
+                if error_info.get("rate_limited"):
+                    rate_limited_models.append(candidate)
+                    logging.info(f"⚠️ Model {candidate} is rate limited upstream, trying next model...")
+                    # Don't set last_error for rate limits, keep trying
+                    continue
+                    
+                last_error = {**error_info, "done": True}
+                logging.error(f"Model {candidate} failed with error: {error_info.get('error')}")
                 continue
 
             accumulated: List[str] = []
@@ -471,9 +541,12 @@ class Grok2Client:
                 "model": candidate,
             }
             if primary_model and candidate != primary_model:
+                # Get model name for better UX
+                model_name = next((m["name"] for m in type(self).DEFAULT_MODELS if m["id"] == candidate), candidate)
                 payload["notice"] = (
-                    f"Primary model '{primary_model}' unavailable. Responded with '{candidate}'."
+                    f"✓ Switched to {model_name} (primary model rate limited)"
                 )
+                logging.info(f"✓ Successfully used fallback model: {candidate}")
 
             yield payload
             return

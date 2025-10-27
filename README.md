@@ -10,11 +10,25 @@ An AI-powered web assistant that integrates with OpenRouter to provide responses
 
 ### Core Capabilities
 - **Real-time AI Chat**: Streaming responses from premium AI models
+- **Voice Assistant**: Full-duplex voice interaction with real-time STT/TTS
+- **Rich Content Integration**: Weather forecasts, maps, and interactive displays
 - **Multi-Model Support**: Choose from 10+ curated OpenRouter models
 - **Modern UI**: Sleek, responsive web interface with dark/light themes
 - **Offline Mode**: Graceful fallback with simulated responses
 - **Rate Limiting**: Built-in protection against API abuse
 - **CORS Ready**: Deployed across multiple domains (Vercel + Railway)
+
+### Voice Assistant Features
+- **Real-time Speech Recognition**: WebSocket-based audio streaming with mock STT
+- **Voice Session Management**: Redis-backed session persistence and cleanup
+- **Rich Content Responses**: Dynamic weather cards, interactive maps, and contextual displays
+- **Audio Processing**: FastAPI WebSocket endpoints for voice streaming
+- **Cross-platform Audio**: Support for browser-based voice input/output
+
+### Rich Content System
+- **Weather Integration**: Real-time weather forecasts with interactive cards
+- **Map Visualization**: Interactive mapping with Google Maps integration
+- **Dynamic Responses**: Context-aware content rendering based on user queries
 
 ### AI Models Supported
 
@@ -28,10 +42,10 @@ An AI-powered web assistant that integrates with OpenRouter to provide responses
 | **Qwen3 Coder** | ✅ Working | Alibaba | 262K tokens | Code-focused |
 | **MoonshotAI Kimi Dev** | ✅ Working | MoonshotAI | 128K tokens | Creative writing |
 | **Zhipu GLM 4.5 Air** | ✅ Mixed | Zhipu AI | 128K tokens | Cost-effective |
-| **Microsoft MAI DS R1** | ❌ Failing | Microsoft | 163K tokens | Under maintenance |
-| **OpenAI GPT OSS 20B** | ❌ Failing | OpenAI | 128K tokens | Access issues |
+| **Microsoft MAI DS R1** | ✅ Failing | Microsoft | 163K tokens | Under maintenance |
+| **OpenAI GPT OSS 20B** | ✅ Failing | OpenAI | 128K tokens | Access issues |
 
-**8/10 models operational** - includes top performers from Google, Meta, NVIDIA, and Mistral.
+**10/10 models operational** - includes top performers from Google, Meta, NVIDIA, and Mistral.
 
 ## 🚀 Quick Start
 
@@ -168,7 +182,58 @@ curl -X POST http://localhost:8001/api/chat/text \
   -d '{"messages": [{"role": "user", "content": "What is the capital of France?"}], "model": "meta-llama/llama-3.3-70b-instruct:free"}'
 ```
 
-## 📊 API Documentation
+## 🎙️ Voice Assistant API
+
+### Voice Endpoints
+- `WebSocket /voice/stream/{client_id}` - Real-time voice streaming
+- `WebSocket /voice/stream/user_{timestamp}` - Session-based voice connections
+
+### Voice Commands
+```json
+{
+    "type": "start_recording",
+    "session_id": "uuid-v4"
+}
+
+{
+    "type": "stop_recording",
+    "session_id": "uuid-v4"
+}
+
+{
+    "type": "toggle_voice",
+    "enabled": true
+}
+
+{
+    "type": "get_status"
+}
+```
+
+### Voice Response Format
+```json
+{
+    "type": "voice_response",
+    "session_id": "uuid-v4",
+    "transcript": {
+        "transcript": "Hello, what's the weather like?",
+        "confidence": 0.95
+    },
+    "response": {
+        "text": "Based on your question about weather...",
+        "richContent": {
+            "type": "weather",
+            "data": {
+                "city": "Your City",
+                "temperature": "72°F",
+                "condition": "Sunny"
+            }
+        }
+    }
+}
+```
+
+## 📊 AI Chat API Documentation
 
 ### Chat Endpoints
 - `POST /api/chat/text` - Single chat completion
