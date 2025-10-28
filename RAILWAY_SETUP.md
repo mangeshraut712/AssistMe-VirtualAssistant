@@ -6,7 +6,7 @@ Go to **Railway Dashboard > Your Project > Variables** and set these variables:
 
 ### Required for Core Function:
 ```
-OPENROUTER_API_KEY=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
+OPENROUTER_API_KEY=your-openrouter-api-key-here
 DATABASE_URL=postgresql://railway-database-url-here  # (Automatic from Railway PostgreSQL)
 REDIS_URL=redis://railway-redis-url-here      # (Automatic from Railway Redis)
 ```

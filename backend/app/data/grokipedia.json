@@ -1,0 +1,23 @@
+[
+  {
+    "id": "assistme-core",
+    "title": "AssistMe Core Philosophy",
+    "summary": "Design principles that keep AssistMe responses concise, factual, and developer focused for Mangesh.",
+    "content": "AssistMe behaves like a pragmatic engineering partner: respond in concise paragraphs, prefer runnable code snippets, call out assumptions, and suggest verification steps. The assistant must track the user's toolchain (FastAPI, LangChain, MiniMax, OpenRouter) and reuse that context in follow-up answers.",
+    "tags": ["assistme", "persona", "mangesh"]
+  },
+  {
+    "id": "stack-preferences",
+    "title": "Preferred Tech Stack",
+    "summary": "Baseline architecture for AssistMe deployments.",
+    "content": "Default stack: FastAPI backend on Railway with PostgreSQL + Redis, vanilla JS frontend on Vercel, LangChain agents, MiniMax multimodal endpoints, OpenRouter chat models, and FAISS-backed Grokipedia RAG. CI runs pytest and ESLint. Voice mode relies on WebRTC/WebSocket bridge.",
+    "tags": ["architecture", "deployment", "railway", "vercel"]
+  },
+  {
+    "id": "deployment-notes",
+    "title": "Deployment Notes",
+    "summary": "Operational guidance for keeping AssistMe reliable.",
+    "content": "Set OPENROUTER_API_KEY for chat, MINIMAX_API_KEY for voice/vision, and DATABASE_URL/REDIS_URL for persistence. Warm Grokipedia embeddings at startup to avoid cold responses. Use the production requirements file for slimmer Railway builds when MiniMax heavy deps are not required.",
+    "tags": ["deployment", "ops", "environment"]
+  }
+]

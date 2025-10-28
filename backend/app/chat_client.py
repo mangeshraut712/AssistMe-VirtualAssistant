@@ -29,23 +29,26 @@ except ImportError:  # pragma: no cover - optional dependency
     HAS_REQUESTS = False
 
 class Grok2Client:
-    __slots__ = ("config", "redis_client", "session")
-    DEFAULT_MODELS: ClassVar[List[Dict[str, str]]] = [
-        {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct"},     # Accurate, 131K
-        {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash Experimental"},  # Fastest, 1M context
-        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2"},             # Very fast, 131K
-        {"id": "mistralai/mistral-nemo:free", "name": "Mistral Nemo"},                               # Fast, 128K
-        {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B A35B"},                            # Best for code, 262K
-        {"id": "z-ai/glm-4.5-air:free", "name": "Zhipu GLM 4.5 Air"},                                # Multilingual, 128K
-        {"id": "openai/gpt-oss-20b:free", "name": "OpenAI GPT OSS 20B"},                             # Good quality, 128K
-        {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "DeepSeek R1T2 Chimera"},               # Reasoning, 163K
-        {"id": "microsoft/mai-ds-r1:free", "name": "Microsoft MAI DS R1"},                           # Research, 163K
-        {"id": "moonshotai/kimi-dev-72b:free", "name": "MoonshotAI Kimi Dev 72B"},                   # Long context, 128K
+    __slots__ = ("config", "redis_client", "session", "_models_cache", "_models_cache_time")
+    # Fallback models in case API is unavailable
+    FALLBACK_MODELS: ClassVar[List[Dict[str, str]]] = [
+        {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct"},
+        {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash Experimental"},
+        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2"},
+        {"id": "mistralai/mistral-nemo:free", "name": "Mistral Nemo"},
+        {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B A35B"},
+        {"id": "z-ai/glm-4.5-air:free", "name": "Zhipu GLM 4.5 Air"},
+        {"id": "openai/gpt-oss-20b:free", "name": "OpenAI GPT OSS 20B"},
+        {"id": "tngtech/deepseek-r1t2-chimera:free", "name": "DeepSeek R1T2 Chimera"},
+        {"id": "microsoft/mai-ds-r1:free", "name": "Microsoft MAI DS R1"},
+        {"id": "moonshotai/kimi-dev-72b:free", "name": "MoonshotAI Kimi Dev 72B"},
     ]
 
     def __init__(self):
         self.config = self._load_config()
         self.redis_client: Optional[Any] = None
+        self._models_cache: Optional[List[Dict[str, str]]] = None
+        self._models_cache_time: Optional[float] = None
         # Connection pooling for faster requests
         if HAS_REQUESTS and requests is not None:
             self.session = requests.Session()
@@ -65,11 +68,11 @@ class Grok2Client:
         """Load config values at instantiation to minimize instance attributes."""
         base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
         configured_default = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip()
-        if not configured_default and type(self).DEFAULT_MODELS:
-            configured_default = type(self).DEFAULT_MODELS[0]["id"]
+        # No hardcoded default - will be determined dynamically
         fallback_env = os.getenv("OPENROUTER_FALLBACK_MODELS", "")
         return {
             "base_url": base_url,
+            "models_endpoint": f"{base_url}/models",
             "chat_endpoint": f"{base_url}/chat/completions",
             "api_key": os.getenv("OPENROUTER_API_KEY", "").strip(),
             "referrer": os.getenv("APP_URL", os.getenv("VERCEL_URL", "https://assist-me-virtual-assistant.vercel.app")),
@@ -77,7 +80,7 @@ class Grok2Client:
             "dev_mode": os.getenv("DEV_MODE", "false").lower() == "true",
             "redis_url": os.getenv("REDIS_URL"),
             "timeout": self._get_timeout(),
-            "default_model": configured_default,
+            "default_model": configured_default,  # Can be empty for full flexibility
             "retry_attempts": self._coerce_int(os.getenv("OPENROUTER_RETRY_ATTEMPTS"), 3),
             "retry_backoff_base": self._coerce_float(os.getenv("OPENROUTER_RETRY_BACKOFF_BASE"), 1.0),
             "retry_backoff_max": self._coerce_float(os.getenv("OPENROUTER_RETRY_BACKOFF_MAX"), 12.0),
@@ -329,17 +332,81 @@ class Grok2Client:
             "metadata": metadata or None,
         }
 
+    def _fetch_models_from_api(self) -> List[Dict[str, str]]:
+        """Fetch available models from OpenRouter API with caching."""
+        import time
+
+        # Check cache first (cache for 1 hour)
+        cache_duration = 3600  # 1 hour
+        current_time = time.time()
+
+        if (self._models_cache is not None and
+            self._models_cache_time is not None and
+            current_time - self._models_cache_time < cache_duration):
+            return self._models_cache
+
+        # Fetch from API
+        if not HAS_REQUESTS or requests is None:
+            logging.warning("Requests library not available, using fallback models")
+            return type(self).FALLBACK_MODELS
+
+        if not self.config["api_key"]:
+            logging.warning("No API key configured, using fallback models")
+            return type(self).FALLBACK_MODELS
+
+        try:
+            headers = self._headers()
+            response = requests.get(
+                self.config["models_endpoint"],
+                headers=headers,
+                timeout=self.config["timeout"]
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                models_data = data.get("data", [])
+
+                # Filter for free models and format them
+                available_models = []
+                for model in models_data:
+                    model_id = model.get("id", "")
+                    # Only include free models (those with :free suffix or no pricing)
+                    if ":free" in model_id or not any(p in model_id for p in [":paid", ":enterprise"]):
+                        available_models.append({
+                            "id": model_id,
+                            "name": model.get("name", model_id),
+                            "context_length": model.get("context_length", 0),
+                            "pricing": model.get("pricing", {})
+                        })
+
+                # Sort by context length (higher first) then by name
+                available_models.sort(key=lambda x: (-x.get("context_length", 0), x.get("name", "")))
+
+                # Cache the result
+                self._models_cache = available_models
+                self._models_cache_time = current_time
+
+                logging.info(f"Fetched {len(available_models)} models from OpenRouter API")
+                return available_models
+            else:
+                logging.warning(f"Failed to fetch models from API: {response.status_code}")
+                return type(self).FALLBACK_MODELS
+
+        except Exception as e:
+            logging.exception(f"Error fetching models from OpenRouter API: {e}")
+            return type(self).FALLBACK_MODELS
+
     def _get_candidates(self, requested: Optional[str]) -> List[str]:
         """Get list of models to try, prioritizing the requested one."""
         priority: List[str] = []
-        models = type(self).DEFAULT_MODELS
+        models = self._fetch_models_from_api()
 
         # If specific model requested, try it first
         if requested:
             priority.append(requested)
 
-        # Add default model if not already in list
-        primary = self.config.get("default_model") or (models[0]["id"] if models else None)
+        # Add default model if configured and not already in list
+        primary = self.config.get("default_model")
         if primary and primary not in priority:
             priority.append(primary)
 
@@ -353,7 +420,7 @@ class Grok2Client:
             mid = entry.get("id")
             if mid and mid not in priority:
                 priority.append(mid)
-        
+
         return priority
 
     def _call_model_api(self, endpoint: str, payload: dict, target_model: str) -> Dict[str, Any]:
@@ -465,13 +532,8 @@ class Grok2Client:
         # In development mode, return mock responses
         config = self.config
         primary_model = model or config.get("default_model")
-        if not primary_model and type(self).DEFAULT_MODELS:
-            primary_model = type(self).DEFAULT_MODELS[0]["id"]
         if config["dev_mode"]:
-            fallback_model = primary_model
-            if not fallback_model and type(self).DEFAULT_MODELS:
-                fallback_model = type(self).DEFAULT_MODELS[0]["id"]
-            fallback_model = fallback_model or "mock-openrouter-model"
+            fallback_model = primary_model or "mock-openrouter-model"
             return self._get_mock_response(messages, fallback_model)
 
         readiness_error = self._ensure_live_ready()
@@ -494,7 +556,8 @@ class Grok2Client:
         return last_error
 
     def get_available_models(self):
-        return type(self).DEFAULT_MODELS
+        """Get available models, fetching from API if possible."""
+        return self._fetch_models_from_api()
 
     # No cleanup needed for requests library
 
@@ -580,17 +643,14 @@ class Grok2Client:
         max_tokens: int = 1024,
     ) -> Iterator[Dict[str, object]]:
         """Yield incremental response chunks for realtime streaming."""
-        models = type(self).DEFAULT_MODELS
         primary_model = model or self.config.get("default_model")
-        if not primary_model and models:
-            primary_model = models[0]["id"]
         if not primary_model:
             yield {"error": "No OpenRouter models configured.", "done": True}
             return
 
         # Handle development mode
         if self.config["dev_mode"]:
-            fallback_model = primary_model or (models[0]["id"] if models else "mock-openrouter-model")
+            fallback_model = primary_model or "mock-openrouter-model"
             mock = self._get_mock_response(messages, fallback_model)
             for chunk in self._stream_chunks(mock["response"]):
                 yield chunk
@@ -654,7 +714,8 @@ class Grok2Client:
             }
             if primary_model and candidate != primary_model:
                 # Get model name for better UX
-                model_name = next((m["name"] for m in type(self).DEFAULT_MODELS if m["id"] == candidate), candidate)
+                available_models = self._fetch_models_from_api()
+                model_name = next((m["name"] for m in available_models if m["id"] == candidate), candidate)
                 payload["notice"] = (
                     f"✓ Switched to {model_name} (primary model rate limited)"
                 )
