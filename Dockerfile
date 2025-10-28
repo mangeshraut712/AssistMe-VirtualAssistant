@@ -15,7 +15,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Copy and install Python dependencies first (for better caching)
-COPY backend/requirements.txt ./
+# Use production requirements for faster builds
+COPY backend/requirements-production.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 

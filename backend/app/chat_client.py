@@ -13,6 +13,15 @@ if TYPE_CHECKING:
 else:
     RedisType = Any
 
+# Import Grokipedia for knowledge grounding
+try:
+    from .rag.engine import get_rag_engine, GrokipediaRAG  # type: ignore[import-not-found]
+    HAS_RAG = True
+except ImportError:  # pragma: no cover - optional dependency
+    get_rag_engine = None
+    GrokipediaRAG = None
+    HAS_RAG = False
+
 try:
     import redis  # type: ignore[import-not-found]
     HAS_REDIS = True
@@ -86,6 +95,8 @@ class Grok2Client:
             "retry_backoff_max": self._coerce_float(os.getenv("OPENROUTER_RETRY_BACKOFF_MAX"), 12.0),
             "retry_jitter": self._coerce_float(os.getenv("OPENROUTER_RETRY_JITTER"), 0.25),
             "fallback_models": self._parse_fallback_models(fallback_env),
+            "use_grokipedia": os.getenv("GROKIPEDIA_ENABLED", "true").lower() == "true",
+            "rag_top_k": self._coerce_int(os.getenv("GROKIPEDIA_TOP_K"), 3),
         }
 
     @staticmethod
@@ -528,10 +539,117 @@ class Grok2Client:
             return None, last_error
         return None, {"error": "Unable to open OpenRouter stream", "model": candidate}
 
-    def generate_response(self, messages, model=None, temperature=0.7, max_tokens=1024):
-        # In development mode, return mock responses
+    def generate_response(self, messages, model=None, temperature=0.7, max_tokens=1024, use_grokipedia=None):
+        """Generate response with optional knowledge grounding from Grokipedia."""
+        config = self.config
+        
+        # Determine whether to use Grokipedia
+        if use_grokipedia is None:
+            use_grokipedia = config.get("use_grokipedia", True)
+
+        # If Grokipedia is enabled, use the enhanced method
+        if use_grokipedia:
+            return self.generate_response_with_grokipedia(messages, model, temperature, max_tokens)
+
+        # Otherwise, use direct generation without Grokipedia
+        return self._generate_response_direct(messages, model, temperature, max_tokens)
+
+    def get_available_models(self):
+        """Get available models, fetching from API if possible."""
+        return self._fetch_models_from_api()
+
+    # No cleanup needed for requests library
+
+
+    def get_default_model(self) -> Optional[str]:
+        return self.config.get("default_model")
+
+    def _get_grokipedia_context(self, query: str) -> Dict[str, Any]:
+        """Get relevant Grokipedia context for knowledge grounding."""
+        if not self.config.get("use_grokipedia") or not HAS_RAG or not get_rag_engine:
+            return {"articles_retrieved": 0, "context_blocks": [], "search_metadata": {}}
+
+        try:
+            rag_engine = get_rag_engine()
+            context = rag_engine.as_context(query, top_k=self.config.get("rag_top_k", 3))
+
+            # Parse the context to extract article information
+            context_blocks = []
+            if context:
+                # Split context by article markers
+                articles = context.split("📄 **")
+                articles = [art for art in articles if art.strip()]
+
+                for article in articles[1:]:  # Skip the first empty element
+                    if "**" in article:
+                        title_end = article.find("**")
+                        title = article[:title_end].strip()
+                        content = article[title_end + 2:].strip()
+                        context_blocks.append(f"📄 **{title}**\n{content}")
+
+            return {
+                "articles_retrieved": len(context_blocks),
+                "context_blocks": context_blocks,
+                "query_processed": query,
+                "search_metadata": {
+                    "total_search_time": 0.001,  # Placeholder
+                    "rag_engine_used": True
+                }
+            }
+        except Exception as e:
+            logging.debug("Grokipedia context retrieval failed: %s", e)
+            return {"articles_retrieved": 0, "context_blocks": [], "search_metadata": {"error": str(e)}}
+
+    def generate_response_with_grokipedia(self, messages, model=None, temperature=0.7, max_tokens=1024):
+        """Generate response with knowledge grounding from Grokipedia."""
+        # Extract user message for context search
+        user_message = ""
+        for msg in messages:
+            if msg.get("role") == "user":
+                user_message = msg.get("content", "")
+                break
+
+        # Get Grokipedia context
+        grokipedia_context = self._get_grokipedia_context(user_message)
+
+        # Enhance messages with context if available
+        enhanced_messages = messages.copy()
+        articles_cited = 0
+
+        if grokipedia_context and isinstance(grokipedia_context, dict):
+            articles_cited = grokipedia_context.get("articles_retrieved", 0)
+            context_blocks = grokipedia_context.get("context_blocks", [])
+
+            if context_blocks and articles_cited > 0:
+                context_text = "\n\n".join(context_blocks)
+                context_message = {
+                    "role": "system",
+                    "content": f"You have access to verified knowledge from Grokipedia. Use this information to provide accurate, factual responses:\n\n{context_text}\n\nWhen referencing information from Grokipedia, cite it clearly. If the query doesn't relate to the provided context, you can still use your general knowledge but indicate when you're going beyond the verified facts."
+                }
+                enhanced_messages.insert(0, context_message)
+
+        # Generate response using enhanced messages, but without Grokipedia to avoid recursion
+        result = self._generate_response_direct(
+            messages=enhanced_messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+
+        # Add knowledge attribution
+        if "response" in result:
+            result["grokipedia_used"] = articles_cited > 0
+            result["knowledge_sources"] = grokipedia_context
+            result["articles_cited"] = articles_cited
+
+        return result
+
+    def _generate_response_direct(self, messages, model=None, temperature=0.7, max_tokens=1024):
+        """Direct response generation without Grokipedia processing."""
         config = self.config
         primary_model = model or config.get("default_model")
+        
+        # In development mode, return mock responses
         if config["dev_mode"]:
             fallback_model = primary_model or "mock-openrouter-model"
             return self._get_mock_response(messages, fallback_model)
@@ -554,16 +672,6 @@ class Grok2Client:
             last_error = result
 
         return last_error
-
-    def get_available_models(self):
-        """Get available models, fetching from API if possible."""
-        return self._fetch_models_from_api()
-
-    # No cleanup needed for requests library
-
-
-    def get_default_model(self) -> Optional[str]:
-        return self.config.get("default_model")
 
     def _stream_chunks(self, response_text: str) -> Iterator[Dict[str, object]]:
         """Stream mock response chunks in development mode."""
@@ -641,8 +749,34 @@ class Grok2Client:
         model: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 1024,
+        use_grokipedia: Optional[bool] = None,
     ) -> Iterator[Dict[str, object]]:
-        """Yield incremental response chunks for realtime streaming."""
+        """Yield incremental response chunks for realtime streaming with optional Grokipedia grounding."""
+        # Determine whether to use Grokipedia
+        if use_grokipedia is None:
+            use_grokipedia = self.config.get("use_grokipedia", True)
+
+        # Extract user message for context search
+        user_message = ""
+        for msg in messages:
+            if msg.get("role") == "user":
+                user_message = msg.get("content", "")
+                break
+
+        # Get Grokipedia context if enabled
+        grokipedia_context = ""
+        if use_grokipedia:
+            grokipedia_context = self._get_grokipedia_context(user_message)
+
+        # Enhance messages with context if available
+        enhanced_messages = messages.copy()
+        if grokipedia_context:
+            context_message = {
+                "role": "system",
+                "content": f"You have access to verified knowledge from Grokipedia. Use this information to provide accurate, factual responses:\n\n{grokipedia_context}\n\nWhen referencing information from Grokipedia, cite it clearly. If the query doesn't relate to the provided context, you can still use your general knowledge but indicate when you're going beyond the verified facts."
+            }
+            enhanced_messages.insert(0, context_message)
+
         primary_model = model or self.config.get("default_model")
         if not primary_model:
             yield {"error": "No OpenRouter models configured.", "done": True}
@@ -651,7 +785,7 @@ class Grok2Client:
         # Handle development mode
         if self.config["dev_mode"]:
             fallback_model = primary_model or "mock-openrouter-model"
-            mock = self._get_mock_response(messages, fallback_model)
+            mock = self._get_mock_response(enhanced_messages, fallback_model)
             for chunk in self._stream_chunks(mock["response"]):
                 yield chunk
             return
@@ -669,7 +803,7 @@ class Grok2Client:
 
         for candidate in attempts:
             logging.info("Trying model: %s", candidate)
-            response, open_error = self._open_stream_with_backoff(messages, candidate, temperature, max_tokens)
+            response, open_error = self._open_stream_with_backoff(enhanced_messages, candidate, temperature, max_tokens)
 
             if not response:
                 if open_error:
@@ -720,6 +854,11 @@ class Grok2Client:
                     f"✓ Switched to {model_name} (primary model rate limited)"
                 )
                 logging.info(f"✓ Successfully used fallback model: {candidate}")
+
+            # Add Grokipedia usage info
+            if grokipedia_context:
+                payload["grokipedia_used"] = True
+                payload["knowledge_sources"] = "Grokipedia + OpenRouter model"
 
             yield payload
             return

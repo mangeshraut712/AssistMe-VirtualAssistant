@@ -28,7 +28,7 @@ python-socketio==5.14.0
 # Rich content APIs
 requests-cache==1.2.1
 
-# Agent stack & integrations (lightweight)
+# Agent stack & integrations (production ready)
 langchain>=0.3.0
 langchain-openai>=0.2.0
 openai>=1.54.0
@@ -38,4 +38,3 @@ PyGithub>=2.4.0
 sentence-transformers>=3.1.0
 faiss-cpu>=1.9.0
 numpy>=2.0.0
-pytest==8.3.2

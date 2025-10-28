@@ -22,7 +22,35 @@ restartPolicyMaxRetries = 10
 sleepApplication = false
 railwayTomlPath = "railway.toml"
 
-# REQUIRED ENVIRONMENT VARIABLES for OpenRouter integration:
-# OPENROUTER_API_KEY - Your OpenRouter API key (obtain from https://openrouter.ai/keys)
-# DATABASE_URL - PostgreSQL connection string (auto-provided by Railway)
-# APP_URL - Frontend URL for OpenRouter referrer (default: production Vercel URL)
+[env]
+# Core Application
+APP_URL = "https://assistme-virtualassistant-production.up.railway.app"
+APP_NAME = "AssistMe Virtual Assistant"
+DEV_MODE = "false"
+
+# Database (auto-provided by Railway)
+# DATABASE_URL - automatically set by Railway PostgreSQL
+
+# Redis (auto-provided by Railway)
+# REDIS_URL - automatically set by Railway Redis
+
+# OpenRouter API Configuration
+OPENROUTER_API_KEY = ""
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+# Grokipedia RAG Configuration
+GROKIPEDIA_DEFAULT_ENABLED = "true"
+GROKIPEDIA_DATA_PATH = "data/grokipedia.json"
+GROKIPEDIA_EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+# MiniMax Multimodal Configuration
+MINIMAX_API_KEY = ""
+MINIMAX_BASE_URL = "https://api.minimax.chat/v1"
+MINIMAX_AGENT_MODEL = "minimax/minimax-m2"
+MINIMAX_TTS_MODEL = "speech-02"
+MINIMAX_IMAGE_MODEL = "image-01"
+MINIMAX_VIDEO_MODEL = "hailuo-02"
+
+# GitHub Integration (optional)
+GITHUB_TOKEN = ""
+GITHUB_DEFAULT_REPO = ""

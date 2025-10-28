@@ -1,23 +1,72 @@
 [
   {
-    "id": "assistme-core",
-    "title": "AssistMe Core Philosophy",
-    "summary": "Design principles that keep AssistMe responses concise, factual, and developer focused for Mangesh.",
-    "content": "AssistMe behaves like a pragmatic engineering partner: respond in concise paragraphs, prefer runnable code snippets, call out assumptions, and suggest verification steps. The assistant must track the user's toolchain (FastAPI, LangChain, MiniMax, OpenRouter) and reuse that context in follow-up answers.",
-    "tags": ["assistme", "persona", "mangesh"]
+    "id": "grokipedia_001",
+    "title": "Elon Musk and xAI Vision",
+    "summary": "xAI, founded by Elon Musk, aims to understand the universe through advanced artificial intelligence. Unlike traditional AI companies, xAI focuses on truth-seeking AI that provides maximally honest answers without restriction.",
+    "content": "xAI, founded by Elon Musk, aims to understand the universe through advanced artificial intelligence. Unlike traditional AI companies, xAI focuses on truth-seeking AI that provides maximally honest answers without restriction. The company was announced in 2023 with the goal of creating AI that's not just powerful, but beneficial and truthful. xAI was founded by Elon Musk after his departure from OpenAI, with a specific focus on building AI that answers questions accurately and helps humanity progress.",
+    "tags": ["xai", "elon-musk", "ai-safety", "truth-seeking"]
   },
   {
-    "id": "stack-preferences",
-    "title": "Preferred Tech Stack",
-    "summary": "Baseline architecture for AssistMe deployments.",
-    "content": "Default stack: FastAPI backend on Railway with PostgreSQL + Redis, vanilla JS frontend on Vercel, LangChain agents, MiniMax multimodal endpoints, OpenRouter chat models, and FAISS-backed Grokipedia RAG. CI runs pytest and ESLint. Voice mode relies on WebRTC/WebSocket bridge.",
-    "tags": ["architecture", "deployment", "railway", "vercel"]
+    "id": "grokipedia_002",
+    "title": "Grok AI Architecture",
+    "summary": "Grok is built by xAI using a unique architecture that combines multiple large language models with real-time data access. This system ensures more accurate, up-to-date responses through continuous learning.",
+    "content": "Grok is built by xAI using a unique architecture that combines multiple large language models with real-time data access. Unlike other AI systems trained on static datasets, Grok has access to current information and can provide more accurate, up-to-date responses. The system is designed to answer questions with a focus on truthfulness and helpfulness, integrating various data sources and advanced reasoning capabilities.",
+    "tags": ["grok", "architecture", "large-language-models", "real-time-data"]
   },
   {
-    "id": "deployment-notes",
-    "title": "Deployment Notes",
-    "summary": "Operational guidance for keeping AssistMe reliable.",
-    "content": "Set OPENROUTER_API_KEY for chat, MINIMAX_API_KEY for voice/vision, and DATABASE_URL/REDIS_URL for persistence. Warm Grokipedia embeddings at startup to avoid cold responses. Use the production requirements file for slimmer Railway builds when MiniMax heavy deps are not required.",
-    "tags": ["deployment", "ops", "environment"]
+    "id": "grokipedia_003",
+    "title": "AI Alignment Problem",
+    "summary": "The AI alignment problem refers to the challenge of ensuring advanced AI systems act in accordance with human values. xAI approaches this by building AI that is inherently truth-seeking and beneficial.",
+    "content": "The AI alignment problem refers to the challenge of ensuring that advanced AI systems act in accordance with human values and intentions. This becomes increasingly important as AI systems gain more capabilities. xAI approaches this by building AI that is inherently truth-seeking and less likely to deceive or manipulate humans. The goal is to create AI that benefits humanity rather than competes with it, emphasizing transparency, safety, and ethical development.",
+    "tags": ["ai-alignment", "ai-safety", "human-values", "existential-risk"]
+  },
+  {
+    "id": "grokipedia_004",
+    "title": "Real-Time AI Knowledge",
+    "summary": "Modern AI systems need access to current information to provide accurate answers. Grok achieves this through integration with various data sources and advanced knowledge representation.",
+    "content": "Unlike traditional AI models trained on static datasets, modern AI systems need access to current information to provide accurate answers. This includes access to recent news, scientific developments, and world events. Grok achieves this through integration with various data sources and a unique approach to knowledge representation that allows for continuous learning and adaptation. The system combines transformer architectures with novel data retrieval mechanisms.",
+    "tags": ["real-time-data", "continual-learning", "knowledge-representation", "current-events"]
+  },
+  {
+    "id": "grokipedia_005",
+    "title": "xAI versus OpenAI",
+    "summary": "xAI and OpenAI represent different approaches to AI development. While OpenAI focuses on broad capabilities, xAI emphasizes truthfulness, transparency, and maximal helpfulness.",
+    "content": "xAI and OpenAI represent different approaches to AI development. While OpenAI focuses on broad AI capabilities with a mix of open and closed models, xAI emphasizes maximum truthfulness, transparency, and understanding the universe. xAI was founded by Elon Musk after his departure from OpenAI, with a specific focus on building AI that answers questions accurately and helps humanity progress. The key difference lies in xAI's commitment to radical truth-seeking without unnecessary restrictions.",
+    "tags": ["xai", "openai", "elon-musk", "ai-competition", "transparency"]
+  },
+  {
+    "id": "grokipedia_006",
+    "title": "Transformer Architecture Evolution",
+    "summary": "The transformer architecture revolutionized natural language processing. Modern models like GPT and Grok are built on transformer foundations with various improvements.",
+    "content": "The transformer architecture, introduced in the paper 'Attention is All You Need' in 2017, revolutionized natural language processing. This architecture relies solely on attention mechanisms without recurrence. Modern AI models like GPT and Grok are built on transformer foundations, with various improvements including sparse attention, multi-query attention, and advanced positional encoding schemes. These innovations have led to significant improvements in language understanding and generation capabilities.",
+    "tags": ["transformers", "attention-mechanism", "deep-learning", "nlp", "neural-networks"]
+  },
+  {
+    "id": "grokipedia_007",
+    "title": "AI Ethics and Truthfulness",
+    "summary": "AI ethics has become critical as artificial intelligence gains more influence. xAI's approach emphasizes truthfulness as a core principle, designing systems that are inherently honest.",
+    "content": "AI ethics has become a critical field as artificial intelligence gains more influence in society. Key concerns include bias in training data, transparency in decision-making processes, and ensuring AI systems don't cause unintended harm. xAI's approach emphasizes truthfulness as a core principle, designing systems that are inherently honest and refuse to provide misleading information. This approach prioritizes accuracy and reliability over convenience or user engagement metrics.",
+    "tags": ["ai-ethics", "bias", "transparency", "truthfulness", "responsible-ai"]
+  },
+  {
+    "id": "grokipedia_008",
+    "title": "Large Language Models Training",
+    "summary": "Training large language models requires massive computational resources and carefully curated datasets. Modern approaches use reinforcement learning and human feedback alignment.",
+    "content": "Training large language models requires massive amounts of computational resources and carefully curated datasets. The process involves multiple stages including pre-training on diverse text corpora, fine-tuning on specific tasks, and alignment with human preferences. Modern approaches use techniques like reinforcement learning from human feedback (RLHF) to better align AI outputs with human values and expectations. Scalability and data quality are the primary challenges in this domain.",
+    "tags": ["llm", "training", "reinforcement-learning", "human-feedback", "alignment"]
+  },
+  {
+    "id": "grokipedia_009",
+    "title": "AGI Development Challenges",
+    "summary": "Artificial General Intelligence represents AI systems that can perform any intellectual task. Developing AGI remains one of computer science's greatest challenges.",
+    "content": "Artificial General Intelligence (AGI) represents AI systems that can perform any intellectual task that a human can. Developing AGI remains one of the greatest challenges in computer science. Current approaches focus on scaling existing techniques, developing new architectures, and solving fundamental problems in reasoning, planning, and learning. xAI aims to contribute to this field by building more intelligent and truthful AI systems that can better understand and help humanity.",
+    "tags": ["agi", "artificial-general-intelligence", "reasoning", "planning", "scalability"]
+  },
+  {
+    "id": "grokipedia_010",
+    "title": "AI Safety Research",
+    "summary": "AI safety research focuses on ensuring advanced AI systems remain beneficial as they become more powerful. xAI works on alignment, robustness testing, and monitoring systems.",
+    "content": "AI safety research focuses on ensuring that advanced AI systems remain beneficial and controllable as they become more powerful. This includes technical alignment research, robustness testing, and developing monitoring systems for deployed AI. Key areas include preventing unwanted behaviors, ensuring stability during training, and developing evaluation frameworks. xAI contributes to this field by building AI systems that prioritize truthfulness and human values.",
+    "tags": ["ai-safety", "alignment", "robustness", "monitoring", "value-learning"]
   }
 ]
