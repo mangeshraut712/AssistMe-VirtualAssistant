@@ -5,8 +5,16 @@
 ![Status](https://img.shields.io/badge/status-production--ready-green)
 ![Features](https://img.shields.io/badge/features-multimodal-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![MiniMax](https://img.shields.io/badge/MiniMax-Developer%20Approved-blue)
+![xAI](https://img.shields.io/badge/xAI-Grok%20Integrated-blue)
 
 ## 🎯 Core Features
+
+### 🏆 **Official MiniMax Developer Program Access**
+- ✅ **Developer Approved**: Official MiniMax developer status
+- 🎁 **$50 Free Credits**: Valid until December 31st
+- 🌐 **88,000+ Developer Community**: Join at [discord.com/invite/hailuoai](https://discord.com/invite/hailuoai)
+- 🚀 **Top-Performing Models**: Global No. 1 TTS, top video generation
 
 ### 🤖 **AI Model Integration**
 - **10+ Premium Models**: Google, Meta, NVIDIA, Mistral, and more
@@ -20,21 +28,24 @@
 - **Smart Proxy Fallback**: Grok API → Local FAISS search
 - **Source Citations**: Factually grounded, attributed responses
 
-### 🎨 **Multimodal Generation (MiniMax)**
-- **Image Generation**: `/image [prompt]` - AI-powered image creation
-- **Video Generation**: `/video [prompt]` - Short video production
-- **Text-to-Speech**: `/speech [text]` - High-quality voice synthesis
+### 🎨 **Multimodal Generation (MiniMax Official)**
+- **Image Generation**: `/image [prompt]` - AI-powered image creation (Image-01 model)
+- **Video Generation**: `/video [prompt]` - Short video production (Hailuo-02 model)
+- **Text-to-Speech**: `/speech [text]` - High-quality voice synthesis (Speech-02 series)
 - **Speech-to-Text**: Real-time voice transcription via WebSocket
+- **Music Generation**: Full tracks with vocals (Music 1.5)
 
 ### 🤖 **Agentic Workflows**
 - **MiniMax M2 Agent**: ReAct agent with GitHub tooling
 - **Planning**: `/plan [task]` - Automated task planning and execution
 - **GitHub Integration**: Issue creation and repository management
+- **Advanced Tooling**: Professional grade agent capabilities
 
 ### 🎙️ **Voice Assistant**
 - **WebSocket Streaming**: Real-time voice conversations
 - **Multi-provider STT/TTS**: MiniMax + Fallback options
 - **Session Management**: Redis-backed voice session handling
+- **40+ Languages**: Multilingual voice support
 
 ## 🚀 Quick Start
 
