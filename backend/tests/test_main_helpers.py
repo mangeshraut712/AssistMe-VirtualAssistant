@@ -2,7 +2,10 @@ import base64
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+# Ensure repository backend directory is on sys.path for CI compatibility
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
 from app.main import (
     _apply_personalisation,

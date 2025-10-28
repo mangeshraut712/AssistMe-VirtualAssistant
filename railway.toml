@@ -4,13 +4,23 @@ builder = "NIXPACKS"
 [build.env]
 # Enable V2 runtime for better FastAPI support
 NIXPACKS_V2 = "true"
+# Specify exact Python version
+NIXPACKS_PYTHON_VERSION = "3.11"
+
+# Railway-specific package configuration
+NIXPACKS_PKGS = "git libpq-dev libssl-dev"
 
 [deploy]
 # V2 runtime: uvicorn startup in backend directory
 startCommand = "./start.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
-# Use start.sh script for proper uvicorn startup with PORT resolution
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+# Railway V2 runtime settings
+sleepApplication = false
+railwayTomlPath = "railway.toml"
 
 # REQUIRED ENVIRONMENT VARIABLES for OpenRouter integration:
 # OPENROUTER_API_KEY - Your OpenRouter API key (obtain from https://openrouter.ai/keys)

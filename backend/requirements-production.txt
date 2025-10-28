@@ -1,4 +1,4 @@
-# Railway-compatible stable versions
+# Production requirements - excludes heavy ML packages for faster builds
 fastapi==0.112.0
 uvicorn[standard]==0.30.6
 sqlalchemy==2.0.34
@@ -10,7 +10,7 @@ redis[hiredis]==5.1.1
 python-dotenv==1.0.1
 python-multipart==0.0.18
 
-# Performance optimizations (Railway compatible)
+# Performance optimizations
 orjson==3.10.7
 aiofiles==24.1.0
 requests==2.32.4
@@ -27,14 +27,10 @@ python-socketio==5.14.0
 
 # Rich content APIs
 requests-cache==1.2.1
-aiohttp==3.12.14
 
-# Agent stack & integrations
+# Agent stack & integrations (lightweight)
 langchain>=0.3.0
 langchain-openai>=0.2.0
 openai>=1.54.0
 PyGithub>=2.4.0
-sentence-transformers>=3.1.0
-faiss-cpu>=1.9.0
-numpy>=2.0.0
 pytest==8.3.2

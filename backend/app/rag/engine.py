@@ -5,18 +5,10 @@ from __future__ import annotations
 import json
 import logging
 import os
-import asyncio
-import time
 import threading
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TYPE_CHECKING
-from urllib.parse import quote
-
-try:
-    import aiohttp  # type: ignore[import-not-found]
-except ImportError:
-    aiohttp = None  # type: ignore[assignment]
 
 # Keep legacy FAISS imports for fallback
 try:
@@ -43,14 +35,9 @@ logger = logging.getLogger(__name__)
 
 
 class GrokipediaRAG:
-    """Grokipedia retrieval engine with Grok API proxy and local fallback support."""
+    """Grokipedia retrieval engine backed by local embeddings."""
 
     def __init__(self, data_path: Optional[str] = None):
-        # Configure Grok API proxy settings (current approach for Grokipedia access)
-        self.use_grok_proxy = os.getenv("GROKIPEDIA_USE_GROK_PROXY", "false").lower() == "true"
-        self.xai_api_key = os.getenv("XAI_API_KEY")  # For Grok API proxy search
-
-        # Local data fallback
         default_path = Path(__file__).resolve().parents[1] / "data" / "grokipedia.json"
         self.data_path = Path(data_path or os.getenv("GROKIPEDIA_DATA_PATH", default_path))
         self.model_name = os.getenv("GROKIPEDIA_EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
@@ -61,9 +48,7 @@ class GrokipediaRAG:
         self._embeddings: Optional[Any] = None
         self._metadata: List[Dict[str, Any]] = []
 
-        if self.use_grok_proxy and self.xai_api_key:
-            logger.info("🇬 Grokipedia Grok proxy enabled - using Grok API for search")
-        elif self.documents:
+        if self.documents:
             logger.info("📁 Using local Grokipedia data (%d articles)", len(self.documents))
         else:
             logger.warning("⚠️  No Grokipedia data available - add grokipedia.json with 885K articles dataset")
@@ -161,90 +146,8 @@ class GrokipediaRAG:
         scored.sort(key=lambda item: item[0], reverse=True)
         return [doc for _, doc in scored[:top_k]]
 
-    def search_via_grok_proxy(self, query: str, top_k: int = 3) -> Optional[List[Dict[str, Any]]]:
-        """Query Grokipedia via Grok API proxy for factual responses."""
-        if not self.use_grok_proxy or not self.xai_api_key or aiohttp is None:
-            return None
-
-        async def grok_api_query():
-            try:
-                # Type-safe aiohttp usage
-                assert aiohttp is not None, "aiohttp not available"
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as session:  # type: ignore[attr-defined]
-                    url = "https://api.x.ai/v1/chat/completions"
-                    headers = {
-                        "Authorization": f"Bearer {self.xai_api_key}",
-                        "Content-Type": "application/json"
-                    }
-
-                    # Prompt Grok to search/retrieve from Grokipedia knowledge
-                    system_prompt = """You are Grok, built by xAI. You have access to Grokipedia, an AI-curated knowledge base with 885K+ articles.
-
-When given a search query, provide factual information from Grokipedia in the following JSON format:
-[{
-  "title": "Article Title",
-  "summary": "Brief summary",
-  "content": "Relevant content excerpt",
-  "score": 0.95,
-  "tags": ["relevant", "tags"]
-}]
-
-Return only valid JSON array, no other text. If no relevant information, return []."""
-
-                    payload = {
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": f"Search Grokipedia for: {query}. Return top {top_k} results as JSON array."}
-                        ],
-                        "model": "grok-2-latest",
-                        "temperature": 0.1,
-                        "max_tokens": 2000,
-                        "stream": False
-                    }
-
-                    async with session.post(url, json=payload, headers=headers) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                            try:
-                                results = json.loads(content.strip())
-                                return results if isinstance(results, list) else []
-                            except json.JSONDecodeError:
-                                logger.warning("Failed to parse Grok API response as JSON")
-                                return []
-                        else:
-                            logger.warning(f"Grok API error: {response.status}")
-                            return []
-
-            except asyncio.TimeoutError:
-                logger.warning("Grok API timeout")
-                return []
-            except Exception as exc:
-                logger.warning(f"Grok API error: {exc}")
-                return []
-
-        # Run async query in event loop
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(grok_api_query())
-            loop.close()
-            return result if result and len(result) > 0 else []
-        except Exception as exc:
-            logger.warning(f"Failed to query Grok API for Grokipedia: {exc}")
-            return []
-
     def search(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
-        """Search with Grokipedia - tries Grok proxy first, falls back to local."""
-        # Try Grok API proxy first if enabled
-        if self.use_grok_proxy:
-            grok_results = self.search_via_grok_proxy(query, top_k)
-            if grok_results and len(grok_results) > 0:
-                logger.debug(f"🇬 Found {len(grok_results)} results from Grokipedia via Grok API")
-                return grok_results
-
-        # Fallback to local search
-        logger.debug("Falling back to local Grokipedia data")
+        """Search Grokipedia using local embeddings or keyword fallback."""
         return self._search_local(query, top_k)
 
     def _search_local(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
@@ -287,11 +190,7 @@ Return only valid JSON array, no other text. If no relevant information, return 
         results = self.search(query, top_k=top_k)
         blocks = []
 
-        # Add source attribution header
-        if self.use_grok_proxy:
-            sources_used = "Grokipedia via Grok API proxy"
-        else:
-            sources_used = "local Grokipedia data"
+        sources_used = "local Grokipedia data"
         blocks.append(f"Factual information from {sources_used} (searched: \"{query}\"):")
 
         for item in results:

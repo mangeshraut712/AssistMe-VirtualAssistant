@@ -101,10 +101,6 @@ DATABASE_URL=postgresql://...            # PostgreSQL connection
 
 ### Optional (Enhanced Features)
 ```bash
-# xAI Grok Integration
-XAI_API_KEY=xai-...                      # Enable Grok API proxy
-GROKIPEDIA_USE_GROK_PROXY=false          # true = use Grok, false = local only
-
 # MiniMax Multimodal
 MINIMAX_API_KEY=eyJ...                   # Enable image/video/speech generation
 
@@ -123,7 +119,6 @@ OPENROUTER_API_KEY=sk-or-v1-your-key-here
 DATABASE_URL=postgresql://railway-connection-url
 
 # Optional Enhanced Features
-XAI_API_KEY=xai-your-grok-key
 MINIMAX_API_KEY=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 GITHUB_TOKEN=ghp_your-github-token
 
@@ -131,7 +126,6 @@ GITHUB_TOKEN=ghp_your-github-token
 APP_URL=https://your-vercel-app.vercel.app
 APP_NAME=AssistMe Virtual Assistant
 DEV_MODE=false
-GROKIPEDIA_USE_GROK_PROXY=false
 ```
 
 ### Vercel Frontend Setup

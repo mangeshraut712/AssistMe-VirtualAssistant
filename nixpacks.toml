@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["python311", "postgresql", "openssl", "git"]
+
+[phases.build]
+cmds = ["cd backend && pip install --upgrade pip setuptools wheel", "cd backend && pip install -r requirements-production.txt"]
+
+[phases.install]
+onlyIncludeFiles = ["backend/**", "start.sh"]
+
+[start]
+cmd = "./start.sh"

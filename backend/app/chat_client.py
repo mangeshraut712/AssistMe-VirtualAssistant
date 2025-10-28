@@ -28,26 +28,12 @@ except ImportError:  # pragma: no cover - optional dependency
     requests = None  # type: ignore[assignment]
     HAS_REQUESTS = False
 
-# Import X.AI client if available
-try:
-    import openai  # type: ignore[import-not-found]
-    HAS_XAI = True
-except ImportError:
-    openai = None  # type: ignore[assignment]
-    HAS_XAI = False
-
 class Grok2Client:
     __slots__ = ("config", "redis_client", "session")
     DEFAULT_MODELS: ClassVar[List[Dict[str, str]]] = [
-        # X.AI Models (Grok) - highest priority
-        {"id": "xai/grok-4-latest", "name": "Grok 4 Latest (X.AI)"},                                 # Latest Grok model
-        {"id": "xai/grok-4", "name": "Grok 4 (X.AI)"},                                              # Stable Grok 4
-        {"id": "xai/grok-3.5", "name": "Grok 3.5 (X.AI)"},                                          # Previous version
-
-        # Ordered by speed/performance for optimal user experience (fallback)
+        {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct"},     # Accurate, 131K
         {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash Experimental"},  # Fastest, 1M context
         {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2"},             # Very fast, 131K
-        {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct"},     # Accurate, 131K
         {"id": "mistralai/mistral-nemo:free", "name": "Mistral Nemo"},                               # Fast, 128K
         {"id": "qwen/qwen3-coder:free", "name": "Qwen3 Coder 480B A35B"},                            # Best for code, 262K
         {"id": "z-ai/glm-4.5-air:free", "name": "Zhipu GLM 4.5 Air"},                                # Multilingual, 128K
@@ -496,23 +482,14 @@ class Grok2Client:
         last_error: Dict[str, Any] = {"error": "No OpenRouter models available."}
 
         for candidate in attempts:
-            if self._is_xai_model(candidate):
-                payload = self._build_payload(messages, candidate, temperature=temperature, max_tokens=max_tokens)
-                result = self._call_xai_model_api(payload, candidate)
-                if "response" in result:
-                    if primary_model and candidate != primary_model:
-                        result.setdefault("notice", f"✓ Switched to X.AI Grok '{candidate}'")
-                    return result
-                last_error = result
-            else:
-                payload = self._build_payload(messages, candidate, temperature=temperature, max_tokens=max_tokens)
-                result = self._call_with_backoff(config["chat_endpoint"], payload, candidate)
+            payload = self._build_payload(messages, candidate, temperature=temperature, max_tokens=max_tokens)
+            result = self._call_with_backoff(config["chat_endpoint"], payload, candidate)
 
-                if "response" in result:
-                    if primary_model and candidate != primary_model:
-                        result.setdefault("notice", f"Primary model '{primary_model}' unavailable. Responded with '{candidate}'.")
-                    return result
-                last_error = result
+            if "response" in result:
+                if primary_model and candidate != primary_model:
+                    result.setdefault("notice", f"Primary model '{primary_model}' unavailable. Responded with '{candidate}'.")
+                return result
+            last_error = result
 
         return last_error
 
@@ -521,56 +498,6 @@ class Grok2Client:
 
     # No cleanup needed for requests library
 
-    def _is_xai_model(self, model_id: str) -> bool:
-        """Check if model is an X.AI Grok model"""
-        return model_id.startswith("xai/") and HAS_XAI and openai is not None
-
-    def _call_xai_model_api(self, payload: dict, target_model: str) -> Dict[str, Any]:
-        """Make API call to X.AI for Grok models"""
-        assert openai is not None, "OpenAI client not available"
-        xai_api_key = os.getenv("XAI_API_KEY")
-
-        if not xai_api_key:
-            return {"error": "X.AI API key not configured", "model": target_model}
-
-        try:
-            # Replace xai/ prefix with grok model names
-            real_model = target_model.replace("xai/", "", 1)
-            if real_model == "grok-4-latest":
-                real_model = "grok-4-latest"
-            elif real_model == "grok-4":
-                real_model = "grok-4"
-            elif real_model == "grok-3.5":
-                real_model = "grok-3.5"
-            else:
-                real_model = "grok-4-latest"  # fallback
-
-            # Update payload with correct model name
-            payload = payload.copy()
-            payload["model"] = real_model
-
-            client = openai.OpenAI(
-                api_key=xai_api_key,
-                base_url="https://api.x.ai/v1",
-            )
-
-            response = client.chat.completions.create(**payload)
-            message = response.choices[0].message
-            text = (message.content or "").strip()
-
-            if not text:
-                text = "I wasn't able to produce a response. Please try again."
-
-            if response.usage:
-                tokens = getattr(response.usage, 'total_tokens', len(text.split()))
-            else:
-                tokens = len(text.split())
-
-            return {"response": text, "tokens": tokens, "model": target_model}
-
-        except Exception as exc:
-            logging.exception("Unexpected error calling X.AI")
-            return {"error": f"Unexpected error calling X.AI: {exc}", "model": target_model}
 
     def get_default_model(self) -> Optional[str]:
         return self.config.get("default_model")

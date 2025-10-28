@@ -22,8 +22,9 @@ def rebuild_faiss_index():
     try:
         from backend.app.rag.engine import GrokipediaRAG
 
-        # Get data path from environment or default
-        data_path = os.getenv("GROKIPEDIA_DATA_PATH", "data/grokipedia.json")
+        # Get data path from environment or default (relative to project root)
+        default_data_path = ROOT_DIR / "data" / "grokipedia.json"
+        data_path = os.getenv("GROKIPEDIA_DATA_PATH", str(default_data_path))
 
         print(f"📂 Loading data from: {data_path}")
 
