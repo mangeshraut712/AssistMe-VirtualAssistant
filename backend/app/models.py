@@ -15,6 +15,10 @@ class User(Base):
     username = Column(String(100), unique=True, index=True, nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    preferred_language = Column(String(32), nullable=True)
+    style_preset = Column(String(64), nullable=True)
+    preferred_voice = Column(String(64), nullable=True)
+    preferences = Column(Text, nullable=True)
 
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
 

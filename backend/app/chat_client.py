@@ -1,6 +1,8 @@
 import os
 import json
 import logging
+import random
+import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Iterator, List, Optional
 
 if TYPE_CHECKING:
@@ -20,15 +22,29 @@ except ImportError:  # pragma: no cover - optional dependency
 
 try:
     import requests  # type: ignore[import-not-found]
+    import requests.adapters  # type: ignore[import-not-found]
     HAS_REQUESTS = True
 except ImportError:  # pragma: no cover - optional dependency
     requests = None  # type: ignore[assignment]
     HAS_REQUESTS = False
 
+# Import X.AI client if available
+try:
+    import openai  # type: ignore[import-not-found]
+    HAS_XAI = True
+except ImportError:
+    openai = None  # type: ignore[assignment]
+    HAS_XAI = False
+
 class Grok2Client:
     __slots__ = ("config", "redis_client", "session")
     DEFAULT_MODELS: ClassVar[List[Dict[str, str]]] = [
-        # Ordered by speed/performance for optimal user experience
+        # X.AI Models (Grok) - highest priority
+        {"id": "xai/grok-4-latest", "name": "Grok 4 Latest (X.AI)"},                                 # Latest Grok model
+        {"id": "xai/grok-4", "name": "Grok 4 (X.AI)"},                                              # Stable Grok 4
+        {"id": "xai/grok-3.5", "name": "Grok 3.5 (X.AI)"},                                          # Previous version
+
+        # Ordered by speed/performance for optimal user experience (fallback)
         {"id": "google/gemini-2.0-flash-exp:free", "name": "Google Gemini 2.0 Flash Experimental"},  # Fastest, 1M context
         {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2"},             # Very fast, 131K
         {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct"},     # Accurate, 131K
@@ -45,8 +61,10 @@ class Grok2Client:
         self.config = self._load_config()
         self.redis_client: Optional[Any] = None
         # Connection pooling for faster requests
-        if HAS_REQUESTS and requests:
+        if HAS_REQUESTS and requests is not None:
             self.session = requests.Session()
+            # Type assertion for Pylance since we know requests is available
+            assert requests.adapters is not None
             adapter = requests.adapters.HTTPAdapter(
                 pool_connections=10,
                 pool_maxsize=20,
@@ -63,6 +81,7 @@ class Grok2Client:
         configured_default = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip()
         if not configured_default and type(self).DEFAULT_MODELS:
             configured_default = type(self).DEFAULT_MODELS[0]["id"]
+        fallback_env = os.getenv("OPENROUTER_FALLBACK_MODELS", "")
         return {
             "base_url": base_url,
             "chat_endpoint": f"{base_url}/chat/completions",
@@ -73,6 +92,11 @@ class Grok2Client:
             "redis_url": os.getenv("REDIS_URL"),
             "timeout": self._get_timeout(),
             "default_model": configured_default,
+            "retry_attempts": self._coerce_int(os.getenv("OPENROUTER_RETRY_ATTEMPTS"), 3),
+            "retry_backoff_base": self._coerce_float(os.getenv("OPENROUTER_RETRY_BACKOFF_BASE"), 1.0),
+            "retry_backoff_max": self._coerce_float(os.getenv("OPENROUTER_RETRY_BACKOFF_MAX"), 12.0),
+            "retry_jitter": self._coerce_float(os.getenv("OPENROUTER_RETRY_JITTER"), 0.25),
+            "fallback_models": self._parse_fallback_models(fallback_env),
         }
 
     @staticmethod
@@ -82,6 +106,43 @@ class Grok2Client:
             return float(os.getenv("OPENROUTER_TIMEOUT", "60.0"))
         except ValueError:
             return 60.0
+
+    @staticmethod
+    def _coerce_int(raw: Optional[str], default: int) -> int:
+        try:
+            if raw is None:
+                return default
+            value = int(raw)
+            return max(1, value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _coerce_float(raw: Optional[str], default: float) -> float:
+        try:
+            if raw is None:
+                return default
+            return float(raw)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _parse_fallback_models(raw: str) -> List[str]:
+        models: List[str] = []
+        for entry in raw.split(","):
+            candidate = entry.strip()
+            if candidate:
+                models.append(candidate)
+        return models
+
+    def _sleep_with_backoff(self, attempt: int) -> None:
+        base = self.config.get("retry_backoff_base", 1.0) or 1.0
+        cap = self.config.get("retry_backoff_max", 12.0) or 12.0
+        jitter = self.config.get("retry_jitter", 0.25) or 0.0
+        delay = min(cap, base * (2 ** attempt))
+        # Add a small random jitter to avoid synchronized retries
+        jitter_offset = random.uniform(0, jitter) if jitter > 0 else 0.0
+        time.sleep(delay + jitter_offset)
 
     def _headers(self) -> dict:
         config = self.config
@@ -203,11 +264,11 @@ class Grok2Client:
         """Build payload with flexible parameters to avoid too many positional args."""
         formatted_messages = self._format_messages(messages)
         
-        # Add optimized system message for speed and accuracy
+        # Add optimized system message for speed and accuracy with Grokipedia context
         if not any(msg.get("role") == "system" for msg in formatted_messages):
             system_msg = {
                 "role": "system",
-                "content": "You are a fast, accurate AI assistant. Provide concise, direct answers. Be specific and factual. Avoid unnecessary elaboration unless asked."
+                "content": "You are a fast, accurate AI assistant powered by Grok. Provide concise, direct answers based on verified facts. When using external knowledge, cite sources clearly. Be specific and factual. Avoid unnecessary elaboration. If referencing information, mention the source (Grokipedia or general knowledge)."
             }
             formatted_messages.insert(0, system_msg)
         
@@ -251,6 +312,15 @@ class Grok2Client:
                 "rate_limited": True,
             }
 
+        if response.status_code >= 500 or response.status_code in (408, 409, 425, 502, 503, 504):
+            return {
+                "error": message or f"Transient OpenRouter error {response.status_code}",
+                "status_code": response.status_code,
+                "model": model_name,
+                "should_retry": True,
+                "transient": True,
+            }
+
         if response.status_code == 402 or (title and "Paid Model" in title):
             friendly = (
                 "This OpenRouter model requires credits. "
@@ -277,15 +347,20 @@ class Grok2Client:
         """Get list of models to try, prioritizing the requested one."""
         priority: List[str] = []
         models = type(self).DEFAULT_MODELS
-        
+
         # If specific model requested, try it first
         if requested:
             priority.append(requested)
-        
+
         # Add default model if not already in list
         primary = self.config.get("default_model") or (models[0]["id"] if models else None)
         if primary and primary not in priority:
             priority.append(primary)
+
+        # Add configured fallback models
+        for fallback in self.config.get("fallback_models", []):
+            if fallback and fallback not in priority:
+                priority.append(fallback)
 
         # Add all other models as fallbacks
         for entry in models:
@@ -297,9 +372,14 @@ class Grok2Client:
 
     def _call_model_api(self, endpoint: str, payload: dict, target_model: str) -> Dict[str, Any]:
         """Make actual API call to OpenRouter."""
+        # Type assertion: We know requests is available because this method is only called after _ensure_live_ready
+        assert HAS_REQUESTS and requests is not None, "Requests library must be available"
         try:
             # Use session for connection pooling if available
-            http_client = self.session if self.session else requests
+            if self.session is not None:
+                http_client = self.session
+            else:
+                http_client = requests  # type: ignore[assignment]
             response = http_client.post(
                 endpoint,
                 json=payload,
@@ -320,15 +400,80 @@ class Grok2Client:
             tokens = data.get("usage", {}).get("total_tokens", len(text.split()))
             return {"response": text, "tokens": tokens, "model": target_model}
 
-        except requests.exceptions.HTTPError as exc:
-            logging.error("OpenRouter returned HTTP error %s: %s", exc.response.status_code, exc.response.text)
-            return {"error": f"OpenRouter HTTP error {exc.response.status_code}: {exc.response.text}", "model": target_model}
-        except requests.exceptions.RequestException as exc:
-            logging.error("Network error while calling OpenRouter: %s", exc)
-            return {"error": f"Network error while calling OpenRouter: {exc}", "model": target_model}
         except Exception as exc:
             logging.exception("Unexpected error calling OpenRouter")
-            return {"error": f"Unexpected error calling OpenRouter: {exc}", "model": target_model}
+            return {"error": f"Unexpected error calling OpenRouter: {exc}", "model": target_model, "should_retry": True}
+
+    def _call_with_backoff(self, endpoint: str, payload: dict, target_model: str) -> Dict[str, Any]:
+        """Call OpenRouter with exponential backoff on retryable errors."""
+        attempts = max(1, int(self.config.get("retry_attempts") or 3))
+        last_result: Dict[str, Any] = {"error": "Request failed", "model": target_model}
+
+        for attempt in range(attempts):
+            result = self._call_model_api(endpoint, payload, target_model)
+            if "response" in result:
+                return result
+
+            last_result = result
+            should_retry = bool(result.get("should_retry"))
+            if not should_retry:
+                break
+
+            # Stop retrying if we're on the last attempt
+            if attempt >= attempts - 1:
+                break
+
+            self._sleep_with_backoff(attempt)
+
+        return last_result
+
+    def _open_stream_with_backoff(
+        self,
+        messages,
+        candidate: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> tuple:
+        # Type assertion: We know requests is available because _ensure_live_ready would have caught this
+        assert HAS_REQUESTS and requests is not None, "Requests library must be available"
+        attempts = max(1, int(self.config.get("retry_attempts") or 3))
+        last_error: Optional[Dict[str, Any]] = None
+
+        for attempt in range(attempts):
+            try:
+                response = self._setup_streaming_request(messages, candidate, temperature, max_tokens)
+            except requests.exceptions.HTTPError as exc:
+                logging.error("OpenRouter streaming HTTP error %s: %s", exc.response.status_code, exc.response.text)
+                status_code = exc.response.status_code if exc.response else None
+                last_error = {
+                    "error": f"OpenRouter streaming HTTP error {status_code}: {exc.response.text if exc.response else exc}",
+                    "model": candidate,
+                }
+                if status_code and status_code >= 500:
+                    last_error["should_retry"] = True
+            except requests.exceptions.RequestException as exc:
+                logging.error("Network error while opening OpenRouter stream: %s", exc)
+                last_error = {"error": f"Network error while opening OpenRouter stream: {exc}", "model": candidate, "should_retry": True}
+            except Exception as exc:
+                logging.exception("Unexpected error opening OpenRouter stream")
+                last_error = {"error": f"Unexpected error opening OpenRouter stream: {exc}", "model": candidate, "should_retry": True}
+            else:
+                if response.status_code < 400:
+                    return response, None
+
+                error_info = self._normalise_error(response, candidate)
+                response.close()
+                last_error = error_info
+
+            should_retry = bool(last_error and last_error.get("should_retry"))
+            if attempt >= attempts - 1 or not should_retry:
+                break
+
+            self._sleep_with_backoff(attempt)
+
+        if last_error:
+            return None, last_error
+        return None, {"error": "Unable to open OpenRouter stream", "model": candidate}
 
     def generate_response(self, messages, model=None, temperature=0.7, max_tokens=1024):
         # In development mode, return mock responses
@@ -351,14 +496,23 @@ class Grok2Client:
         last_error: Dict[str, Any] = {"error": "No OpenRouter models available."}
 
         for candidate in attempts:
-            payload = self._build_payload(messages, candidate, temperature=temperature, max_tokens=max_tokens)
-            result = self._call_model_api(config["chat_endpoint"], payload, candidate)
+            if self._is_xai_model(candidate):
+                payload = self._build_payload(messages, candidate, temperature=temperature, max_tokens=max_tokens)
+                result = self._call_xai_model_api(payload, candidate)
+                if "response" in result:
+                    if primary_model and candidate != primary_model:
+                        result.setdefault("notice", f"✓ Switched to X.AI Grok '{candidate}'")
+                    return result
+                last_error = result
+            else:
+                payload = self._build_payload(messages, candidate, temperature=temperature, max_tokens=max_tokens)
+                result = self._call_with_backoff(config["chat_endpoint"], payload, candidate)
 
-            if "response" in result:
-                if primary_model and candidate != primary_model:
-                    result.setdefault("notice", f"Primary model '{primary_model}' unavailable. Responded with '{candidate}'.")
-                return result
-            last_error = result
+                if "response" in result:
+                    if primary_model and candidate != primary_model:
+                        result.setdefault("notice", f"Primary model '{primary_model}' unavailable. Responded with '{candidate}'.")
+                    return result
+                last_error = result
 
         return last_error
 
@@ -366,6 +520,57 @@ class Grok2Client:
         return type(self).DEFAULT_MODELS
 
     # No cleanup needed for requests library
+
+    def _is_xai_model(self, model_id: str) -> bool:
+        """Check if model is an X.AI Grok model"""
+        return model_id.startswith("xai/") and HAS_XAI and openai is not None
+
+    def _call_xai_model_api(self, payload: dict, target_model: str) -> Dict[str, Any]:
+        """Make API call to X.AI for Grok models"""
+        assert openai is not None, "OpenAI client not available"
+        xai_api_key = os.getenv("XAI_API_KEY")
+
+        if not xai_api_key:
+            return {"error": "X.AI API key not configured", "model": target_model}
+
+        try:
+            # Replace xai/ prefix with grok model names
+            real_model = target_model.replace("xai/", "", 1)
+            if real_model == "grok-4-latest":
+                real_model = "grok-4-latest"
+            elif real_model == "grok-4":
+                real_model = "grok-4"
+            elif real_model == "grok-3.5":
+                real_model = "grok-3.5"
+            else:
+                real_model = "grok-4-latest"  # fallback
+
+            # Update payload with correct model name
+            payload = payload.copy()
+            payload["model"] = real_model
+
+            client = openai.OpenAI(
+                api_key=xai_api_key,
+                base_url="https://api.x.ai/v1",
+            )
+
+            response = client.chat.completions.create(**payload)
+            message = response.choices[0].message
+            text = (message.content or "").strip()
+
+            if not text:
+                text = "I wasn't able to produce a response. Please try again."
+
+            if response.usage:
+                tokens = getattr(response.usage, 'total_tokens', len(text.split()))
+            else:
+                tokens = len(text.split())
+
+            return {"response": text, "tokens": tokens, "model": target_model}
+
+        except Exception as exc:
+            logging.exception("Unexpected error calling X.AI")
+            return {"error": f"Unexpected error calling X.AI: {exc}", "model": target_model}
 
     def get_default_model(self) -> Optional[str]:
         return self.config.get("default_model")
@@ -382,13 +587,18 @@ class Grok2Client:
 
     def _setup_streaming_request(self, messages, model_name, temperature, max_tokens):
         """Prepare streaming request and return necessary data."""
+        # Type assertion: We know requests is available because _ensure_live_ready would have caught this
+        assert HAS_REQUESTS and requests is not None, "Requests library must be available"
         payload = self._build_payload(messages, model_name, temperature=temperature, max_tokens=max_tokens, stream=True)
         headers = self._headers()
         headers["Accept"] = "text/event-stream"
         headers["Connection"] = "keep-alive"  # Keep connection alive for faster streaming
 
         # Use session for connection pooling if available
-        http_client = self.session if self.session else requests
+        if self.session is not None:
+            http_client = self.session
+        else:
+            http_client = requests  # type: ignore[assignment]
         response = http_client.post(
             self.config["chat_endpoint"],
             json=payload,
@@ -467,46 +677,21 @@ class Grok2Client:
 
         attempts = self._get_candidates(model)
         last_error: Optional[Dict[str, object]] = None
-        rate_limited_models = []
 
-        logging.info(f"Attempting models in order: {attempts}")
+        logging.info("Attempting models in order: %s", attempts)
 
         for candidate in attempts:
-            # Skip if this model was already rate limited
-            if candidate in rate_limited_models:
-                logging.info(f"Skipping {candidate} - already rate limited")
-                continue
-            
-            logging.info(f"Trying model: {candidate}")
-                
-            try:
-                response = self._setup_streaming_request(messages, candidate, temperature, max_tokens)
-            except requests.exceptions.HTTPError as exc:
-                logging.error("OpenRouter returned HTTP error %s: %s", exc.response.status_code, exc.response.text)
-                last_error = {"error": f"OpenRouter HTTP error {exc.response.status_code}: {exc.response.text}", "done": True}
-                continue
-            except requests.exceptions.RequestException as exc:
-                logging.error("Network error while calling OpenRouter: %s", exc)
-                last_error = {"error": f"Network error while calling OpenRouter: {exc}", "done": True}
-                continue
-            except Exception as exc:
-                logging.exception("Unexpected error during streaming call")
-                last_error = {"error": f"Unexpected error calling OpenRouter: {exc}", "done": True}
-                continue
+            logging.info("Trying model: %s", candidate)
+            response, open_error = self._open_stream_with_backoff(messages, candidate, temperature, max_tokens)
 
-            if response.status_code >= 400:
-                error_info = self._normalise_error(response, candidate)
-                response.close()
-                
-                # If rate limited, try next model
-                if error_info.get("rate_limited"):
-                    rate_limited_models.append(candidate)
-                    logging.info(f"⚠️ Model {candidate} is rate limited upstream, trying next model...")
-                    # Don't set last_error for rate limits, keep trying
-                    continue
-                    
-                last_error = {**error_info, "done": True}
-                logging.error(f"Model {candidate} failed with error: {error_info.get('error')}")
+            if not response:
+                if open_error:
+                    logging.warning("Streaming setup failed for %s: %s", candidate, open_error.get("error"))
+                    if open_error.get("rate_limited"):
+                        logging.info("Model %s rate limited upstream, moving to next candidate", candidate)
+                    last_error = {**open_error, "done": True}
+                else:
+                    last_error = {"error": f"Failed to open stream for {candidate}", "model": candidate, "done": True}
                 continue
 
             accumulated: List[str] = []

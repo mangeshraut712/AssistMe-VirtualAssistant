@@ -12,3 +12,11 @@ backend/.venv/
 
 #Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
+
+
+#Ignore cursor AI rules
+.cursor/rules/codacy.mdc
+
+# Grokipedia data (don't commit large datasets)
+data/grokipedia.json
+data/*.json

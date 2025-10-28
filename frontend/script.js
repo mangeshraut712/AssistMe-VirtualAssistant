@@ -6,12 +6,51 @@ const dompurifyLib = window.DOMPurify || null;
 const STORAGE_KEY = 'assistme.conversations.v2';
 const THEME_KEY = 'assistme.theme';
 const MODEL_KEY = 'assistme.model';
+const PREFS_KEY = 'assistme.preferences.v1';
+const RAG_KEY = 'assistme.rag.enabled';
+
+function loadJsonFromStorage(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+            return parsed;
+        }
+        return fallback;
+    } catch (error) {
+        console.warn(`Failed to parse storage key ${key}`, error);
+        return fallback;
+    }
+}
+
+function saveJsonToStorage(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+        console.warn(`Failed to persist storage key ${key}`, error);
+    }
+}
+
+const initialPreferences = loadJsonFromStorage(PREFS_KEY, {
+    style: 'Concise, code-heavy answers',
+    language: 'en',
+    voice: 'alloy',
+    persona: 'Mangesh-mode: precise, pragmatic, engineer-friendly.',
+});
+
+function loadRagPreference() {
+    const stored = localStorage.getItem(RAG_KEY);
+    if (stored === null) {
+        return true;
+    }
+    return stored === 'true';
+}
 
 // Device detection
 const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isAndroid = /Android/.test(navigator.userAgent);
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 // Suppress browser extension errors in console
@@ -108,6 +147,9 @@ const endpoints = {
     chat: `${API_BASE}/api/chat/text`,
     conversations: `${API_BASE}/api/conversations`,
     conversationById: (id) => `${API_BASE}/api/conversations/${id}`,
+    agentPlan: `${API_BASE}/api/agent/plan`,
+    multimodal: `${API_BASE}/api/multimodal/generate`,
+    ragQuery: `${API_BASE}/api/rag/query`,
 };
 
 const MODEL_OPTIONS = [
@@ -332,6 +374,19 @@ const elements = {
     uploadBtn: document.getElementById('uploadBtn'),
     connectionStatus: document.getElementById('connectionStatus'),
     connectionStatusText: document.getElementById('connectionStatusText'),
+    agentPlanBtn: document.getElementById('agentPlanBtn'),
+    ragToggle: document.getElementById('ragToggle'),
+    ragCheckbox: document.getElementById('ragCheckbox'),
+    agentPanel: document.getElementById('agentPanel'),
+    settingsModal: document.getElementById('settingsModal'),
+    settingsBackdrop: document.getElementById('settingsBackdrop'),
+    settingsClose: document.getElementById('settingsClose'),
+    preferenceForm: document.getElementById('preferenceForm'),
+    preferenceLanguage: document.getElementById('preferenceLanguage'),
+    preferenceStyle: document.getElementById('preferenceStyle'),
+    preferenceVoice: document.getElementById('preferenceVoice'),
+    preferencePersona: document.getElementById('preferencePersona'),
+    preferenceSave: document.getElementById('preferenceSave'),
 };
 
 // Connection status helper
@@ -357,6 +412,9 @@ const state = {
     isStreaming: false,
     typingNode: null,
     abortController: null,
+    useRag: loadRagPreference(),
+    preferences: { ...initialPreferences },
+    lastAgentPlan: null,
     voice: {
         recognition: null,
         listening: false,
@@ -378,6 +436,85 @@ const state = {
         isComposing: false,
     },
 };
+
+function savePreferences() {
+    saveJsonToStorage(PREFS_KEY, state.preferences);
+}
+
+function applyPreferencesToUI() {
+    if (elements.preferenceLanguage) {
+        elements.preferenceLanguage.value = state.preferences.language || '';
+    }
+    if (elements.preferenceStyle) {
+        elements.preferenceStyle.value = state.preferences.style || '';
+    }
+    if (elements.preferenceVoice) {
+        elements.preferenceVoice.value = state.preferences.voice || '';
+    }
+    if (elements.preferencePersona) {
+        elements.preferencePersona.value = state.preferences.persona || '';
+    }
+    if (elements.ragCheckbox) {
+        elements.ragCheckbox.checked = !!state.useRag;
+    }
+}
+
+function mergePreferences(preferences = {}) {
+    if (!preferences || typeof preferences !== 'object') return;
+    const merged = { ...state.preferences };
+    ['style', 'language', 'voice', 'persona', 'custom'].forEach((key) => {
+        if (preferences[key]) {
+            merged[key] = preferences[key];
+        }
+    });
+    state.preferences = merged;
+    savePreferences();
+    applyPreferencesToUI();
+}
+
+function updateRagPreference(enabled) {
+    state.useRag = Boolean(enabled);
+    localStorage.setItem(RAG_KEY, state.useRag ? 'true' : 'false');
+    if (elements.ragCheckbox) {
+        elements.ragCheckbox.checked = state.useRag;
+    }
+    showToast(state.useRag ? 'Grounding enabled with Grokipedia' : 'Grounding disabled', 'info', 2400);
+}
+
+function getLastUserPrompt() {
+    if (!state.activeConversation) return '';
+    const history = [...state.activeConversation.messages].reverse();
+    const last = history.find((message) => message.role === 'user' && message.content?.trim());
+    return last ? last.content.trim() : '';
+}
+
+function applyPayloadPreferences(payload) {
+    payload.use_rag = Boolean(state.useRag);
+    if (state.preferences && Object.keys(state.preferences).length > 0) {
+        payload.user_preferences = { ...state.preferences };
+    }
+}
+
+function detectComposerCommand(text) {
+    if (!text) return null;
+    const trimmed = text.trim();
+    if (trimmed.startsWith('/image ')) {
+        return { type: 'image', prompt: trimmed.slice(7).trim() };
+    }
+    if (trimmed.startsWith('/video ')) {
+        return { type: 'video', prompt: trimmed.slice(7).trim() };
+    }
+    if (trimmed.startsWith('/speech ')) {
+        return { type: 'speech', prompt: trimmed.slice(8).trim() };
+    }
+    if (trimmed === '/plan') {
+        return { type: 'plan' };
+    }
+    if (trimmed.startsWith('/plan ')) {
+        return { type: 'plan', prompt: trimmed.slice(6).trim() };
+    }
+    return null;
+}
 
 const ALLOWED_TAGS = new Set([
     'P', 'BR', 'PRE', 'CODE', 'SPAN', 'STRONG', 'EM', 'UL', 'OL', 'LI', 'BLOCKQUOTE',
@@ -508,12 +645,13 @@ function sanitizeHtml(html) {
 
     // Use DOMPurify if available, fallback to basic parser-based sanitization
     if (dompurifyLib?.sanitize) {
-        const sanitized = dompurifyLib.sanitize(html, {
+        // Validate and sanitize the HTML content with strict options
+        const sanitized = dompurifyLib.sanitize(String(html), {
             ALLOWED_TAGS: Array.from(ALLOWED_TAGS),
             ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class', 'colspan', 'rowspan'],
             ALLOW_DATA_ATTR: false,
             FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'style', 'link'],
-            FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onmouseout'],
+            FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onmouseout', 'oninput', 'onchange'],
             SANITIZE_DOM: false,
             RETURN_DOM_FRAGMENT: true,
             IN_PLACE: false,
@@ -605,7 +743,8 @@ function getSafeArrayItem(list, index) {
     if (index < 0 || index >= list.length) {
         return undefined;
     }
-    return list[index];
+    // Defensive copy/array access pattern to avoid prototype pollution
+    return list.slice(index, index + 1)[0];
 }
 
 function focusMessageInput() {
@@ -874,6 +1013,10 @@ function handleGlobalKeydown(event) {
         event.preventDefault();
         closeBenchmarkModal();
     }
+    if (event.key === 'Escape' && elements.settingsModal?.classList.contains('open')) {
+        event.preventDefault();
+        closeSettingsModal();
+    }
 }
 
 function renderAssistantContent(target, content) {
@@ -909,6 +1052,77 @@ function renderAssistantContent(target, content) {
             console.warn('Math rendering error', error);
         }
     }
+}
+
+function attachRagReferences(wrapper, documents) {
+    if (!wrapper || !Array.isArray(documents) || documents.length === 0) return;
+    const existing = wrapper.querySelector('.rag-context');
+    if (existing) existing.remove();
+
+    const container = document.createElement('div');
+    container.className = 'rag-context';
+
+    const title = document.createElement('strong');
+    title.textContent = 'Grounded context';
+    container.appendChild(title);
+
+    const list = document.createElement('ol');
+    list.className = 'rag-list';
+    documents.forEach((doc) => {
+        const item = document.createElement('li');
+        const heading = document.createElement('span');
+        heading.className = 'rag-heading';
+        heading.textContent = doc.title || 'Context snippet';
+
+        const summary = document.createElement('small');
+        summary.textContent = doc.summary || doc.content?.slice(0, 160) || '';
+
+        item.appendChild(heading);
+        if (summary.textContent) {
+            item.appendChild(document.createElement('br'));
+            item.appendChild(summary);
+        }
+        list.appendChild(item);
+    });
+
+    container.appendChild(list);
+    wrapper.appendChild(container);
+}
+
+function attachMediaContent(wrapper, media) {
+    if (!wrapper || !media) return;
+    const mediaItems = Array.isArray(media) ? media : [media];
+    if (mediaItems.length === 0) return;
+
+    let container = wrapper.querySelector('.message-media');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'message-media';
+        wrapper.appendChild(container);
+    }
+
+    container.replaceChildren();
+
+    mediaItems.forEach((item) => {
+        if (!item || !item.type) return;
+        if (item.type === 'image' && item.b64) {
+            const img = document.createElement('img');
+            img.src = `data:image/${item.format || 'png'};base64,${item.b64}`;
+            img.alt = item.prompt || 'Generated image';
+            img.loading = 'lazy';
+            container.appendChild(img);
+        } else if (item.type === 'speech' && item.b64) {
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.src = `data:audio/${item.format || 'mp3'};base64,${item.b64}`;
+            container.appendChild(audio);
+        } else if (item.type === 'video') {
+            const info = document.createElement('div');
+            info.className = 'media-status';
+            info.textContent = `Video request queued (id: ${item.id || 'pending'})`;
+            container.appendChild(info);
+        }
+    });
 }
 
 function newConversation(modelId = null) {
@@ -1360,6 +1574,12 @@ function setActiveConversation(conversation, { resetView = true } = {}) {
         const fragment = createMessageElement(message.role);
         if (message.role === 'assistant') {
             renderAssistantContent(fragment.text, message.content);
+            if (message.metadata?.ragDocuments) {
+                attachRagReferences(fragment.text, message.metadata.ragDocuments);
+            }
+            if (message.metadata?.media) {
+                attachMediaContent(fragment.text, message.metadata.media);
+            }
         } else {
             fragment.text.textContent = message.content;
         }
@@ -1390,6 +1610,19 @@ function applyMetadata(container, metadata) {
     if (merged.model) entries.push({ icon: 'fa-solid fa-robot', text: merged.model });
     if (merged.latency) entries.push({ icon: 'fa-solid fa-gauge-high', text: `${merged.latency} ms` });
     if (merged.tokens) entries.push({ icon: 'fa-solid fa-layer-group', text: `${merged.tokens} tok` });
+    if (Array.isArray(merged.ragDocuments) && merged.ragDocuments.length > 0) {
+        entries.push({ icon: 'fa-solid fa-bookmark', text: `RAG ×${merged.ragDocuments.length}` });
+    }
+    if (merged.agent) {
+        entries.push({ icon: 'fa-solid fa-list-check', text: 'Agent plan' });
+    }
+    if (merged.media) {
+        const mediaItems = Array.isArray(merged.media) ? merged.media : [merged.media];
+        const summary = mediaItems.map((item) => item.type).filter(Boolean).join(', ');
+        if (summary) {
+            entries.push({ icon: 'fa-solid fa-photo-film', text: summary });
+        }
+    }
 
     if (entries.length === 0) {
         container.style.display = 'none';
@@ -1491,6 +1724,10 @@ async function requestCompletionFallback(userMessage) {
         payload.conversation_id = state.activeConversation.serverId;
     }
 
+    applyPayloadPreferences(payload);
+
+    applyPayloadPreferences(payload);
+
     const response = await fetch(endpoints.chat, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1542,6 +1779,8 @@ async function streamAssistantResponse(userMessage) {
     const started = performance.now();
     let tokensUsed = null;
     let effectiveModel = modelId;
+    let ragDocs = null;
+    let preferenceSnapshot = null;
 
     if (state.backendHealthy === false) {
         const recovered = await backendHealth.check();
@@ -1632,6 +1871,12 @@ async function streamAssistantResponse(userMessage) {
                         if (parsed.data?.notice) {
                             showToast(parsed.data.notice, 'info');
                         }
+                        if (parsed.data?.rag?.documents) {
+                            ragDocs = parsed.data.rag.documents;
+                        }
+                        if (parsed.data?.preferences) {
+                            preferenceSnapshot = parsed.data.preferences;
+                        }
                         const conversationId = parsed.data?.conversation_id;
                         if (typeof conversationId === 'number' && conversationId > 0) {
                             state.activeConversation.localId = state.activeConversation.localId || state.activeConversation.id;
@@ -1685,6 +1930,12 @@ async function streamAssistantResponse(userMessage) {
                 if (parsed.data?.notice) {
                     showToast(parsed.data.notice, 'info');
                 }
+                if (parsed.data?.rag?.documents) {
+                    ragDocs = parsed.data.rag.documents;
+                }
+                if (parsed.data?.preferences) {
+                    preferenceSnapshot = parsed.data.preferences;
+                }
             }
             buffer = '';
         }
@@ -1695,6 +1946,13 @@ async function streamAssistantResponse(userMessage) {
             latency,
             tokens: tokensUsed,
         };
+        if (ragDocs && ragDocs.length) {
+            assistantMessage.metadata.ragDocuments = ragDocs;
+        }
+
+        if (preferenceSnapshot) {
+            mergePreferences(preferenceSnapshot);
+        }
 
         // Ensure content is displayed even if empty
         if (!assistantMessage.content || assistantMessage.content.trim() === '') {
@@ -1703,6 +1961,14 @@ async function streamAssistantResponse(userMessage) {
         }
 
         renderAssistantContent(assistantFragment.text, assistantMessage.content);
+
+        if (assistantMessage.metadata.ragDocuments) {
+            attachRagReferences(assistantFragment.text, assistantMessage.metadata.ragDocuments);
+        }
+
+        if (assistantMessage.metadata.media) {
+            attachMediaContent(assistantFragment.text, assistantMessage.metadata.media);
+        }
 
         applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
         updateMetrics(latency, tokensUsed);
@@ -1789,6 +2055,15 @@ async function streamAssistantResponse(userMessage) {
                 latency,
                 tokens: tokensUsed,
             };
+            if (fallbackData?.rag?.documents) {
+                assistantMessage.metadata.ragDocuments = fallbackData.rag.documents;
+            }
+            if (fallbackData?.preferences) {
+                mergePreferences(fallbackData.preferences);
+            }
+            if (assistantMessage.metadata.ragDocuments) {
+                attachRagReferences(assistantFragment.text, assistantMessage.metadata.ragDocuments);
+            }
             applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
             updateMetrics(latency, tokensUsed);
             ensureConversationVisible();
@@ -1861,7 +2136,273 @@ async function handleSend() {
 
     persistActiveConversation();
 
+    const command = detectComposerCommand(text);
+    if (command) {
+        await handleComposerCommand(command, userMessage);
+        return;
+    }
+
     await streamAssistantResponse({ role: 'user', content: text });
+}
+
+async function handleComposerCommand(command, userMessage) {
+    if (!state.activeConversation) return;
+    if (['image', 'video', 'speech'].includes(command.type)) {
+        await handleMultimodalCommand(command);
+        return;
+    }
+    if (command.type === 'plan') {
+        await triggerAgentPlan(command.prompt || '', { fromCommand: true });
+        return;
+    }
+    await streamAssistantResponse(userMessage);
+}
+
+async function handleMultimodalCommand(command) {
+    if (!state.activeConversation) return;
+    const prompt = command.prompt || getLastUserPrompt();
+    if (!prompt) {
+        showToast('Provide a prompt for multimodal generation.', 'info');
+        return;
+    }
+
+    const started = performance.now();
+    state.isStreaming = true;
+    handleInputChange();
+    showTypingIndicator();
+
+    const assistantMessage = {
+        role: 'assistant',
+        content: '',
+        createdAt: Date.now(),
+        metadata: { model: 'MiniMax multimodal', media: [] },
+    };
+    state.activeConversation.messages.push(assistantMessage);
+    const fragment = createMessageElement('assistant');
+
+    try {
+        const payload = {
+            type: command.type,
+            prompt,
+            text: prompt,
+            options: {},
+        };
+        const response = await fetch(endpoints.multimodal, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data?.detail || data?.error || `HTTP ${response.status}`);
+        }
+
+        let mediaMeta = null;
+        let summary = '';
+
+        if (command.type === 'image') {
+            summary = `Generated image with ${data.model || 'MiniMax Image-01'} (${data.size || '1024x1024'}).`;
+            mediaMeta = {
+                type: 'image',
+                b64: data.b64,
+                format: (data.size && data.size.includes('512')) ? 'png' : 'png',
+                prompt,
+            };
+            assistantMessage.metadata.model = data.model || 'MiniMax/Image-01';
+        } else if (command.type === 'video') {
+            summary = `Video request queued (${data.id || 'pending'}). Status: ${data.status || 'queued'}.`;
+            mediaMeta = {
+                type: 'video',
+                id: data.id,
+                status: data.status,
+                prompt,
+            };
+            assistantMessage.metadata.model = data.model || 'MiniMax/Hailuo-02';
+        } else if (command.type === 'speech') {
+            summary = 'Speech synthesis ready below. Use the audio player to preview.';
+            mediaMeta = {
+                type: 'speech',
+                b64: data.b64,
+                format: data.format || 'mp3',
+                prompt,
+            };
+            assistantMessage.metadata.model = data.voice || 'MiniMax/Speech-02';
+        }
+
+        assistantMessage.content = summary || 'Multimodal response ready.';
+        if (mediaMeta) {
+            assistantMessage.metadata.media = mediaMeta;
+        }
+        renderAssistantContent(fragment.text, assistantMessage.content);
+        if (assistantMessage.metadata.media) {
+            attachMediaContent(fragment.text, assistantMessage.metadata.media);
+        }
+
+        const latency = Math.round(performance.now() - started);
+        assistantMessage.metadata.latency = latency;
+        applyMetadata(fragment.metadata, assistantMessage.metadata);
+        showToast('Multimodal request completed', 'success');
+    } catch (error) {
+        assistantMessage.content = `⚠️ Multimodal request failed: ${error.message || 'Unknown error'}`;
+        renderAssistantContent(fragment.text, assistantMessage.content);
+        assistantMessage.metadata.model = 'multimodal/error';
+        applyMetadata(fragment.metadata, assistantMessage.metadata);
+        showToast(error.message || 'Multimodal request failed', 'error');
+    } finally {
+        removeTypingIndicator();
+        state.isStreaming = false;
+        handleInputChange();
+        persistActiveConversation();
+    }
+}
+
+function formatAgentPlanMarkdown(result) {
+    const sections = [];
+    if (result?.output) {
+        sections.push(result.output.trim());
+    }
+    if (Array.isArray(result?.intermediate_steps) && result.intermediate_steps.length > 0) {
+        const steps = result.intermediate_steps
+            .map((entry, index) => {
+                const [action, observation] = entry;
+                const tool = action?.tool ? ` (${action.tool})` : '';
+                const input = typeof action?.tool_input === 'string' ? action.tool_input : JSON.stringify(action?.tool_input);
+                return `${index + 1}. **${action?.log || 'Action'}${tool}:** ${input}\n   → ${observation || 'No observation recorded.'}`;
+            })
+            .join('\n');
+        sections.push(`#### Agent trace\n${steps}`);
+    }
+    return `### Planner Output\n${sections.join('\n\n')}`;
+}
+
+function renderAgentPanel(result) {
+    if (!elements.agentPanel) return;
+    if (!result) {
+        elements.agentPanel.replaceChildren();
+        return;
+    }
+    const container = document.createElement('div');
+    container.className = 'agent-plan-card';
+    const heading = document.createElement('strong');
+    heading.textContent = 'Latest plan';
+    container.appendChild(heading);
+
+    const summary = document.createElement('p');
+    summary.textContent = (result.output || '').split('\n')[0] || 'No plan generated yet.';
+    container.appendChild(summary);
+
+    if (Array.isArray(result.intermediate_steps) && result.intermediate_steps.length > 0) {
+        const footnote = document.createElement('small');
+        footnote.textContent = `${result.intermediate_steps.length} tool calls in trace`;
+        container.appendChild(footnote);
+    }
+
+    elements.agentPanel.replaceChildren(container);
+}
+
+async function triggerAgentPlan(promptOverride, options = {}) {
+    if (!state.activeConversation) {
+        showToast('Start a conversation before requesting a plan.', 'info');
+        return;
+    }
+
+    const basePrompt = promptOverride || elements.messageInput?.value || getLastUserPrompt();
+    const prompt = (basePrompt || '').trim();
+    if (!prompt) {
+        showToast('Provide a prompt for the agent to plan.', 'info');
+        return;
+    }
+
+    const started = performance.now();
+    elements.agentPlanBtn?.classList.add('loading');
+    state.isStreaming = true;
+    handleInputChange();
+
+    const payload = {
+        prompt,
+        context: state.preferences?.persona,
+        metadata: {
+            rag_enabled: state.useRag,
+            conversation_id: state.activeConversation.serverId || null,
+        },
+        extra: {
+            model: state.currentModel,
+        },
+    };
+
+    try {
+        const response = await fetch(endpoints.agentPlan, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data?.detail || data?.error || `HTTP ${response.status}`);
+        }
+
+        state.lastAgentPlan = data;
+        renderAgentPanel(data);
+
+        const assistantMessage = {
+            role: 'assistant',
+            content: formatAgentPlanMarkdown(data),
+            createdAt: Date.now(),
+            metadata: {
+                model: 'minimax/minimax-m2',
+                agent: true,
+                latency: Math.round(performance.now() - started),
+            },
+        };
+
+        state.activeConversation.messages.push(assistantMessage);
+        const fragment = createMessageElement('assistant');
+        renderAssistantContent(fragment.text, assistantMessage.content);
+        applyMetadata(fragment.metadata, assistantMessage.metadata);
+        persistActiveConversation();
+        showToast('Planner ready', 'success');
+    } catch (error) {
+        console.error('Agent plan failed', error);
+        showToast(error.message || 'Agent plan failed', 'error');
+    } finally {
+        elements.agentPlanBtn?.classList.remove('loading');
+        state.isStreaming = false;
+        handleInputChange();
+    }
+
+    if (options.fromCommand) {
+        elements.messageInput.value = '';
+        handleInputChange();
+    }
+}
+
+function openSettingsModal() {
+    if (!elements.settingsModal) return;
+    elements.settingsModal.classList.add('open');
+    elements.settingsModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    applyPreferencesToUI();
+    elements.preferenceLanguage?.focus();
+}
+
+function closeSettingsModal() {
+    if (!elements.settingsModal) return;
+    elements.settingsModal.classList.remove('open');
+    elements.settingsModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    elements.settingsBtn?.focus({ preventScroll: true });
+}
+
+function handlePreferenceSubmit(event) {
+    event.preventDefault();
+    const language = elements.preferenceLanguage?.value?.trim();
+    const style = elements.preferenceStyle?.value?.trim();
+    const voice = elements.preferenceVoice?.value?.trim();
+    const persona = elements.preferencePersona?.value?.trim();
+
+    mergePreferences({ language, style, voice, persona });
+    showToast('Preferences updated', 'success');
+    closeSettingsModal();
 }
 
 function handleNewChat() {
@@ -1872,6 +2413,7 @@ function handleNewChat() {
     setActiveConversation(conversation);
     highlightActiveConversation();
     resetComposer();
+    renderAgentPanel(null);
     focusMessageInput();
     if (elements.welcomePanel) {
         elements.welcomePanel.style.display = '';
@@ -2035,18 +2577,20 @@ function initInlineHandlers() {
     elements.voiceBtn?.addEventListener('click', toggleVoiceInput);
     elements.voiceModeBtn?.addEventListener('click', toggleVoiceMode);
     elements.uploadBtn?.addEventListener('click', () => showToast('File uploads are coming soon.', 'info'));
+    elements.settingsBtn?.addEventListener('click', openSettingsModal);
+    elements.settingsClose?.addEventListener('click', closeSettingsModal);
+    elements.settingsBackdrop?.addEventListener('click', closeSettingsModal);
+    elements.preferenceForm?.addEventListener('submit', handlePreferenceSubmit);
+    elements.ragCheckbox?.addEventListener('change', (event) => {
+        updateRagPreference(event.target.checked);
+    });
+    elements.agentPlanBtn?.addEventListener('click', () => triggerAgentPlan());
 
 // ====================
 // Voice Controls & Rich Content Components
 // ====================
 
-// Voice controls elements
-const voiceControls = {
-    voiceToggleBtn: null,
-    voiceStatusIndicator: null,
-    interimTranscript: null,
-    recordingIndicator: null,
-};
+
 
 // Rich content containers
 let richContentContainer = null;
@@ -2444,42 +2988,97 @@ function renderWeatherCard(weatherData) {
         max-width: 350px;
     `;
 
-    card.innerHTML = `
-        <div style="display: flex; align-items: center; margin-bottom: 15px;">
-            <i class="fas fa-cloud-sun" style="font-size: 24px; margin-right: 10px; color: #007bff;"></i>
-            <div>
-                <h3 style="margin: 0; font-size: 18px;">${weatherData.city || 'Weather'}</h3>
-                <div style="font-size: 12px; opacity: 0.7;">${weatherData.condition || 'Current conditions'}</div>
-            </div>
-        </div>
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 15px;';
 
-        <div style="display: flex; align-items: center; margin-bottom: 15px;">
-            <div style="font-size: 32px; font-weight: bold; margin-right: 15px;">${weatherData.temperature || '--'}°C</div>
-            <div>
-                <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                    <i class="fas fa-tint" style="margin-right: 5px; color: #007bff;"></i>
-                    <span>${weatherData.humidity || '--'}% humidity</span>
-                </div>
-                <div style="display: flex; align-items: center;">
-                    <i class="fas fa-wind" style="margin-right: 5px; color: #007bff;"></i>
-                    <span>${weatherData.wind_speed || '--'} wind</span>
-                </div>
-            </div>
-        </div>
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-cloud-sun';
+    icon.style.cssText = 'font-size: 24px; margin-right: 10px; color: #007bff;';
 
-        ${weatherData.forecast ? `
-        <div style="border-top: 1px solid var(--border-color, #f0f0f0); padding-top: 15px;">
-            <h4 style="margin: 0 0 10px 0; font-size: 14px;">3-Day Forecast</h4>
-            ${weatherData.forecast.slice(0, 3).map(day => `
-                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
-                    <span style="font-weight: 500;">${day.day || 'Day'}</span>
-                    <span>${day.condition || '--'}</span>
-                    <span style="font-weight: 500;">${day.high || '--'}°/${day.low || '--'}°</span>
-                </div>
-            `).join('')}
-        </div>
-        ` : ''}
-    `;
+    const textDiv = document.createElement('div');
+    const title = document.createElement('h3');
+    title.style.cssText = 'margin: 0; font-size: 18px;';
+    title.textContent = weatherData.city || 'Weather';
+
+    const condition = document.createElement('div');
+    condition.style.cssText = 'font-size: 12px; opacity: 0.7;';
+    condition.textContent = weatherData.condition || 'Current conditions';
+
+    textDiv.appendChild(title);
+    textDiv.appendChild(condition);
+    headerDiv.appendChild(icon);
+    headerDiv.appendChild(textDiv);
+
+    const tempDiv = document.createElement('div');
+    tempDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 15px;';
+
+    const temp = document.createElement('div');
+    temp.style.cssText = 'font-size: 32px; font-weight: bold; margin-right: 15px;';
+    temp.textContent = (weatherData.temperature || '--') + '°C';
+
+    const detailsDiv = document.createElement('div');
+
+    const humidityDiv = document.createElement('div');
+    humidityDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 5px;';
+    const humidityIcon = document.createElement('i');
+    humidityIcon.className = 'fas fa-tint';
+    humidityIcon.style.cssText = 'margin-right: 5px; color: #007bff;';
+    const humidityText = document.createElement('span');
+    humidityText.textContent = (weatherData.humidity || '--') + '% humidity';
+    humidityDiv.appendChild(humidityIcon);
+    humidityDiv.appendChild(humidityText);
+
+    const windDiv = document.createElement('div');
+    windDiv.style.cssText = 'display: flex; align-items: center;';
+    const windIcon = document.createElement('i');
+    windIcon.className = 'fas fa-wind';
+    windIcon.style.cssText = 'margin-right: 5px; color: #007bff;';
+    const windText = document.createElement('span');
+    windText.textContent = (weatherData.wind_speed || '--') + ' wind';
+    windDiv.appendChild(windIcon);
+    windDiv.appendChild(windText);
+
+    detailsDiv.appendChild(humidityDiv);
+    detailsDiv.appendChild(windDiv);
+    tempDiv.appendChild(temp);
+    tempDiv.appendChild(detailsDiv);
+
+    card.appendChild(headerDiv);
+    card.appendChild(tempDiv);
+
+    // Add forecast if available
+    if (weatherData.forecast && Array.isArray(weatherData.forecast)) {
+        const forecastDiv = document.createElement('div');
+        forecastDiv.style.cssText = 'border-top: 1px solid var(--border-color, #f0f0f0); padding-top: 15px;';
+
+        const forecastTitle = document.createElement('h4');
+        forecastTitle.style.cssText = 'margin: 0 0 10px 0; font-size: 14px;';
+        forecastTitle.textContent = '3-Day Forecast';
+        forecastDiv.appendChild(forecastTitle);
+
+        weatherData.forecast.slice(0, 3).forEach(day => {
+            const dayDiv = document.createElement('div');
+            dayDiv.style.cssText = 'display: flex; justify-content: space-between; padding: 5px 0;';
+
+            const dayName = document.createElement('span');
+            dayName.style.fontWeight = '500';
+            dayName.textContent = day.day || 'Day';
+
+            const conditionSpan = document.createElement('span');
+            conditionSpan.textContent = day.condition || '--';
+
+            const tempSpan = document.createElement('span');
+            tempSpan.style.fontWeight = '500';
+            tempSpan.textContent = (day.high || '--') + '°/' + (day.low || '--') + '°';
+
+            dayDiv.appendChild(dayName);
+            dayDiv.appendChild(conditionSpan);
+            dayDiv.appendChild(tempSpan);
+            forecastDiv.appendChild(dayDiv);
+        });
+
+        card.appendChild(forecastDiv);
+    }
 
     richContentContainer.appendChild(card);
 }
@@ -2497,49 +3096,95 @@ function renderMapCard(mapData) {
         max-width: 350px;
     `;
 
-    card.innerHTML = `
-        <div style="display: flex; align-items: center; margin-bottom: 15px;">
-            <i class="fas fa-map-marked-alt" style="font-size: 24px; margin-right: 10px; color: #28a745;"></i>
-            <div>
-                <h3 style="margin: 0; font-size: 18px;">Map</h3>
-                <div style="font-size: 12px; opacity: 0.7;">${mapData.markerText || 'Location'}</div>
-            </div>
-        </div>
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 15px;';
 
-        <div style="margin-bottom: 10px; font-size: 14px;">
-            <i class="fas fa-location-dot" style="margin-right: 5px; color: #dc3545;"></i>
-            ${mapData.address || 'Address not available'}
-        </div>
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-map-marked-alt';
+    icon.style.cssText = 'font-size: 24px; margin-right: 10px; color: #28a745;';
 
-        <div style="
-            width: 100%;
-            height: 200px;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #f8f9fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            color: #666;
-        ">
-            <div style="text-align: center;">
-                <i class="fas fa-map" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;"></i>
-                <div>Interactive map would load here</div>
-                <div style="font-size: 12px; margin-top: 5px;">
-                    Coordinates: ${mapData.location?.lat?.toFixed(4) || '--'}, ${mapData.location?.lng?.toFixed(4) || '--'}
-                </div>
-            </div>
-        </div>
+    const textDiv = document.createElement('div');
+    const title = document.createElement('h3');
+    title.style.cssText = 'margin: 0; font-size: 18px;';
+    title.textContent = 'Map';
 
-        <div style="margin-top: 10px; text-align: center;">
-            <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapData.address || 'Pune, India')}"
-               target="_blank" style="color: #007bff; text-decoration: none; font-size: 14px;">
-                <i class="fas fa-external-link-alt" style="margin-right: 5px;"></i>
-                Open in Google Maps
-            </a>
-        </div>
+    const markerText = document.createElement('div');
+    markerText.style.cssText = 'font-size: 12px; opacity: 0.7;';
+    markerText.textContent = mapData.markerText || 'Location';
+
+    textDiv.appendChild(title);
+    textDiv.appendChild(markerText);
+    headerDiv.appendChild(icon);
+    headerDiv.appendChild(textDiv);
+
+    const addressDiv = document.createElement('div');
+    addressDiv.style.cssText = 'margin-bottom: 10px; font-size: 14px;';
+
+    const locationIcon = document.createElement('i');
+    locationIcon.className = 'fas fa-location-dot';
+    locationIcon.style.cssText = 'margin-right: 5px; color: #dc3545;';
+    const addressText = document.createElement('span');
+    addressText.textContent = mapData.address || 'Address not available';
+
+    addressDiv.appendChild(locationIcon);
+    addressDiv.appendChild(addressText);
+
+    const mapDiv = document.createElement('div');
+    mapDiv.style.cssText = `
+        width: 100%;
+        height: 200px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        color: #666;
     `;
+
+    const mapContentDiv = document.createElement('div');
+    mapContentDiv.style.cssText = 'text-align: center;';
+
+    const mapIcon = document.createElement('i');
+    mapIcon.className = 'fas fa-map';
+    mapIcon.style.cssText = 'font-size: 48px; margin-bottom: 10px; opacity: 0.5;';
+
+    const mapText = document.createElement('div');
+    mapText.textContent = 'Interactive map would load here';
+
+    const coordinatesDiv = document.createElement('div');
+    coordinatesDiv.style.cssText = 'font-size: 12px; margin-top: 5px;';
+    coordinatesDiv.textContent = 'Coordinates: ' +
+        (mapData.location?.lat?.toFixed(4) || '--') + ', ' +
+        (mapData.location?.lng?.toFixed(4) || '--');
+
+    mapContentDiv.appendChild(mapIcon);
+    mapContentDiv.appendChild(mapText);
+    mapContentDiv.appendChild(coordinatesDiv);
+    mapDiv.appendChild(mapContentDiv);
+
+    const linkDiv = document.createElement('div');
+    linkDiv.style.cssText = 'margin-top: 10px; text-align: center;';
+
+    const link = document.createElement('a');
+    link.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapData.address || 'Pune, India');
+    link.target = '_blank';
+    link.style.cssText = 'color: #007bff; text-decoration: none; font-size: 14px;';
+
+    const externalIcon = document.createElement('i');
+    externalIcon.className = 'fas fa-external-link-alt';
+    externalIcon.style.cssText = 'margin-right: 5px;';
+    const linkText = document.createTextNode('Open in Google Maps');
+
+    link.appendChild(externalIcon);
+    link.appendChild(linkText);
+    linkDiv.appendChild(link);
+
+    card.appendChild(headerDiv);
+    card.appendChild(addressDiv);
+    card.appendChild(mapDiv);
+    card.appendChild(linkDiv);
 
     richContentContainer.appendChild(card);
 }
@@ -2670,12 +3315,17 @@ function restoreInitialState() {
     const freshConversation = newConversation(state.currentModel);
     setActiveConversation(freshConversation);
     updateMetrics(null, null);
+    applyPreferencesToUI();
+    if (elements.ragCheckbox) {
+        elements.ragCheckbox.checked = state.useRag;
+    }
     handleInputChange();
 }
 
 async function bootstrap() {
     restoreInitialState();
     initInlineHandlers();
+    renderAgentPanel(state.lastAgentPlan);
     initMobileOptimizations();
     composerAutofocus.init();
     initVoice();

@@ -163,6 +163,12 @@
                         <span id="latencyMetric">—</span>
                         <span id="tokenMetric">— tokens</span>
                     </div>
+                    <div class="composer-toggles" id="ragToggle">
+                        <label class="toggle">
+                            <input type="checkbox" id="ragCheckbox" checked>
+                            <span>Ground with Grokipedia</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="composer-box">
@@ -195,13 +201,17 @@
                         <button class="icon-btn voice-mode-btn" id="voiceModeBtn" title="Voice conversation mode (like ChatGPT/Gemini Live)">
                             <i class="fa-solid fa-podcast" aria-hidden="true"></i>
                         </button>
+                        <button class="icon-btn" id="agentPlanBtn" title="Plan next steps with MiniMax">
+                            <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                        </button>
                         <button class="send-btn disabled" id="sendButton" disabled aria-label="Send message">
                             <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
                 <div class="composer-footnote">
-                    AssistMe can make mistakes. Consider checking important information.
+                    <div class="agent-panel" id="agentPanel" aria-live="polite"></div>
+                    <span class="footnote-copy">AssistMe can make mistakes. Consider checking important information.</span>
                 </div>
             </footer>
         </main>
@@ -294,6 +304,42 @@
                         <li>Tag benchmark runs with <code>--label "release-2025.02"</code> to track regressions over time.</li>
                     </ul>
                 </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal" aria-hidden="true">
+        <div class="modal-backdrop" id="settingsBackdrop"></div>
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+            <div class="modal-header">
+                <div>
+                    <h2 id="settingsTitle">Personalise AssistMe</h2>
+                    <p>Set your default style, language, and voice so every response feels tailored.</p>
+                </div>
+                <button class="modal-close" id="settingsClose" aria-label="Close settings">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <form id="preferenceForm" class="preferences-form">
+                    <label for="preferenceLanguage">Preferred language</label>
+                    <input type="text" id="preferenceLanguage" name="language" placeholder="e.g., en, hi" autocomplete="off">
+
+                    <label for="preferenceStyle">Response style</label>
+                    <input type="text" id="preferenceStyle" name="style" placeholder="Concise, code-first, pragmatic" autocomplete="off">
+
+                    <label for="preferenceVoice">Voice (MiniMax Speech)</label>
+                    <input type="text" id="preferenceVoice" name="voice" placeholder="speech-02 voice" autocomplete="off">
+
+                    <label for="preferencePersona">Persona notes</label>
+                    <textarea id="preferencePersona" name="persona" rows="3" placeholder="Mangesh-mode: concise, cite assumptions, give code."></textarea>
+
+                    <button type="submit" class="primary-btn" id="preferenceSave">
+                        <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                        Save preferences
+                    </button>
+                </form>
             </div>
         </div>
     </div>
