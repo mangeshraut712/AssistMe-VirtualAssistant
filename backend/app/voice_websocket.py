@@ -19,10 +19,18 @@ try:
         transcribe_audio as minimax_transcribe_audio,
     )
     MINIMAX_VOICE_READY = is_minimax_ready()
+    # Use the imported classes directly
+    MiniMaxClientErrorImported = MiniMaxClientError  # type: ignore[assignment]
+    MiniMaxClientNotConfiguredImported = MiniMaxClientNotConfigured  # type: ignore[assignment]
 except Exception as exc:  # pragma: no cover - optional dependency
     logging.warning("MiniMax voice features unavailable: %s", exc)
-    MiniMaxClientError = RuntimeError  # type: ignore[assignment]
-    MiniMaxClientNotConfigured = RuntimeError  # type: ignore[assignment]
+
+    class MiniMaxClientErrorImported(RuntimeError):  # type: ignore[no-redef]
+        """Fallback error used when MiniMax voice helpers are unavailable."""
+
+    class MiniMaxClientNotConfiguredImported(RuntimeError):  # type: ignore[no-redef]
+        """Fallback configuration error used when MiniMax voice helpers are unavailable."""
+
     minimax_synthesize_speech = None  # type: ignore[assignment]
     minimax_transcribe_audio = None  # type: ignore[assignment]
     encode_audio_to_base64 = None  # type: ignore[assignment]
@@ -67,6 +75,7 @@ class VoiceSession:
         self.voice_enabled = True
         self.created_at = datetime.utcnow()
         self.last_activity = datetime.utcnow()
+        self.last_partial_transcript: Optional[str] = None
 
     def update_activity(self):
         self.last_activity = datetime.utcnow()
@@ -173,26 +182,29 @@ voice_manager = VoiceWebsocketManager()
 
 async def perform_minimax_stt(audio_data: bytes, session_id: str) -> Dict[str, Any]:
     """Run MiniMax STT with graceful fallback to mock behaviour."""
-    if MINIMAX_VOICE_READY and minimax_transcribe_audio:
+    stt_callable = minimax_transcribe_audio
+    if MINIMAX_VOICE_READY and stt_callable is not None:
         loop = asyncio.get_running_loop()
         try:
             result = await loop.run_in_executor(
                 None,
-                lambda: minimax_transcribe_audio(audio_data, language=None, format="wav"),
+                lambda: stt_callable(audio_data, language=None, audio_format="wav"),
             )
             transcript = (result.get("text") or "").strip()
             if transcript:
                 return {
                     "transcript": transcript,
-                    "confidence": 0.92,
+                    "confidence": result.get("confidence") or 0.92,
                     "final": True,
                     "provider": "minimax",
                     "raw": result,
                     "timestamp": datetime.utcnow().isoformat(),
+                    "full_transcript": transcript,
+                    "progress": 1.0,
                 }
-        except MiniMaxClientNotConfigured:
+        except MiniMaxClientNotConfiguredImported:
             logger.info("MiniMax STT not configured; using mock responses.")
-        except MiniMaxClientError as exc:
+        except MiniMaxClientErrorImported as exc:
             logger.warning("MiniMax STT error: %s", exc)
         except Exception as exc:  # pragma: no cover - defensive log
             logger.exception("Unexpected MiniMax STT failure: %s", exc)
@@ -202,20 +214,22 @@ async def perform_minimax_stt(audio_data: bytes, session_id: str) -> Dict[str, A
 
 async def perform_minimax_tts(text: str) -> Optional[str]:
     """Synthesize speech via MiniMax and return base64 audio."""
-    if not text:
+    tts_callable = minimax_synthesize_speech
+    base64_encoder = encode_audio_to_base64
+    if not text or not base64_encoder:
         return None
-    if MINIMAX_VOICE_READY and minimax_synthesize_speech and encode_audio_to_base64:
+    if MINIMAX_VOICE_READY and tts_callable is not None:
         loop = asyncio.get_running_loop()
         try:
             audio_bytes = await loop.run_in_executor(
                 None,
-                lambda: minimax_synthesize_speech(text, format="mp3"),
+                lambda: tts_callable(text, audio_format="mp3"),
             )
-            return encode_audio_to_base64(audio_bytes)
-        except MiniMaxClientNotConfigured:
-            logger.info("MiniMax TTS not configured; skipping audio synthesis.")
-        except MiniMaxClientError as exc:
+            return base64_encoder(audio_bytes)
+        except MiniMaxClientErrorImported as exc:
             logger.warning("MiniMax TTS error: %s", exc)
+        except MiniMaxClientNotConfiguredImported:
+            logger.info("MiniMax TTS not configured; skipping audio synthesis.")
         except Exception as exc:  # pragma: no cover - defensive log
             logger.exception("Unexpected MiniMax TTS failure: %s", exc)
     return None
@@ -225,36 +239,81 @@ async def mock_stt_processing(audio_data: bytes, session_id: str) -> Dict[str, A
     Mock STT processing for testing
     Returns pre-canned responses based on session context
     """
-    # Simple mock logic - alternate responses for testing
     mock_responses = [
-        {
-            "transcript": "What's the weather like in Pune?",
-            "confidence": 0.95,
-            "final": True,
-            "timestamp": datetime.utcnow().isoformat()
-        },
-        {
-            "transcript": "Show me a map of Pimpri Chinchwad",
-            "confidence": 0.92,
-            "final": True,
-            "timestamp": datetime.utcnow().isoformat()
-        },
-        {
-            "transcript": "Tell me about your capabilities",
-            "confidence": 0.88,
-            "final": True,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        "What's the weather like in Pune?",
+        "Show me a map of Pimpri Chinchwad",
+        "Tell me about your capabilities",
     ]
-
-    # Cycle through responses based on session ID hash for consistency
     response_index = hash(session_id) % len(mock_responses)
-    await asyncio.sleep(0.5)  # Simulate processing delay
+    full_transcript = mock_responses[response_index]
 
-    return mock_responses[response_index]
+    # Simulate progressive confidence and partial transcripts based on audio length
+    audio_length = max(len(audio_data), 1)
+    progress_ratio = min(1.0, audio_length / 16000)  # assume ~1.6s of audio per unit
+    min_chars = max(12, int(len(full_transcript) * progress_ratio))
+    partial_transcript = full_transcript[:min_chars].rstrip()
+
+    # Avoid cutting words mid-way for intermediate responses
+    if progress_ratio < 1.0 and " " in partial_transcript:
+        partial_transcript = partial_transcript.rsplit(" ", 1)[0]
+
+    confidence = round(0.6 + (0.35 * progress_ratio), 2)
+    await asyncio.sleep(0.15)  # Simulate processing delay
+
+    return {
+        "transcript": partial_transcript or full_transcript[:8],
+        "confidence": confidence,
+        "final": progress_ratio >= 1.0,
+        "provider": "mock",
+        "timestamp": datetime.utcnow().isoformat(),
+        "full_transcript": full_transcript,
+        "progress": progress_ratio,
+    }
+
+async def generate_live_voice_response(transcript: str, stt_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Generate live LLM response using the chat client for ChatGPT/Gemini Live-like experience."""
+    try:
+        # Import the chat client here to avoid circular imports
+        from .chat_client import grok_client
+
+        # Build voice-specific context
+        voice_prefix = "🎤 Voice input: This is a spoken conversation. Respond naturally and conversationally, as if in a real dialogue. Keep responses concise but engaging, like ChatGPT or Gemini Live."
+
+        # Create messages list with voice context
+        messages = [
+            {
+                "role": "user",
+                "content": f"{voice_prefix}\n\nTranscribed text: {transcript}"
+            }
+        ]
+
+        # Generate response using the same client as chat
+        result = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: grok_client.generate_response(
+                messages,
+                temperature=0.7,
+                max_tokens=1024,
+                use_grokipedia=False  # Disable for voice to keep it fast
+            )
+        )
+
+        if result and "response" in result:
+            llm_text = result["response"]
+            return {
+                "text": llm_text,
+                "confidence": 0.95
+            }
+        else:
+            logger.warning("LLM generation failed, falling back to mock")
+            return await mock_llm_response(transcript)
+
+    except Exception as e:
+        logger.exception(f"Failed to generate live voice response: {e}")
+        return await mock_llm_response(transcript)
 
 async def mock_llm_response(transcript: str) -> Dict[str, Any]:
-    """Mock LLM responses with rich content for testing"""
+    """Mock LLM responses with rich content for testing when live generation fails"""
     text = transcript.lower()
 
     if "weather" in text and "pune" in text:
@@ -409,47 +468,76 @@ async def process_audio_chunk(websocket: WebSocket, session: VoiceSession, audio
 
     # Buffer audio chunk
     session.audio_buffer.append(audio_data)
+    chunk_count = len(session.audio_buffer)
 
-    # Simple mock processing - in real implementation, this would stream to STT API
-    # For now, simulate processing every 10 chunks
-    if len(session.audio_buffer) >= 10:
-        try:
-            combined_audio = b"".join(session.audio_buffer)
-            stt_result = await perform_minimax_stt(combined_audio, session.session_id)
+    # Trigger processing on every 4th chunk to provide interim feedback
+    if chunk_count < 4:
+        return
 
-            if stt_result.get("final", False):
-                # Get LLM response with rich content
-                llm_response = await mock_llm_response(stt_result["transcript"])
-                tts_audio = await perform_minimax_tts(llm_response.get("text", ""))
+    try:
+        # Double-check websocket is still connected before processing
+        if websocket.application_state.value != 1:  # 1 = CONNECTED
+            logger.warning(f"WebSocket not connected for session {session.session_id}, skipping processing")
+            return
 
-                # Send combined response
-                response = {
-                    "type": "voice_response",
-                    "session_id": session.session_id,
-                    "transcript": stt_result,
-                    "response": llm_response,
-                    "ttsAudio": tts_audio,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+        combined_audio = b"".join(session.audio_buffer)
+        stt_result = await perform_minimax_stt(combined_audio, session.session_id)
 
-                await websocket.send_json(response)
+        # Check again after STT processing (which can take time)
+        if websocket.application_state.value != 1:
+            logger.warning(f"WebSocket closed during STT processing for session {session.session_id}")
+            return
 
-                # Clear buffer for next utterance
-                session.audio_buffer = []
-            else:
-                # Send interim transcript if available
-                if stt_result.get("transcript"):
+        if stt_result.get("final", False):
+            transcript = stt_result.get("full_transcript") or stt_result.get("transcript", "")
+            llm_response = await generate_live_voice_response(transcript, stt_result)
+
+            # Check before LLM processing
+            if websocket.application_state.value != 1:
+                logger.warning(f"WebSocket closed during LLM generation for session {session.session_id}")
+                return
+
+            tts_audio = await perform_minimax_tts(llm_response.get("text", ""))
+
+            # Final check before sending response
+            if websocket.application_state.value != 1:
+                logger.warning(f"WebSocket closed before sending response for session {session.session_id}")
+                return
+
+            response = {
+                "type": "voice_response",
+                "session_id": session.session_id,
+                "transcript": stt_result,
+                "response": llm_response,
+                "ttsAudio": tts_audio,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+
+            await websocket.send_json(response)
+            session.audio_buffer = []
+            session.last_partial_transcript = None
+        else:
+            transcript_text = stt_result.get("transcript")
+            if transcript_text and transcript_text != session.last_partial_transcript:
+                session.last_partial_transcript = transcript_text
+
+                # Check websocket before sending interim transcript
+                if websocket.application_state.value == 1:
                     await websocket.send_json({
                         "type": "interim_transcript",
                         "session_id": session.session_id,
-                        "transcript": stt_result["transcript"],
+                        "transcript": transcript_text,
                         "confidence": stt_result.get("confidence", 0.0)
                     })
-
-        except Exception as e:
-            logger.error(f"Error processing audio chunk: {e}")
-            await websocket.send_json({
-                "type": "error",
-                "error": "audio_processing_failed",
-                "message": str(e)
-            })
+    except Exception as exc:
+        logger.error("Error processing audio chunk: %s", exc)
+        # Only try to send error message if websocket is still connected
+        if websocket.application_state.value == 1:
+            try:
+                await websocket.send_json({
+                    "type": "error",
+                    "error": "audio_processing_failed",
+                    "message": str(exc)
+                })
+            except Exception as send_exc:
+                logger.error("Failed to send error message: %s", send_exc)

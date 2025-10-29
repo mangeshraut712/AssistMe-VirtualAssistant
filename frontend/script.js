@@ -150,6 +150,7 @@ const endpoints = {
     agentPlan: `${API_BASE}/api/agent/plan`,
     multimodal: `${API_BASE}/api/multimodal/generate`,
     ragQuery: `${API_BASE}/api/rag/query`,
+    contextCompress: `${API_BASE}/api/context/compress`,
 };
 
 const MODEL_OPTIONS = [
@@ -212,6 +213,12 @@ const MODEL_OPTIONS = [
         label: 'MoonshotAI Kimi Dev 72B',
         hint: 'MoonshotAI developer-tuned',
         context: '128k context',
+    },
+    {
+        id: 'minimax/minimax-m2',
+        label: 'MiniMax M2',
+        hint: 'MiniMax M2 · voice-optimized',
+        context: 'Unlimited context',
     },
 ];
 
@@ -462,9 +469,13 @@ function applyPreferencesToUI() {
 function mergePreferences(preferences = {}) {
     if (!preferences || typeof preferences !== 'object') return;
     const merged = { ...state.preferences };
-    ['style', 'language', 'voice', 'persona', 'custom'].forEach((key) => {
-        if (preferences[key]) {
-            merged[key] = preferences[key];
+    const safeKeys = ['style', 'language', 'voice', 'persona', 'custom'];
+    safeKeys.forEach((key) => {
+        if (Object.prototype.hasOwnProperty.call(preferences, key)) {
+            const value = preferences[key];
+            if (typeof value !== 'undefined') {
+                merged[key] = value;
+            }
         }
     });
     state.preferences = merged;
@@ -506,6 +517,12 @@ function detectComposerCommand(text) {
     }
     if (trimmed.startsWith('/speech ')) {
         return { type: 'speech', prompt: trimmed.slice(8).trim() };
+    }
+    if (trimmed === '/compress') {
+        return { type: 'compress', prompt: '' };
+    }
+    if (trimmed.startsWith('/compress ')) {
+        return { type: 'compress', prompt: trimmed.slice(10).trim() };
     }
     if (trimmed === '/plan') {
         return { type: 'plan' };
@@ -646,7 +663,7 @@ function sanitizeHtml(html) {
     // Use DOMPurify if available, fallback to basic parser-based sanitization
     if (dompurifyLib?.sanitize) {
         // Validate and sanitize the HTML content with strict options
-        const sanitized = dompurifyLib.sanitize(String(html), {
+        const sanitized = dompurifyLib.sanitize(html, {
             ALLOWED_TAGS: Array.from(ALLOWED_TAGS),
             ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class', 'colspan', 'rowspan'],
             ALLOW_DATA_ATTR: false,
@@ -1359,14 +1376,7 @@ function setModel(modelId) {
     focusMessageInput();
 }
 
-function handleClickOutside(event) {
-    if (elements.modelSelector && !elements.modelSelector.contains(event.target)) {
-        toggleModelDropdown(false);
-    }
-    if (elements.sidebar && !elements.sidebar.contains(event.target) && elements.sidebar.classList.contains('open')) {
-        elements.sidebar.classList.remove('open');
-    }
-}
+
 
 function ensureConversationVisible() {
     if (elements.welcomePanel) {
@@ -1610,6 +1620,14 @@ function applyMetadata(container, metadata) {
     if (merged.model) entries.push({ icon: 'fa-solid fa-robot', text: merged.model });
     if (merged.latency) entries.push({ icon: 'fa-solid fa-gauge-high', text: `${merged.latency} ms` });
     if (merged.tokens) entries.push({ icon: 'fa-solid fa-layer-group', text: `${merged.tokens} tok` });
+    if (typeof merged.confidence === 'number') {
+        const pct = Math.round(merged.confidence * 100);
+        entries.push({ icon: 'fa-solid fa-wave-square', text: `${pct}% confidence` });
+    }
+    if (merged.voice) {
+        entries.push({ icon: 'fa-solid fa-microphone-lines', text: merged.voice });
+    }
+    if (merged.compression) entries.push({ icon: 'fa-solid fa-file-zipper', text: String(merged.compression) });
     if (Array.isArray(merged.ragDocuments) && merged.ragDocuments.length > 0) {
         entries.push({ icon: 'fa-solid fa-bookmark', text: `RAG ×${merged.ragDocuments.length}` });
     }
@@ -2151,6 +2169,10 @@ async function handleComposerCommand(command, userMessage) {
         await handleMultimodalCommand(command);
         return;
     }
+    if (command.type === 'compress') {
+        await handleCompressCommand(command.prompt);
+        return;
+    }
     if (command.type === 'plan') {
         await triggerAgentPlan(command.prompt || '', { fromCommand: true });
         return;
@@ -2248,6 +2270,89 @@ async function handleMultimodalCommand(command) {
         assistantMessage.metadata.model = 'multimodal/error';
         applyMetadata(fragment.metadata, assistantMessage.metadata);
         showToast(error.message || 'Multimodal request failed', 'error');
+    } finally {
+        removeTypingIndicator();
+        state.isStreaming = false;
+        handleInputChange();
+        persistActiveConversation();
+    }
+}
+
+async function handleCompressCommand(textPayload) {
+    if (!state.activeConversation) return;
+    const explicitText = (textPayload || '').trim();
+    const sourceText = explicitText || getLastUserPrompt();
+    if (!sourceText) {
+        showToast('Provide text after /compress or send a message to compress.', 'info');
+        return;
+    }
+
+    const started = performance.now();
+    state.isStreaming = true;
+    handleInputChange();
+    showTypingIndicator();
+
+    const assistantMessage = {
+        role: 'assistant',
+        content: '',
+        createdAt: Date.now(),
+        metadata: { model: 'context-compression' },
+    };
+    state.activeConversation.messages.push(assistantMessage);
+    const fragment = createMessageElement('assistant');
+
+    try {
+        const payload = {
+            text: sourceText,
+        };
+
+        const response = await fetch(endpoints.contextCompress, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data?.detail || data?.error || `HTTP ${response.status}`);
+        }
+
+        const pages = Array.isArray(data.pages) ? data.pages : [];
+        const pageCount = pages.length;
+        const summary = pageCount > 0
+            ? `Compressed ${sourceText.length.toLocaleString()} characters into ${pageCount} page${pageCount === 1 ? '' : 's'} for vision models.`
+            : 'No pages were generated for the provided text.';
+
+        assistantMessage.content = summary;
+        assistantMessage.metadata = {
+            model: 'context-compression',
+            latency: Math.round(performance.now() - started),
+            compression: pageCount ? `${pageCount} page${pageCount === 1 ? '' : 's'}` : 'no pages',
+            media: pages.map((page, index) => ({
+                type: 'image',
+                b64: page.image_b64,
+                format: 'png',
+                prompt: `Compressed page ${index + 1}`,
+                width: page.width,
+                height: page.height,
+            })),
+            originalChars: sourceText.length,
+        };
+
+        renderAssistantContent(fragment.text, assistantMessage.content);
+        if (assistantMessage.metadata.media) {
+            attachMediaContent(fragment.text, assistantMessage.metadata.media);
+        }
+        applyMetadata(fragment.metadata, assistantMessage.metadata);
+        showToast('Context compressed into image pages.', 'success', 2600);
+    } catch (error) {
+        assistantMessage.content = `⚠️ Compression failed: ${error.message || 'Unknown error'}`;
+        assistantMessage.metadata = {
+            model: 'context-compression',
+        };
+        renderAssistantContent(fragment.text, assistantMessage.content);
+        applyMetadata(fragment.metadata, assistantMessage.metadata);
+        showToast(error.message || 'Compression failed', 'error');
     } finally {
         removeTypingIndicator();
         state.isStreaming = false;
@@ -2585,6 +2690,7 @@ function initInlineHandlers() {
         updateRagPreference(event.target.checked);
     });
     elements.agentPlanBtn?.addEventListener('click', () => triggerAgentPlan());
+}
 
 // ====================
 // Voice Controls & Rich Content Components
@@ -2592,9 +2698,8 @@ function initInlineHandlers() {
 
 
 
-// Rich content containers
-let richContentContainer = null;
 let interimTranscriptContainer = null;
+let interimTranscriptHideTimer = null;
 
 // Voice WebSocket client
 let voiceWebsocket = null;
@@ -2615,43 +2720,471 @@ function initializeVoiceControls() {
 }
 
 function createVoiceUI() {
-    // Create rich content container for voice responses
-    richContentContainer = document.createElement('div');
-    richContentContainer.id = 'richContentContainer';
-    richContentContainer.className = 'rich-content-container';
-    richContentContainer.style.cssText = `
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        max-width: 400px;
-        z-index: 999;
-    `;
+    if (interimTranscriptContainer) return;
 
-    // Create interim transcript container
     interimTranscriptContainer = document.createElement('div');
     interimTranscriptContainer.id = 'interimTranscript';
     interimTranscriptContainer.className = 'interim-transcript';
-    interimTranscriptContainer.style.cssText = `
-        display: none;
-        position: fixed;
-        bottom: 100px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--surface-panel, rgba(0,0,0,0.9));
-        color: var(--text-primary, white);
-        padding: 12px 24px;
-        border-radius: 24px;
-        font-size: 16px;
-        max-width: 80%;
-        text-align: center;
-        z-index: 1001;
-        box-shadow: var(--shadow-hard);
-        border: 1px solid var(--border-subtle);
+    interimTranscriptContainer.setAttribute('aria-live', 'polite');
+    interimTranscriptContainer.textContent = '';
+    interimTranscriptContainer.classList.remove('visible');
+
+    const anchor = elements.composer?.parentElement || document.body;
+    anchor.appendChild(interimTranscriptContainer);
+
+    // Create Voice Mode Debug Panel
+    createVoiceDebugPanel();
+}
+
+function createVoiceDebugPanel() {
+    if (document.getElementById('voiceDebugPanel')) return;
+
+    const panel = document.createElement('div');
+    panel.id = 'voiceDebugPanel';
+    panel.className = 'voice-debug-panel hidden';
+    panel.innerHTML = `
+        <div class="voice-debug-header">
+            <h4><i class="fa-solid fa-microphone-lines"></i> Voice Mode Debug</h4>
+            <button class="voice-debug-toggle" id="voiceDebugToggle" title="Toggle debug panel">
+                <i class="fa-solid fa-chevron-up"></i>
+            </button>
+            <button class="voice-debug-clear" id="voiceDebugClear" title="Clear debug logs">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
+        <div class="voice-debug-content">
+            <div class="voice-debug-section">
+                <h5><i class="fa-solid fa-wave-square"></i> Real-time Transcripts</h5>
+                <div class="voice-debug-transcripts" id="voiceDebugTranscripts">
+                    <div class="voice-debug-placeholder">Voice mode not active</div>
+                </div>
+            </div>
+            <div class="voice-debug-section">
+                <h5><i class="fa-solid fa-robot"></i> AI Responses</h5>
+                <div class="voice-debug-responses" id="voiceDebugResponses">
+                    <div class="voice-debug-placeholder">No AI responses yet</div>
+                </div>
+            </div>
+            <div class="voice-debug-section">
+                <h5><i class="fa-solid fa-chart-line"></i> System Status</h5>
+                <div class="voice-debug-status" id="voiceDebugStatus">
+                    <div class="status-item">
+                        <span class="status-label">WebSocket:</span>
+                        <span class="status-value status-disconnected" id="wsStatus">Disconnected</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Recording:</span>
+                        <span class="status-value" id="recordingStatus">Stopped</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">STT Model:</span>
+                        <span class="status-value" id="sttModel">MiniMax</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">LLM Model:</span>
+                        <span class="status-value" id="llmModel">${state.currentModel || 'Unknown'}</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Session ID:</span>
+                        <span class="status-value" id="sessionId">None</span>
+                    </div>
+                </div>
+            </div>
+            <div class="voice-debug-section">
+                <h5><i class="fa-solid fa-bug"></i> Error Logs</h5>
+                <div class="voice-debug-errors" id="voiceDebugErrors">
+                    <div class="voice-debug-placeholder">No errors</div>
+                </div>
+            </div>
+        </div>
     `;
 
-    // Add to DOM
-    document.body.appendChild(richContentContainer);
-    document.body.appendChild(interimTranscriptContainer);
+    // Position the panel to the right side - initially hidden
+    Object.assign(panel.style, {
+        position: 'fixed',
+        top: '80px',
+        right: '20px',
+        width: '350px',
+        maxHeight: '70vh',
+        background: 'var(--bg-primary)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '12px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+        zIndex: '1000',
+        fontSize: '12px',
+        overflow: 'hidden',
+        opacity: '0',
+        pointerEvents: 'none',
+        transform: 'translateX(100px)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+    });
+
+    // Add header styling
+    const header = panel.querySelector('.voice-debug-header');
+    if (header) {
+        Object.assign(header.style, {
+            background: 'var(--bg-secondary)',
+            borderBottom: '1px solid var(--border-color)',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: '600'
+        });
+
+        const headerIcon = header.querySelector('h4 i');
+        if (headerIcon) {
+            Object.assign(headerIcon.style, {
+                marginRight: '8px',
+                color: 'var(--accent-color)'
+            });
+        }
+    }
+
+    // Style the buttons
+    const toggleBtn = header?.querySelector('.voice-debug-toggle');
+    const clearBtn = header?.querySelector('.voice-debug-clear');
+    if (toggleBtn) {
+        Object.assign(toggleBtn.style, {
+            marginLeft: 'auto',
+            background: 'none',
+            border: 'none',
+            padding: '4px 8px',
+            cursor: 'pointer',
+            borderRadius: '4px',
+            color: 'var(--text-secondary)',
+            transition: 'color 0.2s'
+        });
+        toggleBtn.onmouseover = () => toggleBtn.style.color = 'var(--text-primary)';
+        toggleBtn.onmouseout = () => toggleBtn.style.color = 'var(--text-secondary)';
+    }
+    if (clearBtn) {
+        Object.assign(clearBtn.style, {
+            background: 'none',
+            border: 'none',
+            padding: '4px 8px',
+            cursor: 'pointer',
+            borderRadius: '4px',
+            color: 'var(--text-secondary)',
+            transition: 'color 0.2s'
+        });
+        clearBtn.onmouseover = () => clearBtn.style.color = 'var(--error)';
+        clearBtn.onmouseout = () => clearBtn.style.color = 'var(--text-secondary)';
+    }
+
+    // Style the content sections
+    const sections = panel.querySelectorAll('.voice-debug-section');
+    sections.forEach(section => {
+        Object.assign(section.style, {
+            borderBottom: '1px solid var(--border-color)',
+            padding: '12px 16px'
+        });
+
+        const header = section.querySelector('h5');
+        if (header) {
+            Object.assign(header.style, {
+                margin: '0 0 8px 0',
+                fontSize: '11px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                color: 'var(--text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+            });
+
+            const icon = header.querySelector('i');
+            if (icon) {
+                header.insertBefore(icon, header.firstChild);
+            }
+        }
+
+        const list = section.querySelector('.status-item, .voice-debug-entry, .voice-debug-placeholder');
+        if (list) {
+            Object.assign(list.style, {
+                fontSize: '11px',
+                lineHeight: '1.4'
+            });
+        }
+    });
+
+    const anchor = elements.composer?.parentElement || document.body;
+    anchor.appendChild(panel);
+
+    // Add beautiful glow effect for active states
+    const originalUpdateVoiceDebugStatus = updateVoiceDebugStatus;
+    updateVoiceDebugStatus = (updates) => {
+        originalUpdateVoiceDebugStatus(updates);
+
+        // Add glow effect for connected state
+        if (updates.ws === 'Connected') {
+            panel.style.boxShadow = '0 8px 24px rgba(34, 197, 94, 0.2)';
+        } else {
+            panel.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
+        }
+        if (updates.ws === 'Disconnected') {
+            panel.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
+        }
+    };
+
+    // Add event listeners
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const content = panel.querySelector('.voice-debug-content');
+            const isCollapsed = panel.classList.contains('collapsed');
+
+            if (isCollapsed) {
+                content.style.display = 'block';
+                panel.classList.remove('collapsed');
+                toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-up"></i>';
+            } else {
+                content.style.display = 'none';
+                panel.classList.add('collapsed');
+                toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
+            }
+        });
+    }
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            clearVoiceDebugLogs();
+        });
+    }
+
+    // Panel should start completely hidden and only show when voice mode is activated
+    showVoiceDebugPanel(false);
+}
+
+function clearVoiceDebugLogs() {
+    const transcriptsDiv = document.getElementById('voiceDebugTranscripts');
+    const responsesDiv = document.getElementById('voiceDebugResponses');
+    const errorsDiv = document.getElementById('voiceDebugErrors');
+
+    if (transcriptsDiv) transcriptsDiv.innerHTML = '<div class="voice-debug-placeholder">Logs cleared</div>';
+    if (responsesDiv) responsesDiv.innerHTML = '<div class="voice-debug-placeholder">Logs cleared</div>';
+    if (errorsDiv) errorsDiv.innerHTML = '<div class="voice-debug-placeholder">Logs cleared</div>';
+
+    console.log('Voice debug logs cleared');
+}
+
+function updateVoiceDebugPanelVisibility() {
+    const panel = document.getElementById('voiceDebugPanel');
+    if (!panel) return;
+
+    if (isVoiceModeActive) {
+        showVoiceDebugPanel(true);
+        // Only update status when voice mode is actually active
+        updateVoiceDebugStatus({
+            recording: 'Recording',
+            sttModel: 'MiniMax',
+            llmModel: state.currentModel,
+            sessionId: 'Active'
+        });
+    } else {
+        showVoiceDebugPanel(false);
+        // Reset to initial disconnected state
+        updateVoiceDebugStatus({
+            ws: 'Disconnected',
+            recording: 'Stopped',
+            sttModel: 'MiniMax',
+            llmModel: state.currentModel,
+            sessionId: 'None'
+        });
+    }
+}
+
+function showVoiceDebugPanel(show) {
+    const panel = document.getElementById('voiceDebugPanel');
+    if (!panel) return;
+
+    if (show) {
+        // Make visible with smooth animation
+        panel.style.opacity = '1';
+        panel.style.pointerEvents = 'auto';
+        panel.style.transform = 'translateX(0)';
+        panel.classList.add('visible');
+    } else {
+        // Hide with animation
+        panel.style.opacity = '0';
+        panel.style.pointerEvents = 'none';
+        panel.style.transform = 'translateX(100px)';
+        panel.classList.remove('visible');
+    }
+}
+
+function logVoiceTranscript(text, confidence, isFinal = false) {
+    const transcriptsDiv = document.getElementById('voiceDebugTranscripts');
+    if (!transcriptsDiv) return;
+
+    const timestamp = new Date().toLocaleTimeString();
+    const confidenceStr = typeof confidence === 'number' ? `${(confidence * 100).toFixed(0)}%` : 'N/A';
+
+    // Check if this is new or updating an existing entry
+    const existingEntries = transcriptsDiv.querySelectorAll('.voice-debug-entry');
+    const lastEntry = existingEntries[existingEntries.length - 1];
+
+    if (lastEntry && !isFinal && !lastEntry.classList.contains('final')) {
+        // Update existing interim entry
+        lastEntry.innerHTML = `
+            <div class="voice-debug-meta">
+                <span class="voice-debug-time">${timestamp}</span>
+                <span class="voice-debug-confidence">${confidenceStr}</span>
+                <span class="voice-debug-type interim">Interim</span>
+            </div>
+            <div class="voice-debug-content">${text || '...'}</div>
+        `;
+    } else {
+        // Add new entry
+        const entry = document.createElement('div');
+        entry.className = `voice-debug-entry ${isFinal ? 'final' : 'interim'}`;
+        entry.innerHTML = `
+            <div class="voice-debug-meta">
+                <span class="voice-debug-time">${timestamp}</span>
+                <span class="voice-debug-confidence">${confidenceStr}</span>
+                <span class="voice-debug-type ${isFinal ? 'final' : 'interim'}">${isFinal ? 'Final' : 'Interim'}</span>
+            </div>
+            <div class="voice-debug-content">${text || '...'}</div>
+        `;
+
+        // Remove placeholder if exists
+        const placeholder = transcriptsDiv.querySelector('.voice-debug-placeholder');
+        if (placeholder) placeholder.remove();
+
+        transcriptsDiv.appendChild(entry);
+
+        // Keep only last 10 entries
+        const entries = transcriptsDiv.querySelectorAll('.voice-debug-entry');
+        if (entries.length > 10) {
+            entries[0].remove();
+        }
+
+        // Scroll to bottom
+        transcriptsDiv.scrollTop = transcriptsDiv.scrollHeight;
+    }
+
+    console.log(`Voice transcript ${isFinal ? 'final' : 'interim'}:`, text, `(${confidenceStr})`);
+}
+
+function logVoiceAiResponse(text, model, latency, tokens) {
+    const responsesDiv = document.getElementById('voiceDebugResponses');
+    if (!responsesDiv) return;
+
+    const timestamp = new Date().toLocaleTimeString();
+
+    const entry = document.createElement('div');
+    entry.className = 'voice-debug-entry response';
+    entry.innerHTML = `
+        <div class="voice-debug-meta">
+            <span class="voice-debug-time">${timestamp}</span>
+            <span class="voice-debug-model">${model || 'Unknown'}</span>
+            <span class="voice-debug-latency">${latency || 0}ms</span>
+            <span class="voice-debug-tokens">${tokens || 0} tokens</span>
+        </div>
+        <div class="voice-debug-content">${text || 'No response'}</div>
+    `;
+
+    // Remove placeholder if exists
+    const placeholder = responsesDiv.querySelector('.voice-debug-placeholder');
+    if (placeholder) placeholder.remove();
+
+    responsesDiv.appendChild(entry);
+
+    // Keep only last 10 entries
+    const entries = responsesDiv.querySelectorAll('.voice-debug-entry');
+    if (entries.length > 10) {
+        entries[0].remove();
+    }
+
+    // Scroll to bottom
+    responsesDiv.scrollTop = responsesDiv.scrollHeight;
+
+    console.log('Voice AI response:', { text, model, latency, tokens });
+}
+
+function logVoiceError(message, type = 'error') {
+    const errorsDiv = document.getElementById('voiceDebugErrors');
+    if (!errorsDiv) return;
+
+    const timestamp = new Date().toLocaleTimeString();
+
+    const entry = document.createElement('div');
+    entry.className = `voice-debug-entry ${type}`;
+    entry.innerHTML = `
+        <div class="voice-debug-meta">
+            <span class="voice-debug-time">${timestamp}</span>
+            <span class="voice-debug-type error">Error</span>
+        </div>
+        <div class="voice-debug-content">${message || 'Unknown error'}</div>
+    `;
+
+    // Remove placeholder if exists
+    const placeholder = errorsDiv.querySelector('.voice-debug-placeholder');
+    if (placeholder) placeholder.remove();
+
+    errorsDiv.appendChild(entry);
+
+    // Keep only last 10 entries
+    const entries = errorsDiv.querySelectorAll('.voice-debug-entry');
+    if (entries.length > 10) {
+        entries[0].remove();
+    }
+
+    // Scroll to bottom
+    errorsDiv.scrollTop = errorsDiv.scrollHeight;
+
+    console.error('Voice error logged:', message);
+}
+
+function updateVoiceDebugStatus(updates) {
+    // Update individual status items
+    Object.entries(updates).forEach(([key, value]) => {
+        const element = document.getElementById(`${key}Status`);
+        if (element) {
+            element.textContent = value;
+
+            // Update status classes
+            element.classList.remove('status-connected', 'status-disconnected', 'status-recording', 'status-stopped');
+            if (key === 'ws') {
+                element.classList.add(value.toLowerCase() === 'connected' ? 'status-connected' : 'status-disconnected');
+            } else if (key === 'recording') {
+                element.classList.add(value.toLowerCase() === 'recording' ? 'status-recording' : 'status-stopped');
+            }
+        }
+    });
+
+    console.log('Voice status updated:', updates);
+}
+
+function setInterimTranscript(message, confidence) {
+    if (!interimTranscriptContainer) return;
+
+    if (!message) {
+        if (interimTranscriptHideTimer) {
+            clearTimeout(interimTranscriptHideTimer);
+            interimTranscriptHideTimer = null;
+        }
+        interimTranscriptContainer.classList.remove('visible');
+        interimTranscriptContainer.textContent = '';
+        return;
+    }
+
+    const confidenceSuffix = typeof confidence === 'number'
+        ? ` · ${(confidence * 100).toFixed(0)}%`
+        : '';
+    interimTranscriptContainer.textContent = `${message}${confidenceSuffix}`;
+    interimTranscriptContainer.classList.add('visible');
+
+    if (interimTranscriptHideTimer) {
+        clearTimeout(interimTranscriptHideTimer);
+    }
+    interimTranscriptHideTimer = setTimeout(() => {
+        if (interimTranscriptContainer) {
+            interimTranscriptContainer.classList.remove('visible');
+            interimTranscriptContainer.textContent = '';
+        }
+        interimTranscriptHideTimer = null;
+    }, 4000);
 }
 
 function toggleVoiceMode() {
@@ -2662,8 +3195,10 @@ function toggleVoiceMode() {
         setTimeout(() => {
             if (voiceWebsocket && voiceWebsocket.readyState === WebSocket.OPEN) {
                 activateVoiceMode();
+                updateVoiceDebugStatus({ ws: 'Connected' });
             } else {
                 showToast('Connecting to voice system...', 'info');
+                updateVoiceDebugStatus({ ws: 'Connecting...' });
             }
         }, 500);
         return;
@@ -2673,57 +3208,75 @@ function toggleVoiceMode() {
         deactivateVoiceMode();
     } else {
         activateVoiceMode();
+        updateVoiceDebugStatus({ ws: 'Connected' });
     }
 }
 
 function activateVoiceMode() {
     isVoiceModeActive = true;
-    
-    // Auto-select best model for voice mode (Gemini 2.0 Flash - fastest, best for conversation)
+
+    // Update debug panel visibility
+    updateVoiceDebugPanelVisibility();
+
+    // Auto-select best model for voice mode (MiniMax M2 - optimized for voice conversations)
     const previousModel = state.currentModel;
-    state.currentModel = 'google/gemini-2.0-flash-exp:free';
+    state.currentModel = 'minimax/minimax-m2';
     updateModelButton();
     localStorage.setItem(MODEL_KEY, state.currentModel);
-    
+
     // Store previous model to restore later if needed
     state.voiceModeOriginalModel = previousModel;
-    
+
+    // Update debug status
+    updateVoiceDebugStatus({
+        recording: 'Starting...',
+        sttModel: 'MiniMax',
+        llmModel: state.currentModel,
+        sessionId: 'Initializing...'
+    });
+
     // Update UI with stop icon
     if (elements.voiceModeBtn) {
         elements.voiceModeBtn.classList.add('active');
         elements.voiceModeBtn.innerHTML = '<i class="fa-solid fa-stop" aria-hidden="true"></i>';
         elements.voiceModeBtn.title = 'Stop voice conversation';
     }
-    
+
     // Start recording
     startVoiceRecording();
-    
+
     // Send command to backend
     if (voiceWebsocket && voiceWebsocket.readyState === WebSocket.OPEN) {
         voiceWebsocket.send(JSON.stringify({ type: 'start_recording' }));
     }
-    
-    showToast('🎙️ Voice mode active (using Gemini 2.0 Flash)', 'success');
+
+    showToast('🎙️ Voice mode active (using MiniMax M2)', 'success');
 }
 
 function deactivateVoiceMode() {
     isVoiceModeActive = false;
-    
+
+    // Hide debug panel
+    updateVoiceDebugPanelVisibility();
+
     // Update UI back to podcast icon
     if (elements.voiceModeBtn) {
         elements.voiceModeBtn.classList.remove('active');
         elements.voiceModeBtn.innerHTML = '<i class="fa-solid fa-podcast" aria-hidden="true"></i>';
         elements.voiceModeBtn.title = 'Voice conversation mode (like ChatGPT/Gemini Live)';
     }
-    
+
     // Stop recording
     stopVoiceRecording();
-    
+
     // Send command to backend
     if (voiceWebsocket && voiceWebsocket.readyState === WebSocket.OPEN) {
         voiceWebsocket.send(JSON.stringify({ type: 'stop_recording' }));
     }
-    
+
+    // Update debug status
+    updateVoiceDebugStatus({ recording: 'Stopped', sessionId: 'None' });
+
     showToast('Voice mode stopped', 'info');
 }
 
@@ -2752,11 +3305,7 @@ async function startVoiceRecording() {
         mediaRecorder.start(100); // Collect data every 100ms
         console.log('Voice recording started');
         
-        // Show interim transcript container
-        if (interimTranscriptContainer) {
-            interimTranscriptContainer.style.display = 'block';
-            interimTranscriptContainer.textContent = 'Listening...';
-        }
+        setInterimTranscript('Listening...', null);
     } catch (error) {
         console.error('Error starting voice recording:', error);
         showToast('Microphone access denied. Please allow microphone access.', 'error');
@@ -2774,10 +3323,7 @@ function stopVoiceRecording() {
         audioStream = null;
     }
 
-    // Hide interim transcript
-    if (interimTranscriptContainer) {
-        interimTranscriptContainer.style.display = 'none';
-    }
+    setInterimTranscript('', null);
 
     console.log('Voice recording stopped');
 }
@@ -2833,18 +3379,22 @@ function handleVoiceMessage(data) {
     switch (data.type) {
         case 'welcome':
             console.log('Voice session started');
+            updateVoiceDebugStatus({ sessionId: data.session_id || 'Active' });
             break;
 
         case 'recording_started':
             console.log('Recording started on server');
+            updateVoiceDebugStatus({ recording: 'Recording' });
             break;
 
         case 'recording_stopped':
             console.log('Recording stopped on server');
+            updateVoiceDebugStatus({ recording: 'Processing...' });
             break;
 
         case 'interim_transcript':
             showInterimTranscript(data.transcript, data.confidence);
+            logVoiceTranscript(data.transcript, data.confidence, false);
             break;
 
         case 'voice_response':
@@ -2854,6 +3404,7 @@ function handleVoiceMessage(data) {
         case 'error':
             showToast(`Voice error: ${data.message}`, 'error');
             deactivateVoiceMode();
+            logVoiceError(data.message);
             break;
 
         case 'ping':
@@ -2865,26 +3416,18 @@ function handleVoiceMessage(data) {
     }
 }
 
-function showInterimTranscript(transcript) {
-    if (!interimTranscriptContainer) return;
-
-    interimTranscriptContainer.textContent = transcript || '';
-    interimTranscriptContainer.style.display = transcript ? 'block' : 'none';
-
-    // Auto-hide after 3 seconds
-    clearTimeout(window.interimTranscriptTimeout);
-    window.interimTranscriptTimeout = setTimeout(() => {
-        if (interimTranscriptContainer) {
-            interimTranscriptContainer.style.display = 'none';
-        }
-    }, 3000);
+function showInterimTranscript(transcript, confidence) {
+    if (transcript) {
+        setInterimTranscript(transcript, confidence);
+    } else {
+        setInterimTranscript('Listening...', null);
+    }
 }
 
 // Track last rendered response to prevent duplicates
 let lastVoiceResponseId = null;
 
 function handleVoiceResponse(data) {
-    // Deduplicate responses using timestamp
     const responseId = data.timestamp || `${data.session_id}-${Date.now()}`;
     if (responseId === lastVoiceResponseId) {
         console.log('Skipping duplicate voice response');
@@ -2892,308 +3435,199 @@ function handleVoiceResponse(data) {
     }
     lastVoiceResponseId = responseId;
 
-    // Hide interim transcript
-    if (interimTranscriptContainer) {
-        interimTranscriptContainer.style.display = 'none';
-    }
+    setInterimTranscript('', null);
 
-    // Show recognized transcript
-    if (data.transcript?.transcript) {
-        showToast(`Heard: "${data.transcript.transcript}"`);
-    }
-
-    // Render response content
-    if (data.response) {
-        renderVoiceResponse(data.response);
-    }
-}
-
-function renderVoiceResponse(response) {
-    console.log('Rendering voice response:', response);
-
-    // Create assistant message
-    const assistantMessage = {
-        role: 'assistant',
-        content: response.text || 'Voice processing complete',
-    };
-
-    // Ensure conversation exists
     if (!state.activeConversation) {
         state.activeConversation = newConversation();
         setActiveConversation(state.activeConversation);
     }
 
-    // Add to conversation and render
-    state.activeConversation.messages.push({
-        ...assistantMessage,
-        createdAt: Date.now()
-    });
+    ensureConversationVisible();
 
-    const messageElement = createMessageElement('assistant');
-    renderAssistantContent(messageElement.text, assistantMessage.content);
+    const transcriptText = (data.transcript?.full_transcript || data.transcript?.transcript || '').trim();
+    if (transcriptText) {
+        const lastMessage = state.activeConversation.messages[state.activeConversation.messages.length - 1];
+        const alreadyLogged = lastMessage
+            && lastMessage.role === 'user'
+            && (lastMessage.content || '').trim().toLowerCase() === transcriptText.toLowerCase();
 
-    // Handle rich content
-    if (response.richContent) {
-        renderRichContent(response.richContent);
-    }
-
-    // Persist conversation
-    persistActiveConversation();
-
-    // Scroll to bottom
-    scrollToBottom();
-}
-
-function renderRichContent(richContent) {
-    console.log('Rendering rich content:', richContent);
-
-    if (!richContentContainer) return;
-
-    // Clear existing content
-    richContentContainer.innerHTML = '';
-
-    switch (richContent.type) {
-        case 'weather':
-            renderWeatherCard(richContent.data);
-            break;
-        case 'map':
-            renderMapCard(richContent.data);
-            break;
-        default:
-            console.log('Unknown rich content type:', richContent.type);
-    }
-
-    // Show container
-    richContentContainer.style.display = 'block';
-
-    // Auto-hide after 30 seconds
-    clearTimeout(window.richContentTimeout);
-    window.richContentTimeout = setTimeout(() => {
-        if (richContentContainer) {
-            richContentContainer.style.display = 'none';
+        if (!alreadyLogged) {
+            const userMessage = {
+                role: 'user',
+                content: transcriptText,
+                createdAt: Date.now(),
+                metadata: { voice: true },
+            };
+            state.activeConversation.messages.push(userMessage);
+            const fragment = createMessageElement('user');
+            fragment.text.textContent = transcriptText;
         }
-    }, 30000);
-}
-
-function renderWeatherCard(weatherData) {
-    const card = document.createElement('div');
-    card.className = 'rich-content-card weather-card';
-    card.style.cssText = `
-        background: var(--bg-secondary, white);
-        border: 1px solid var(--border-color, #e1e1e1);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        margin-bottom: 10px;
-        max-width: 350px;
-    `;
-
-    const headerDiv = document.createElement('div');
-    headerDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 15px;';
-
-    const icon = document.createElement('i');
-    icon.className = 'fas fa-cloud-sun';
-    icon.style.cssText = 'font-size: 24px; margin-right: 10px; color: #007bff;';
-
-    const textDiv = document.createElement('div');
-    const title = document.createElement('h3');
-    title.style.cssText = 'margin: 0; font-size: 18px;';
-    title.textContent = weatherData.city || 'Weather';
-
-    const condition = document.createElement('div');
-    condition.style.cssText = 'font-size: 12px; opacity: 0.7;';
-    condition.textContent = weatherData.condition || 'Current conditions';
-
-    textDiv.appendChild(title);
-    textDiv.appendChild(condition);
-    headerDiv.appendChild(icon);
-    headerDiv.appendChild(textDiv);
-
-    const tempDiv = document.createElement('div');
-    tempDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 15px;';
-
-    const temp = document.createElement('div');
-    temp.style.cssText = 'font-size: 32px; font-weight: bold; margin-right: 15px;';
-    temp.textContent = (weatherData.temperature || '--') + '°C';
-
-    const detailsDiv = document.createElement('div');
-
-    const humidityDiv = document.createElement('div');
-    humidityDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 5px;';
-    const humidityIcon = document.createElement('i');
-    humidityIcon.className = 'fas fa-tint';
-    humidityIcon.style.cssText = 'margin-right: 5px; color: #007bff;';
-    const humidityText = document.createElement('span');
-    humidityText.textContent = (weatherData.humidity || '--') + '% humidity';
-    humidityDiv.appendChild(humidityIcon);
-    humidityDiv.appendChild(humidityText);
-
-    const windDiv = document.createElement('div');
-    windDiv.style.cssText = 'display: flex; align-items: center;';
-    const windIcon = document.createElement('i');
-    windIcon.className = 'fas fa-wind';
-    windIcon.style.cssText = 'margin-right: 5px; color: #007bff;';
-    const windText = document.createElement('span');
-    windText.textContent = (weatherData.wind_speed || '--') + ' wind';
-    windDiv.appendChild(windIcon);
-    windDiv.appendChild(windText);
-
-    detailsDiv.appendChild(humidityDiv);
-    detailsDiv.appendChild(windDiv);
-    tempDiv.appendChild(temp);
-    tempDiv.appendChild(detailsDiv);
-
-    card.appendChild(headerDiv);
-    card.appendChild(tempDiv);
-
-    // Add forecast if available
-    if (weatherData.forecast && Array.isArray(weatherData.forecast)) {
-        const forecastDiv = document.createElement('div');
-        forecastDiv.style.cssText = 'border-top: 1px solid var(--border-color, #f0f0f0); padding-top: 15px;';
-
-        const forecastTitle = document.createElement('h4');
-        forecastTitle.style.cssText = 'margin: 0 0 10px 0; font-size: 14px;';
-        forecastTitle.textContent = '3-Day Forecast';
-        forecastDiv.appendChild(forecastTitle);
-
-        weatherData.forecast.slice(0, 3).forEach(day => {
-            const dayDiv = document.createElement('div');
-            dayDiv.style.cssText = 'display: flex; justify-content: space-between; padding: 5px 0;';
-
-            const dayName = document.createElement('span');
-            dayName.style.fontWeight = '500';
-            dayName.textContent = day.day || 'Day';
-
-            const conditionSpan = document.createElement('span');
-            conditionSpan.textContent = day.condition || '--';
-
-            const tempSpan = document.createElement('span');
-            tempSpan.style.fontWeight = '500';
-            tempSpan.textContent = (day.high || '--') + '°/' + (day.low || '--') + '°';
-
-            dayDiv.appendChild(dayName);
-            dayDiv.appendChild(conditionSpan);
-            dayDiv.appendChild(tempSpan);
-            forecastDiv.appendChild(dayDiv);
-        });
-
-        card.appendChild(forecastDiv);
+        lastVoiceTranscript = transcriptText;
     }
 
-    richContentContainer.appendChild(card);
+    if (data.response) {
+        renderVoiceResponse(data);
+    }
+
+    persistActiveConversation();
+    state.isStreaming = false;
+    handleInputChange();
 }
 
-function renderMapCard(mapData) {
-    const card = document.createElement('div');
-    card.className = 'rich-content-card map-card';
-    card.style.cssText = `
-        background: var(--bg-secondary, white);
-        border: 1px solid var(--border-color, #e1e1e1);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        margin-bottom: 10px;
-        max-width: 350px;
-    `;
+function renderVoiceResponse(payload) {
+    const response = payload.response || {};
+    console.log('Rendering voice response:', response);
 
-    const headerDiv = document.createElement('div');
-    headerDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 15px;';
+    const assistantContent = response.text || 'Voice processing complete';
 
-    const icon = document.createElement('i');
-    icon.className = 'fas fa-map-marked-alt';
-    icon.style.cssText = 'font-size: 24px; margin-right: 10px; color: #28a745;';
+    const assistantMessage = {
+        role: 'assistant',
+        content: assistantContent,
+        createdAt: Date.now(),
+        metadata: {
+            model: response.model || state.currentModel,
+            tokens: response.tokens,
+            confidence: typeof response.confidence === 'number'
+                ? response.confidence
+                : payload.transcript?.confidence,
+            voice: payload.ttsAudio ? 'MiniMax TTS' : null,
+            latency: response.latency,
+        },
+    };
 
-    const textDiv = document.createElement('div');
-    const title = document.createElement('h3');
-    title.style.cssText = 'margin: 0; font-size: 18px;';
-    title.textContent = 'Map';
+    // Log AI response for debugging
+    logVoiceAiResponse(
+        assistantContent,
+        response.model || state.currentModel,
+        response.latency,
+        response.tokens
+    );
 
-    const markerText = document.createElement('div');
-    markerText.style.cssText = 'font-size: 12px; opacity: 0.7;';
-    markerText.textContent = mapData.markerText || 'Location';
+    state.activeConversation.messages.push(assistantMessage);
+    const messageElement = createMessageElement('assistant');
+    renderAssistantContent(messageElement.text, assistantContent);
 
-    textDiv.appendChild(title);
-    textDiv.appendChild(markerText);
-    headerDiv.appendChild(icon);
-    headerDiv.appendChild(textDiv);
+    if (response.richContent) {
+        const richElement = createRichContentElement(response.richContent);
+        if (richElement) {
+            messageElement.text.appendChild(richElement);
+        }
+    }
 
-    const addressDiv = document.createElement('div');
-    addressDiv.style.cssText = 'margin-bottom: 10px; font-size: 14px;';
+    if (payload.ttsAudio) {
+        const audioWrapper = document.createElement('div');
+        audioWrapper.className = 'message-audio';
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = `data:audio/mp3;base64,${payload.ttsAudio}`;
+        audioWrapper.appendChild(audio);
+        messageElement.text.appendChild(audioWrapper);
+    }
 
-    const locationIcon = document.createElement('i');
-    locationIcon.className = 'fas fa-location-dot';
-    locationIcon.style.cssText = 'margin-right: 5px; color: #dc3545;';
-    const addressText = document.createElement('span');
-    addressText.textContent = mapData.address || 'Address not available';
+    applyMetadata(messageElement.metadata, assistantMessage.metadata);
 
-    addressDiv.appendChild(locationIcon);
-    addressDiv.appendChild(addressText);
-
-    const mapDiv = document.createElement('div');
-    mapDiv.style.cssText = `
-        width: 100%;
-        height: 200px;
-        border-radius: 8px;
-        overflow: hidden;
-        background: #f8f9fa;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        color: #666;
-    `;
-
-    const mapContentDiv = document.createElement('div');
-    mapContentDiv.style.cssText = 'text-align: center;';
-
-    const mapIcon = document.createElement('i');
-    mapIcon.className = 'fas fa-map';
-    mapIcon.style.cssText = 'font-size: 48px; margin-bottom: 10px; opacity: 0.5;';
-
-    const mapText = document.createElement('div');
-    mapText.textContent = 'Interactive map would load here';
-
-    const coordinatesDiv = document.createElement('div');
-    coordinatesDiv.style.cssText = 'font-size: 12px; margin-top: 5px;';
-    coordinatesDiv.textContent = 'Coordinates: ' +
-        (mapData.location?.lat?.toFixed(4) || '--') + ', ' +
-        (mapData.location?.lng?.toFixed(4) || '--');
-
-    mapContentDiv.appendChild(mapIcon);
-    mapContentDiv.appendChild(mapText);
-    mapContentDiv.appendChild(coordinatesDiv);
-    mapDiv.appendChild(mapContentDiv);
-
-    const linkDiv = document.createElement('div');
-    linkDiv.style.cssText = 'margin-top: 10px; text-align: center;';
-
-    const link = document.createElement('a');
-    link.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapData.address || 'Pune, India');
-    link.target = '_blank';
-    link.style.cssText = 'color: #007bff; text-decoration: none; font-size: 14px;';
-
-    const externalIcon = document.createElement('i');
-    externalIcon.className = 'fas fa-external-link-alt';
-    externalIcon.style.cssText = 'margin-right: 5px;';
-    const linkText = document.createTextNode('Open in Google Maps');
-
-    link.appendChild(externalIcon);
-    link.appendChild(linkText);
-    linkDiv.appendChild(link);
-
-    card.appendChild(headerDiv);
-    card.appendChild(addressDiv);
-    card.appendChild(mapDiv);
-    card.appendChild(linkDiv);
-
-    richContentContainer.appendChild(card);
-}
-
-function scrollToBottom() {
     if (elements.chatMessages) {
         elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
     }
 }
+
+function createRichContentElement(richContent) {
+    if (!richContent || typeof richContent !== 'object') {
+        return null;
+    }
+
+    switch (richContent.type) {
+        case 'weather':
+            return createWeatherCard(richContent.data);
+        case 'map':
+            return createMapCard(richContent.data);
+        default:
+            console.log('Unknown rich content type:', richContent.type);
+            return null;
+    }
+}
+
+function createWeatherCard(weatherData = {}) {
+    const card = document.createElement('div');
+    card.className = 'rich-content-card weather-card';
+
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'rich-card-header';
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-cloud-sun';
+    const textDiv = document.createElement('div');
+    textDiv.className = 'rich-card-text';
+    textDiv.innerHTML = `
+        <strong>${weatherData.city || 'Current location'}</strong><br>
+        ${weatherData.condition || 'Mixed conditions'} · ${weatherData.temperature || '--°C'}
+    `;
+    headerDiv.appendChild(icon);
+    headerDiv.appendChild(textDiv);
+
+    const metricsDiv = document.createElement('div');
+    metricsDiv.className = 'rich-card-metrics';
+    metricsDiv.innerHTML = `
+        <div><span>Humidity</span><strong>${weatherData.humidity || '--'}</strong></div>
+        <div><span>Wind</span><strong>${weatherData.wind_speed || '--'}</strong></div>
+    `;
+
+    const forecastList = document.createElement('ul');
+    forecastList.className = 'rich-card-forecast';
+    (weatherData.forecast || []).slice(0, 3).forEach((day) => {
+        const item = document.createElement('li');
+        item.innerHTML = `<span>${day.day || 'Day'}</span><span>${day.high || '--'} / ${day.low || '--'} · ${day.condition || '--'}</span>`;
+        forecastList.appendChild(item);
+    });
+
+    card.appendChild(headerDiv);
+    card.appendChild(metricsDiv);
+    if (forecastList.children.length > 0) {
+        card.appendChild(forecastList);
+    }
+
+    return card;
+}
+
+function createMapCard(mapData = {}) {
+    const card = document.createElement('div');
+    card.className = 'rich-content-card map-card';
+
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'rich-card-header';
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-location-dot';
+    const textDiv = document.createElement('div');
+    textDiv.className = 'rich-card-text';
+    textDiv.innerHTML = `
+        <strong>${mapData.location?.label || 'Location'}</strong><br>
+        ${mapData.address || 'Tap to open in maps'}
+    `;
+    headerDiv.appendChild(icon);
+    headerDiv.appendChild(textDiv);
+
+    const preview = document.createElement('div');
+    preview.className = 'rich-map-preview';
+    preview.innerHTML = `
+        <i class="fas fa-map"></i>
+        <div>Interactive map preview</div>
+        <div class="rich-map-coordinates">Coordinates: ${(mapData.location?.lat)?.toFixed(4) || '--'}, ${(mapData.location?.lng)?.toFixed(4) || '--'}</div>
+    `;
+
+    const link = document.createElement('a');
+    link.className = 'rich-map-link';
+    link.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapData.address || 'Pune, India');
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.innerHTML = '<i class="fas fa-external-link-alt"></i> Open in Google Maps';
+
+    card.appendChild(headerDiv);
+    card.appendChild(preview);
+    card.appendChild(link);
+
+    return card;
+}
+
+
 
 function setupVoiceEventListeners() {
     // Add keyboard shortcuts for voice mode
@@ -3210,11 +3644,6 @@ function setupVoiceEventListeners() {
 document.addEventListener('DOMContentLoaded', () => {
     initializeVoiceControls();
 });
-
-    document.addEventListener('click', handleClickOutside);
-}
-
-
 
 function initVoice() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

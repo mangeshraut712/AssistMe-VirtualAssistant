@@ -760,22 +760,30 @@ body.modal-open {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 12px;
-    padding: 16px 20px;
+    padding: 8px 12px;
     border-radius: var(--radius-xl);
-    background: var(--surface-panel);
-    border: 1px solid var(--border-subtle);
-    box-shadow: var(--shadow-soft);
+    background: transparent;
+    border: none;
+    box-shadow: none;
     max-width: 100%;
     word-wrap: break-word;
 }
 
-.message.assistant {
+.message.assistant .message-content,
+.message.user .message-content {
+    border-radius: var(--radius-xl);
+    padding: 16px 20px;
+    box-shadow: var(--shadow-soft);
+    background: var(--surface-panel);
+}
+
+.message.assistant .message-content {
     background: var(--surface-assistant);
 }
 
-.message.user {
+.message.user .message-content {
     background: var(--surface-user);
-    border: 1px solid rgba(16, 163, 127, 0.3);
+    border: 1px solid rgba(16, 163, 127, 0.25);
 }
 
 .message-avatar {
@@ -844,6 +852,122 @@ body.modal-open {
 .message-action-btn:hover {
     background: var(--surface-hover);
     color: var(--accent-primary);
+}
+
+.message .rich-content-card {
+    margin-top: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-panel-alt);
+    padding: 16px;
+    box-shadow: var(--shadow-soft);
+}
+
+.rich-content-card.weather-card {
+    background: linear-gradient(180deg, rgba(16, 163, 127, 0.05), transparent 70%);
+}
+
+.rich-content-card.map-card {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.05), transparent 70%);
+}
+
+.rich-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.rich-card-header i {
+    font-size: 20px;
+    color: var(--accent-secondary);
+}
+
+.rich-card-text {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.rich-card-metrics {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.rich-card-metrics span {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+
+.rich-card-metrics strong {
+    display: block;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.rich-card-forecast {
+    list-style: none;
+    padding: 12px 0 0;
+    margin: 12px 0 0;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.rich-card-forecast li {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.rich-map-preview {
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(16, 163, 127, 0.08));
+    padding: 24px;
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.rich-map-preview i {
+    font-size: 32px;
+    margin-bottom: 10px;
+    color: var(--accent-secondary);
+}
+
+.rich-map-coordinates {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+.rich-map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--accent-secondary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.rich-map-link:hover {
+    text-decoration: underline;
+}
+
+.message-audio {
+    margin-top: 12px;
+}
+
+.message-audio audio {
+    width: 100%;
+    border-radius: 8px;
 }
 
 .message-metadata {
@@ -966,6 +1090,32 @@ html[data-theme="dark"] .composer {
     padding: 12px 16px;
     box-shadow: var(--shadow-soft);
     transition: all var(--transition-fast);
+}
+
+.interim-transcript {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 112px;
+    padding: 10px 20px;
+    border-radius: 999px;
+    background: var(--surface-panel);
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-medium);
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast);
+    z-index: 1200;
+}
+
+html[data-theme="dark"] .interim-transcript {
+    background: rgba(52, 53, 65, 0.95);
+}
+
+.interim-transcript.visible {
+    opacity: 1;
 }
 
 .composer-box:focus-within {
@@ -1542,6 +1692,14 @@ html[data-theme="dark"] .benchmark-tab[aria-selected="true"] {
     .modal-content {
         padding: 0 20px 20px;
         max-height: calc(100vh - 100px);
+    }
+
+    .interim-transcript {
+        left: 16px;
+        right: 16px;
+        transform: none;
+        bottom: 150px;
+        text-align: center;
     }
 }
 

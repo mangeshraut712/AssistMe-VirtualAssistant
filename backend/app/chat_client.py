@@ -75,21 +75,32 @@ class Grok2Client:
 
     def _load_config(self) -> Dict[str, Any]:
         """Load config values at instantiation to minimize instance attributes."""
-        base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
-        configured_default = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip()
+        # Determine which provider to use
+        provider = os.getenv("AI_PROVIDER", "openrouter").lower()  # Default to openrouter
+
+        if provider == "minimax":
+            # MiniMax configuration
+            base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io").rstrip("/")
+            configured_default = os.getenv("MINIMAX_DEFAULT_MODEL", "MiniMax-M2").strip()
+        else:
+            # OpenRouter configuration (default)
+            base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
+            configured_default = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip()
+
         # No hardcoded default - will be determined dynamically
         fallback_env = os.getenv("OPENROUTER_FALLBACK_MODELS", "")
         return {
+            "provider": provider,
             "base_url": base_url,
-            "models_endpoint": f"{base_url}/models",
-            "chat_endpoint": f"{base_url}/chat/completions",
-            "api_key": os.getenv("OPENROUTER_API_KEY", "").strip(),
+            "models_endpoint": f"{base_url}/models" if provider == "openrouter" else f"{base_url}/v1/models",
+            "chat_endpoint": f"{base_url}/chat/completions" if provider == "openrouter" else f"{base_url}/v1/text/chatcompletion_v2",
+            "api_key": os.getenv("MINIMAX_API_KEY" if provider == "minimax" else "OPENROUTER_API_KEY", "").strip(),
             "referrer": os.getenv("APP_URL", os.getenv("VERCEL_URL", "https://assist-me-virtual-assistant.vercel.app")),
             "title": os.getenv("APP_NAME", "AssistMe Virtual Assistant"),
             "dev_mode": os.getenv("DEV_MODE", "false").lower() == "true",
             "redis_url": os.getenv("REDIS_URL"),
             "timeout": self._get_timeout(),
-            "default_model": configured_default,  # Can be empty for full flexibility
+            "default_model": configured_default,
             "retry_attempts": self._coerce_int(os.getenv("OPENROUTER_RETRY_ATTEMPTS"), 3),
             "retry_backoff_base": self._coerce_float(os.getenv("OPENROUTER_RETRY_BACKOFF_BASE"), 1.0),
             "retry_backoff_max": self._coerce_float(os.getenv("OPENROUTER_RETRY_BACKOFF_MAX"), 12.0),
@@ -140,8 +151,8 @@ class Grok2Client:
         cap = self.config.get("retry_backoff_max", 12.0) or 12.0
         jitter = self.config.get("retry_jitter", 0.25) or 0.0
         delay = min(cap, base * (2 ** attempt))
-        # Add a small random jitter to avoid synchronized retries
-        jitter_offset = random.uniform(0, jitter) if jitter > 0 else 0.0
+        # Add a small random jitter to avoid synchronized retries (non-cryptographic usage)
+        jitter_offset = random.random() * jitter if jitter > 0 else 0.0
         time.sleep(delay + jitter_offset)
 
     def _headers(self) -> dict:
@@ -322,16 +333,14 @@ class Grok2Client:
             }
 
         if response.status_code == 402 or (title and "Paid Model" in title):
-            friendly = (
-                "This OpenRouter model requires credits. "
-                "Please choose one of the free models or top up credits."
-            )
             return {
-                "error": friendly,
-                "detail": message,
-                "buyCreditsUrl": buy_credits_url,
-                "requires_credits": True,
+                "error": f"{model_name or 'Model'} requires credits. Trying alternative model...",
+                "status_code": 402,
                 "model": model_name,
+                "should_retry": True,  # Signal to try another model
+                "requires_credits": True,
+                "buyCreditsUrl": buy_credits_url,
+                "detail": message,
             }
 
         return {
@@ -365,47 +374,64 @@ class Grok2Client:
             logging.warning("No API key configured, using fallback models")
             return type(self).FALLBACK_MODELS
 
+        headers = self._headers()
+        timeout_seconds = float(self.config.get("timeout") or 60.0)
+        http_client = None
+        should_close = False
+
         try:
-            headers = self._headers()
-            response = requests.get(
+            if self.session is not None:
+                http_client = self.session
+            else:
+                # Create a short-lived session when pooling is unavailable
+                assert requests is not None  # nosec: B101 - guarded by HAS_REQUESTS check above
+                http_client = requests.Session()
+                should_close = True
+
+            response = http_client.get(
                 self.config["models_endpoint"],
                 headers=headers,
-                timeout=self.config["timeout"]
+                timeout=timeout_seconds,
             )
-
-            if response.status_code == 200:
-                data = response.json()
-                models_data = data.get("data", [])
-
-                # Filter for free models and format them
-                available_models = []
-                for model in models_data:
-                    model_id = model.get("id", "")
-                    # Only include free models (those with :free suffix or no pricing)
-                    if ":free" in model_id or not any(p in model_id for p in [":paid", ":enterprise"]):
-                        available_models.append({
-                            "id": model_id,
-                            "name": model.get("name", model_id),
-                            "context_length": model.get("context_length", 0),
-                            "pricing": model.get("pricing", {})
-                        })
-
-                # Sort by context length (higher first) then by name
-                available_models.sort(key=lambda x: (-x.get("context_length", 0), x.get("name", "")))
-
-                # Cache the result
-                self._models_cache = available_models
-                self._models_cache_time = current_time
-
-                logging.info(f"Fetched {len(available_models)} models from OpenRouter API")
-                return available_models
-            else:
-                logging.warning(f"Failed to fetch models from API: {response.status_code}")
-                return type(self).FALLBACK_MODELS
-
-        except Exception as e:
-            logging.exception(f"Error fetching models from OpenRouter API: {e}")
+        except requests.exceptions.RequestException as exc:
+            logging.error("Failed to load models from OpenRouter: %s", exc)
             return type(self).FALLBACK_MODELS
+        except Exception as exc:  # pragma: no cover - defensive catch
+            logging.exception("Unexpected error while fetching models from OpenRouter: %s", exc)
+            return type(self).FALLBACK_MODELS
+        finally:
+            if should_close and http_client is not None:
+                http_client.close()
+
+        if response.status_code == 200:
+            data = response.json()
+            models_data = data.get("data", [])
+
+            # Filter for free models and format them
+            available_models = []
+            for model in models_data:
+                model_id = model.get("id", "")
+                # Only include free models (those with :free suffix or no pricing)
+                if ":free" in model_id or not any(p in model_id for p in [":paid", ":enterprise"]):
+                    available_models.append({
+                        "id": model_id,
+                        "name": model.get("name", model_id),
+                        "context_length": model.get("context_length", 0),
+                        "pricing": model.get("pricing", {})
+                    })
+
+            # Sort by context length (higher first) then by name
+            available_models.sort(key=lambda x: (-x.get("context_length", 0), x.get("name", "")))
+
+            # Cache the result
+            self._models_cache = available_models
+            self._models_cache_time = current_time
+
+            logging.info(f"Fetched {len(available_models)} models from OpenRouter API")
+            return available_models
+
+        logging.warning(f"Failed to fetch models from API: {response.status_code}")
+        return type(self).FALLBACK_MODELS
 
     def _get_candidates(self, requested: Optional[str]) -> List[str]:
         """Get list of models to try, prioritizing the requested one."""

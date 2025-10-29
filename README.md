@@ -13,7 +13,7 @@
 
 **Leveraging Global AI Excellence + Unified Model Access + Intelligent Knowledge Synthesis**
 
-[🚀 Quick Start](#quick-start) • [📚 Documentation](#architecture) • [🔧 Configuration](#configuration) • [🚀 Deployment](#deployment)
+[🚀 Quick Start](#quick-start) • [📚 Documentation](#architecture-overview) • [🔧 Configuration](#configuration-guide) • [🚀 Deployment](#deployment-options)
 
 </div>
 
@@ -77,6 +77,7 @@ Despite these considerations, the unified intelligence and performance benefits 
 - **Chroma/Chromadb**: Vector database for knowledge retrieval
 - **OpenRouter SDK**: Unified access to 100+ AI models
 - **MiniMax M2**: Specialized model for agentic reasoning
+- **Text→Image Compression**: Pillow-backed renderer converts long context into PNG pages for VLM consumption
 
 ### Container & Orchestration
 - **Docker Compose**: Simplified multi-service deployment
@@ -91,11 +92,17 @@ Despite these considerations, the unified intelligence and performance benefits 
 
 ## 📋 Prerequisites & Requirements
 
+### System Requirements
 - **Runtime**: Python 3.9+ with pip
 - **Container**: Docker 20+ with Docker Compose
 - **Database**: PostgreSQL 15+ or compatible
 - **Cache**: Redis 7+ cluster
 - **Models**: Access to OpenRouter API and selected AI providers
+
+### API Keys Required
+- **OpenRouter API Key**: For accessing 100+ AI models
+- **MiniMax API Key**: For advanced agentic reasoning (optional)
+- **GitHub Token**: For repository integration (optional)
 
 ## 🚀 Quick Start
 
@@ -103,12 +110,39 @@ Despite these considerations, the unified intelligence and performance benefits 
 ```bash
 git clone https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git
 cd AssistMe-VirtualAssistant
+
+# Copy environment template and configure API keys
+cp .env.example .env
+# Edit .env with your API keys (see Configuration section below)
+
+# Start the application
 docker compose up -d
+```
+
+### Manual Installation (Alternative)
+```bash
+# Backend setup
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# Configure environment variables
+cp ../.env.example ../.env
+# Edit ../.env with your API keys
+
+# Start backend
+uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+# Frontend (in another terminal)
+cd ../frontend
+python -m http.server 3000
 ```
 
 ### Instant Access
 - **🌐 Web Interface**: [http://localhost:3000](http://localhost:3000)
 - **🔌 API Gateway**: [http://localhost:8001](http://localhost:8001)
+- **📚 API Documentation**: [http://localhost:8001/docs](http://localhost:8001/docs)
 - **💚 Health Status**: [http://localhost:8001/health](http://localhost:8001/health)
 
 <div align="center">
@@ -212,6 +246,23 @@ cp .env.example .env.prod
 docker compose --env-file .env.prod up -d
 ```
 
+## 🗜️ Context Compression Pipeline
+
+Long-form inputs can now be converted into compact image pages for vision-enabled models. Use the REST endpoint below to compress any text payload:
+
+```bash
+curl -X POST "http://localhost:8001/api/context/compress" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "text": "<paste long context here>",
+        "max_chars": 900,
+        "width": 1024,
+        "font_size": 20
+      }'
+```
+
+The response includes a `pages` array with base64 PNGs and metadata for each rendered page. These can be forwarded directly to OpenRouter vision models or MiniMax multimodal endpoints to bypass strict token limits.
+
 ## 🚀 Deployment Options
 
 ### Docker Deployment (Recommended)
@@ -244,21 +295,30 @@ kubectl apply -f k8s/
 
 ### Automated Testing
 ```bash
-# Backend tests
-cd backend && python -m pytest
+# Backend unit tests
+cd backend && python -m pytest tests/ -v
 
 # API integration tests
-./scripts/test-api.sh
+curl -X GET "http://localhost:8001/health"
 
-# Performance benchmarking
-./scripts/benchmark.sh
+# Manual testing endpoints
+curl -X POST "http://localhost:8001/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Hello"}]}'
 ```
 
 ### Quality Gates
 - **100% Type Coverage**: Full type hints and validation
 - **Pylint Standards**: Code quality enforcement
-- **Security Scanning**: Automated vulnerability detection
+- **Security Scanning**: Automated vulnerability detection with Bandit
 - **Performance Monitoring**: Real-time metrics and alerts
+- **Linter Compliance**: ESLint, Pylint, and Bandit passing
+
+### Troubleshooting
+- **Import Errors**: Ensure all dependencies are installed: `pip install -r requirements.txt`
+- **API Key Issues**: Check that `OPENROUTER_API_KEY` is set in your `.env` file
+- **Port Conflicts**: Ensure ports 3000 (frontend) and 8001 (backend) are available
+- **Docker Issues**: Run `docker system prune` to clean up old containers
 
 ## 🤝 Contributing
 

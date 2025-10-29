@@ -4,7 +4,7 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 # Load environment variables from .env files
 try:
@@ -57,10 +57,13 @@ except Exception as exc:  # pragma: no cover - optional dependency
     MiniMaxAgentNotConfigured = RuntimeError  # type: ignore[assignment]
     AGENT_AVAILABLE = False
 
+MiniMaxClientError: Type[RuntimeError] = RuntimeError
+MiniMaxClientNotConfigured: Type[RuntimeError] = RuntimeError
+
 try:
-    from .utils.minimax import (
-        MiniMaxClientError,
-        MiniMaxClientNotConfigured,
+    from .utils.minimax import (  # type: ignore[import-not-found]
+        MiniMaxClientError as _MiniMaxClientError,
+        MiniMaxClientNotConfigured as _MiniMaxClientNotConfigured,
         encode_audio_to_base64,
         generate_image,
         generate_video,
@@ -68,17 +71,36 @@ try:
         synthesize_speech,
         transcribe_audio,
     )
+    MiniMaxClientError = _MiniMaxClientError
+    MiniMaxClientNotConfigured = _MiniMaxClientNotConfigured
     MULTIMODAL_AVAILABLE = is_minimax_ready()
 except Exception as exc:  # pragma: no cover - optional dependency
     logging.warning("MiniMax multimodal utilities unavailable: %s", exc)
-    MiniMaxClientError = RuntimeError  # type: ignore[assignment]
-    MiniMaxClientNotConfigured = RuntimeError  # type: ignore[assignment]
+
+    class _FallbackMiniMaxClientError(RuntimeError):
+        """Fallback error raised when MiniMax multimodal helpers are unavailable."""
+
+    class _FallbackMiniMaxClientNotConfigured(RuntimeError):
+        """Fallback configuration error raised when MiniMax multimodal helpers are unavailable."""
+
+    MiniMaxClientError = _FallbackMiniMaxClientError
+    MiniMaxClientNotConfigured = _FallbackMiniMaxClientNotConfigured
+    encode_audio_to_base64 = None  # type: ignore[assignment]
     generate_image = None  # type: ignore[assignment]
     generate_video = None  # type: ignore[assignment]
     synthesize_speech = None  # type: ignore[assignment]
     transcribe_audio = None  # type: ignore[assignment]
-    encode_audio_to_base64 = None  # type: ignore[assignment]
     MULTIMODAL_AVAILABLE = False
+
+try:
+    from .utils.compression import compress_text_to_images, RenderedPage, ensure_pillow_available
+    COMPRESSION_AVAILABLE = True
+except Exception as exc:  # pragma: no cover - optional dependency
+    logging.warning("Text compression utilities unavailable: %s", exc)
+    compress_text_to_images = None  # type: ignore[assignment]
+    RenderedPage = None  # type: ignore[assignment]
+    ensure_pillow_available = None  # type: ignore[assignment]
+    COMPRESSION_AVAILABLE = False
 
 try:
     from .rag.engine import get_rag_engine, rag_query as rag_query_engine
@@ -139,48 +161,55 @@ CORS_ALLOW_ALL = os.getenv("CORS_ALLOW_ALL", "false").lower() == "true"
 ACTIVE_ORIGIN_REGEX = CUSTOM_ORIGIN_REGEX or DEFAULT_ORIGIN_REGEX
 VERCEL_ORIGIN_PATTERN = re.compile(ACTIVE_ORIGIN_REGEX) if ACTIVE_ORIGIN_REGEX else re.compile(DEFAULT_ORIGIN_REGEX)
 
-app = FastAPI(title="AssistMe API", version="1.0.0")
+def create_application():
+    """Create and configure the FastAPI application."""
+    app = FastAPI(title="AssistMe API", version="1.0.0")
 
-# Include voice WebSocket router if available
-if VOICE_AVAILABLE and voice_router:
-    app.include_router(voice_router)
-    logging.info("Voice WebSocket router included")
-else:
-    logging.warning("Voice WebSocket router not available")
+    # Include voice WebSocket router if available
+    if VOICE_AVAILABLE and voice_router:
+        app.include_router(voice_router)
+        logging.info("Voice WebSocket router included")
+    else:
+        logging.warning("Voice WebSocket router not available")
 
-# Initialize voice manager on startup
-@app.on_event("startup")
-async def startup_event():
-    if VOICE_AVAILABLE and voice_manager:
-        await voice_manager.initialize_redis()
-        logging.info("Voice manager initialized")
-    if RAG_AVAILABLE and get_rag_engine:
-        try:
-            await run_in_threadpool(get_rag_engine)
-            logging.info("Grokipedia RAG engine warmed")
-        except Exception as exc:  # pragma: no cover - defensive log
-            logging.warning("Failed to warm Grokipedia RAG engine: %s", exc)
+    # Configure CORS for cross-origin requests
+    cors_kwargs = {
+        "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
+        "allow_headers": ["*"],
+        "expose_headers": ["*"],
+        "max_age": 3600,
+    }
 
-# Configure CORS for cross-origin requests
-cors_kwargs = {
-    "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
-    "allow_headers": ["*"],
-    "expose_headers": ["*"],
-    "max_age": 3600,
-}
+    if CORS_ALLOW_ALL:
+        cors_kwargs["allow_origins"] = ["*"]
+        cors_kwargs["allow_credentials"] = False
+    else:
+        configured_origins = ALLOWED_ORIGINS or ["https://assist-me-virtual-assistant.vercel.app"]
+        cors_kwargs["allow_origins"] = configured_origins
+        cors_kwargs["allow_credentials"] = True
 
-if CORS_ALLOW_ALL:
-    cors_kwargs["allow_origins"] = ["*"]
-    cors_kwargs["allow_credentials"] = False
-else:
-    configured_origins = ALLOWED_ORIGINS or ["https://assist-me-virtual-assistant.vercel.app"]
-    cors_kwargs["allow_origins"] = configured_origins
-    cors_kwargs["allow_credentials"] = True
+    if ACTIVE_ORIGIN_REGEX:
+        cors_kwargs["allow_origin_regex"] = ACTIVE_ORIGIN_REGEX
 
-if ACTIVE_ORIGIN_REGEX:
-    cors_kwargs["allow_origin_regex"] = ACTIVE_ORIGIN_REGEX
+    app.add_middleware(CORSMiddleware, **cors_kwargs)
 
-app.add_middleware(CORSMiddleware, **cors_kwargs)
+    # Initialize voice manager on startup
+    @app.on_event("startup")
+    async def startup_event():
+        if VOICE_AVAILABLE and voice_manager:
+            await voice_manager.initialize_redis()
+            logging.info("Voice manager initialized")
+        if RAG_AVAILABLE and get_rag_engine:
+            try:
+                await run_in_threadpool(get_rag_engine)
+                logging.info("Grokipedia RAG engine warmed")
+            except Exception as exc:  # pragma: no cover - defensive log
+                logging.warning("Failed to warm Grokipedia RAG engine: %s", exc)
+
+    return app
+
+# Create the global app instance
+app = create_application()
 
 
 def _resolve_origin(request: Request) -> str:
@@ -243,6 +272,17 @@ class MultimodalGenerateRequest(BaseModel):
 class RAGQueryRequest(BaseModel):
     query: str
     top_k: Optional[int] = 3
+
+
+class CompressionRequest(BaseModel):
+    text: str
+    max_chars: Optional[int] = 800
+    overlap: Optional[int] = 0
+    width: Optional[int] = 1024
+    padding: Optional[int] = 48
+    font_size: Optional[int] = 20
+    bg_color: Optional[str] = "#ffffff"
+    text_color: Optional[str] = "#111111"
 
 
 def generate_conversation_title_from_messages(messages: List[ChatMessage]) -> str:
@@ -420,6 +460,18 @@ def _decode_base64_audio(payload: Optional[str]) -> Optional[bytes]:
         return base64.b64decode(payload)
     except (ValueError, TypeError):
         return None
+
+
+def _rendered_pages_payload(pages: List[Any]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "text": getattr(page, "text", ""),
+            "image_b64": getattr(page, "image_b64", ""),
+            "width": getattr(page, "width", 0),
+            "height": getattr(page, "height", 0),
+        }
+        for page in pages
+    ]
 
 
 def _last_user_message(messages: List[ChatMessage]) -> str:
@@ -604,7 +656,7 @@ async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depend
     payload_messages, rag_matches = _apply_rag_context(payload_messages, request)
 
     result = await run_in_threadpool(
-        grok_client.generate_response,
+        grok_client.generate_response,  # type: ignore[attr-defined]
         payload_messages,
         request.model or None,  # type: ignore
         request.temperature or 0.7,
@@ -623,7 +675,7 @@ async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depend
         generated_title,
     )
 
-    rag_payload = {"used": bool(rag_matches)}
+    rag_payload: Dict[str, Any] = {"used": bool(rag_matches)}
     if rag_matches:
         rag_payload["documents"] = rag_matches
 
@@ -661,7 +713,7 @@ async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] =
         final_tokens: Optional[int] = None
 
         # Run the streaming call directly since we're in a sync context
-        for chunk in grok_client.generate_response_stream(
+        for chunk in grok_client.generate_response_stream(  # type: ignore[attr-defined]
             payload_messages,
             model_id,
             temperature,
@@ -693,7 +745,7 @@ async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] =
         final_text = "".join(accumulated_chunks)
         final_tokens_value = final_tokens or (len(final_text.split()) if final_text else 0)
 
-        rag_payload = {"used": bool(rag_matches)}
+        rag_payload: Dict[str, Any] = {"used": bool(rag_matches)}
         if rag_matches:
             rag_payload["documents"] = rag_matches
 
@@ -826,7 +878,7 @@ async def multimodal_generate(request: MultimodalGenerateRequest, http_request: 
             audio_bytes = synthesize_speech(
                 text_value,
                 voice=voice,
-                format=audio_format,
+                audio_format=audio_format,
                 language=language,
                 model=model,
             )
@@ -849,7 +901,7 @@ async def multimodal_generate(request: MultimodalGenerateRequest, http_request: 
             result = transcribe_audio(
                 audio_bytes,
                 language=language,
-                format=audio_format,
+                audio_format=audio_format,
                 model=model,
             )
             return {"type": "transcription", **result}
@@ -858,11 +910,6 @@ async def multimodal_generate(request: MultimodalGenerateRequest, http_request: 
 
     try:
         result = await run_in_threadpool(_dispatch)
-    except MiniMaxClientNotConfigured as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except MiniMaxClientError as exc:
-        logging.warning("MiniMax multimodal error: %s", exc)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - defensive logging
@@ -879,6 +926,40 @@ async def multimodal_generate_options(request: Request) -> Response:
     return Response(status_code=204, headers=headers)
 
 
+@app.post("/api/context/compress")
+async def context_compress(request: CompressionRequest, http_request: Request) -> JSONResponse:
+    if not COMPRESSION_AVAILABLE or compress_text_to_images is None:
+        raise HTTPException(status_code=503, detail="Text compression utilities are not available on this deployment.")
+
+    def _render() -> List[Any]:
+        return compress_text_to_images(  # type: ignore[misc]
+            request.text,
+            max_chars=request.max_chars or 800,
+            overlap=request.overlap or 0,
+            width=request.width or 1024,
+            padding=request.padding or 48,
+            font_size=request.font_size or 20,
+            bg_color=request.bg_color or "#ffffff",
+            text_color=request.text_color or "#111111",
+        )
+
+    try:
+        pages = await run_in_threadpool(_render)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    headers = _cors_headers(http_request)
+    return JSONResponse(content={"pages": _rendered_pages_payload(pages)}, headers=headers)
+
+
+@app.options("/api/context/compress")
+async def context_compress_options(request: Request) -> Response:
+    headers = _cors_headers(request, methods="POST, OPTIONS")
+    return Response(status_code=204, headers=headers)
+
+
 @app.post("/api/rag/query")
 async def rag_query_endpoint(request: RAGQueryRequest, http_request: Request) -> JSONResponse:
     if not RAG_AVAILABLE or rag_query_engine is None:
@@ -887,7 +968,7 @@ async def rag_query_endpoint(request: RAGQueryRequest, http_request: Request) ->
     top_k = max(1, min(10, request.top_k or 3))
 
     def _dispatch() -> List[Dict[str, Any]]:
-        return list(rag_query_engine(request.query, top_k=top_k))
+        return list(rag_query_engine(request.query, top_k=top_k))  # type: ignore[operator]
 
     try:
         results = await run_in_threadpool(_dispatch)
@@ -909,8 +990,8 @@ async def rag_query_options(request: Request) -> Response:
 def list_models():
     _ensure_chat_client()
     return {
-        "models": grok_client.get_available_models(),
-        "default": grok_client.get_default_model(),
+        "models": grok_client.get_available_models(),  # type: ignore[attr-defined]
+        "default": grok_client.get_default_model(),  # type: ignore[attr-defined]
     }
 
 
@@ -934,7 +1015,7 @@ def openrouter_status():
         "configured": True,
         "base_url": config.get("base_url", "unknown"),
         "has_api_key": bool(config.get("api_key")),
-        "default_model": grok_client.get_default_model(),
+        "default_model": grok_client.get_default_model(),  # type: ignore[attr-defined]
         "dev_mode": config.get("dev_mode", False),
     }
 
