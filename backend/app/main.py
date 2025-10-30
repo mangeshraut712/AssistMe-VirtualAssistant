@@ -576,6 +576,8 @@ def _apply_rag_context(
 def _apply_personalisation(
     payload_messages: List[Dict[str, str]],
     preferences: Optional[Dict[str, Any]],
+    extra_context: Optional[List[Any]] = None,  # kept for compatibility with older callers
+    request: Optional[TextChatRequest] = None,
 ) -> List[Dict[str, str]]:
     if not preferences:
         return payload_messages
@@ -879,10 +881,6 @@ async def multimodal_generate(request: MultimodalGenerateRequest, http_request: 
                 raise ValueError("prompt is required for image generation.")
             size = options.get("size", "1024x1024")
             model = options.get("model")
-            response_text = result.get("response")
-            if isinstance(response_text, str) and response_text.strip():
-                ack_text = response_text.strip()
-            model_used = result.get("model") or model_used
             return generate_image(prompt, size=size, model=model)
 
         if req_type == "video":

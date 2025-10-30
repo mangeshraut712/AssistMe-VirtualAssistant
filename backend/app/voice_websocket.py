@@ -37,13 +37,34 @@ except Exception as exc:  # pragma: no cover - optional dependency
     encode_audio_to_base64 = None  # type: ignore[assignment]
     MINIMAX_VOICE_READY = False
 
-VOICE_MOCK_ENABLED = os.getenv("VOICE_ENABLE_MOCKS", "false").lower() == "true"
 VOICE_FEATURE_AVAILABLE = bool(
     MINIMAX_VOICE_READY
     and minimax_transcribe_audio is not None
     and minimax_synthesize_speech is not None
     and encode_audio_to_base64 is not None
 )
+
+
+def _normalise_flag(value: Optional[str]) -> str:
+    return (value or "").strip().lower()
+
+
+_voice_mock_env = _normalise_flag(os.getenv("VOICE_ENABLE_MOCKS", "auto"))
+if _voice_mock_env in {"true", "1", "yes", "on"}:
+    VOICE_MOCK_ENABLED = True
+elif _voice_mock_env in {"false", "0", "no", "off"}:
+    VOICE_MOCK_ENABLED = False
+else:
+    # Auto mode: enable mocks when real voice features are unavailable
+    VOICE_MOCK_ENABLED = not VOICE_FEATURE_AVAILABLE
+
+logger = logging.getLogger(__name__)
+
+if not VOICE_FEATURE_AVAILABLE and VOICE_MOCK_ENABLED:
+    logger.info("Voice features not configured; enabling mock voice fallback")
+
+VOICE_FEATURE_ACTIVE = VOICE_FEATURE_AVAILABLE or VOICE_MOCK_ENABLED
+VOICE_RUNTIME_MODE = "realtime" if VOICE_FEATURE_AVAILABLE else ("mock" if VOICE_MOCK_ENABLED else "off")
 
 try:
     import redis.asyncio as redis  # type: ignore[import-not-found]
@@ -68,8 +89,6 @@ except ImportError as exc:  # pragma: no cover
         "Voice WebSocket requires settings helpers. "
         "Ensure backend.app.settings exports 'get_redis_url'."
     ) from exc
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -375,7 +394,7 @@ async def voice_websocket_endpoint(websocket: WebSocket, client_id: str):
     await websocket.accept()
     logger.info(f"Voice WebSocket connection: {client_id}")
 
-    if not VOICE_FEATURE_AVAILABLE and not VOICE_MOCK_ENABLED:
+    if not VOICE_FEATURE_ACTIVE:
         await websocket.send_json(
             {
                 "type": "error",
@@ -397,7 +416,13 @@ async def voice_websocket_endpoint(websocket: WebSocket, client_id: str):
         welcome_msg = {
             "type": "welcome",
             "session_id": session.session_id,
-            "message": "Voice session started. Ready for audio streaming."
+            "voice_available": VOICE_FEATURE_ACTIVE,
+            "voice_mode": VOICE_RUNTIME_MODE,
+            "message": (
+                "Voice session started using real MiniMax voice services."
+                if VOICE_FEATURE_AVAILABLE
+                else "Voice session started in mock mode. Audio will use canned transcripts."
+            ),
         }
         await websocket.send_json(welcome_msg)
 

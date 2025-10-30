@@ -2920,8 +2920,21 @@ function initializeVoiceControls() {
     setupVoiceEventListeners();
 }
 
+const voiceStatusElements = Object.create(null);
+let voiceDebugStylesApplied = false;
+
+function ensureVoiceDebugPanel() {
+    if (!document.getElementById('voiceDebugPanel')) {
+        createVoiceDebugPanel();
+    }
+    return document.getElementById('voiceDebugPanel');
+}
+
 function createVoiceUI() {
-    if (interimTranscriptContainer) return;
+    if (interimTranscriptContainer) {
+        ensureVoiceDebugPanel();
+        return;
+    }
 
     interimTranscriptContainer = document.createElement('div');
     interimTranscriptContainer.id = 'interimTranscript';
@@ -2933,74 +2946,83 @@ function createVoiceUI() {
     const anchor = elements.composer?.parentElement || document.body;
     anchor.appendChild(interimTranscriptContainer);
 
-    // Create Voice Mode Debug Panel
-    createVoiceDebugPanel();
+    ensureVoiceDebugPanel();
 }
 
-function createVoiceDebugPanel() {
-    if (document.getElementById('voiceDebugPanel')) return;
+function createElementWithClass(tag, className, textContent) {
+    const element = document.createElement(tag);
+    if (className) {
+        element.className = className;
+    }
+    if (typeof textContent === 'string') {
+        element.textContent = textContent;
+    }
+    return element;
+}
 
-    const panel = document.createElement('div');
-    panel.id = 'voiceDebugPanel';
-    panel.className = 'voice-debug-panel hidden';
-    panel.innerHTML = `
-        <div class="voice-debug-header">
-            <h4><i class="fa-solid fa-microphone-lines"></i> Voice Mode Debug</h4>
-            <button class="voice-debug-toggle" id="voiceDebugToggle" title="Toggle debug panel">
-                <i class="fa-solid fa-chevron-up"></i>
-            </button>
-            <button class="voice-debug-clear" id="voiceDebugClear" title="Clear debug logs">
-                <i class="fa-solid fa-trash"></i>
-            </button>
-        </div>
-        <div class="voice-debug-content">
-            <div class="voice-debug-section">
-                <h5><i class="fa-solid fa-wave-square"></i> Real-time Transcripts</h5>
-                <div class="voice-debug-transcripts" id="voiceDebugTranscripts">
-                    <div class="voice-debug-placeholder">Voice mode not active</div>
-                </div>
-            </div>
-            <div class="voice-debug-section">
-                <h5><i class="fa-solid fa-robot"></i> AI Responses</h5>
-                <div class="voice-debug-responses" id="voiceDebugResponses">
-                    <div class="voice-debug-placeholder">No AI responses yet</div>
-                </div>
-            </div>
-            <div class="voice-debug-section">
-                <h5><i class="fa-solid fa-chart-line"></i> System Status</h5>
-                <div class="voice-debug-status" id="voiceDebugStatus">
-                    <div class="status-item">
-                        <span class="status-label">WebSocket:</span>
-                        <span class="status-value status-disconnected" id="wsStatus">Disconnected</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Recording:</span>
-                        <span class="status-value" id="recordingStatus">Stopped</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">STT Model:</span>
-                        <span class="status-value" id="sttModel">MiniMax</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">LLM Model:</span>
-                        <span class="status-value" id="llmModel">${state.currentModel || 'Unknown'}</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Session ID:</span>
-                        <span class="status-value" id="sessionId">None</span>
-                    </div>
-                </div>
-            </div>
-            <div class="voice-debug-section">
-                <h5><i class="fa-solid fa-bug"></i> Error Logs</h5>
-                <div class="voice-debug-errors" id="voiceDebugErrors">
-                    <div class="voice-debug-placeholder">No errors</div>
-                </div>
-            </div>
-        </div>
-    `;
+function appendChildren(parent, ...children) {
+    children.forEach((child) => {
+        if (child instanceof Node) {
+            parent.appendChild(child);
+        } else if (typeof child === 'string') {
+            parent.appendChild(document.createTextNode(child));
+        }
+    });
+    return parent;
+}
 
-    // Position the panel to the right side - initially hidden
+function createIcon(className) {
+    const icon = document.createElement('i');
+    icon.className = className;
+    return icon;
+}
+
+function buildVoiceDebugMeta(pairs) {
+    const metaDiv = createElementWithClass('div', 'voice-debug-meta');
+    pairs.forEach(({ className, text }) => {
+        metaDiv.appendChild(createElementWithClass('span', className, text));
+    });
+    return metaDiv;
+}
+
+function buildVoiceDebugEntry(entryClass, metaPairs, bodyText) {
+    const entry = createElementWithClass('div', `voice-debug-entry ${entryClass}`.trim());
+    const metaDiv = buildVoiceDebugMeta(metaPairs);
+    const contentDiv = createElementWithClass('div', 'voice-debug-content', bodyText);
+    appendChildren(entry, metaDiv, contentDiv);
+    return entry;
+}
+
+function sanitizeVoiceDebugText(text, fallback = '...') {
+    const source = text ?? fallback;
+    const normalised = typeof source === 'string' ? source : String(source);
+    return normalised.replace(/[<>]/g, '').substring(0, 200) || fallback;
+}
+
+function styleVoiceDebugButton(button, { hoverColor, defaultColor }) {
+    if (!button) return;
+    Object.assign(button.style, {
+        marginLeft: button.classList.contains('voice-debug-toggle') ? 'auto' : button.style.marginLeft,
+        background: 'none',
+        border: 'none',
+        padding: '4px 8px',
+        cursor: 'pointer',
+        borderRadius: '4px',
+        color: defaultColor,
+        transition: 'color 0.2s',
+    });
+
+    button.addEventListener('mouseenter', () => {
+        button.style.color = hoverColor;
+    });
+    button.addEventListener('mouseleave', () => {
+        button.style.color = defaultColor;
+    });
+}
+
+function applyVoiceDebugPanelStyles(panel, toggleBtn, clearBtn) {
+    if (voiceDebugStylesApplied || !panel) return;
+
     Object.assign(panel.style, {
         position: 'fixed',
         top: '80px',
@@ -3017,10 +3039,9 @@ function createVoiceDebugPanel() {
         opacity: '0',
         pointerEvents: 'none',
         transform: 'translateX(100px)',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     });
 
-    // Add header styling
     const header = panel.querySelector('.voice-debug-header');
     if (header) {
         Object.assign(header.style, {
@@ -3031,60 +3052,38 @@ function createVoiceDebugPanel() {
             alignItems: 'center',
             gap: '8px',
             fontSize: '14px',
-            fontWeight: '600'
+            fontWeight: '600',
         });
 
         const headerIcon = header.querySelector('h4 i');
         if (headerIcon) {
             Object.assign(headerIcon.style, {
                 marginRight: '8px',
-                color: 'var(--accent-color)'
+                color: 'var(--accent-color)',
             });
         }
     }
 
-    // Style the buttons
-    const toggleBtn = header?.querySelector('.voice-debug-toggle');
-    const clearBtn = header?.querySelector('.voice-debug-clear');
-    if (toggleBtn) {
-        Object.assign(toggleBtn.style, {
-            marginLeft: 'auto',
-            background: 'none',
-            border: 'none',
-            padding: '4px 8px',
-            cursor: 'pointer',
-            borderRadius: '4px',
-            color: 'var(--text-secondary)',
-            transition: 'color 0.2s'
-        });
-        toggleBtn.onmouseover = () => toggleBtn.style.color = 'var(--text-primary)';
-        toggleBtn.onmouseout = () => toggleBtn.style.color = 'var(--text-secondary)';
-    }
-    if (clearBtn) {
-        Object.assign(clearBtn.style, {
-            background: 'none',
-            border: 'none',
-            padding: '4px 8px',
-            cursor: 'pointer',
-            borderRadius: '4px',
-            color: 'var(--text-secondary)',
-            transition: 'color 0.2s'
-        });
-        clearBtn.onmouseover = () => clearBtn.style.color = 'var(--error)';
-        clearBtn.onmouseout = () => clearBtn.style.color = 'var(--text-secondary)';
-    }
+    styleVoiceDebugButton(toggleBtn, {
+        hoverColor: 'var(--text-primary)',
+        defaultColor: 'var(--text-secondary)',
+    });
 
-    // Style the content sections
+    styleVoiceDebugButton(clearBtn, {
+        hoverColor: 'var(--error)',
+        defaultColor: 'var(--text-secondary)',
+    });
+
     const sections = panel.querySelectorAll('.voice-debug-section');
-    sections.forEach(section => {
+    sections.forEach((section) => {
         Object.assign(section.style, {
             borderBottom: '1px solid var(--border-color)',
-            padding: '12px 16px'
+            padding: '12px 16px',
         });
 
-        const header = section.querySelector('h5');
-        if (header) {
-            Object.assign(header.style, {
+        const sectionHeader = section.querySelector('h5');
+        if (sectionHeader) {
+            Object.assign(sectionHeader.style, {
                 margin: '0 0 8px 0',
                 fontSize: '11px',
                 fontWeight: '600',
@@ -3093,129 +3092,104 @@ function createVoiceDebugPanel() {
                 color: 'var(--text-secondary)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
             });
 
-            const icon = header.querySelector('i');
+            const icon = sectionHeader.querySelector('i');
             if (icon) {
-                header.insertBefore(icon, header.firstChild);
+                sectionHeader.insertBefore(icon, sectionHeader.firstChild);
             }
         }
 
-        const list = section.querySelector('.status-item, .voice-debug-entry, .voice-debug-placeholder');
-        if (list) {
-            Object.assign(list.style, {
-                fontSize: '11px',
-                lineHeight: '1.4'
+        section.querySelectorAll('.status-item, .voice-debug-entry, .voice-debug-placeholder')
+            .forEach((node) => {
+                Object.assign(node.style, {
+                    fontSize: '11px',
+                    lineHeight: '1.4',
+                });
             });
-        }
     });
 
-    // Create voice debug panel structure safely
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'voice-debug-header';
+    voiceDebugStylesApplied = true;
+}
 
-    const titleH4 = document.createElement('h4');
-    const titleIcon = document.createElement('i');
-    titleIcon.className = 'fa-solid fa-microphone-lines';
-    titleH4.appendChild(titleIcon);
-    titleH4.appendChild(document.createTextNode(' Voice Mode Debug'));
+function createVoiceDebugPanel() {
+    if (document.getElementById('voiceDebugPanel')) return;
+
+    const panel = createElementWithClass('div', 'voice-debug-panel hidden');
+    panel.id = 'voiceDebugPanel';
+
+    // Create header
+    const headerDiv = createElementWithClass('div', 'voice-debug-header');
+
+    const titleH4 = createElementWithClass('h4');
+    appendChildren(titleH4, createIcon('fa-solid fa-microphone-lines'), document.createTextNode(' Voice Mode Debug'));
     headerDiv.appendChild(titleH4);
 
-    toggleBtn = document.createElement('button');
-    toggleBtn.className = 'voice-debug-toggle';
+    const toggleBtn = createElementWithClass('button', 'voice-debug-toggle');
     toggleBtn.id = 'voiceDebugToggle';
     toggleBtn.title = 'Toggle debug panel';
-    const toggleIcon = document.createElement('i');
-    toggleIcon.className = 'fa-solid fa-chevron-up';
+    const toggleIcon = createIcon('fa-solid fa-chevron-up');
     toggleBtn.appendChild(toggleIcon);
     headerDiv.appendChild(toggleBtn);
 
-    clearBtn = document.createElement('button');
-    clearBtn.className = 'voice-debug-clear';
+    const clearBtn = createElementWithClass('button', 'voice-debug-clear');
     clearBtn.id = 'voiceDebugClear';
     clearBtn.title = 'Clear debug logs';
-    const clearIcon = document.createElement('i');
-    clearIcon.className = 'fa-solid fa-trash';
-    clearBtn.appendChild(clearIcon);
+    clearBtn.appendChild(createIcon('fa-solid fa-trash'));
     headerDiv.appendChild(clearBtn);
 
     panel.appendChild(headerDiv);
 
     // Create content area
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'voice-debug-content';
+    const contentDiv = createElementWithClass('div', 'voice-debug-content');
 
     // Create sections
     const sectionsData = [
-        { icon: 'fa-wave-square', title: 'Real-time Transcripts', id: 'voiceDebugTranscripts' },
-        { icon: 'fa-robot', title: 'AI Responses', id: 'voiceDebugResponses' },
-        { icon: 'fa-bug', title: 'Error Logs', id: 'voiceDebugErrors' }
+        { icon: 'fa-wave-square', title: 'Real-time Transcripts', id: 'voiceDebugTranscripts', placeholder: 'Voice mode not active', containerClass: 'voice-debug-transcripts' },
+        { icon: 'fa-robot', title: 'AI Responses', id: 'voiceDebugResponses', placeholder: 'No AI responses yet', containerClass: 'voice-debug-responses' },
+        { icon: 'fa-bug', title: 'Error Logs', id: 'voiceDebugErrors', placeholder: 'No errors', containerClass: 'voice-debug-errors' }
     ];
 
-    sectionsData.forEach(section => {
-        const sectionDiv = document.createElement('div');
-        sectionDiv.className = 'voice-debug-section';
-
-        const headerH5 = document.createElement('h5');
-        const headerIcon = document.createElement('i');
-        headerIcon.className = `fa-solid ${section.icon}`;
-        headerH5.appendChild(headerIcon);
-        headerH5.appendChild(document.createTextNode(` ${section.title}`));
+    sectionsData.forEach((section) => {
+        const sectionDiv = createElementWithClass('div', 'voice-debug-section');
+        const headerH5 = createElementWithClass('h5');
+        appendChildren(headerH5, createIcon(`fa-solid ${section.icon}`), document.createTextNode(` ${section.title}`));
         sectionDiv.appendChild(headerH5);
 
-        const contentContainer = document.createElement('div');
+        const contentContainer = createElementWithClass('div', section.containerClass);
         contentContainer.id = section.id;
+        contentContainer.appendChild(createElementWithClass('div', 'voice-debug-placeholder', section.placeholder));
 
-        const placeholder = document.createElement('div');
-        placeholder.className = 'voice-debug-placeholder';
-        const placeholderText = section.id === 'voiceDebugTranscripts' ? 'Voice mode not active' :
-                               section.id === 'voiceDebugResponses' ? 'No AI responses yet' : 'No errors';
-        placeholder.textContent = placeholderText;
-        contentContainer.appendChild(placeholder);
-
-        sectionDiv.appendChild(contentContainer);
+        appendChildren(sectionDiv, contentContainer);
         contentDiv.appendChild(sectionDiv);
     });
 
     // Create system status section
-    const statusSection = document.createElement('div');
-    statusSection.className = 'voice-debug-section';
-
-    const statusHeader = document.createElement('h5');
-    const statusIcon = document.createElement('i');
-    statusIcon.className = 'fa-solid fa-chart-line';
-    statusHeader.appendChild(statusIcon);
-    statusHeader.appendChild(document.createTextNode(' System Status'));
+    const statusSection = createElementWithClass('div', 'voice-debug-section');
+    const statusHeader = createElementWithClass('h5');
+    appendChildren(statusHeader, createIcon('fa-solid fa-chart-line'), document.createTextNode(' System Status'));
     statusSection.appendChild(statusHeader);
 
-    const statusContainer = document.createElement('div');
-    statusContainer.className = 'voice-debug-status';
+    const statusContainer = createElementWithClass('div', 'voice-debug-status');
     statusContainer.id = 'voiceDebugStatus';
 
     const statusItems = [
-        { label: 'WebSocket:', value: 'Disconnected', id: 'wsStatus', extraClass: 'status-disconnected' },
-        { label: 'Recording:', value: 'Stopped', id: 'recordingStatus' },
-        { label: 'STT Model:', value: 'MiniMax', id: 'sttModel' },
-        { label: 'LLM Model:', value: 'Unknown', id: 'llmModel' },
-        { label: 'Session ID:', value: 'None', id: 'sessionId' }
+        { key: 'ws', label: 'WebSocket:', value: 'Disconnected', id: 'wsStatus', extraClass: 'status-disconnected' },
+        { key: 'recording', label: 'Recording:', value: 'Stopped', id: 'recordingStatus' },
+        { key: 'sttModel', label: 'STT Model:', value: 'MiniMax', id: 'sttModel' },
+        { key: 'llmModel', label: 'LLM Model:', value: state.currentModel || 'Unknown', id: 'llmModel' },
+        { key: 'sessionId', label: 'Session ID:', value: 'None', id: 'sessionId' }
     ];
 
-    statusItems.forEach(item => {
-        const statusItem = document.createElement('div');
-        statusItem.className = 'status-item';
-
-        const labelSpan = document.createElement('span');
-        labelSpan.className = 'status-label';
-        labelSpan.textContent = item.label;
-        statusItem.appendChild(labelSpan);
-
-        const valueSpan = document.createElement('span');
-        valueSpan.className = `status-value${item.extraClass ? ` ${item.extraClass}` : ''}`;
+    statusItems.forEach((item) => {
+        const statusItem = createElementWithClass('div', 'status-item');
+        const labelSpan = createElementWithClass('span', 'status-label', item.label);
+        const valueSpan = createElementWithClass('span', `status-value${item.extraClass ? ` ${item.extraClass}` : ''}`, item.value);
         valueSpan.id = item.id;
-        valueSpan.textContent = item.label === 'LLM Model:' ? (state.currentModel || 'Unknown') : item.value;
+        statusItem.appendChild(labelSpan);
         statusItem.appendChild(valueSpan);
-
+        voiceStatusElements[item.key] = valueSpan;
         statusContainer.appendChild(statusItem);
     });
 
@@ -3223,6 +3197,8 @@ function createVoiceDebugPanel() {
     contentDiv.appendChild(statusSection);
 
     panel.appendChild(contentDiv);
+
+    applyVoiceDebugPanelStyles(panel, toggleBtn, clearBtn);
 
     const anchor = elements.composer?.parentElement || document.body;
     anchor.appendChild(panel);
@@ -3255,9 +3231,15 @@ function clearVoiceDebugLogs() {
     const responsesDiv = document.getElementById('voiceDebugResponses');
     const errorsDiv = document.getElementById('voiceDebugErrors');
 
-    if (transcriptsDiv) transcriptsDiv.innerHTML = '<div class="voice-debug-placeholder">Logs cleared</div>';
-    if (responsesDiv) responsesDiv.innerHTML = '<div class="voice-debug-placeholder">Logs cleared</div>';
-    if (errorsDiv) errorsDiv.innerHTML = '<div class="voice-debug-placeholder">Logs cleared</div>';
+    if (transcriptsDiv) {
+        transcriptsDiv.replaceChildren(createElementWithClass('div', 'voice-debug-placeholder', 'Logs cleared'));
+    }
+    if (responsesDiv) {
+        responsesDiv.replaceChildren(createElementWithClass('div', 'voice-debug-placeholder', 'Logs cleared'));
+    }
+    if (errorsDiv) {
+        errorsDiv.replaceChildren(createElementWithClass('div', 'voice-debug-placeholder', 'Logs cleared'));
+    }
 
     console.log('Voice debug logs cleared');
 }
@@ -3313,6 +3295,7 @@ function logVoiceTranscript(text, confidence, isFinal = false) {
 
     const timestamp = new Date().toLocaleTimeString();
     const confidenceStr = typeof confidence === 'number' ? `${(confidence * 100).toFixed(0)}%` : 'N/A';
+    const safeText = sanitizeVoiceDebugText(text);
 
     // Check if this is new or updating an existing entry
     const existingEntries = transcriptsDiv.querySelectorAll('.voice-debug-entry');
@@ -3320,7 +3303,6 @@ function logVoiceTranscript(text, confidence, isFinal = false) {
 
     if (lastEntry && !isFinal && !lastEntry.classList.contains('final')) {
         // Update existing interim entry - use textContent for safety
-        const safeText = (text || '...').replace(/[<>]/g, '').substring(0, 200);
         const metaDiv = lastEntry.querySelector('.voice-debug-meta');
         if (metaDiv) {
             const timeSpan = metaDiv.querySelector('.voice-debug-time');
@@ -3332,37 +3314,15 @@ function logVoiceTranscript(text, confidence, isFinal = false) {
         if (contentDiv) contentDiv.textContent = safeText;
     } else {
         // Add new entry - create elements safely without innerHTML
-        const entry = document.createElement('div');
-        entry.className = `voice-debug-entry ${isFinal ? 'final' : 'interim'}`;
-
-        const safeText = (text || '...').replace(/[<>]/g, '').substring(0, 200);
-
-        // Build elements safely without innerHTML
-        const metaDiv = document.createElement('div');
-        metaDiv.className = 'voice-debug-meta';
-
-        const timeSpan = document.createElement('span');
-        timeSpan.className = 'voice-debug-time';
-        timeSpan.textContent = timestamp;
-
-        const confidenceSpan = document.createElement('span');
-        confidenceSpan.className = 'voice-debug-confidence';
-        confidenceSpan.textContent = confidenceStr;
-
-        const typeSpan = document.createElement('span');
-        typeSpan.className = `voice-debug-type ${isFinal ? 'final' : 'interim'}`;
-        typeSpan.textContent = isFinal ? 'Final' : 'Interim';
-
-        metaDiv.appendChild(timeSpan);
-        metaDiv.appendChild(confidenceSpan);
-        metaDiv.appendChild(typeSpan);
-
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'voice-debug-content';
-        contentDiv.textContent = safeText;
-
-        entry.appendChild(metaDiv);
-        entry.appendChild(contentDiv);
+        const entry = buildVoiceDebugEntry(
+            isFinal ? 'final' : 'interim',
+            [
+                { className: 'voice-debug-time', text: timestamp },
+                { className: 'voice-debug-confidence', text: confidenceStr },
+                { className: `voice-debug-type ${isFinal ? 'final' : 'interim'}`, text: isFinal ? 'Final' : 'Interim' },
+            ],
+            safeText,
+        );
 
         // Remove placeholder if exists
         const placeholder = transcriptsDiv.querySelector('.voice-debug-placeholder');
@@ -3388,41 +3348,16 @@ function logVoiceAiResponse(text, model, latency, tokens) {
     if (!responsesDiv) return;
 
     const timestamp = new Date().toLocaleTimeString();
-
-    const entry = document.createElement('div');
-    entry.className = 'voice-debug-entry response';
-
-    // Create elements safely without innerHTML
-    const metaDiv = document.createElement('div');
-    metaDiv.className = 'voice-debug-meta';
-
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'voice-debug-time';
-    timeSpan.textContent = timestamp;
-
-    const modelSpan = document.createElement('span');
-    modelSpan.className = 'voice-debug-model';
-    modelSpan.textContent = model || 'Unknown';
-
-    const latencySpan = document.createElement('span');
-    latencySpan.className = 'voice-debug-latency';
-    latencySpan.textContent = `${latency || 0}ms`;
-
-    const tokenSpan = document.createElement('span');
-    tokenSpan.className = 'voice-debug-tokens';
-    tokenSpan.textContent = `${tokens || 0} tokens`;
-
-    metaDiv.appendChild(timeSpan);
-    metaDiv.appendChild(modelSpan);
-    metaDiv.appendChild(latencySpan);
-    metaDiv.appendChild(tokenSpan);
-
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'voice-debug-content';
-    contentDiv.textContent = text || 'No response';
-
-    entry.appendChild(metaDiv);
-    entry.appendChild(contentDiv);
+    const entry = buildVoiceDebugEntry(
+        'response',
+        [
+            { className: 'voice-debug-time', text: timestamp },
+            { className: 'voice-debug-model', text: model || 'Unknown' },
+            { className: 'voice-debug-latency', text: `${latency || 0}ms` },
+            { className: 'voice-debug-tokens', text: `${tokens || 0} tokens` },
+        ],
+        sanitizeVoiceDebugText(text, 'No response'),
+    );
 
     // Remove placeholder if exists
     const placeholder = responsesDiv.querySelector('.voice-debug-placeholder');
@@ -3447,30 +3382,14 @@ function logVoiceError(message, type = 'error') {
     if (!errorsDiv) return;
 
     const timestamp = new Date().toLocaleTimeString();
-
-    const entry = document.createElement('div');
-    entry.className = `voice-debug-entry ${type}`;
-
-    // Create elements safely without innerHTML
-    const metaDiv = document.createElement('div');
-    metaDiv.className = 'voice-debug-meta';
-
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'voice-debug-time';
-    timeSpan.textContent = timestamp;
-
-    const typeSpan = document.createElement('span');
-    typeSpan.className = 'voice-debug-type error';
-    typeSpan.textContent = 'Error';
-
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'voice-debug-content';
-    contentDiv.textContent = message || 'Unknown error';
-
-    metaDiv.appendChild(timeSpan);
-    metaDiv.appendChild(typeSpan);
-    entry.appendChild(metaDiv);
-    entry.appendChild(contentDiv);
+    const entry = buildVoiceDebugEntry(
+        type || 'error',
+        [
+            { className: 'voice-debug-time', text: timestamp },
+            { className: 'voice-debug-type error', text: 'Error' },
+        ],
+        sanitizeVoiceDebugText(message, 'Unknown error'),
+    );
 
     // Remove placeholder if exists
     const placeholder = errorsDiv.querySelector('.voice-debug-placeholder');
@@ -3491,33 +3410,33 @@ function logVoiceError(message, type = 'error') {
 }
 
 function updateVoiceDebugStatus(updates) {
-    // Update individual status items
-    Object.entries(updates).forEach(([key, value]) => {
-        const element = document.getElementById(`${key}Status`);
-        if (element) {
-            element.textContent = value;
+    if (!updates || typeof updates !== 'object') {
+        return;
+    }
 
-            // Update status classes
-            element.classList.remove('status-connected', 'status-disconnected', 'status-recording', 'status-stopped');
-            if (key === 'ws') {
-                element.classList.add(value.toLowerCase() === 'connected' ? 'status-connected' : 'status-disconnected');
-            } else if (key === 'recording') {
-                element.classList.add(value.toLowerCase() === 'recording' ? 'status-recording' : 'status-stopped');
-            }
+    Object.entries(updates).forEach(([key, value]) => {
+        const element = voiceStatusElements[key];
+        if (!element) return;
+
+        const resolvedValue = typeof value === 'string' ? value : String(value ?? '');
+        element.textContent = resolvedValue;
+
+        element.classList.remove('status-connected', 'status-disconnected', 'status-recording', 'status-stopped');
+        const normalised = resolvedValue.trim().toLowerCase();
+        if (key === 'ws') {
+            element.classList.add(normalised === 'connected' ? 'status-connected' : 'status-disconnected');
+        } else if (key === 'recording') {
+            element.classList.add(normalised === 'recording' ? 'status-recording' : 'status-stopped');
         }
     });
 
     const panel = document.getElementById('voiceDebugPanel');
+    const wsElement = voiceStatusElements.ws;
+    const currentWsValue = (updates.ws ?? wsElement?.textContent ?? '').toString().trim().toLowerCase();
     if (panel) {
-        const wsElement = document.getElementById('wsStatus');
-        const currentWsValue = updates.ws || wsElement?.textContent || '';
-        const normalised = currentWsValue.trim().toLowerCase();
-
-        if (normalised === 'connected') {
-            panel.style.boxShadow = '0 8px 24px rgba(34, 197, 94, 0.2)';
-        } else {
-            panel.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
-        }
+        panel.style.boxShadow = currentWsValue === 'connected'
+            ? '0 8px 24px rgba(34, 197, 94, 0.2)'
+            : '0 8px 24px rgba(0,0,0,0.2)';
     }
 
     console.log('Voice status updated:', updates);
