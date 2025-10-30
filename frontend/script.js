@@ -2914,20 +2914,7 @@ function createVoiceDebugPanel() {
     anchor.appendChild(panel);
 
     // Add beautiful glow effect for active states
-    const originalUpdateVoiceDebugStatus = updateVoiceDebugStatus;
-    updateVoiceDebugStatus = (updates) => {
-        originalUpdateVoiceDebugStatus(updates);
-
-        // Add glow effect for connected state
-        if (updates.ws === 'Connected') {
-            panel.style.boxShadow = '0 8px 24px rgba(34, 197, 94, 0.2)';
-        } else {
-            panel.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
-        }
-        if (updates.ws === 'Disconnected') {
-            panel.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
-        }
-    };
+    // Note: Removed function redefinition to avoid ESLint no-func-assign error
 
     // Add event listeners
     if (toggleBtn) {
