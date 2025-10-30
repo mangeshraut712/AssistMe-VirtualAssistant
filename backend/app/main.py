@@ -1,9 +1,12 @@
 import base64
 import json
 import logging
+import mimetypes
 import os
 import re
+import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 # Load environment variables from .env files
@@ -16,9 +19,10 @@ if load_dotenv:
     load_dotenv('../secrets.env')  # Load secrets.env from parent directory
     load_dotenv('.env')            # Override with .env if needed
 
-from fastapi import FastAPI, WebSocket, Depends, HTTPException, Request  # type: ignore[import-not-found]
+from fastapi import FastAPI, WebSocket, Depends, HTTPException, Request, UploadFile, File  # type: ignore[import-not-found]
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-not-found]
 from fastapi.responses import Response, StreamingResponse, JSONResponse  # type: ignore[import-not-found]
+from fastapi.staticfiles import StaticFiles  # type: ignore[import-not-found]
 from pydantic import BaseModel  # type: ignore[import-not-found]
 from sqlalchemy.orm import Session as SessionType  # type: ignore[import-not-found]
 from starlette.concurrency import run_in_threadpool  # type: ignore[import-not-found]
@@ -158,6 +162,10 @@ ALLOWED_ORIGINS = sorted({origin for origin in ALLOWED_ORIGINS if origin})
 DEFAULT_ORIGIN_REGEX = r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app"
 CUSTOM_ORIGIN_REGEX = os.getenv("CORS_ALLOW_ORIGIN_REGEX", "").strip()
 CORS_ALLOW_ALL = os.getenv("CORS_ALLOW_ALL", "false").lower() == "true"
+
+FILE_STORAGE_PATH = Path(os.getenv("FILE_STORAGE_PATH", "./storage")).resolve()
+FILE_STORAGE_PATH.mkdir(parents=True, exist_ok=True)
+FILE_PREVIEW_MAX_BYTES = int(os.getenv("FILE_PREVIEW_MAX_BYTES", str(2 * 1024 * 1024)))
 ACTIVE_ORIGIN_REGEX = CUSTOM_ORIGIN_REGEX or DEFAULT_ORIGIN_REGEX
 VERCEL_ORIGIN_PATTERN = re.compile(ACTIVE_ORIGIN_REGEX) if ACTIVE_ORIGIN_REGEX else re.compile(DEFAULT_ORIGIN_REGEX)
 
@@ -171,6 +179,12 @@ def create_application():
         logging.info("Voice WebSocket router included")
     else:
         logging.warning("Voice WebSocket router not available")
+
+    # Mount static route for uploaded files so frontend can fetch them
+    try:
+        app.mount("/uploads", StaticFiles(directory=str(FILE_STORAGE_PATH)), name="uploads")
+    except Exception as exc:  # pragma: no cover - defensive log
+        logging.warning("Failed to mount uploads directory: %s", exc)
 
     # Configure CORS for cross-origin requests
     cors_kwargs = {
@@ -242,6 +256,19 @@ def _cors_headers(request: Request, methods: Optional[str] = None) -> Dict[str, 
 class ChatMessage(BaseModel):
     role: str
     content: str
+
+class UploadedFileSummary(BaseModel):
+    filename: str
+    contentType: str
+    size: int
+    sizeLabel: str
+    type: str
+    b64: Optional[str] = None
+    format: Optional[str] = None
+    note: Optional[str] = None
+    status: Optional[str] = None
+    url: Optional[str] = None
+    storageKey: Optional[str] = None
 
 class TextChatRequest(BaseModel):
     messages: List[ChatMessage]
@@ -652,7 +679,7 @@ async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depend
 
     current_conversation_id, payload_messages, user_preferences = _prepare_conversation_context(request, db)
 
-    payload_messages = _apply_personalisation(payload_messages, user_preferences)
+    payload_messages = _apply_personalisation(payload_messages, user_preferences, [], request)
     payload_messages, rag_matches = _apply_rag_context(payload_messages, request)
 
     result = await run_in_threadpool(
@@ -700,7 +727,7 @@ async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] =
         return StreamingResponse(error_generator(), media_type="text/event-stream")
 
     current_conversation_id, payload_messages, user_preferences = _prepare_conversation_context(request, db)
-    payload_messages = _apply_personalisation(payload_messages, user_preferences)
+    payload_messages = _apply_personalisation(payload_messages, user_preferences, [], request)
     payload_messages, rag_matches = _apply_rag_context(payload_messages, request)
     candidate_title = generate_conversation_title_from_messages(request.messages)
     user_messages = list(request.messages)
@@ -852,6 +879,10 @@ async def multimodal_generate(request: MultimodalGenerateRequest, http_request: 
                 raise ValueError("prompt is required for image generation.")
             size = options.get("size", "1024x1024")
             model = options.get("model")
+            response_text = result.get("response")
+            if isinstance(response_text, str) and response_text.strip():
+                ack_text = response_text.strip()
+            model_used = result.get("model") or model_used
             return generate_image(prompt, size=size, model=model)
 
         if req_type == "video":

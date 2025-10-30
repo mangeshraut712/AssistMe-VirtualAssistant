@@ -5,6 +5,7 @@ Implements WebSocket connections for audio streaming and voice interaction
 import asyncio
 import json
 import logging
+import os
 import uuid
 from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
@@ -35,6 +36,14 @@ except Exception as exc:  # pragma: no cover - optional dependency
     minimax_transcribe_audio = None  # type: ignore[assignment]
     encode_audio_to_base64 = None  # type: ignore[assignment]
     MINIMAX_VOICE_READY = False
+
+VOICE_MOCK_ENABLED = os.getenv("VOICE_ENABLE_MOCKS", "false").lower() == "true"
+VOICE_FEATURE_AVAILABLE = bool(
+    MINIMAX_VOICE_READY
+    and minimax_transcribe_audio is not None
+    and minimax_synthesize_speech is not None
+    and encode_audio_to_base64 is not None
+)
 
 try:
     import redis.asyncio as redis  # type: ignore[import-not-found]
@@ -183,7 +192,7 @@ voice_manager = VoiceWebsocketManager()
 async def perform_minimax_stt(audio_data: bytes, session_id: str) -> Dict[str, Any]:
     """Run MiniMax STT with graceful fallback to mock behaviour."""
     stt_callable = minimax_transcribe_audio
-    if MINIMAX_VOICE_READY and stt_callable is not None:
+    if VOICE_FEATURE_AVAILABLE and stt_callable is not None:
         loop = asyncio.get_running_loop()
         try:
             result = await loop.run_in_executor(
@@ -209,7 +218,10 @@ async def perform_minimax_stt(audio_data: bytes, session_id: str) -> Dict[str, A
         except Exception as exc:  # pragma: no cover - defensive log
             logger.exception("Unexpected MiniMax STT failure: %s", exc)
 
-    return await mock_stt_processing(audio_data, session_id)
+    if VOICE_MOCK_ENABLED:
+        return await mock_stt_processing(audio_data, session_id)
+
+    raise MiniMaxClientNotConfiguredImported("Voice transcription not configured")
 
 
 async def perform_minimax_tts(text: str) -> Optional[str]:
@@ -218,7 +230,7 @@ async def perform_minimax_tts(text: str) -> Optional[str]:
     base64_encoder = encode_audio_to_base64
     if not text or not base64_encoder:
         return None
-    if MINIMAX_VOICE_READY and tts_callable is not None:
+    if VOICE_FEATURE_AVAILABLE and tts_callable is not None:
         loop = asyncio.get_running_loop()
         try:
             audio_bytes = await loop.run_in_executor(
@@ -239,6 +251,8 @@ async def mock_stt_processing(audio_data: bytes, session_id: str) -> Dict[str, A
     Mock STT processing for testing
     Returns pre-canned responses based on session context
     """
+    if not VOICE_MOCK_ENABLED:
+        raise MiniMaxClientNotConfiguredImported("Voice mock processing disabled")
     mock_responses = [
         "What's the weather like in Pune?",
         "Show me a map of Pimpri Chinchwad",
@@ -314,6 +328,8 @@ async def generate_live_voice_response(transcript: str, stt_result: Dict[str, An
 
 async def mock_llm_response(transcript: str) -> Dict[str, Any]:
     """Mock LLM responses with rich content for testing when live generation fails"""
+    if not VOICE_MOCK_ENABLED:
+        raise MiniMaxClientNotConfiguredImported("Voice mock responses disabled")
     text = transcript.lower()
 
     if "weather" in text and "pune" in text:
@@ -358,6 +374,17 @@ async def voice_websocket_endpoint(websocket: WebSocket, client_id: str):
     """WebSocket endpoint for real-time voice streaming"""
     await websocket.accept()
     logger.info(f"Voice WebSocket connection: {client_id}")
+
+    if not VOICE_FEATURE_AVAILABLE and not VOICE_MOCK_ENABLED:
+        await websocket.send_json(
+            {
+                "type": "error",
+                "error": "voice_unavailable",
+                "message": "Voice mode is not configured on the server.",
+            }
+        )
+        await websocket.close()
+        return
 
     # Ensure Redis is ready (best-effort)
     await voice_manager.initialize_redis()
@@ -426,6 +453,8 @@ async def handle_voice_command(websocket: WebSocket, session: VoiceSession, comm
     command_type = command.get("type", "")
 
     if command_type == "start_recording":
+        if session.is_recording:
+            return
         session.is_recording = True
         session.audio_buffer = []
         await websocket.send_json({
@@ -529,6 +558,18 @@ async def process_audio_chunk(websocket: WebSocket, session: VoiceSession, audio
                         "transcript": transcript_text,
                         "confidence": stt_result.get("confidence", 0.0)
                     })
+    except MiniMaxClientNotConfiguredImported as exc:
+        logger.info("Voice processing skipped: %s", exc)
+        if websocket.application_state.value == 1:
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "error": "voice_unconfigured",
+                    "message": str(exc),
+                }
+            )
+        session.audio_buffer = []
+        session.last_partial_transcript = None
     except Exception as exc:
         logger.error("Error processing audio chunk: %s", exc)
         # Only try to send error message if websocket is still connected

@@ -145,6 +145,7 @@ function updateSendButtonState() {
 const endpoints = {
     stream: `${API_BASE}/api/chat/stream`,
     chat: `${API_BASE}/api/chat/text`,
+    uploads: `${API_BASE}/api/files/upload`,
     conversations: `${API_BASE}/api/conversations`,
     conversationById: (id) => `${API_BASE}/api/conversations/${id}`,
     agentPlan: `${API_BASE}/api/agent/plan`,
@@ -379,6 +380,7 @@ const elements = {
     voiceModeBtn: document.getElementById('voiceModeBtn'),
     toastContainer: document.getElementById('toastContainer'),
     uploadBtn: document.getElementById('uploadBtn'),
+    uploadInput: null,
     connectionStatus: document.getElementById('connectionStatus'),
     connectionStatusText: document.getElementById('connectionStatusText'),
     agentPlanBtn: document.getElementById('agentPlanBtn'),
@@ -426,7 +428,10 @@ const state = {
         recognition: null,
         listening: false,
         available: false,
+        configured: true,
+        lastNotice: null,
     },
+    pendingUploads: [],
     inputHistory: {
         items: [],
         index: -1,
@@ -551,6 +556,10 @@ const backendHealth = {
     setStatus(isHealthy, message) {
         const healthy = Boolean(isHealthy);
         state.backendHealthy = healthy;
+
+        if (!healthy) {
+            disableVoiceModeUi('Backend offline');
+        }
 
         const statusContainer = elements.assistantStatus;
         const statusDot = elements.statusDot;
@@ -1448,6 +1457,152 @@ function createMessageElement(role) {
     wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
     return { wrapper, text, metadata };
+}
+
+function ensureUploadInput() {
+    if (elements.uploadInput) {
+        return elements.uploadInput;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = '';
+    input.style.display = 'none';
+
+    input.addEventListener('change', async (event) => {
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+        await handleFileUpload(files);
+        input.value = '';
+    });
+
+    document.body.appendChild(input);
+    elements.uploadInput = input;
+    return input;
+}
+
+function describeUploadSummary(summary) {
+    const parts = [summary.filename];
+    if (summary.sizeLabel) parts.push(summary.sizeLabel);
+    if (summary.contentType) parts.push(summary.contentType);
+    return parts.join(' · ');
+}
+
+function prefabUploadMessage(summaries) {
+    const lines = summaries.map((item, index) => `${index + 1}. ${describeUploadSummary(item)}`);
+    return `📎 Uploaded files:\n${lines.join('\n')}`;
+}
+
+function renderUploadedMedia(container, mediaItems) {
+    if (!mediaItems || !mediaItems.length) return;
+    const messageMedia = container.querySelector('.message-media') || (() => {
+        const mediaDiv = document.createElement('div');
+        mediaDiv.className = 'message-media';
+        container.appendChild(mediaDiv);
+        return mediaDiv;
+    })();
+
+    mediaItems.forEach((media) => {
+        if (!media || !media.type) return;
+
+        if (media.type === 'image' && media.b64) {
+            const img = document.createElement('img');
+            img.src = `data:image/${media.format || 'png'};base64,${media.b64}`;
+            img.alt = media.filename || 'Uploaded image';
+            img.loading = 'lazy';
+            messageMedia.appendChild(img);
+        } else if (media.type === 'speech' && media.b64) {
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.src = `data:audio/${media.format || 'mp3'};base64,${media.b64}`;
+            messageMedia.appendChild(audio);
+        } else {
+            const linkContainer = document.createElement('div');
+            linkContainer.className = 'uploaded-file-link';
+            const link = document.createElement('a');
+            link.textContent = media.filename || 'Download file';
+            link.href = media.url || '#';
+            link.target = '_blank';
+            link.rel = 'noopener';
+            linkContainer.appendChild(link);
+            if (media.note) {
+                const note = document.createElement('div');
+                note.className = 'upload-note';
+                note.textContent = media.note;
+                linkContainer.appendChild(note);
+            }
+            messageMedia.appendChild(linkContainer);
+        }
+    });
+}
+
+async function handleFileUpload(files) {
+    if (!files || !files.length) return;
+    if (state.isStreaming) {
+        showToast('Please wait for the current response to finish before uploading.', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+
+    showToast(`Uploading ${files.length} file${files.length > 1 ? 's' : ''}…`, 'info', 2000);
+
+    let responsePayload = null;
+    try {
+        const response = await fetch(endpoints.uploads, {
+            method: 'POST',
+            body: formData,
+        });
+        responsePayload = await response.json().catch(() => null);
+        if (!response.ok) {
+            throw new Error(responsePayload?.detail || responsePayload?.error || `HTTP ${response.status}`);
+        }
+    } catch (error) {
+        console.error('File upload failed:', error);
+        showToast(error.message || 'File upload failed', 'error');
+        return;
+    }
+
+    const summaries = responsePayload?.attachments || [];
+    const mediaItems = responsePayload?.media || [];
+    const acknowledgement = responsePayload?.message || prefabUploadMessage(summaries);
+
+    const userFragment = createMessageElement('user');
+    userFragment.text.textContent = prefabUploadMessage(summaries);
+    state.activeConversation = state.activeConversation || newConversation(state.currentModel);
+    state.activeConversation.messages.push({
+        role: 'user',
+        content: prefabUploadMessage(summaries),
+        createdAt: Date.now(),
+        metadata: { upload: true, attachments: summaries },
+    });
+
+    const assistantFragment = createMessageElement('assistant');
+    renderAssistantContent(assistantFragment.text, acknowledgement);
+    if (mediaItems.length) {
+        renderUploadedMedia(assistantFragment.text, mediaItems);
+    }
+
+    const responseMetadata = {
+        model: responsePayload?.model || 'minimax/minimax-m2',
+        attachments: summaries,
+        media: mediaItems,
+    };
+    applyMetadata(assistantFragment.metadata, responseMetadata);
+
+    state.activeConversation.messages.push({
+        role: 'assistant',
+        content: acknowledgement,
+        createdAt: Date.now(),
+        metadata: responseMetadata,
+    });
+
+    persistActiveConversation();
+    ensureConversationVisible();
+    elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+    showToast('Upload complete!', 'success');
 }
 
 function showTypingIndicator() {
@@ -2681,7 +2836,10 @@ function initInlineHandlers() {
 
     elements.voiceBtn?.addEventListener('click', toggleVoiceInput);
     elements.voiceModeBtn?.addEventListener('click', toggleVoiceMode);
-    elements.uploadBtn?.addEventListener('click', () => showToast('File uploads are coming soon.', 'info'));
+    elements.uploadBtn?.addEventListener('click', () => {
+        const input = ensureUploadInput();
+        input.click();
+    });
     elements.settingsBtn?.addEventListener('click', openSettingsModal);
     elements.settingsClose?.addEventListener('click', closeSettingsModal);
     elements.settingsBackdrop?.addEventListener('click', closeSettingsModal);
@@ -2706,16 +2864,59 @@ let voiceWebsocket = null;
 let isVoiceModeActive = false;
 let mediaRecorder = null;
 let audioStream = null;
+let voiceFeatureAvailable = true;
+
+function teardownVoiceWebsocket() {
+    if (voiceWebsocket) {
+        try {
+            voiceWebsocket.close();
+        } catch (err) {
+            console.warn('Error closing voice websocket', err);
+        }
+    }
+    voiceWebsocket = null;
+}
+
+function disableVoiceModeUi(reason) {
+    voiceFeatureAvailable = false;
+    state.voice.available = false;
+    state.voice.configured = false;
+    isVoiceModeActive = false;
+
+    teardownVoiceWebsocket();
+    showVoiceDebugPanel(false);
+
+    const panel = document.getElementById('voiceDebugPanel');
+    if (panel) {
+        panel.style.opacity = '0';
+        panel.style.pointerEvents = 'none';
+        panel.classList.add('hidden');
+    }
+
+    if (elements.voiceModeBtn) {
+        elements.voiceModeBtn.disabled = true;
+        elements.voiceModeBtn.classList.remove('active');
+        elements.voiceModeBtn.innerHTML = '<i class="fa-solid fa-podcast" aria-hidden="true"></i>';
+        elements.voiceModeBtn.title = reason || 'Voice mode unavailable';
+    }
+
+    if (reason && state.voice.lastNotice !== reason) {
+        showToast(reason, 'warning', 3500);
+        state.voice.lastNotice = reason;
+    }
+}
 
 // Initialize voice controls
 function initializeVoiceControls() {
     // Create voice UI elements
     createVoiceUI();
 
-    // Initialize voice WebSocket
-    initializeVoiceWebSocket();
+    if (voiceFeatureAvailable) {
+        initializeVoiceWebSocket();
+    } else {
+        disableVoiceModeUi('Voice mode unavailable');
+    }
 
-    // Add voice event listeners
     setupVoiceEventListeners();
 }
 
@@ -3140,6 +3341,19 @@ function updateVoiceDebugStatus(updates) {
         }
     });
 
+    const panel = document.getElementById('voiceDebugPanel');
+    if (panel) {
+        const wsElement = document.getElementById('wsStatus');
+        const currentWsValue = updates.ws || wsElement?.textContent || '';
+        const normalised = currentWsValue.trim().toLowerCase();
+
+        if (normalised === 'connected') {
+            panel.style.boxShadow = '0 8px 24px rgba(34, 197, 94, 0.2)';
+        } else {
+            panel.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
+        }
+    }
+
     console.log('Voice status updated:', updates);
 }
 
@@ -3329,6 +3543,13 @@ function initializeVoiceWebSocket() {
     voiceWebsocket.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
+            if (data?.type === 'error' && (data.error === 'voice_unavailable' || data.error === 'voice_unconfigured')) {
+                console.warn('Voice mode disabled by server:', data.message);
+                voiceFeatureAvailable = false;
+                disableVoiceModeUi(data.message || 'Voice mode unavailable');
+                teardownVoiceWebsocket();
+                return;
+            }
             handleVoiceMessage(data);
         } catch (error) {
             console.error('Error parsing voice message:', error);
@@ -3365,6 +3586,15 @@ function handleVoiceMessage(data) {
 
     switch (data.type) {
         case 'welcome':
+            if (typeof data.voice_available === 'boolean') {
+                voiceFeatureAvailable = data.voice_available;
+                if (!voiceFeatureAvailable) {
+                    disableVoiceModeUi(data.message || 'Voice mode unavailable');
+                    return;
+                }
+            }
+            state.voice.available = true;
+            state.voice.configured = true;
             console.log('Voice session started');
             updateVoiceDebugStatus({ sessionId: data.session_id || 'Active' });
             break;
@@ -3466,6 +3696,7 @@ function renderVoiceResponse(payload) {
     console.log('Rendering voice response:', response);
 
     const assistantContent = response.text || 'Voice processing complete';
+    const shouldRenderRichContent = voiceFeatureAvailable && response.richContent;
 
     const assistantMessage = {
         role: 'assistant',
@@ -3494,7 +3725,7 @@ function renderVoiceResponse(payload) {
     const messageElement = createMessageElement('assistant');
     renderAssistantContent(messageElement.text, assistantContent);
 
-    if (response.richContent) {
+    if (shouldRenderRichContent) {
         const richElement = createRichContentElement(response.richContent);
         if (richElement) {
             messageElement.text.appendChild(richElement);
@@ -3519,7 +3750,7 @@ function renderVoiceResponse(payload) {
 }
 
 function createRichContentElement(richContent) {
-    if (!richContent || typeof richContent !== 'object') {
+    if (!voiceFeatureAvailable || !richContent || typeof richContent !== 'object') {
         return null;
     }
 
