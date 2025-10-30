@@ -3111,34 +3111,140 @@ function createVoiceDebugPanel() {
         }
     });
 
+    // Create voice debug panel structure safely
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'voice-debug-header';
+
+    const titleH4 = document.createElement('h4');
+    const titleIcon = document.createElement('i');
+    titleIcon.className = 'fa-solid fa-microphone-lines';
+    titleH4.appendChild(titleIcon);
+    titleH4.appendChild(document.createTextNode(' Voice Mode Debug'));
+    headerDiv.appendChild(titleH4);
+
+    toggleBtn = document.createElement('button');
+    toggleBtn.className = 'voice-debug-toggle';
+    toggleBtn.id = 'voiceDebugToggle';
+    toggleBtn.title = 'Toggle debug panel';
+    const toggleIcon = document.createElement('i');
+    toggleIcon.className = 'fa-solid fa-chevron-up';
+    toggleBtn.appendChild(toggleIcon);
+    headerDiv.appendChild(toggleBtn);
+
+    clearBtn = document.createElement('button');
+    clearBtn.className = 'voice-debug-clear';
+    clearBtn.id = 'voiceDebugClear';
+    clearBtn.title = 'Clear debug logs';
+    const clearIcon = document.createElement('i');
+    clearIcon.className = 'fa-solid fa-trash';
+    clearBtn.appendChild(clearIcon);
+    headerDiv.appendChild(clearBtn);
+
+    panel.appendChild(headerDiv);
+
+    // Create content area
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'voice-debug-content';
+
+    // Create sections
+    const sectionsData = [
+        { icon: 'fa-wave-square', title: 'Real-time Transcripts', id: 'voiceDebugTranscripts' },
+        { icon: 'fa-robot', title: 'AI Responses', id: 'voiceDebugResponses' },
+        { icon: 'fa-bug', title: 'Error Logs', id: 'voiceDebugErrors' }
+    ];
+
+    sectionsData.forEach(section => {
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'voice-debug-section';
+
+        const headerH5 = document.createElement('h5');
+        const headerIcon = document.createElement('i');
+        headerIcon.className = `fa-solid ${section.icon}`;
+        headerH5.appendChild(headerIcon);
+        headerH5.appendChild(document.createTextNode(` ${section.title}`));
+        sectionDiv.appendChild(headerH5);
+
+        const contentContainer = document.createElement('div');
+        contentContainer.id = section.id;
+
+        const placeholder = document.createElement('div');
+        placeholder.className = 'voice-debug-placeholder';
+        const placeholderText = section.id === 'voiceDebugTranscripts' ? 'Voice mode not active' :
+                               section.id === 'voiceDebugResponses' ? 'No AI responses yet' : 'No errors';
+        placeholder.textContent = placeholderText;
+        contentContainer.appendChild(placeholder);
+
+        sectionDiv.appendChild(contentContainer);
+        contentDiv.appendChild(sectionDiv);
+    });
+
+    // Create system status section
+    const statusSection = document.createElement('div');
+    statusSection.className = 'voice-debug-section';
+
+    const statusHeader = document.createElement('h5');
+    const statusIcon = document.createElement('i');
+    statusIcon.className = 'fa-solid fa-chart-line';
+    statusHeader.appendChild(statusIcon);
+    statusHeader.appendChild(document.createTextNode(' System Status'));
+    statusSection.appendChild(statusHeader);
+
+    const statusContainer = document.createElement('div');
+    statusContainer.className = 'voice-debug-status';
+    statusContainer.id = 'voiceDebugStatus';
+
+    const statusItems = [
+        { label: 'WebSocket:', value: 'Disconnected', id: 'wsStatus', extraClass: 'status-disconnected' },
+        { label: 'Recording:', value: 'Stopped', id: 'recordingStatus' },
+        { label: 'STT Model:', value: 'MiniMax', id: 'sttModel' },
+        { label: 'LLM Model:', value: 'Unknown', id: 'llmModel' },
+        { label: 'Session ID:', value: 'None', id: 'sessionId' }
+    ];
+
+    statusItems.forEach(item => {
+        const statusItem = document.createElement('div');
+        statusItem.className = 'status-item';
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'status-label';
+        labelSpan.textContent = item.label;
+        statusItem.appendChild(labelSpan);
+
+        const valueSpan = document.createElement('span');
+        valueSpan.className = `status-value${item.extraClass ? ` ${item.extraClass}` : ''}`;
+        valueSpan.id = item.id;
+        valueSpan.textContent = item.label === 'LLM Model:' ? (state.currentModel || 'Unknown') : item.value;
+        statusItem.appendChild(valueSpan);
+
+        statusContainer.appendChild(statusItem);
+    });
+
+    statusSection.appendChild(statusContainer);
+    contentDiv.appendChild(statusSection);
+
+    panel.appendChild(contentDiv);
+
     const anchor = elements.composer?.parentElement || document.body;
     anchor.appendChild(panel);
 
-    // Add beautiful glow effect for active states
-    // Note: Removed function redefinition to avoid ESLint no-func-assign error
-
     // Add event listeners
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            const content = panel.querySelector('.voice-debug-content');
-            const isCollapsed = panel.classList.contains('collapsed');
+    toggleBtn.addEventListener('click', () => {
+        const isCollapsed = panel.classList.contains('collapsed');
 
-            if (isCollapsed) {
-                content.style.display = 'block';
-                panel.classList.remove('collapsed');
-                toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-up"></i>';
-            } else {
-                content.style.display = 'none';
-                panel.classList.add('collapsed');
-                toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
-            }
-        });
-    }
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-            clearVoiceDebugLogs();
-        });
-    }
+        if (isCollapsed) {
+            contentDiv.style.display = 'block';
+            panel.classList.remove('collapsed');
+            toggleIcon.className = 'fa-solid fa-chevron-up';
+        } else {
+            contentDiv.style.display = 'none';
+            panel.classList.add('collapsed');
+            toggleIcon.className = 'fa-solid fa-chevron-down';
+        }
+    });
+
+    clearBtn.addEventListener('click', () => {
+        clearVoiceDebugLogs();
+    });
 
     // Panel should start completely hidden and only show when voice mode is activated
     showVoiceDebugPanel(false);
@@ -3213,27 +3319,50 @@ function logVoiceTranscript(text, confidence, isFinal = false) {
     const lastEntry = existingEntries[existingEntries.length - 1];
 
     if (lastEntry && !isFinal && !lastEntry.classList.contains('final')) {
-        // Update existing interim entry
-        lastEntry.innerHTML = `
-            <div class="voice-debug-meta">
-                <span class="voice-debug-time">${timestamp}</span>
-                <span class="voice-debug-confidence">${confidenceStr}</span>
-                <span class="voice-debug-type interim">Interim</span>
-            </div>
-            <div class="voice-debug-content">${text || '...'}</div>
-        `;
+        // Update existing interim entry - use textContent for safety
+        const safeText = (text || '...').replace(/[<>]/g, '').substring(0, 200);
+        const metaDiv = lastEntry.querySelector('.voice-debug-meta');
+        if (metaDiv) {
+            const timeSpan = metaDiv.querySelector('.voice-debug-time');
+            const confidenceSpan = metaDiv.querySelector('.voice-debug-confidence');
+            if (timeSpan) timeSpan.textContent = timestamp;
+            if (confidenceSpan) confidenceSpan.textContent = confidenceStr;
+        }
+        const contentDiv = lastEntry.querySelector('.voice-debug-content');
+        if (contentDiv) contentDiv.textContent = safeText;
     } else {
-        // Add new entry
+        // Add new entry - create elements safely without innerHTML
         const entry = document.createElement('div');
         entry.className = `voice-debug-entry ${isFinal ? 'final' : 'interim'}`;
-        entry.innerHTML = `
-            <div class="voice-debug-meta">
-                <span class="voice-debug-time">${timestamp}</span>
-                <span class="voice-debug-confidence">${confidenceStr}</span>
-                <span class="voice-debug-type ${isFinal ? 'final' : 'interim'}">${isFinal ? 'Final' : 'Interim'}</span>
-            </div>
-            <div class="voice-debug-content">${text || '...'}</div>
-        `;
+
+        const safeText = (text || '...').replace(/[<>]/g, '').substring(0, 200);
+
+        // Build elements safely without innerHTML
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'voice-debug-meta';
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'voice-debug-time';
+        timeSpan.textContent = timestamp;
+
+        const confidenceSpan = document.createElement('span');
+        confidenceSpan.className = 'voice-debug-confidence';
+        confidenceSpan.textContent = confidenceStr;
+
+        const typeSpan = document.createElement('span');
+        typeSpan.className = `voice-debug-type ${isFinal ? 'final' : 'interim'}`;
+        typeSpan.textContent = isFinal ? 'Final' : 'Interim';
+
+        metaDiv.appendChild(timeSpan);
+        metaDiv.appendChild(confidenceSpan);
+        metaDiv.appendChild(typeSpan);
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'voice-debug-content';
+        contentDiv.textContent = safeText;
+
+        entry.appendChild(metaDiv);
+        entry.appendChild(contentDiv);
 
         // Remove placeholder if exists
         const placeholder = transcriptsDiv.querySelector('.voice-debug-placeholder');
@@ -3262,15 +3391,38 @@ function logVoiceAiResponse(text, model, latency, tokens) {
 
     const entry = document.createElement('div');
     entry.className = 'voice-debug-entry response';
-    entry.innerHTML = `
-        <div class="voice-debug-meta">
-            <span class="voice-debug-time">${timestamp}</span>
-            <span class="voice-debug-model">${model || 'Unknown'}</span>
-            <span class="voice-debug-latency">${latency || 0}ms</span>
-            <span class="voice-debug-tokens">${tokens || 0} tokens</span>
-        </div>
-        <div class="voice-debug-content">${text || 'No response'}</div>
-    `;
+
+    // Create elements safely without innerHTML
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'voice-debug-meta';
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'voice-debug-time';
+    timeSpan.textContent = timestamp;
+
+    const modelSpan = document.createElement('span');
+    modelSpan.className = 'voice-debug-model';
+    modelSpan.textContent = model || 'Unknown';
+
+    const latencySpan = document.createElement('span');
+    latencySpan.className = 'voice-debug-latency';
+    latencySpan.textContent = `${latency || 0}ms`;
+
+    const tokenSpan = document.createElement('span');
+    tokenSpan.className = 'voice-debug-tokens';
+    tokenSpan.textContent = `${tokens || 0} tokens`;
+
+    metaDiv.appendChild(timeSpan);
+    metaDiv.appendChild(modelSpan);
+    metaDiv.appendChild(latencySpan);
+    metaDiv.appendChild(tokenSpan);
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'voice-debug-content';
+    contentDiv.textContent = text || 'No response';
+
+    entry.appendChild(metaDiv);
+    entry.appendChild(contentDiv);
 
     // Remove placeholder if exists
     const placeholder = responsesDiv.querySelector('.voice-debug-placeholder');
@@ -3298,13 +3450,27 @@ function logVoiceError(message, type = 'error') {
 
     const entry = document.createElement('div');
     entry.className = `voice-debug-entry ${type}`;
-    entry.innerHTML = `
-        <div class="voice-debug-meta">
-            <span class="voice-debug-time">${timestamp}</span>
-            <span class="voice-debug-type error">Error</span>
-        </div>
-        <div class="voice-debug-content">${message || 'Unknown error'}</div>
-    `;
+
+    // Create elements safely without innerHTML
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'voice-debug-meta';
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'voice-debug-time';
+    timeSpan.textContent = timestamp;
+
+    const typeSpan = document.createElement('span');
+    typeSpan.className = 'voice-debug-type error';
+    typeSpan.textContent = 'Error';
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'voice-debug-content';
+    contentDiv.textContent = message || 'Unknown error';
+
+    metaDiv.appendChild(timeSpan);
+    metaDiv.appendChild(typeSpan);
+    entry.appendChild(metaDiv);
+    entry.appendChild(contentDiv);
 
     // Remove placeholder if exists
     const placeholder = errorsDiv.querySelector('.voice-debug-placeholder');
@@ -3775,25 +3941,56 @@ function createWeatherCard(weatherData = {}) {
     icon.className = 'fas fa-cloud-sun';
     const textDiv = document.createElement('div');
     textDiv.className = 'rich-card-text';
-    textDiv.innerHTML = `
-        <strong>${weatherData.city || 'Current location'}</strong><br>
-        ${weatherData.condition || 'Mixed conditions'} · ${weatherData.temperature || '--°C'}
-    `;
+
+    // Create strong element and text nodes safely
+    const strongEl = document.createElement('strong');
+    strongEl.textContent = weatherData.city || 'Current location';
+    const br = document.createElement('br');
+    const remainingText = document.createTextNode(`${weatherData.condition || 'Mixed conditions'} · ${weatherData.temperature || '--°C'}`);
+
+    textDiv.appendChild(strongEl);
+    textDiv.appendChild(br);
+    textDiv.appendChild(remainingText);
+
     headerDiv.appendChild(icon);
     headerDiv.appendChild(textDiv);
 
     const metricsDiv = document.createElement('div');
     metricsDiv.className = 'rich-card-metrics';
-    metricsDiv.innerHTML = `
-        <div><span>Humidity</span><strong>${weatherData.humidity || '--'}</strong></div>
-        <div><span>Wind</span><strong>${weatherData.wind_speed || '--'}</strong></div>
-    `;
+
+    // Create metrics without innerHTML
+    const humidityDiv = document.createElement('div');
+    const humiditySpan = document.createElement('span');
+    humiditySpan.textContent = 'Humidity';
+    const humidityStrong = document.createElement('strong');
+    humidityStrong.textContent = weatherData.humidity || '--';
+
+    const windDiv = document.createElement('div');
+    const windSpan = document.createElement('span');
+    windSpan.textContent = 'Wind';
+    const windStrong = document.createElement('strong');
+    windStrong.textContent = weatherData.wind_speed || '--';
+
+    humidityDiv.appendChild(humiditySpan);
+    humidityDiv.appendChild(humidityStrong);
+    windDiv.appendChild(windSpan);
+    windDiv.appendChild(windStrong);
+
+    metricsDiv.appendChild(humidityDiv);
+    metricsDiv.appendChild(windDiv);
 
     const forecastList = document.createElement('ul');
     forecastList.className = 'rich-card-forecast';
     (weatherData.forecast || []).slice(0, 3).forEach((day) => {
         const item = document.createElement('li');
-        item.innerHTML = `<span>${day.day || 'Day'}</span><span>${day.high || '--'} / ${day.low || '--'} · ${day.condition || '--'}</span>`;
+        // Create forecast entry without innerHTML
+        const daySpan = document.createElement('span');
+        daySpan.textContent = day.day || 'Day';
+        const detailsSpan = document.createElement('span');
+        detailsSpan.textContent = `${day.high || '--'} / ${day.low || '--'} · ${day.condition || '--'}`;
+
+        item.appendChild(daySpan);
+        item.appendChild(detailsSpan);
         forecastList.appendChild(item);
     });
 
@@ -3816,27 +4013,48 @@ function createMapCard(mapData = {}) {
     icon.className = 'fas fa-location-dot';
     const textDiv = document.createElement('div');
     textDiv.className = 'rich-card-text';
-    textDiv.innerHTML = `
-        <strong>${mapData.location?.label || 'Location'}</strong><br>
-        ${mapData.address || 'Tap to open in maps'}
-    `;
+
+    // Create header text safely without innerHTML
+    const strongEl = document.createElement('strong');
+    strongEl.textContent = mapData.location?.label || 'Location';
+    const br = document.createElement('br');
+    const addressText = document.createTextNode(mapData.address || 'Tap to open in maps');
+
+    textDiv.appendChild(strongEl);
+    textDiv.appendChild(br);
+    textDiv.appendChild(addressText);
+
     headerDiv.appendChild(icon);
     headerDiv.appendChild(textDiv);
 
     const preview = document.createElement('div');
     preview.className = 'rich-map-preview';
-    preview.innerHTML = `
-        <i class="fas fa-map"></i>
-        <div>Interactive map preview</div>
-        <div class="rich-map-coordinates">Coordinates: ${(mapData.location?.lat)?.toFixed(4) || '--'}, ${(mapData.location?.lng)?.toFixed(4) || '--'}</div>
-    `;
+
+    // Create preview content without innerHTML
+    const previewIcon = document.createElement('i');
+    previewIcon.className = 'fas fa-map';
+    const previewText = document.createElement('div');
+    previewText.textContent = 'Interactive map preview';
+    const coordinatesDiv = document.createElement('div');
+    coordinatesDiv.className = 'rich-map-coordinates';
+    coordinatesDiv.textContent = `Coordinates: ${(mapData.location?.lat)?.toFixed(4) || '--'}, ${(mapData.location?.lng)?.toFixed(4) || '--'}`;
+
+    preview.appendChild(previewIcon);
+    preview.appendChild(previewText);
+    preview.appendChild(coordinatesDiv);
 
     const link = document.createElement('a');
     link.className = 'rich-map-link';
     link.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapData.address || 'Pune, India');
     link.target = '_blank';
     link.rel = 'noopener';
-    link.innerHTML = '<i class="fas fa-external-link-alt"></i> Open in Google Maps';
+
+    // Create link content without innerHTML
+    const linkIcon = document.createElement('i');
+    linkIcon.className = 'fas fa-external-link-alt';
+    const linkText = document.createTextNode(' Open in Google Maps');
+    link.appendChild(linkIcon);
+    link.appendChild(linkText);
 
     card.appendChild(headerDiv);
     card.appendChild(preview);
