@@ -1,4 +1,8 @@
+import os
 from fastapi.testclient import TestClient
+
+# Set development mode for tests so health check passes without API keys
+os.environ["DEV_MODE"] = "true"
 
 from app.main import app
 
