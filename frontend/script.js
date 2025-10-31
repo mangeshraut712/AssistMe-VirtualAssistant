@@ -53,34 +53,82 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isAndroid = /Android/.test(navigator.userAgent);
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
+const EXTENSION_ERROR_MARKERS = [
+    'chrome-extension://',
+    'content_script.js',
+    'contentScript.bundle.js',
+    'shouldOfferCompletionListForField',
+    'MetadataHeuristicsRunner',
+    'quillbot-content.js',
+    'No resume URL'
+];
+
+function shouldSuppressExtensionError(details) {
+    if (!details) return false;
+
+    const parts = [
+        typeof details.message === 'string' ? details.message : '',
+        typeof details.source === 'string' ? details.source : '',
+        typeof details.stack === 'string' ? details.stack : ''
+    ].join(' ');
+
+    if (!parts) {
+        return false;
+    }
+
+    return EXTENSION_ERROR_MARKERS.some(marker => parts.includes(marker));
+}
+
+function suppressEventIfFromExtension(event, fallbackDetails = {}) {
+    const details = {
+        message: event?.message ?? event?.reason?.message ?? fallbackDetails.message,
+        source: event?.filename ?? event?.reason?.stack ?? fallbackDetails.source,
+        stack: event?.error?.stack ?? event?.reason?.stack ?? fallbackDetails.stack
+    };
+
+    if (!shouldSuppressExtensionError(details)) {
+        return false;
+    }
+
+    if (typeof event?.preventDefault === 'function') {
+        event.preventDefault();
+    }
+    if (typeof event?.stopImmediatePropagation === 'function') {
+        event.stopImmediatePropagation();
+    }
+    return true;
+}
+
+const originalWindowOnError = window.onerror;
+window.onerror = function(message, source, lineno, colno, error) {
+    if (shouldSuppressExtensionError({ message, source, stack: error?.stack })) {
+        return true;
+    }
+    if (typeof originalWindowOnError === 'function') {
+        return originalWindowOnError.call(this, message, source, lineno, colno, error);
+    }
+    return false;
+};
+
 // Suppress browser extension errors in console
-window.addEventListener('error', function(e) {
-    // Ignore chrome extension errors
-    if (e.filename && e.filename.includes('chrome-extension://')) {
-        e.preventDefault();
-        return false;
-    }
-    // Ignore QuillBot extension errors
-    if (e.filename && e.filename.includes('quillbot-content.js')) {
-        e.preventDefault();
-        return false;
-    }
-    // Ignore other extension errors
-    if (e.message && (e.message.includes('extension') || e.message.includes('contentScript'))) {
-        e.preventDefault();
-        return false;
-    }
+window.addEventListener('error', (event) => {
+    suppressEventIfFromExtension(event);
 }, true);
 
-// Suppress unhandled promise rejections from extensions
-window.addEventListener('unhandledrejection', function(e) {
-    if (e.reason && e.reason.message && 
-        (e.reason.message.includes('extension') || 
-         e.reason.message.includes('No resume URL') ||
-         e.reason.message.includes('chrome-extension'))) {
-        e.preventDefault();
-        return false;
+const originalUnhandledRejection = window.onunhandledrejection;
+window.onunhandledrejection = function(event) {
+    if (suppressEventIfFromExtension(event, { message: event?.reason?.message, stack: event?.reason?.stack })) {
+        return true;
     }
+    if (typeof originalUnhandledRejection === 'function') {
+        return originalUnhandledRejection.call(this, event);
+    }
+    return false;
+};
+
+// Suppress unhandled promise rejections from extensions
+window.addEventListener('unhandledrejection', (event) => {
+    suppressEventIfFromExtension(event, { message: event?.reason?.message, stack: event?.reason?.stack });
 });
 
 function resolveApiBase() {
@@ -582,7 +630,10 @@ const backendHealth = {
         if (healthy) {
             showConnectionStatus('connected', '✓ Connected to backend');
         } else {
-            showConnectionStatus('error', '✗ Backend offline');
+            const offlineMessage = (typeof message === 'string' && message.trim())
+                ? message.trim()
+                : 'Backend offline';
+            showConnectionStatus('error', `✗ ${offlineMessage}`);
         }
     },
     async check() {
@@ -602,18 +653,28 @@ const backendHealth = {
                 window.clearTimeout(timeoutId);
             }
 
+            const contentType = response.headers?.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+            const data = isJson ? await response.json().catch(() => ({})) : {};
+
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                const componentMessage = data?.components?.chat?.message;
+                const errorMessage = data?.message || componentMessage || `HTTP ${response.status}`;
+                throw new Error(errorMessage);
             }
 
-            const data = await response.json().catch(() => ({}));
-            const healthy = (data?.status || '').toLowerCase() === 'ok';
-            const message = healthy ? 'Online' : (data?.message || 'Unavailable');
+            const statusValue = (data?.status || '').toLowerCase();
+            const healthy = statusValue === 'ok';
+            const componentMessage = data?.components?.chat?.message;
+            const message = healthy
+                ? (data?.message || 'Online')
+                : (data?.message || componentMessage || 'Unavailable');
             this.setStatus(healthy, message);
             return healthy;
         } catch (error) {
             console.warn('Health check failed', error);
-            this.setStatus(false, 'Offline');
+            const errorMessage = error instanceof Error ? (error.message || 'Offline') : 'Offline';
+            this.setStatus(false, errorMessage);
             return false;
         }
     },

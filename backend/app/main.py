@@ -118,6 +118,41 @@ except Exception as exc:  # pragma: no cover - optional dependency
 from .database import get_db
 from .models import Conversation, Message as MessageModel
 
+
+def _chat_component_status() -> Dict[str, Any]:
+    """Determine readiness of the primary chat provider."""
+    component: Dict[str, Any] = {
+        "name": "chat",
+        "ready": False,
+        "message": "Chat client unavailable.",
+        "provider": None,
+    }
+
+    if not CHAT_CLIENT_AVAILABLE or grok_client is None:
+        return component
+
+    config = getattr(grok_client, "config", {}) or {}
+    provider = (config.get("provider") or "openrouter").lower()
+    dev_mode = bool(config.get("dev_mode"))
+    api_key_present = bool(config.get("api_key"))
+
+    component["provider"] = provider
+    component["dev_mode"] = dev_mode
+
+    if dev_mode:
+        component["ready"] = True
+        component["message"] = "Development mode enabled. Mock responses active."
+        return component
+
+    if not api_key_present:
+        provider_name = "MiniMax" if provider == "minimax" else "OpenRouter"
+        component["message"] = f"{provider_name} API key is not configured."
+        return component
+
+    component["ready"] = True
+    component["message"] = "Chat client ready."
+    return component
+
 def _normalise_origin(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
@@ -629,13 +664,24 @@ def _apply_personalisation(
 @app.get("/health")
 def health(request: Request):
     headers = _cors_headers(request)
-    payload = {
-        "status": "ok",
+    chat_component = _chat_component_status()
+    components = {"chat": chat_component}
+    healthy = all(item.get("ready") for item in components.values())
+
+    status_text = "ok" if healthy else "error"
+    message = "AssistMe API is fully operational." if healthy else chat_component.get("message", "Service degraded.")
+
+    payload: Dict[str, Any] = {
+        "status": status_text,
         "service": "assistme-api",
         "version": "1.0.0",
         "timestamp": datetime.now().isoformat(),
+        "message": message,
+        "components": components,
     }
-    return JSONResponse(content=payload, headers=headers)
+
+    status_code = 200 if healthy else 503
+    return JSONResponse(content=payload, headers=headers, status_code=status_code)
 
 
 @app.options("/health")
