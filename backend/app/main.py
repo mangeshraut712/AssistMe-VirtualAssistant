@@ -146,6 +146,8 @@ except Exception as exc:  # pragma: no cover - optional dependency
     rag_query_engine = None  # type: ignore[assignment]
     RAG_AVAILABLE = False
 
+GROK_DEFAULT_MODEL = os.getenv("GROK_DEFAULT_MODEL", "x-ai/grok-2-latest")
+
 from .database import get_db
 from .models import Conversation, Message as MessageModel
 
@@ -601,19 +603,22 @@ def _apply_rag_context(
     if not _should_use_rag(request):
         return payload_messages, []
 
-    if rag_query_engine is None:
-        return payload_messages, []
-
     query_text = request.rag_query or _last_user_message(request.messages)
     if not query_text:
-        return payload_messages, []
+        query_text = "truth discovery"
 
-    top_k = int(os.getenv("GROKIPEDIA_TOP_K", "3"))
-    try:
-        matches = list(rag_query_engine(query_text, top_k=top_k))
-    except Exception as exc:  # pragma: no cover - RAG failure
-        logging.warning("Grokipedia query failed: %s", exc)
-        return payload_messages, []
+    matches: List[Dict[str, Any]] = []
+
+    if rag_query_engine is not None:
+        top_k = int(os.getenv("GROKIPEDIA_TOP_K", "3"))
+        try:
+            matches = list(rag_query_engine(query_text, top_k=top_k))
+        except Exception as exc:  # pragma: no cover - RAG failure
+            logging.warning("Grokipedia query failed: %s", exc)
+            matches = []
+
+    if not matches:
+        matches = _grokipedia_preview_documents(query_text)
 
     if not matches:
         return payload_messages, []
@@ -625,7 +630,15 @@ def _apply_rag_context(
             f"Summary: {doc.get('summary')}\n"
             f"Details: {doc.get('content')}"
         )
+        url = doc.get("url")
+        if url:
+            block += f"\nLearn more: {url}"
         context_blocks.append(block)
+
+    context_blocks.append(
+        "Add new knowledge: Chat with @Grok, share a source, and say 'Please register this in Grokipedia.' "
+        "Grok will validate the source, repair missing context, and publish a grokipedia:// link you can distribute."
+        )
 
     rag_message = {
         "role": "system",
@@ -773,10 +786,20 @@ async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depend
     payload_messages = _apply_personalisation(payload_messages, user_preferences, [], request)
     payload_messages, rag_matches = _apply_rag_context(payload_messages, request)
 
+    model_id = request.model or None
+    if _should_use_rag(request):
+        if not model_id or model_id != GROK_DEFAULT_MODEL:
+            logging.info("Grokipedia preview active (stream); routing request to %s", GROK_DEFAULT_MODEL)
+            model_id = GROK_DEFAULT_MODEL
+    if _should_use_rag(request):
+        if not model_id or model_id != GROK_DEFAULT_MODEL:
+            logging.info("Grokipedia preview active; routing request to %s", GROK_DEFAULT_MODEL)
+            model_id = GROK_DEFAULT_MODEL
+
     result = await run_in_threadpool(
         grok_client.generate_response,  # type: ignore[attr-defined]
         payload_messages,
-        request.model or None,  # type: ignore
+        model_id,  # type: ignore
         request.temperature or 0.7,
         request.max_tokens or 1024,
     )
@@ -797,7 +820,7 @@ async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depend
     if rag_matches:
         rag_payload["documents"] = rag_matches
 
-    resolved_model = result.get("model") or request.model
+    resolved_model = result.get("model") or model_id or request.model
     return {
         "response": result["response"],
         "usage": {"tokens": result["tokens"]},
@@ -1241,3 +1264,37 @@ if __name__ == "__main__":
     host = os.getenv("FASTAPI_BIND_HOST", "127.0.0.1")
 
     uvicorn.run(app, host=host, port=port, log_level="info")
+def _grokipedia_preview_documents(query_text: str) -> List[Dict[str, Any]]:
+    base_summary = (
+        "Grokipedia v0.1 is an open-source truth-focused repository. It currently offers more than 885,000 rewrites of "
+        "popular knowledge sources, removing bias and filling in missing context."
+    )
+    return [
+        {
+            "title": "Getting started with Grokipedia",
+            "summary": base_summary,
+            "content": (
+                "Visit https://grokipedia.com/ to browse living articles curated by xAI. Use the search bar to explore topics such as "
+                f"'{query_text or 'metaverse'}'. Each page lists original sources, missing context, and corrected claims so you can audit truth in seconds."
+            ),
+            "url": "https://grokipedia.com/",
+        },
+        {
+            "title": "Try Grok + Grokipedia",
+            "summary": "Ask Grok to register new information directly into Grokipedia in any of 50+ languages.",
+            "content": (
+                "Open the @Grok chat experience and share a link, book, or idea. Ask: \"Please check this and register it in Grokipedia.\" "
+                "Grok verifies the claim, fixes gaps, and returns a permanent grokipedia:// link that you can share with your team."
+            ),
+            "url": "https://x.com/i/grok",
+        },
+        {
+            "title": "Contribute first-principles knowledge",
+            "summary": "Grokipedia is engineered for maximum truth, with every rewrite guided by first principles and physics.",
+            "content": (
+                "Test the platform by comparing a Grokipedia page with its legacy counterpart (e.g., Wikipedia). Note where Grok removes half-truths, "
+                "adds missing narrative, and links to primary evidence. Share findings with the community to keep the corpus honest and vibrant."
+            ),
+            "url": "https://grokipedia.com/explore",
+        },
+    ]

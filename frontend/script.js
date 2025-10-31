@@ -202,6 +202,8 @@ const endpoints = {
     contextCompress: `${API_BASE}/api/context/compress`,
 };
 
+const GROK_MODEL_ID = 'x-ai/grok-2-latest';
+
 const MODEL_OPTIONS = [
     // Free models prioritized first
     {
@@ -270,6 +272,12 @@ const MODEL_OPTIONS = [
         label: 'MiniMax M2',
         hint: 'MiniMax M2 · voice-optimized · paid',
         context: 'Unlimited context',
+    },
+    {
+        id: GROK_MODEL_ID,
+        label: 'xAI Grok 2 Latest',
+        hint: 'xAI Grok · optimized for Grokipedia truth previews',
+        context: '131k context',
     },
 ];
 
@@ -418,6 +426,7 @@ const elements = {
     benchmarkBackdrop: document.getElementById('benchmarkBackdrop'),
     benchmarkClose: document.getElementById('benchmarkClose'),
     benchmarkTabs: document.getElementById('benchmarkTabs'),
+    benchmarkChart: document.getElementById('benchmarkChart'),
     benchmarkTableBody: document.getElementById('benchmarkTableBody'),
     benchmarkDescription: document.getElementById('benchmarkDescription'),
     benchmarkCommand: document.getElementById('benchmarkCommand'),
@@ -504,6 +513,8 @@ const state = {
         focusLockGrace: null,
         isComposing: false,
     },
+    previousModelBeforeGrok: null,
+    suppressModelLockToast: false,
 };
 
 function savePreferences() {
@@ -551,7 +562,21 @@ function updateRagPreference(enabled) {
     if (elements.ragCheckbox) {
         elements.ragCheckbox.checked = state.useRag;
     }
-    showToast(state.useRag ? 'Grounding enabled with Grokipedia' : 'Grounding disabled', 'info', 2400);
+    if (state.useRag) {
+        if (state.currentModel !== GROK_MODEL_ID) {
+            state.previousModelBeforeGrok = state.currentModel;
+            state.suppressModelLockToast = true;
+            setModel(GROK_MODEL_ID);
+        }
+        showToast('Grokipedia preview enabled · Grok model engaged', 'info', 3600);
+    } else {
+        if (state.previousModelBeforeGrok && state.previousModelBeforeGrok !== GROK_MODEL_ID) {
+            state.suppressModelLockToast = true;
+            setModel(state.previousModelBeforeGrok);
+        }
+        state.previousModelBeforeGrok = null;
+        showToast('Grokipedia preview disabled', 'info', 2400);
+    }
 }
 
 function getLastUserPrompt() {
@@ -987,6 +1012,367 @@ function getBenchmarkScenario(key) {
     return scenarioEntry ? scenarioEntry[1] : null;
 }
 
+let benchmarkChartInstance = null;
+
+function getCssVar(name, fallback) {
+    try {
+        const style = getComputedStyle(document.documentElement);
+        const value = style.getPropertyValue(name);
+        return value ? value.trim() : fallback;
+    } catch (error) {
+        console.warn(`Failed to read CSS var ${name}`, error);
+        return fallback;
+    }
+}
+
+function hexToRgba(hex, alpha = 1) {
+    if (!hex) return `rgba(16, 163, 127, ${alpha})`;
+    const value = hex.trim();
+    if (value.startsWith('#')) {
+        let normalized = value.slice(1);
+        if (normalized.length === 3) {
+            normalized = normalized.split('').map((char) => char + char).join('');
+        }
+        if (normalized.length !== 6) return `rgba(16, 163, 127, ${alpha})`;
+        const bigint = Number.parseInt(normalized, 16);
+        if (Number.isNaN(bigint)) return `rgba(16, 163, 127, ${alpha})`;
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    if (value.startsWith('rgba')) {
+        return value.replace(/rgba\(([^)]+)\)/, (_, contents) => {
+            const parts = contents.split(',').map((part) => part.trim());
+            parts[3] = String(alpha);
+            return `rgba(${parts.join(', ')})`;
+        });
+    }
+    if (value.startsWith('rgb')) {
+        return value.replace(/rgb\(([^)]+)\)/, (_, contents) => `rgba(${contents.trim()}, ${alpha})`);
+    }
+    return `rgba(16, 163, 127, ${alpha})`;
+}
+
+function parseLatencyValue(text) {
+    if (!text) return null;
+    const match = /([\d.]+)/.exec(text);
+    if (!match) return null;
+    const seconds = Number.parseFloat(match[1]);
+    return Number.isFinite(seconds) ? seconds : null;
+}
+
+function parseThroughputValue(text) {
+    if (!text) return null;
+    const match = /([\d.]+)/.exec(text);
+    if (!match) return null;
+    const value = Number.parseFloat(match[1]);
+    return Number.isFinite(value) ? value : null;
+}
+
+function parseContextWindow(text) {
+    if (!text) return null;
+    const match = /([\d.]+)\s*([kKmM]?)/.exec(text);
+    if (!match) return null;
+    let amount = Number.parseFloat(match[1]);
+    if (!Number.isFinite(amount)) return null;
+    const unit = (match[2] || '').toLowerCase();
+    if (unit === 'm') {
+        amount *= 1_000_000;
+    } else if (unit === 'k') {
+        amount *= 1_000;
+    }
+    return amount;
+}
+
+function ensureBenchmarkChart() {
+    if (!elements.benchmarkChart || typeof window.Chart === 'undefined') {
+        return null;
+    }
+    if (benchmarkChartInstance) {
+        return benchmarkChartInstance;
+    }
+
+    const palette = {
+        accent: getCssVar('--accent-primary', '#10a37f'),
+        accentSecondary: getCssVar('--accent-secondary', '#3b82f6'),
+        text: getCssVar('--text-primary', '#111827'),
+        muted: getCssVar('--text-muted', '#6b7280'),
+        surface: getCssVar('--surface-panel', '#ffffff'),
+    };
+
+    const ctx = elements.benchmarkChart.getContext('2d');
+    benchmarkChartInstance = new window.Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: palette.muted,
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded',
+                        font: {
+                            size: 12,
+                            family: getCssVar('--font-sans', 'Inter, sans-serif'),
+                        },
+                    },
+                },
+                tooltip: {
+                    enabled: true,
+                    displayColors: false,
+                    backgroundColor: palette.surface,
+                    borderColor: hexToRgba(palette.muted, 0.2),
+                    borderWidth: 1,
+                    titleColor: palette.text,
+                    bodyColor: palette.text,
+                    callbacks: {
+                        title(contexts) {
+                            return contexts[0]?.label ?? '';
+                        },
+                        label(context) {
+                            const meta = context.chart.$assistmeMeta?.[context.dataIndex];
+                            if (!meta) return context.formattedValue;
+                            if (context.dataset.yAxisID === 'yLatency') {
+                                return `Latency · ${meta.latency}`;
+                            }
+                            if (context.dataset.yAxisID === 'yThroughput') {
+                                return `Throughput · ${meta.throughput}`;
+                            }
+                            if (context.dataset.yAxisID === 'yContext') {
+                                return `Context · ${meta.context}`;
+                            }
+                            return context.formattedValue;
+                        },
+                        afterLabel(context) {
+                            const meta = context.chart.$assistmeMeta?.[context.dataIndex];
+                            if (!meta) return '';
+                            const extras = [];
+                            if (meta.context) extras.push(`Context · ${meta.context}`);
+                            if (meta.bestFor) extras.push(`Best for · ${meta.bestFor}`);
+                            if (meta.accelerator) extras.push(`Accelerator · ${meta.accelerator}`);
+                            return extras.join('\n');
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: palette.muted,
+                        font: {
+                            size: 12,
+                        },
+                    },
+                    grid: {
+                        color: hexToRgba(palette.muted, 0.15),
+                    },
+                },
+                yThroughput: {
+                    beginAtZero: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Tokens per second',
+                        color: palette.muted,
+                    },
+                    ticks: {
+                        color: palette.muted,
+                        callback(value) {
+                            if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+                            return value;
+                        },
+                    },
+                    grid: {
+                        color: hexToRgba(palette.muted, 0.15),
+                    },
+                },
+                yLatency: {
+                    beginAtZero: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'First token latency (s)',
+                        color: palette.muted,
+                    },
+                    ticks: {
+                        color: palette.muted,
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                },
+                yContext: {
+                    beginAtZero: true,
+                    position: 'right',
+                    offset: true,
+                    title: {
+                        display: true,
+                        text: 'Context window (k tokens)',
+                        color: palette.muted,
+                    },
+                    ticks: {
+                        color: palette.muted,
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                },
+            },
+        },
+    });
+
+    return benchmarkChartInstance;
+}
+
+function refreshBenchmarkChartTheme() {
+    if (!benchmarkChartInstance) return;
+    const palette = {
+        accent: getCssVar('--accent-primary', '#10a37f'),
+        accentSecondary: getCssVar('--accent-secondary', '#3b82f6'),
+        text: getCssVar('--text-primary', '#111827'),
+        muted: getCssVar('--text-muted', '#6b7280'),
+        surface: getCssVar('--surface-panel', '#ffffff'),
+    };
+
+    const throughputDataset = benchmarkChartInstance.data.datasets?.find((dataset) => dataset.yAxisID === 'yThroughput');
+    const latencyDataset = benchmarkChartInstance.data.datasets?.find((dataset) => dataset.yAxisID === 'yLatency');
+    const contextDataset = benchmarkChartInstance.data.datasets?.find((dataset) => dataset.yAxisID === 'yContext');
+
+    if (throughputDataset) {
+        const highlight = hexToRgba(palette.accent, 0.9);
+        const soft = hexToRgba(palette.accent, 0.55);
+        throughputDataset.backgroundColor = throughputDataset.data.map((_, index) => (index === 0 ? highlight : soft));
+        throughputDataset.borderColor = hexToRgba(palette.accent, 0.85);
+        throughputDataset.hoverBackgroundColor = hexToRgba(palette.accent, 1);
+    }
+
+    if (latencyDataset) {
+        latencyDataset.borderColor = hexToRgba(palette.accentSecondary, 0.95);
+        latencyDataset.backgroundColor = hexToRgba(palette.accentSecondary, 0.35);
+        latencyDataset.pointBackgroundColor = hexToRgba(palette.accentSecondary, 0.95);
+        latencyDataset.pointBorderColor = hexToRgba(palette.accentSecondary, 1);
+    }
+
+    if (contextDataset) {
+        contextDataset.borderColor = hexToRgba(palette.muted, 0.8);
+        contextDataset.backgroundColor = hexToRgba(palette.muted, 0.3);
+        contextDataset.pointBackgroundColor = hexToRgba(palette.muted, 0.8);
+        contextDataset.pointBorderColor = hexToRgba(palette.muted, 0.5);
+    }
+
+    const legend = benchmarkChartInstance.options.plugins?.legend;
+    if (legend?.labels) {
+        legend.labels.color = palette.muted;
+    }
+
+    const tooltip = benchmarkChartInstance.options.plugins?.tooltip;
+    if (tooltip) {
+        tooltip.backgroundColor = palette.surface;
+        tooltip.borderColor = hexToRgba(palette.muted, 0.2);
+        tooltip.titleColor = palette.text;
+        tooltip.bodyColor = palette.text;
+    }
+
+    const scales = benchmarkChartInstance.options.scales;
+    if (scales?.x?.ticks) {
+        scales.x.ticks.color = palette.muted;
+    }
+    if (scales?.x?.grid) {
+        scales.x.grid.color = hexToRgba(palette.muted, 0.15);
+    }
+    if (scales?.yThroughput?.title) {
+        scales.yThroughput.title.color = palette.muted;
+    }
+    if (scales?.yThroughput?.ticks) {
+        scales.yThroughput.ticks.color = palette.muted;
+    }
+    if (scales?.yThroughput?.grid) {
+        scales.yThroughput.grid.color = hexToRgba(palette.muted, 0.15);
+    }
+    if (scales?.yLatency?.title) {
+        scales.yLatency.title.color = palette.muted;
+    }
+    if (scales?.yLatency?.ticks) {
+        scales.yLatency.ticks.color = palette.muted;
+    }
+    if (scales?.yContext?.title) {
+        scales.yContext.title.color = palette.muted;
+    }
+    if (scales?.yContext?.ticks) {
+        scales.yContext.ticks.color = palette.muted;
+    }
+
+    benchmarkChartInstance.update('none');
+}
+
+function updateBenchmarkChart(scenario) {
+    if (!scenario) return;
+    const chart = ensureBenchmarkChart();
+    if (!chart) return;
+
+    const labels = scenario.models.map((entry) => getModelLabel(entry.id));
+    const throughput = scenario.models.map((entry) => parseThroughputValue(entry.throughput));
+    const latency = scenario.models.map((entry) => parseLatencyValue(entry.latency));
+    const contextWindows = scenario.models.map((entry) => parseContextWindow(entry.context));
+
+    chart.data.labels = labels;
+    chart.data.datasets = [
+        {
+            type: 'bar',
+            label: 'Throughput (tok/s)',
+            data: throughput,
+            yAxisID: 'yThroughput',
+            borderRadius: 12,
+            maxBarThickness: 48,
+            barPercentage: 0.6,
+            categoryPercentage: 0.6,
+        },
+        {
+            type: 'line',
+            label: 'Latency (s)',
+            data: latency,
+            yAxisID: 'yLatency',
+            tension: 0.35,
+            borderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+        },
+        {
+            type: 'line',
+            label: 'Context window (k tokens)',
+            data: contextWindows.map((value) => (Number.isFinite(value) ? Number((value / 1000).toFixed(1)) : null)),
+            yAxisID: 'yContext',
+            tension: 0.3,
+            borderDash: [6, 6],
+            borderWidth: 1.5,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+        },
+    ];
+
+    chart.$assistmeMeta = scenario.models.map((entry) => ({
+        latency: entry.latency,
+        throughput: entry.throughput,
+        context: entry.context,
+        bestFor: entry.bestFor,
+        accelerator: entry.accelerator,
+    }));
+
+    refreshBenchmarkChartTheme();
+    chart.update();
+}
+
 function renderBenchmarkScenario(scenarioKey) {
     const scenario = getBenchmarkScenario(scenarioKey);
     if (!scenario || !elements.benchmarkTableBody) return;
@@ -1055,6 +1441,8 @@ function renderBenchmarkScenario(scenarioKey) {
             elements.benchmarkAccelerators.appendChild(li);
         });
     }
+
+    updateBenchmarkChart(scenario);
 }
 
 function openBenchmarkModal() {
@@ -1158,7 +1546,7 @@ function attachRagReferences(wrapper, documents) {
     container.className = 'rag-context';
 
     const title = document.createElement('strong');
-    title.textContent = 'Grounded context';
+    title.textContent = 'Grokipedia preview';
     container.appendChild(title);
 
     const list = document.createElement('ol');
@@ -1176,6 +1564,19 @@ function attachRagReferences(wrapper, documents) {
         if (summary.textContent) {
             item.appendChild(document.createElement('br'));
             item.appendChild(summary);
+        }
+
+        if (doc.url) {
+            const linkWrapper = document.createElement('div');
+            linkWrapper.className = 'rag-link';
+            const link = document.createElement('a');
+            link.href = doc.url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = 'Open Grokipedia article';
+            linkWrapper.appendChild(link);
+            item.appendChild(document.createElement('br'));
+            item.appendChild(linkWrapper);
         }
         list.appendChild(item);
     });
@@ -1345,6 +1746,7 @@ function toggleTheme() {
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem(THEME_KEY, next);
     syncThemeToggleIcon(next);
+    refreshBenchmarkChartTheme();
 }
 
 function syncThemeToggleIcon(theme) {
@@ -1441,7 +1843,18 @@ function toggleModelDropdown(forceState) {
 }
 
 function setModel(modelId) {
-    state.currentModel = resolveModelId(modelId);
+    let resolved = resolveModelId(modelId);
+    if (state.useRag && resolved !== GROK_MODEL_ID) {
+        if (state.previousModelBeforeGrok === null && state.currentModel !== GROK_MODEL_ID) {
+            state.previousModelBeforeGrok = state.currentModel;
+        }
+        resolved = GROK_MODEL_ID;
+        if (!state.suppressModelLockToast) {
+            showToast('Grokipedia preview locks to Grok model.', 'info', 2600);
+        }
+    }
+    state.currentModel = resolved;
+    state.suppressModelLockToast = false;
     if (state.activeConversation) {
         state.activeConversation.model = state.currentModel;
         if (state.activeConversation.messages.length > 0) {
@@ -1996,7 +2409,7 @@ function applyMetadata(container, metadata) {
         entries.push({ icon: 'fa-solid fa-file-zipper', text: String(merged.compression) });
     }
     if (Array.isArray(merged.ragDocuments) && merged.ragDocuments.length > 0) {
-        entries.push({ icon: 'fa-solid fa-bookmark', text: `RAG · ${merged.ragDocuments.length}` });
+        entries.push({ icon: 'fa-solid fa-compass', text: `Grokipedia · ${merged.ragDocuments.length}`, variant: 'grok' });
     }
     if (merged.agent) {
         entries.push({ icon: 'fa-solid fa-list-check', text: 'Agent plan' });
@@ -4560,6 +4973,12 @@ function restoreInitialState() {
     }
 
     state.currentModel = resolveModelId(storedModel);
+
+    if (state.useRag && state.currentModel !== GROK_MODEL_ID) {
+        state.previousModelBeforeGrok = state.currentModel;
+        state.suppressModelLockToast = true;
+        setModel(GROK_MODEL_ID);
+    }
 
     populateModelDropdown();
 
