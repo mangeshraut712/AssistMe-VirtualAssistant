@@ -7,7 +7,7 @@ import re
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Set, Tuple, Type
 
 # Load environment variables from .env files
 try:
@@ -15,9 +15,40 @@ try:
 except ImportError:  # pragma: no cover - optional in production
     load_dotenv = None  # type: ignore[assignment]
 
-if load_dotenv:
-    load_dotenv('../secrets.env')  # Load secrets.env from parent directory
-    load_dotenv('.env')            # Override with .env if needed
+def _candidate_env_files() -> List[Path]:
+    """Return environment file candidates ordered from project root down."""
+    current_file = Path(__file__).resolve()
+    backend_dir = current_file.parent.parent
+    project_root = current_file.parents[2]
+    cwd = Path.cwd()
+
+    return [
+        project_root / 'secrets.env',
+        project_root / '.env',
+        backend_dir / 'secrets.env',
+        backend_dir / '.env',
+        cwd / 'secrets.env',
+        cwd / '.env',
+    ]
+
+
+def _load_env_files() -> None:
+    if not load_dotenv:
+        return
+
+    loaded: Set[Path] = set()
+    for env_path in _candidate_env_files():
+        try:
+            if env_path in loaded or not env_path.exists():
+                continue
+            load_dotenv(str(env_path), override=False)
+            loaded.add(env_path)
+            logging.debug("Loaded environment variables from %s", env_path)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logging.warning("Failed to load env file %s: %s", env_path, exc)
+
+
+_load_env_files()
 
 from fastapi import FastAPI, WebSocket, Depends, HTTPException, Request, UploadFile, File  # type: ignore[import-not-found]
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-not-found]
@@ -145,7 +176,15 @@ def _chat_component_status() -> Dict[str, Any]:
         return component
 
     # Check if API key is missing or is a placeholder
-    placeholder_keys = {"", "your_openrouter_api_key_here", "your_minimax_api_key_here", "your_new_openrouter_api_key_here"}
+    placeholder_keys = {
+        "",
+        "your-openrouter-api-key",
+        "your-openrouter-api-key-here",
+        "your_new_openrouter_api_key_here",
+        "your_openrouter_api_key_here",
+        "your-minimax-api-key",
+        "your_minimax_api_key_here",
+    }
     if not api_key or api_key in placeholder_keys:
         provider_name = "MiniMax" if provider == "minimax" else "OpenRouter"
         component["message"] = f"{provider_name} API key is not configured or is invalid."
@@ -671,7 +710,9 @@ def health(request: Request):
     healthy = all(item.get("ready") for item in components.values())
 
     status_text = "ok" if healthy else "error"
-    message = "AssistMe API is fully operational." if healthy else chat_component.get("message", "Service degraded.")
+    message = chat_component.get("message")
+    if not message:
+        message = "AssistMe API is fully operational." if healthy else "Service degraded."
 
     payload: Dict[str, Any] = {
         "status": status_text,
@@ -756,10 +797,12 @@ async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depend
     if rag_matches:
         rag_payload["documents"] = rag_matches
 
+    resolved_model = result.get("model") or request.model
     return {
         "response": result["response"],
         "usage": {"tokens": result["tokens"]},
-        "model": request.model,
+        "model": resolved_model,
+        "provider": result.get("provider"),
         "conversation_id": current_conversation_id or 0,
         "title": generated_title,
         "rag": rag_payload,
@@ -788,6 +831,8 @@ async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] =
     def sync_event_generator():
         accumulated_chunks: List[str] = []
         final_tokens: Optional[int] = None
+        final_model: Optional[str] = model_id
+        provider_label: Optional[str] = None
 
         # Run the streaming call directly since we're in a sync context
         for chunk in grok_client.generate_response_stream(  # type: ignore[attr-defined]
@@ -813,6 +858,11 @@ async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] =
                 accumulated_chunks.append(str(content_piece))
                 yield _sse_event("delta", {"content": content_piece})
 
+            if chunk.get("model"):
+                final_model = chunk.get("model")
+            if chunk.get("provider"):
+                provider_label = chunk.get("provider")
+
             if chunk.get("tokens"):
                 final_tokens = int(chunk["tokens"])  # type: ignore[arg-type]
 
@@ -826,16 +876,26 @@ async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] =
         if rag_matches:
             rag_payload["documents"] = rag_matches
 
+        resolved_model = final_model or model_id
+        if provider_label is None and hasattr(grok_client, "_provider_label") and hasattr(grok_client, "_infer_provider_from_model_name"):
+            try:
+                provider_label = grok_client._provider_label(  # type: ignore[attr-defined]
+                    grok_client._infer_provider_from_model_name(resolved_model or "")  # type: ignore[attr-defined]
+                )
+            except Exception:  # pragma: no cover - defensive
+                provider_label = None
+
         yield _sse_event(
             "done",
             {
                 "response": final_text,
                 "tokens": final_tokens_value,
-                "model": model_id,
+                "model": resolved_model,
                 "conversation_id": current_conversation_id or 0,
                 "title": candidate_title,
                 "rag": rag_payload,
                 "preferences": user_preferences or {},
+                "provider": provider_label,
             },
         )
 

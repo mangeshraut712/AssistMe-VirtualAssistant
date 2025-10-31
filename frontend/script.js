@@ -203,6 +203,7 @@ const endpoints = {
 };
 
 const MODEL_OPTIONS = [
+    // Free models prioritized first
     {
         id: 'google/gemini-2.0-flash-exp:free',
         label: 'Google Gemini 2.0 Flash Experimental',
@@ -210,63 +211,64 @@ const MODEL_OPTIONS = [
         context: '1M context',
     },
     {
+        id: 'meta-llama/llama-3.3-70b-instruct:free',
+        label: 'Meta Llama 3.3 70B Instruct',
+        hint: 'Meta frontier instruct tuning · free',
+        context: '131k context',
+    },
+    {
         id: 'qwen/qwen3-coder:free',
         label: 'Qwen3 Coder 480B A35B',
-        hint: 'Alibaba Qwen coder · 480B params',
+        hint: 'Alibaba Qwen coder · 480B params · free',
         context: '262k context',
-    },
-    {
-        id: 'tngtech/deepseek-r1t2-chimera:free',
-        label: 'DeepSeek R1T2 Chimera',
-        hint: 'TNGTech + DeepSeek hybrid reasoning',
-        context: '163k context',
-    },
-    {
-        id: 'microsoft/mai-ds-r1:free',
-        label: 'Microsoft MAI DS R1',
-        hint: 'Microsoft x DeepSeek research model',
-        context: '163k context',
-    },
-    {
-        id: 'openai/gpt-oss-20b:free',
-        label: 'OpenAI GPT OSS 20B',
-        hint: 'Open-source 20B preview, free tier',
-        context: '128k context',
     },
     {
         id: 'z-ai/glm-4.5-air:free',
         label: 'Zhipu GLM 4.5 Air',
-        hint: 'Zhipu AI lightweight flagship',
+        hint: 'Zhipu AI lightweight flagship · free',
         context: '128k context',
-    },
-    {
-        id: 'meta-llama/llama-3.3-70b-instruct:free',
-        label: 'Meta Llama 3.3 70B Instruct',
-        hint: 'Meta frontier instruct tuning',
-        context: '131k context',
-    },
-    {
-        id: 'nvidia/nemotron-nano-9b-v2:free',
-        label: 'NVIDIA Nemotron Nano 9B V2',
-        hint: 'NVIDIA RAG-ready small model',
-        context: '131k context',
     },
     {
         id: 'mistralai/mistral-nemo:free',
         label: 'Mistral Nemo',
-        hint: 'Mistral + NVIDIA collaboration',
+        hint: 'Mistral + NVIDIA collaboration · free',
+        context: '128k context',
+    },
+    {
+        id: 'nvidia/nemotron-nano-9b-v2:free',
+        label: 'NVIDIA Nemotron Nano 9B V2',
+        hint: 'NVIDIA RAG-ready small model · free',
+        context: '131k context',
+    },
+    {
+        id: 'openai/gpt-oss-20b:free',
+        label: 'OpenAI GPT OSS 20B',
+        hint: 'Open-source 20B preview · free tier',
         context: '128k context',
     },
     {
         id: 'moonshotai/kimi-dev-72b:free',
         label: 'MoonshotAI Kimi Dev 72B',
-        hint: 'MoonshotAI developer-tuned',
+        hint: 'MoonshotAI developer-tuned · free',
         context: '128k context',
     },
     {
+        id: 'tngtech/deepseek-r1t2-chimera:free',
+        label: 'DeepSeek R1T2 Chimera',
+        hint: 'TNGTech + DeepSeek hybrid reasoning · free',
+        context: '163k context',
+    },
+    {
+        id: 'microsoft/mai-ds-r1:free',
+        label: 'Microsoft MAI DS R1',
+        hint: 'Microsoft x DeepSeek research model · free',
+        context: '163k context',
+    },
+    // Paid models (MiniMax - voice optimized)
+    {
         id: 'minimax/minimax-m2',
         label: 'MiniMax M2',
-        hint: 'MiniMax M2 · voice-optimized',
+        hint: 'MiniMax M2 · voice-optimized · paid',
         context: 'Unlimited context',
     },
 ];
@@ -428,6 +430,13 @@ const elements = {
     voiceModeBtn: document.getElementById('voiceModeBtn'),
     toastContainer: document.getElementById('toastContainer'),
     uploadBtn: document.getElementById('uploadBtn'),
+    voiceOverlay: document.getElementById('voiceOverlay'),
+    voiceOverlayCard: document.querySelector('#voiceOverlay .voice-overlay-card'),
+    voiceOverlayToggle: document.getElementById('voiceOverlayToggle'),
+    voiceOverlayClose: document.getElementById('voiceOverlayClose'),
+    voiceOverlayStatus: document.getElementById('voiceOverlayStatus'),
+    voiceOverlayHint: document.getElementById('voiceOverlayHint'),
+    voiceWaveform: document.getElementById('voiceWaveform'),
     uploadInput: null,
     connectionStatus: document.getElementById('connectionStatus'),
     connectionStatusText: document.getElementById('connectionStatusText'),
@@ -972,11 +981,6 @@ function applyFormatAction(format) {
     focusMessageInput();
 }
 
-function getModelLabel(modelId) {
-    const match = MODEL_OPTIONS.find((model) => model.id === modelId);
-    return match ? match.label : modelId;
-}
-
 function getBenchmarkScenario(key) {
     if (typeof key !== 'string' || !key) return null;
     const scenarioEntry = Object.entries(BENCHMARK_SCENARIOS).find(([id]) => id === key);
@@ -1103,6 +1107,10 @@ function handleGlobalKeydown(event) {
     if (event.key === 'Escape' && elements.settingsModal?.classList.contains('open')) {
         event.preventDefault();
         closeSettingsModal();
+    }
+    if (event.key === 'Escape' && elements.voiceOverlay?.classList.contains('active')) {
+        event.preventDefault();
+        closeVoiceOverlay(true);
     }
 }
 
@@ -1457,6 +1465,106 @@ function ensureConversationVisible() {
     }
 }
 
+const timeFormatter = typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function'
+    ? new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
+    : null;
+
+function formatTimestamp(value) {
+    if (value instanceof Date) {
+        if (Number.isNaN(value.getTime())) return '';
+        return timeFormatter ? timeFormatter.format(value) : value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+    if (typeof value === 'number') {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime())
+            ? ''
+            : formatTimestamp(date);
+    }
+    if (typeof value === 'string') {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime())
+            ? ''
+            : formatTimestamp(date);
+    }
+    return '';
+}
+
+function setMessageTimestamp(element, value) {
+    if (!element) return;
+    const text = formatTimestamp(value);
+    if (text) {
+        const date = value instanceof Date ? value : new Date(value || Date.now());
+        element.textContent = text;
+        element.dateTime = date.toISOString();
+        element.hidden = false;
+    } else {
+        element.textContent = '';
+        element.removeAttribute('dateTime');
+        element.hidden = true;
+    }
+}
+
+function getModelLabel(modelId) {
+    if (!modelId) return '';
+    const match = MODEL_OPTIONS.find((option) => option.id === modelId);
+    if (match) return match.label;
+    const [, raw] = modelId.split('/');
+    if (!raw) return modelId;
+    return raw.replace(/[:_]/g, ' ').replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function inferProviderFromModel(modelId) {
+    if (!modelId) return null;
+    const lower = modelId.toLowerCase();
+    if (lower.includes('offline')) return 'Offline preview';
+    if (lower.startsWith('minimax/')) return 'MiniMax';
+    if (lower.includes('grok')) return 'Grok';
+    if (lower.includes('context-compression') || lower.includes('multimodal')) return 'AssistMe Tools';
+    if (lower.startsWith('google/')) return 'Google (OpenRouter)';
+    return 'OpenRouter';
+}
+
+function formatLatency(latencyMs) {
+    if (typeof latencyMs !== 'number' || Number.isNaN(latencyMs)) return null;
+    if (latencyMs >= 1000) return `${(latencyMs / 1000).toFixed(1)} s`;
+    if (latencyMs >= 100) return `${Math.round(latencyMs)} ms`;
+    return `${latencyMs.toFixed(1)} ms`;
+}
+
+function formatTokens(tokens) {
+    if (typeof tokens !== 'number' || Number.isNaN(tokens)) return null;
+    if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}k tok`;
+    return `${tokens} tok`;
+}
+
+function syncMessageHeader(contentRoot, metadata, role) {
+    if (!contentRoot || !metadata) return;
+    const providerChip = contentRoot.querySelector('.message-provider-chip');
+    const timestampEl = contentRoot.querySelector('.message-timestamp');
+    const timestamp = metadata.timestamp ?? metadata.createdAt ?? metadata.completedAt ?? Date.now();
+    if (timestampEl) {
+        setMessageTimestamp(timestampEl, timestamp);
+    }
+    if (providerChip) {
+        if (role === 'assistant') {
+            const modelId = metadata.model;
+            const provider = metadata.provider || inferProviderFromModel(modelId);
+            const modelLabel = getModelLabel(modelId);
+            const pieces = [];
+            if (provider) pieces.push(provider);
+            if (modelLabel) pieces.push(modelLabel);
+            providerChip.textContent = pieces.join(' · ');
+            providerChip.hidden = pieces.length === 0;
+            const providerSlug = provider
+                ? provider.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                : 'unknown';
+            providerChip.dataset.provider = providerSlug;
+        } else {
+            providerChip.hidden = true;
+        }
+    }
+}
+
 function createMessageElement(role) {
     const wrapper = document.createElement('article');
     wrapper.className = `message ${role}`;
@@ -1473,12 +1581,26 @@ function createMessageElement(role) {
 
     const text = document.createElement('div');
     text.className = 'prose';
-    content.appendChild(text);
 
-    const metadata = document.createElement('div');
-    metadata.className = 'message-metadata';
-    metadata.style.display = 'none';
-    content.appendChild(metadata);
+    const header = document.createElement('div');
+    header.className = 'message-header';
+
+    const speaker = document.createElement('span');
+    speaker.className = 'message-speaker';
+    speaker.textContent = role === 'user' ? 'You' : 'AssistMe';
+    header.appendChild(speaker);
+
+    const headerMeta = document.createElement('div');
+    headerMeta.className = 'message-header-meta';
+
+    const providerChip = document.createElement('span');
+    providerChip.className = 'message-provider-chip';
+    providerChip.hidden = role !== 'assistant';
+    headerMeta.appendChild(providerChip);
+
+    const timestampEl = document.createElement('time');
+    timestampEl.className = 'message-timestamp';
+    headerMeta.appendChild(timestampEl);
 
     const actions = document.createElement('div');
     actions.className = 'message-actions';
@@ -1497,19 +1619,28 @@ function createMessageElement(role) {
     });
     actions.appendChild(copyButton);
 
+    let speakBtn = null;
     if (role === 'assistant' && 'speechSynthesis' in window) {
-        const speakBtn = document.createElement('button');
+        speakBtn = document.createElement('button');
         speakBtn.className = 'message-action-btn';
         speakBtn.title = 'Listen to response';
         const speakIcon = document.createElement('i');
         speakIcon.className = 'fa-solid fa-volume-high';
         speakIcon.setAttribute('aria-hidden', 'true');
         speakBtn.appendChild(speakIcon);
-        speakBtn.addEventListener('click', () => speakText(text.textContent || ''));
         actions.appendChild(speakBtn);
     }
 
-    content.appendChild(actions);
+    headerMeta.appendChild(actions);
+    header.appendChild(headerMeta);
+    content.appendChild(header);
+
+    content.appendChild(text);
+
+    const metadata = document.createElement('div');
+    metadata.className = 'message-metadata';
+    metadata.style.display = 'none';
+    content.appendChild(metadata);
 
     wrapper.appendChild(avatar);
     wrapper.appendChild(content);
@@ -1517,7 +1648,13 @@ function createMessageElement(role) {
     elements.chatMessages.appendChild(wrapper);
     wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
-    return { wrapper, text, metadata };
+    if (speakBtn) {
+        speakBtn.addEventListener('click', () => speakText(text.textContent || ''));
+    }
+
+    syncMessageHeader(content, { model: role === 'assistant' ? state.currentModel : null, timestamp: Date.now() }, role);
+
+    return { wrapper, text, metadata, provider: providerChip, timestamp: timestampEl };
 }
 
 function ensureUploadInput() {
@@ -1633,11 +1770,13 @@ async function handleFileUpload(files) {
     const userFragment = createMessageElement('user');
     userFragment.text.textContent = prefabUploadMessage(summaries);
     state.activeConversation = state.activeConversation || newConversation(state.currentModel);
+    const userCreatedAt = Date.now();
+    const userMeta = { upload: true, attachments: summaries, timestamp: userCreatedAt };
     state.activeConversation.messages.push({
         role: 'user',
         content: prefabUploadMessage(summaries),
-        createdAt: Date.now(),
-        metadata: { upload: true, attachments: summaries },
+        createdAt: userCreatedAt,
+        metadata: userMeta,
     });
 
     const assistantFragment = createMessageElement('assistant');
@@ -1645,18 +1784,22 @@ async function handleFileUpload(files) {
     if (mediaItems.length) {
         renderUploadedMedia(assistantFragment.text, mediaItems);
     }
+    applyMetadata(userFragment.metadata, userMeta);
 
     const responseMetadata = {
         model: responsePayload?.model || 'minimax/minimax-m2',
         attachments: summaries,
         media: mediaItems,
+        provider: inferProviderFromModel(responsePayload?.model || 'minimax/minimax-m2'),
     };
     applyMetadata(assistantFragment.metadata, responseMetadata);
 
+    const assistantCreatedAt = Date.now();
+    responseMetadata.timestamp = assistantCreatedAt;
     state.activeConversation.messages.push({
         role: 'assistant',
         content: acknowledgement,
-        createdAt: Date.now(),
+        createdAt: assistantCreatedAt,
         metadata: responseMetadata,
     });
 
@@ -1809,12 +1952,11 @@ function setActiveConversation(conversation, { resetView = true } = {}) {
         } else {
             fragment.text.textContent = message.content;
         }
-        if (message.metadata) {
-            applyMetadata(fragment.metadata, message.metadata);
-        } else {
-            fragment.metadata.style.display = 'none';
-            fragment.metadata.replaceChildren();
-        }
+        const metaPayload = {
+            ...(message.metadata || {}),
+            timestamp: message.metadata?.timestamp ?? message.createdAt ?? Date.now(),
+        };
+        applyMetadata(fragment.metadata, metaPayload);
     });
 
     highlightActiveConversation();
@@ -1830,12 +1972,19 @@ function applyMetadata(container, metadata) {
         model: state.currentModel,
         latency: null,
         tokens: null,
+        timestamp: Date.now(),
     };
-    const merged = { ...defaults, ...metadata };
+    const merged = { ...defaults, ...(metadata || {}) };
+    const messageElement = container.closest('.message');
+    const role = messageElement?.classList.contains('user') ? 'user' : 'assistant';
+    const contentRoot = container.closest('.message-content');
+    syncMessageHeader(contentRoot, merged, role);
+
     const entries = [];
-    if (merged.model) entries.push({ icon: 'fa-solid fa-robot', text: merged.model });
-    if (merged.latency) entries.push({ icon: 'fa-solid fa-gauge-high', text: `${merged.latency} ms` });
-    if (merged.tokens) entries.push({ icon: 'fa-solid fa-layer-group', text: `${merged.tokens} tok` });
+    const latencyLabel = formatLatency(merged.latency);
+    if (latencyLabel) entries.push({ icon: 'fa-solid fa-gauge-high', text: latencyLabel });
+    const tokensLabel = formatTokens(merged.tokens);
+    if (tokensLabel) entries.push({ icon: 'fa-solid fa-layer-group', text: tokensLabel });
     if (typeof merged.confidence === 'number') {
         const pct = Math.round(merged.confidence * 100);
         entries.push({ icon: 'fa-solid fa-wave-square', text: `${pct}% confidence` });
@@ -1843,9 +1992,11 @@ function applyMetadata(container, metadata) {
     if (merged.voice) {
         entries.push({ icon: 'fa-solid fa-microphone-lines', text: merged.voice });
     }
-    if (merged.compression) entries.push({ icon: 'fa-solid fa-file-zipper', text: String(merged.compression) });
+    if (merged.compression) {
+        entries.push({ icon: 'fa-solid fa-file-zipper', text: String(merged.compression) });
+    }
     if (Array.isArray(merged.ragDocuments) && merged.ragDocuments.length > 0) {
-        entries.push({ icon: 'fa-solid fa-bookmark', text: `RAG ×${merged.ragDocuments.length}` });
+        entries.push({ icon: 'fa-solid fa-bookmark', text: `RAG · ${merged.ragDocuments.length}` });
     }
     if (merged.agent) {
         entries.push({ icon: 'fa-solid fa-list-check', text: 'Agent plan' });
@@ -1857,22 +2008,22 @@ function applyMetadata(container, metadata) {
             entries.push({ icon: 'fa-solid fa-photo-film', text: summary });
         }
     }
+    if (merged.notice) {
+        entries.push({ icon: 'fa-solid fa-circle-info', text: merged.notice, variant: 'notice' });
+    }
 
     if (entries.length === 0) {
         container.style.display = 'none';
+        container.hidden = true;
         return;
     }
 
-    entries.forEach((entry, index) => {
-        if (index > 0) {
-            const separator = document.createElement('span');
-            separator.className = 'meta-separator';
-            separator.textContent = '·';
-            container.appendChild(separator);
-        }
-
+    entries.forEach((entry) => {
         const span = document.createElement('span');
-        span.className = 'meta-entry';
+        span.className = 'meta-chip';
+        if (entry.variant) {
+            span.classList.add(`meta-chip--${entry.variant}`);
+        }
         const icon = document.createElement('i');
         icon.className = entry.icon;
         icon.setAttribute('aria-hidden', 'true');
@@ -1881,6 +2032,7 @@ function applyMetadata(container, metadata) {
         container.appendChild(span);
     });
 
+    container.hidden = false;
     container.style.display = 'flex';
 }
 
@@ -2001,20 +2153,27 @@ async function streamAssistantResponse(userMessage) {
     handleInputChange();
     showTypingIndicator();
 
+    const creationTimestamp = Date.now();
     const assistantMessage = {
         role: 'assistant',
         content: '',
-        createdAt: Date.now(),
-        metadata: { model: modelId },
+        createdAt: creationTimestamp,
+        metadata: {
+            model: modelId,
+            provider: inferProviderFromModel(modelId),
+            timestamp: creationTimestamp,
+        },
     };
     state.activeConversation.messages.push(assistantMessage);
     const assistantFragment = createMessageElement('assistant');
+    applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
 
     const started = performance.now();
     let tokensUsed = null;
     let effectiveModel = modelId;
     let ragDocs = null;
     let preferenceSnapshot = null;
+    let providerLabel = inferProviderFromModel(modelId);
 
     if (state.backendHealthy === false) {
         const recovered = await backendHealth.check();
@@ -2028,10 +2187,13 @@ async function streamAssistantResponse(userMessage) {
         assistantMessage.content = offline.response;
         assistantFragment.text.textContent = assistantMessage.content;
         const latency = Math.round(performance.now() - started);
+        providerLabel = 'Offline preview';
         assistantMessage.metadata = {
             model: `${modelId || 'offline/mock'}`,
             latency,
             tokens: offline.tokens,
+            provider: 'Offline preview',
+            timestamp: Date.now(),
         };
         applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
         updateMetrics(latency, offline.tokens);
@@ -2102,9 +2264,12 @@ async function streamAssistantResponse(userMessage) {
                         if (parsed.data?.model) {
                             effectiveModel = parsed.data.model;
                         }
-                        if (parsed.data?.notice) {
-                            showToast(parsed.data.notice, 'info');
-                        }
+                    if (parsed.data?.notice) {
+                        showToast(parsed.data.notice, 'info');
+                    }
+                    if (parsed.data?.provider) {
+                        providerLabel = parsed.data.provider;
+                    }
                         if (parsed.data?.rag?.documents) {
                             ragDocs = parsed.data.rag.documents;
                         }
@@ -2164,6 +2329,9 @@ async function streamAssistantResponse(userMessage) {
                 if (parsed.data?.notice) {
                     showToast(parsed.data.notice, 'info');
                 }
+                if (parsed.data?.provider) {
+                    providerLabel = parsed.data.provider;
+                }
                 if (parsed.data?.rag?.documents) {
                     ragDocs = parsed.data.rag.documents;
                 }
@@ -2179,6 +2347,8 @@ async function streamAssistantResponse(userMessage) {
             model: effectiveModel,
             latency,
             tokens: tokensUsed,
+            provider: providerLabel || inferProviderFromModel(effectiveModel),
+            timestamp: Date.now(),
         };
         if (ragDocs && ragDocs.length) {
             assistantMessage.metadata.ragDocuments = ragDocs;
@@ -2230,6 +2400,8 @@ async function streamAssistantResponse(userMessage) {
                     model: effectiveModel,
                     latency,
                     tokens: tokensUsed,
+                    provider: providerLabel || inferProviderFromModel(effectiveModel),
+                    timestamp: Date.now(),
                 };
                 applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
                 updateMetrics(latency, tokensUsed);
@@ -2249,6 +2421,8 @@ async function streamAssistantResponse(userMessage) {
                 model: effectiveModel,
                 latency,
                 tokens: tokensUsed,
+                provider: providerLabel || inferProviderFromModel(effectiveModel),
+                timestamp: Date.now(),
             };
             applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
             updateMetrics(latency, tokensUsed);
@@ -2284,10 +2458,13 @@ async function streamAssistantResponse(userMessage) {
                 updateConversationTitle(state.activeConversation);
             }
             const latency = Math.round(performance.now() - started);
+            providerLabel = fallbackData?.provider || providerLabel || inferProviderFromModel(fallbackData?.model || modelId);
             assistantMessage.metadata = {
                 model: fallbackData?.model || modelId,
                 latency,
                 tokens: tokensUsed,
+                provider: providerLabel,
+                timestamp: Date.now(),
             };
             if (fallbackData?.rag?.documents) {
                 assistantMessage.metadata.ragDocuments = fallbackData.rag.documents;
@@ -2306,17 +2483,17 @@ async function streamAssistantResponse(userMessage) {
             return;
         }
 
-        // Final fallback to offline response
-        assistantMessage.content = `⚠️ Error: ${error.message || 'Unknown error'}`;
-        renderAssistantContent(assistantFragment.text, assistantMessage.content);
-        
-        const latency = Math.round(performance.now() - started);
-        assistantMessage.metadata = {
-            model: effectiveModel,
-            latency,
-            tokens: tokensUsed,
-        };
-        applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
+    // Final fallback to offline response
+    assistantMessage.content = `⚠️ Error: ${error.message || 'Unknown error'}`;
+    renderAssistantContent(assistantFragment.text, assistantMessage.content);
+    
+    const latency = Math.round(performance.now() - started);
+    assistantMessage.metadata.model = effectiveModel;
+    assistantMessage.metadata.latency = latency;
+    assistantMessage.metadata.tokens = tokensUsed;
+    assistantMessage.metadata.provider = providerLabel || inferProviderFromModel(effectiveModel);
+    assistantMessage.metadata.timestamp = Date.now();
+    applyMetadata(assistantFragment.metadata, assistantMessage.metadata);
         updateMetrics(latency, tokensUsed);
         persistActiveConversation();
         focusMessageInput();
@@ -2358,15 +2535,18 @@ async function handleSend() {
     resetComposer();
     focusMessageInput();
 
+    const createdAt = Date.now();
     const userMessage = {
         role: 'user',
         content: text,
-        createdAt: Date.now(),
+        createdAt,
+        metadata: { timestamp: createdAt },
     };
 
     state.activeConversation.messages.push(userMessage);
     const fragment = createMessageElement('user');
     fragment.text.textContent = text;
+    applyMetadata(fragment.metadata, userMessage.metadata);
 
     persistActiveConversation();
 
@@ -2409,14 +2589,21 @@ async function handleMultimodalCommand(command) {
     handleInputChange();
     showTypingIndicator();
 
+    const multimodalCreatedAt = Date.now();
     const assistantMessage = {
         role: 'assistant',
         content: '',
-        createdAt: Date.now(),
-        metadata: { model: 'MiniMax multimodal', media: [] },
+        createdAt: multimodalCreatedAt,
+        metadata: {
+            model: 'MiniMax multimodal',
+            media: [],
+            provider: 'MiniMax',
+            timestamp: multimodalCreatedAt,
+        },
     };
     state.activeConversation.messages.push(assistantMessage);
     const fragment = createMessageElement('assistant');
+    applyMetadata(fragment.metadata, assistantMessage.metadata);
 
     try {
         const payload = {
@@ -2478,12 +2665,15 @@ async function handleMultimodalCommand(command) {
 
         const latency = Math.round(performance.now() - started);
         assistantMessage.metadata.latency = latency;
+        assistantMessage.metadata.timestamp = Date.now();
         applyMetadata(fragment.metadata, assistantMessage.metadata);
         showToast('Multimodal request completed', 'success');
     } catch (error) {
         assistantMessage.content = `⚠️ Multimodal request failed: ${error.message || 'Unknown error'}`;
         renderAssistantContent(fragment.text, assistantMessage.content);
         assistantMessage.metadata.model = 'multimodal/error';
+        assistantMessage.metadata.timestamp = Date.now();
+        assistantMessage.metadata.provider = assistantMessage.metadata.provider || 'MiniMax';
         applyMetadata(fragment.metadata, assistantMessage.metadata);
         showToast(error.message || 'Multimodal request failed', 'error');
     } finally {
@@ -2508,14 +2698,20 @@ async function handleCompressCommand(textPayload) {
     handleInputChange();
     showTypingIndicator();
 
+    const compressCreatedAt = Date.now();
     const assistantMessage = {
         role: 'assistant',
         content: '',
-        createdAt: Date.now(),
-        metadata: { model: 'context-compression' },
+        createdAt: compressCreatedAt,
+        metadata: {
+            model: 'context-compression',
+            provider: 'AssistMe Tools',
+            timestamp: compressCreatedAt,
+        },
     };
     state.activeConversation.messages.push(assistantMessage);
     const fragment = createMessageElement('assistant');
+    applyMetadata(fragment.metadata, assistantMessage.metadata);
 
     try {
         const payload = {
@@ -2553,6 +2749,8 @@ async function handleCompressCommand(textPayload) {
                 height: page.height,
             })),
             originalChars: sourceText.length,
+            provider: assistantMessage.metadata.provider || 'AssistMe Tools',
+            timestamp: Date.now(),
         };
 
         renderAssistantContent(fragment.text, assistantMessage.content);
@@ -2565,6 +2763,8 @@ async function handleCompressCommand(textPayload) {
         assistantMessage.content = `⚠️ Compression failed: ${error.message || 'Unknown error'}`;
         assistantMessage.metadata = {
             model: 'context-compression',
+            provider: 'AssistMe Tools',
+            timestamp: Date.now(),
         };
         renderAssistantContent(fragment.text, assistantMessage.content);
         applyMetadata(fragment.metadata, assistantMessage.metadata);
@@ -2665,14 +2865,17 @@ async function triggerAgentPlan(promptOverride, options = {}) {
         state.lastAgentPlan = data;
         renderAgentPanel(data);
 
+        const createdAt = Date.now();
         const assistantMessage = {
             role: 'assistant',
             content: formatAgentPlanMarkdown(data),
-            createdAt: Date.now(),
+            createdAt,
             metadata: {
                 model: 'minimax/minimax-m2',
                 agent: true,
                 latency: Math.round(performance.now() - started),
+                provider: 'AssistMe Tools',
+                timestamp: createdAt,
             },
         };
 
@@ -2896,7 +3099,9 @@ function initInlineHandlers() {
     });
 
     elements.voiceBtn?.addEventListener('click', toggleVoiceInput);
-    elements.voiceModeBtn?.addEventListener('click', toggleVoiceMode);
+    elements.voiceModeBtn?.addEventListener('click', handleVoiceModeToggleClick);
+    elements.voiceOverlayToggle?.addEventListener('click', handleVoiceModeToggleClick);
+    elements.voiceOverlayClose?.addEventListener('click', () => closeVoiceOverlay(true));
     elements.uploadBtn?.addEventListener('click', () => {
         const input = ensureUploadInput();
         input.click();
@@ -2926,6 +3131,13 @@ let isVoiceModeActive = false;
 let mediaRecorder = null;
 let audioStream = null;
 let voiceFeatureAvailable = true;
+let voiceAudioContext = null;
+let voiceAnalyser = null;
+let voiceAnalyserSource = null;
+let voiceAnalyserData = null;
+let voiceAnimationFrameId = null;
+let voiceWaveCtx = null;
+let voiceOverlayReturnFocus = null;
 
 function teardownVoiceWebsocket() {
     if (voiceWebsocket) {
@@ -2936,6 +3148,151 @@ function teardownVoiceWebsocket() {
         }
     }
     voiceWebsocket = null;
+}
+
+function openVoiceOverlay() {
+    if (!elements.voiceOverlay) return;
+    elements.voiceOverlay.classList.add('active');
+    elements.voiceOverlay.setAttribute('aria-hidden', 'false');
+    if (!voiceOverlayReturnFocus) {
+        voiceOverlayReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    }
+    elements.voiceOverlayToggle?.focus({ preventScroll: true });
+}
+
+function closeVoiceOverlay(stopVoice = false) {
+    if (!elements.voiceOverlay) return;
+    elements.voiceOverlay.classList.remove('active');
+    elements.voiceOverlay.setAttribute('aria-hidden', 'true');
+    elements.voiceOverlayToggle?.classList.remove('active');
+    elements.voiceOverlayToggle?.setAttribute('aria-pressed', 'false');
+    elements.voiceOverlayCard?.classList.remove('listening');
+    if (stopVoice && isVoiceModeActive) {
+        deactivateVoiceMode();
+    }
+    if (voiceOverlayReturnFocus && typeof voiceOverlayReturnFocus.focus === 'function') {
+        voiceOverlayReturnFocus.focus({ preventScroll: true });
+    }
+    voiceOverlayReturnFocus = null;
+}
+
+function updateVoiceOverlayStatus(statusText, hintText, listening = false) {
+    if (!elements.voiceOverlay) return;
+    if (elements.voiceOverlayStatus) {
+        elements.voiceOverlayStatus.textContent = statusText;
+    }
+    if (elements.voiceOverlayHint) {
+        elements.voiceOverlayHint.textContent = hintText;
+    }
+    elements.voiceOverlayToggle?.classList.toggle('active', listening);
+    elements.voiceOverlayToggle?.setAttribute('aria-pressed', listening ? 'true' : 'false');
+    elements.voiceOverlayCard?.classList.toggle('listening', listening);
+    const toggleIcon = elements.voiceOverlayToggle?.querySelector('i');
+    if (toggleIcon) {
+        toggleIcon.className = listening ? 'fa-solid fa-stop' : 'fa-solid fa-microphone-lines';
+    }
+    if (elements.voiceOverlayToggle) {
+        elements.voiceOverlayToggle.title = listening ? 'Stop live voice mode' : 'Start live voice mode';
+        elements.voiceOverlayToggle.setAttribute('aria-label', listening ? 'Stop live voice mode' : 'Start live voice mode');
+    }
+}
+
+function startVoiceVisualiser(stream) {
+    if (!elements.voiceWaveform) return;
+    const canvas = elements.voiceWaveform;
+    const contextClass = window.AudioContext || window.webkitAudioContext;
+    if (!contextClass) return;
+
+    const pixelRatio = window.devicePixelRatio || 1;
+    const canvasWidth = canvas.clientWidth * pixelRatio;
+    const canvasHeight = canvas.clientHeight * pixelRatio;
+    if (canvas.width !== canvasWidth || canvas.height !== canvasHeight) {
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+    }
+
+    if (!voiceAudioContext) {
+        voiceAudioContext = new contextClass({ sampleRate: 44100, latencyHint: 'interactive' });
+    }
+    if (voiceAudioContext.state === 'suspended') {
+        voiceAudioContext.resume().catch(() => {});
+    }
+
+    voiceAnalyser = voiceAudioContext.createAnalyser();
+    voiceAnalyser.fftSize = 1024;
+    voiceAnalyser.smoothingTimeConstant = 0.8;
+
+    voiceAnalyserSource = voiceAudioContext.createMediaStreamSource(stream);
+    voiceAnalyserSource.connect(voiceAnalyser);
+
+    voiceAnalyserData = new Uint8Array(voiceAnalyser.fftSize);
+    voiceWaveCtx = canvas.getContext('2d');
+    if (voiceWaveCtx && pixelRatio !== 1) {
+        voiceWaveCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    }
+    drawVoiceVisualiser();
+}
+
+function drawVoiceVisualiser() {
+    if (!voiceAnalyser || !voiceWaveCtx || !elements.voiceWaveform || !voiceAnalyserData) {
+        return;
+    }
+    voiceAnimationFrameId = requestAnimationFrame(drawVoiceVisualiser);
+    voiceAnalyser.getByteTimeDomainData(voiceAnalyserData);
+
+    const canvas = elements.voiceWaveform;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    voiceWaveCtx.clearRect(0, 0, width, height);
+
+    const gradient = voiceWaveCtx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.18)');
+    gradient.addColorStop(1, 'rgba(14, 165, 233, 0.05)');
+    voiceWaveCtx.fillStyle = gradient;
+    voiceWaveCtx.fillRect(0, 0, width, height);
+
+    voiceWaveCtx.lineWidth = 2.4;
+    voiceWaveCtx.strokeStyle = 'rgba(191, 219, 254, 0.95)';
+    voiceWaveCtx.beginPath();
+
+    const sliceWidth = width / voiceAnalyserData.length;
+    let x = 0;
+    for (let index = 0; index < voiceAnalyserData.length; index += 1) {
+        const amplitude = voiceAnalyserData[index] / 128.0;
+        const y = (amplitude * height) / 2;
+        if (index === 0) {
+            voiceWaveCtx.moveTo(x, y);
+        } else {
+            voiceWaveCtx.lineTo(x, y);
+        }
+        x += sliceWidth;
+    }
+    voiceWaveCtx.stroke();
+}
+
+function stopVoiceVisualiser() {
+    if (voiceAnimationFrameId) {
+        cancelAnimationFrame(voiceAnimationFrameId);
+    }
+    voiceAnimationFrameId = null;
+    if (voiceAnalyserSource) {
+        try {
+            voiceAnalyserSource.disconnect();
+        } catch (error) {
+            console.warn('Error disconnecting voice analyser source', error);
+        }
+    }
+    voiceAnalyserSource = null;
+    voiceAnalyser = null;
+    voiceAnalyserData = null;
+    if (voiceAudioContext) {
+        voiceAudioContext.close().catch(() => {});
+        voiceAudioContext = null;
+    }
+    if (voiceWaveCtx && elements.voiceWaveform) {
+        voiceWaveCtx.clearRect(0, 0, elements.voiceWaveform.clientWidth, elements.voiceWaveform.clientHeight);
+    }
+    voiceWaveCtx = null;
 }
 
 function disableVoiceModeUi(reason) {
@@ -2965,12 +3322,16 @@ function disableVoiceModeUi(reason) {
         showToast(reason, 'warning', 3500);
         state.voice.lastNotice = reason;
     }
+
+    updateVoiceOverlayStatus('Voice mode unavailable', reason || 'Feature disabled', false);
+    closeVoiceOverlay(false);
 }
 
 // Initialize voice controls
 function initializeVoiceControls() {
     // Create voice UI elements
     createVoiceUI();
+    updateVoiceOverlayStatus('Voice mode idle', 'Tap to go live with MiniMax voice', false);
 
     if (voiceFeatureAvailable) {
         initializeVoiceWebSocket();
@@ -3535,8 +3896,19 @@ function setInterimTranscript(message, confidence) {
 }
 
 function toggleVoiceMode() {
+    if (!voiceFeatureAvailable) {
+        showToast('Voice mode is not configured yet.', 'warning');
+        updateVoiceOverlayStatus('Voice mode unavailable', 'Configure MiniMax credentials to enable', false);
+        return;
+    }
+
+    if (!elements.voiceOverlay?.classList.contains('active')) {
+        openVoiceOverlay();
+    }
+
     // Initialize WebSocket if not connected
     if (!voiceWebsocket || voiceWebsocket.readyState !== WebSocket.OPEN) {
+        updateVoiceOverlayStatus('Connecting…', 'Initializing voice service', false);
         initializeVoiceWebSocket();
         // Wait a bit for connection
         setTimeout(() => {
@@ -3546,6 +3918,7 @@ function toggleVoiceMode() {
             } else {
                 showToast('Connecting to voice system...', 'info');
                 updateVoiceDebugStatus({ ws: 'Connecting...' });
+                updateVoiceOverlayStatus('Connecting…', 'Still trying to reach MiniMax servers', false);
             }
         }, 500);
         return;
@@ -3553,14 +3926,26 @@ function toggleVoiceMode() {
 
     if (isVoiceModeActive) {
         deactivateVoiceMode();
+        updateVoiceDebugStatus({ ws: 'Disconnected' });
     } else {
         activateVoiceMode();
         updateVoiceDebugStatus({ ws: 'Connected' });
     }
 }
 
+function handleVoiceModeToggleClick(event) {
+    if (event) {
+        event.preventDefault();
+    }
+    openVoiceOverlay();
+    toggleVoiceMode();
+}
+
 function activateVoiceMode() {
     isVoiceModeActive = true;
+
+    openVoiceOverlay();
+    updateVoiceOverlayStatus('Connecting…', 'Connecting to MiniMax live session', false);
 
     // Update debug panel visibility
     updateVoiceDebugPanelVisibility();
@@ -3589,6 +3974,9 @@ function activateVoiceMode() {
         elements.voiceModeBtn.title = 'Stop voice conversation';
     }
 
+    elements.voiceOverlayToggle?.classList.add('active');
+    elements.voiceOverlayToggle?.setAttribute('aria-pressed', 'true');
+
     // Start recording
     startVoiceRecording();
 
@@ -3615,6 +4003,7 @@ function deactivateVoiceMode() {
 
     // Stop recording
     stopVoiceRecording();
+    updateVoiceOverlayStatus('Voice mode idle', 'Tap to go live again', false);
 
     // Send command to backend
     if (voiceWebsocket && voiceWebsocket.readyState === WebSocket.OPEN) {
@@ -3629,6 +4018,7 @@ function deactivateVoiceMode() {
 
 async function startVoiceRecording() {
     try {
+        updateVoiceOverlayStatus('Preparing microphone…', 'Please allow microphone access to continue', false);
         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(audioStream, {
             mimeType: 'audio/webm;codecs=opus'
@@ -3651,11 +4041,13 @@ async function startVoiceRecording() {
 
         mediaRecorder.start(100); // Collect data every 100ms
         console.log('Voice recording started');
-        
+        startVoiceVisualiser(audioStream);
+        updateVoiceOverlayStatus('Listening…', 'Speak naturally, streaming in real time', true);
         setInterimTranscript('Listening...', null);
     } catch (error) {
         console.error('Error starting voice recording:', error);
         showToast('Microphone access denied. Please allow microphone access.', 'error');
+        updateVoiceOverlayStatus('Microphone access blocked', 'Enable microphone permissions to continue', false);
         deactivateVoiceMode();
     }
 }
@@ -3669,6 +4061,8 @@ function stopVoiceRecording() {
         audioStream.getTracks().forEach(track => track.stop());
         audioStream = null;
     }
+
+    stopVoiceVisualiser();
 
     setInterimTranscript('', null);
 
@@ -3684,6 +4078,7 @@ function initializeVoiceWebSocket() {
     voiceWebsocket.onopen = () => {
         console.log('Voice WebSocket connected');
         updateVoiceStatus(true);
+        updateVoiceOverlayStatus('Connected', 'Listening for audio', isVoiceModeActive);
     };
 
     voiceWebsocket.onmessage = (event) => {
@@ -3705,11 +4100,13 @@ function initializeVoiceWebSocket() {
     voiceWebsocket.onerror = (error) => {
         console.error('Voice WebSocket error:', error);
         updateVoiceStatus(false);
+        updateVoiceOverlayStatus('Connection issue', 'Tap to retry voice mode', false);
     };
 
     voiceWebsocket.onclose = () => {
         console.log('Voice WebSocket closed');
         updateVoiceStatus(false);
+        updateVoiceOverlayStatus('Voice session closed', 'Tap to reconnect', false);
     };
 }
 
@@ -3721,6 +4118,14 @@ function updateVoiceStatus(connected) {
             elements.voiceModeBtn.title = 'Voice system offline - reconnecting...';
         } else {
             elements.voiceModeBtn.title = 'Voice mode (like ChatGPT/Gemini Live)';
+        }
+    }
+    
+    if (elements.voiceOverlay?.classList.contains('active')) {
+        if (connected && isVoiceModeActive) {
+            updateVoiceOverlayStatus('Connected', 'Listening for audio', true);
+        } else if (!connected) {
+            updateVoiceOverlayStatus('Voice link lost', 'Tap to reconnect', false);
         }
     }
     
@@ -3743,16 +4148,19 @@ function handleVoiceMessage(data) {
             state.voice.configured = true;
             console.log('Voice session started');
             updateVoiceDebugStatus({ sessionId: data.session_id || 'Active' });
+            updateVoiceOverlayStatus('Connected', 'Listening for audio', isVoiceModeActive);
             break;
 
         case 'recording_started':
             console.log('Recording started on server');
             updateVoiceDebugStatus({ recording: 'Recording' });
+            updateVoiceOverlayStatus('Streaming audio…', 'We are capturing your voice in real time', true);
             break;
 
         case 'recording_stopped':
             console.log('Recording stopped on server');
             updateVoiceDebugStatus({ recording: 'Processing...' });
+            updateVoiceOverlayStatus('Processing response…', 'Hang tight while we generate a reply', false);
             break;
 
         case 'interim_transcript':
@@ -3762,12 +4170,14 @@ function handleVoiceMessage(data) {
 
         case 'voice_response':
             handleVoiceResponse(data);
+            updateVoiceOverlayStatus('Answering…', 'Streaming assistant response audio', false);
             break;
 
         case 'error':
             showToast(`Voice error: ${data.message}`, 'error');
             deactivateVoiceMode();
             logVoiceError(data.message);
+            updateVoiceOverlayStatus('Voice error', data.message || 'An error occurred', false);
             break;
 
         case 'ping':
@@ -3815,15 +4225,17 @@ function handleVoiceResponse(data) {
             && (lastMessage.content || '').trim().toLowerCase() === transcriptText.toLowerCase();
 
         if (!alreadyLogged) {
+            const createdAt = Date.now();
             const userMessage = {
                 role: 'user',
                 content: transcriptText,
-                createdAt: Date.now(),
-                metadata: { voice: true },
+                createdAt,
+                metadata: { voice: 'Live transcript', timestamp: createdAt },
             };
             state.activeConversation.messages.push(userMessage);
             const fragment = createMessageElement('user');
             fragment.text.textContent = transcriptText;
+            applyMetadata(fragment.metadata, userMessage.metadata);
         }
         lastVoiceTranscript = transcriptText;
     }
@@ -3835,6 +4247,10 @@ function handleVoiceResponse(data) {
     persistActiveConversation();
     state.isStreaming = false;
     handleInputChange();
+
+    if (isVoiceModeActive) {
+        updateVoiceOverlayStatus('Listening…', 'Ready for your next prompt', true);
+    }
 }
 
 function renderVoiceResponse(payload) {
@@ -3844,10 +4260,11 @@ function renderVoiceResponse(payload) {
     const assistantContent = response.text || 'Voice processing complete';
     const shouldRenderRichContent = voiceFeatureAvailable && response.richContent;
 
+    const createdAt = Date.now();
     const assistantMessage = {
         role: 'assistant',
         content: assistantContent,
-        createdAt: Date.now(),
+        createdAt,
         metadata: {
             model: response.model || state.currentModel,
             tokens: response.tokens,
@@ -3856,6 +4273,8 @@ function renderVoiceResponse(payload) {
                 : payload.transcript?.confidence,
             voice: payload.ttsAudio ? 'MiniMax TTS' : null,
             latency: response.latency,
+            provider: payload.provider || inferProviderFromModel(response.model || state.currentModel),
+            timestamp: createdAt,
         },
     };
 
@@ -3870,6 +4289,7 @@ function renderVoiceResponse(payload) {
     state.activeConversation.messages.push(assistantMessage);
     const messageElement = createMessageElement('assistant');
     renderAssistantContent(messageElement.text, assistantContent);
+    applyMetadata(messageElement.metadata, assistantMessage.metadata);
 
     if (shouldRenderRichContent) {
         const richElement = createRichContentElement(response.richContent);

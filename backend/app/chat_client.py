@@ -75,8 +75,8 @@ class Grok2Client:
 
     def _load_config(self) -> Dict[str, Any]:
         """Load config values at instantiation to minimize instance attributes."""
-        # Determine which provider to use
-        provider = os.getenv("AI_PROVIDER", "openrouter").lower()  # Default to openrouter
+        # Determine which provider to use - default to openrouter
+        provider = os.getenv("AI_PROVIDER", "openrouter").lower()
 
         if provider == "minimax":
             # MiniMax configuration
@@ -106,7 +106,43 @@ class Grok2Client:
             "retry_backoff_max": self._coerce_float(os.getenv("OPENROUTER_RETRY_BACKOFF_MAX"), 12.0),
             "retry_jitter": self._coerce_float(os.getenv("OPENROUTER_RETRY_JITTER"), 0.25),
             "fallback_models": self._parse_fallback_models(fallback_env),
-            "use_grokipedia": os.getenv("GROKIPEDIA_ENABLED", "true").lower() == "true",
+            "use_grokipedia": os.getenv("GROKIPEDIA_ENABLED", "false").lower() == "true",
+            "rag_top_k": self._coerce_int(os.getenv("GROKIPEDIA_TOP_K"), 3),
+        }
+
+    def _create_provider_config(self, provider: str) -> Dict[str, Any]:
+        """Create a provider-specific config for dynamic provider switching."""
+        if provider == "minimax":
+            # MiniMax configuration
+            base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io").rstrip("/")
+            configured_default = os.getenv("MINIMAX_DEFAULT_MODEL", "minimax/minimax-m2").strip()
+            api_key = os.getenv("MINIMAX_API_KEY", "").strip()
+        else:
+            # OpenRouter configuration (default)
+            base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
+            configured_default = os.getenv("OPENROUTER_DEFAULT_MODEL", "").strip()
+            api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+
+        # No hardcoded default - will be determined dynamically
+        fallback_env = os.getenv("OPENROUTER_FALLBACK_MODELS", "")
+        return {
+            "provider": provider,
+            "base_url": base_url,
+            "models_endpoint": f"{base_url}/models" if provider == "openrouter" else f"{base_url}/v1/models",
+            "chat_endpoint": f"{base_url}/chat/completions" if provider == "openrouter" else f"{base_url}/v1/text/chatcompletion_v2",
+            "api_key": api_key,
+            "referrer": os.getenv("APP_URL", os.getenv("VERCEL_URL", "https://assist-me-virtual-assistant.vercel.app")),
+            "title": os.getenv("APP_NAME", "AssistMe Virtual Assistant"),
+            "dev_mode": os.getenv("DEV_MODE", "false").lower() == "true",
+            "redis_url": os.getenv("REDIS_URL"),
+            "timeout": self._get_timeout(),
+            "default_model": configured_default,
+            "retry_attempts": self._coerce_int(os.getenv("OPENROUTER_RETRY_ATTEMPTS"), 3),
+            "retry_backoff_base": self._coerce_float(os.getenv("OPENROUTER_RETRY_BACKOFF_BASE"), 1.0),
+            "retry_backoff_max": self._coerce_float(os.getenv("OPENROUTER_RETRY_BACKOFF_MAX"), 12.0),
+            "retry_jitter": self._coerce_float(os.getenv("OPENROUTER_RETRY_JITTER"), 0.25),
+            "fallback_models": self._parse_fallback_models(fallback_env),
+            "use_grokipedia": os.getenv("GROKIPEDIA_ENABLED", "false").lower() == "true",
             "rag_top_k": self._coerce_int(os.getenv("GROKIPEDIA_TOP_K"), 3),
         }
 
@@ -145,6 +181,25 @@ class Grok2Client:
             if candidate:
                 models.append(candidate)
         return models
+
+    @staticmethod
+    def _provider_label(provider: Optional[str]) -> str:
+        if not provider:
+            return "OpenRouter"
+        mapping = {
+            "openrouter": "OpenRouter",
+            "minimax": "MiniMax",
+        }
+        return mapping.get(provider.lower(), provider.title())
+
+    @staticmethod
+    def _infer_provider_from_model_name(model_name: Optional[str]) -> str:
+        if not model_name:
+            return "openrouter"
+        lowered = model_name.lower()
+        if lowered.startswith("minimax/"):
+            return "minimax"
+        return "openrouter"
 
     def _sleep_with_backoff(self, attempt: int) -> None:
         base = self.config.get("retry_backoff_base", 1.0) or 1.0
@@ -236,13 +291,17 @@ class Grok2Client:
 
         return {
             "response": response,
-            "tokens": len(response.split())
+            "tokens": len(response.split()),
+            "provider": self._provider_label(self.config.get("provider")),
         }
 
     def _ensure_live_ready(self) -> Optional[dict]:
         """Validate API configuration and rate limits. Returns error dict if blocked."""
         config = self.config
-        if config["dev_mode"]:
+        dev_mode = bool(config.get("dev_mode"))
+        api_key_present = bool(config.get("api_key"))
+
+        if dev_mode and not api_key_present:
             return None
 
         if not HAS_REQUESTS or requests is None:
@@ -252,7 +311,7 @@ class Grok2Client:
                 "tokens": 0,
             }
 
-        if not config["api_key"]:
+        if not api_key_present:
             logging.warning("OPENROUTER_API_KEY not configured; returning placeholder response.")
             return {
                 "error": "OpenRouter API key is not configured. Please set OPENROUTER_API_KEY to enable live responses.",
@@ -274,17 +333,24 @@ class Grok2Client:
     def _build_payload(self, messages, model_name, **kwargs):
         """Build payload with flexible parameters to avoid too many positional args."""
         formatted_messages = self._format_messages(messages)
-        
+
         # Add optimized system message for speed and accuracy with Grokipedia context
         if not any(msg.get("role") == "system" for msg in formatted_messages):
             system_msg = {
                 "role": "system",
-                "content": "You are a fast, accurate AI assistant powered by Grok. Provide concise, direct answers based on verified facts. When using external knowledge, cite sources clearly. Be specific and factual. Avoid unnecessary elaboration. If referencing information, mention the source (Grokipedia or general knowledge)."
+                "content": "You are a helpful AI assistant with access to general knowledge. Answer all user questions to the best of your ability using your training data and knowledge. Be informative, accurate, and helpful for any topic the user asks about, including current events, recipes, general knowledge, and practical advice."
             }
             formatted_messages.insert(0, system_msg)
-        
+
+        # Handle model name for different providers
+        if self.config.get("provider") == "minimax" and model_name.startswith("minimax/"):
+            # Strip the minimax/ prefix for MiniMax API
+            api_model_name = model_name[len("minimax/"):]
+        else:
+            api_model_name = model_name
+
         payload = {
-            "model": model_name,
+            "model": api_model_name,
             "messages": formatted_messages,
             "temperature": kwargs.get("temperature", 0.3),  # Lower for more focused responses
             "max_tokens": kwargs.get("max_tokens", 1024),  # Optimized for speed
@@ -464,6 +530,8 @@ class Grok2Client:
         """Make actual API call to OpenRouter."""
         # Type assertion: We know requests is available because this method is only called after _ensure_live_ready
         assert HAS_REQUESTS and requests is not None, "Requests library must be available"
+        provider_label = self._provider_label(self._infer_provider_from_model_name(target_model))
+
         try:
             # Use session for connection pooling if available
             if self.session is not None:
@@ -477,22 +545,71 @@ class Grok2Client:
                 timeout=self.config["timeout"],
             )
             if response.status_code >= 400:
-                return self._normalise_error(response, target_model)
+                error_payload = self._normalise_error(response, target_model)
+                error_payload.setdefault("provider", provider_label)
+                return error_payload
 
-            data = response.json()
-            choice = (data.get("choices") or [{}])[0]
-            message = choice.get("message", {}) or {}
-            text = message.get("content", "").strip()
+            try:
+                data = response.json()
+            except (ValueError, json.JSONDecodeError):
+                # If JSON parsing fails, return the raw text response
+                text = response.text.strip() if response.text else "I wasn't able to produce a response. Please try again."
+                logging.debug(f"JSON parsing failed for {target_model}, using raw response: {text[:200]}...")
+                return {"response": text, "tokens": len(text.split()), "model": target_model}
+
+            # Handle different response formats for different providers
+            if self.config.get("provider") == "minimax":
+                # MiniMax response format
+                if isinstance(data, dict) and "reply" in data:
+                    reply = data.get("reply")
+                    if reply is not None:
+                        text = str(reply).strip()
+                    else:
+                        text = "I wasn't able to produce a response. Please try again."
+                elif isinstance(data, dict) and "choices" in data:
+                    # Fallback to OpenAI-like format
+                    choice = (data.get("choices") or [{}])[0]
+                    message = choice.get("message", {}) or {}
+                    content = message.get("content")
+                    if content is not None:
+                        text = str(content).strip()
+                    else:
+                        text = "I wasn't able to produce a response. Please try again."
+                else:
+                    text = "I wasn't able to produce a response. Please try again."
+            else:
+                # OpenRouter/OpenAI format
+                choice = (data.get("choices") or [{}])[0]
+                message = choice.get("message", {}) or {}
+                content = message.get("content")
+                if content is not None:
+                    text = str(content).strip()
+                else:
+                    text = "I wasn't able to produce a response. Please try again."
 
             if not text:
                 text = "I wasn't able to produce a response. Please try again."
 
-            tokens = data.get("usage", {}).get("total_tokens", len(text.split()))
-            return {"response": text, "tokens": tokens, "model": target_model}
+            # Handle token counting for different providers
+            if data is not None:
+                usage = data.get("usage")
+                if usage and isinstance(usage, dict):
+                    tokens = usage.get("total_tokens", len(text.split()))
+                else:
+                    tokens = len(text.split())
+            else:
+                tokens = len(text.split())
+
+            return {"response": text, "tokens": tokens, "model": target_model, "provider": provider_label}
 
         except Exception as exc:
             logging.exception("Unexpected error calling OpenRouter")
-            return {"error": f"Unexpected error calling OpenRouter: {exc}", "model": target_model, "should_retry": True}
+            return {
+                "error": f"Unexpected error calling OpenRouter: {exc}",
+                "model": target_model,
+                "provider": provider_label,
+                "should_retry": True,
+            }
 
     def _call_with_backoff(self, endpoint: str, payload: dict, target_model: str) -> Dict[str, Any]:
         """Call OpenRouter with exponential backoff on retryable errors."""
@@ -563,7 +680,11 @@ class Grok2Client:
 
         if last_error:
             return None, last_error
-        return None, {"error": "Unable to open OpenRouter stream", "model": candidate}
+        return None, {
+            "error": "Unable to open OpenRouter stream",
+            "model": candidate,
+            "provider": self._provider_label(self._infer_provider_from_model_name(candidate)),
+        }
 
     def generate_response(self, messages, model=None, temperature=0.7, max_tokens=1024, use_grokipedia=None):
         """Generate response with optional knowledge grounding from Grokipedia."""
@@ -579,6 +700,47 @@ class Grok2Client:
 
         # Otherwise, use direct generation without Grokipedia
         return self._generate_response_direct(messages, model, temperature, max_tokens)
+
+    @staticmethod
+    def _should_use_rag_for_query(query: str) -> bool:
+        if not query:
+            return True
+        lowered = query.lower()
+        # Culinary / lifestyle keywords that rarely benefit from Grokipedia (engineering-focused)
+        culinary_keywords = {
+            "recipe",
+            "cook",
+            "cooking",
+            "bake",
+            "grill",
+            "fry",
+            "meal",
+            "food",
+            "kitchen",
+            "ingredient",
+            "ingredients",
+            "dish",
+            "noodle",
+            "noodles",
+            "chicken",
+            "beef",
+            "mutton",
+            "fish",
+            "pasta",
+            "soup",
+            "salad",
+            "dessert",
+            "breakfast",
+            "lunch",
+            "dinner",
+            "snack",
+            "smoothie",
+            "drink",
+            "cocktail"
+        }
+        if any(keyword in lowered for keyword in culinary_keywords):
+            return False
+        return True
 
     def get_available_models(self):
         """Get available models, fetching from API if possible."""
@@ -635,6 +797,10 @@ class Grok2Client:
                 user_message = msg.get("content", "")
                 break
 
+        if not self._should_use_rag_for_query(user_message):
+            logging.debug("Skipping Grokipedia context for query: %s", user_message)
+            return self._generate_response_direct(messages, model, temperature, max_tokens)
+
         # Get Grokipedia context
         grokipedia_context = self._get_grokipedia_context(user_message)
 
@@ -664,6 +830,10 @@ class Grok2Client:
 
         # Add knowledge attribution
         if "response" in result:
+            result.setdefault(
+                "provider",
+                self._provider_label(self._infer_provider_from_model_name(result.get("model") or (model or "openrouter")))
+            )
             result["grokipedia_used"] = articles_cited > 0
             result["knowledge_sources"] = grokipedia_context
             result["articles_cited"] = articles_cited
@@ -674,40 +844,80 @@ class Grok2Client:
         """Direct response generation without Grokipedia processing."""
         config = self.config
         primary_model = model or config.get("default_model")
-        
-        # In development mode, return mock responses
-        if config["dev_mode"]:
-            fallback_model = primary_model or "mock-openrouter-model"
-            return self._get_mock_response(messages, fallback_model)
 
-        readiness_error = self._ensure_live_ready()
-        if readiness_error:
-            return readiness_error
+        # Determine provider based on model prefix
+        requested_provider = "openrouter"
+        if primary_model and primary_model.startswith("minimax/"):
+            requested_provider = "minimax"
 
-        attempts = self._get_candidates(model)
-        last_error: Dict[str, Any] = {"error": "No OpenRouter models available."}
+        # Create a temporary config for the requested provider if different from current
+        if requested_provider != config.get("provider"):
+            temp_config = self._create_provider_config(requested_provider)
+            # Temporarily update config for this request
+            original_config = self.config
+            self.config = temp_config
+        else:
+            temp_config = None
+            original_config = None
 
-        for candidate in attempts:
-            payload = self._build_payload(messages, candidate, temperature=temperature, max_tokens=max_tokens)
-            result = self._call_with_backoff(config["chat_endpoint"], payload, candidate)
+        try:
+            dev_mode = bool(self.config.get("dev_mode"))
+            api_key_present = bool(self.config.get("api_key"))
 
-            if "response" in result:
-                if primary_model and candidate != primary_model:
-                    result.setdefault("notice", f"Primary model '{primary_model}' unavailable. Responded with '{candidate}'.")
+            # In development mode without API keys, return mock responses
+            if dev_mode and not api_key_present:
+                fallback_model = primary_model or "mock-openrouter-model"
+                logging.debug("DEV_MODE enabled without API key; returning mock response for %s", fallback_model)
+                result = self._get_mock_response(messages, fallback_model)
+                result.setdefault("provider", self._provider_label(requested_provider))
                 return result
-            last_error = result
 
-        return last_error
+            if dev_mode and api_key_present:
+                logging.debug("DEV_MODE enabled with API key present; proceeding with live %s request.", requested_provider.upper())
 
-    def _stream_chunks(self, response_text: str) -> Iterator[Dict[str, object]]:
+            readiness_error = self._ensure_live_ready()
+            if readiness_error:
+                if isinstance(readiness_error, dict):
+                    readiness_error.setdefault("provider", self._provider_label(requested_provider))
+                return readiness_error
+
+            attempts = self._get_candidates(model)
+            last_error: Dict[str, Any] = {"error": f"No {requested_provider.upper()} models available."}
+
+            for candidate in attempts:
+                payload = self._build_payload(messages, candidate, temperature=temperature, max_tokens=max_tokens)
+                result = self._call_with_backoff(self.config["chat_endpoint"], payload, candidate)
+
+                if "response" in result:
+                    provider_id = self._infer_provider_from_model_name(candidate)
+                    result.setdefault("provider", self._provider_label(provider_id))
+                    result.setdefault("model", candidate)
+                    if primary_model and candidate != primary_model:
+                        result.setdefault("notice", f"Primary model '{primary_model}' unavailable. Responded with '{candidate}'.")
+                    return result
+                last_error = result
+
+            if isinstance(last_error, dict):
+                last_error.setdefault("provider", self._provider_label(requested_provider))
+                last_error.setdefault("model", primary_model or requested_provider)
+            return last_error
+        finally:
+            # Restore original config if we temporarily changed it
+            if temp_config is not None and original_config is not None:
+                self.config = original_config
+
+    def _stream_chunks(self, response_text: str, provider_label: Optional[str] = None) -> Iterator[Dict[str, object]]:
         """Stream mock response chunks in development mode."""
         for chunk in self._chunk_text(response_text):
             yield {"content": chunk}
-        yield {
+        final_chunk: Dict[str, object] = {
             "done": True,
             "response": response_text,
             "tokens": len(response_text.split())
         }
+        if provider_label:
+            final_chunk["provider"] = provider_label
+        yield final_chunk
 
     def _setup_streaming_request(self, messages, model_name, temperature, max_tokens):
         """Prepare streaming request and return necessary data."""
@@ -808,18 +1018,28 @@ class Grok2Client:
             yield {"error": "No OpenRouter models configured.", "done": True}
             return
 
-        # Handle development mode
-        if self.config["dev_mode"]:
+        dev_mode = bool(self.config.get("dev_mode"))
+        api_key_present = bool(self.config.get("api_key"))
+
+        # Handle development mode without API keys
+        if dev_mode and not api_key_present:
             fallback_model = primary_model or "mock-openrouter-model"
+            logging.debug("DEV_MODE streaming without API key; returning mock stream for %s", fallback_model)
             mock = self._get_mock_response(enhanced_messages, fallback_model)
-            for chunk in self._stream_chunks(mock["response"]):
+            provider_label = mock.get("provider") or self._provider_label(self.config.get("provider"))
+            for chunk in self._stream_chunks(mock["response"], provider_label):
                 yield chunk
             return
+
+        if dev_mode and api_key_present:
+            logging.debug("DEV_MODE streaming with API key present; proceeding with live stream.")
 
         # Check readiness
         readiness_error = self._ensure_live_ready()
         if readiness_error:
-            yield {**readiness_error, "done": True}
+            error_payload = {**readiness_error, "done": True}
+            error_payload.setdefault("provider", self._provider_label(self.config.get("provider")))
+            yield error_payload
             return
 
         attempts = self._get_candidates(model)
@@ -837,8 +1057,19 @@ class Grok2Client:
                     if open_error.get("rate_limited"):
                         logging.info("Model %s rate limited upstream, moving to next candidate", candidate)
                     last_error = {**open_error, "done": True}
+                    last_error.setdefault(
+                        "provider",
+                        self._provider_label(self._infer_provider_from_model_name(candidate)),
+                    )
                 else:
-                    last_error = {"error": f"Failed to open stream for {candidate}", "model": candidate, "done": True}
+                    last_error = {
+                        "error": f"Failed to open stream for {candidate}",
+                        "model": candidate,
+                        "done": True,
+                        "provider": self._provider_label(
+                            self._infer_provider_from_model_name(candidate)
+                        ),
+                    }
                 continue
 
             accumulated: List[str] = []
@@ -872,6 +1103,9 @@ class Grok2Client:
                 "tokens": usage_tokens or len(final_text.split()),
                 "model": candidate,
             }
+            payload["provider"] = self._provider_label(
+                self._infer_provider_from_model_name(candidate)
+            )
             if primary_model and candidate != primary_model:
                 # Get model name for better UX
                 available_models = self._fetch_models_from_api()
@@ -888,8 +1122,14 @@ class Grok2Client:
 
             yield payload
             return
-
-        yield last_error or {"error": "All OpenRouter model attempts failed.", "done": True}
+        if last_error:
+            yield last_error
+            return
+        yield {
+            "error": "All OpenRouter model attempts failed.",
+            "done": True,
+            "provider": self._provider_label(self.config.get("provider")),
+        }
 
     @staticmethod
     def _chunk_text(text: str, chunk_size: int = 32) -> Iterator[str]:

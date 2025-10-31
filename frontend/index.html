@@ -116,40 +116,42 @@
                 <span>All systems operational · Responses stream in realtime</span>
             </section>
 
-            <!-- Welcome Panel -->
-            <section class="welcome" id="welcomePanel">
-                <div class="welcome-header">
-                    <h1>How can I help you today?</h1>
-                    <p>Ask me anything. Get instant answers, creative ideas, and helpful insights.</p>
-                </div>
-                <div class="welcome-grid" id="starterGrid">
-                    <button class="welcome-card" data-prompt="Explain quantum computing in simple terms">
-                        <span class="card-category">Explain</span>
-                        <p>Explain quantum computing in simple terms</p>
-                        <span class="card-hint">Clear, accessible explanation</span>
-                    </button>
-                    <button class="welcome-card" data-prompt="Write a Python function to reverse a string">
-                        <span class="card-category">Code</span>
-                        <p>Write a Python function to reverse a string</p>
-                        <span class="card-hint">Clean, efficient code</span>
-                    </button>
-                    <button class="welcome-card" data-prompt="Help me plan a healthy meal for the week">
-                        <span class="card-category">Planning</span>
-                        <p>Help me plan a healthy meal for the week</p>
-                        <span class="card-hint">Balanced nutrition guide</span>
-                    </button>
-                    <button class="welcome-card" data-prompt="Summarize the key points from recent AI developments">
-                        <span class="card-category">Research</span>
-                        <p>Summarize the key points from recent AI developments</p>
-                        <span class="card-hint">Latest breakthroughs</span>
-                    </button>
-                </div>
-            </section>
+            <div class="workspace-scroll" id="workspaceScroll">
+                <!-- Welcome Panel -->
+                <section class="welcome" id="welcomePanel">
+                    <div class="welcome-header">
+                        <h1>How can I help you today?</h1>
+                        <p>Ask me anything. Get instant answers, creative ideas, and helpful insights.</p>
+                    </div>
+                    <div class="welcome-grid" id="starterGrid">
+                        <button class="welcome-card" data-prompt="Explain quantum computing in simple terms">
+                            <span class="card-category">Explain</span>
+                            <p>Explain quantum computing in simple terms</p>
+                            <span class="card-hint">Clear, accessible explanation</span>
+                        </button>
+                        <button class="welcome-card" data-prompt="Write a Python function to reverse a string">
+                            <span class="card-category">Code</span>
+                            <p>Write a Python function to reverse a string</p>
+                            <span class="card-hint">Clean, efficient code</span>
+                        </button>
+                        <button class="welcome-card" data-prompt="Help me plan a healthy meal for the week">
+                            <span class="card-category">Planning</span>
+                            <p>Help me plan a healthy meal for the week</p>
+                            <span class="card-hint">Balanced nutrition guide</span>
+                        </button>
+                        <button class="welcome-card" data-prompt="Summarize the key points from recent AI developments">
+                            <span class="card-category">Research</span>
+                            <p>Summarize the key points from recent AI developments</p>
+                            <span class="card-hint">Latest breakthroughs</span>
+                        </button>
+                    </div>
+                </section>
 
-            <!-- Chat Thread -->
-            <section class="chat-thread" id="chatThread" aria-live="polite">
-                <div class="message-stream" id="chatMessages"></div>
-            </section>
+                <!-- Chat Thread -->
+                <section class="chat-thread" id="chatThread" aria-live="polite">
+                    <div class="message-stream" id="chatMessages"></div>
+                </section>
+            </div>
 
             <!-- Composer -->
             <footer class="composer" id="composer">
@@ -305,6 +307,24 @@
                     </ul>
                 </section>
             </div>
+        </div>
+    </div>
+
+    <!-- Voice conversation overlay -->
+    <div class="voice-overlay" id="voiceOverlay" aria-hidden="true">
+        <div class="voice-overlay-card" role="dialog" aria-live="assertive">
+            <button type="button" class="voice-overlay-close" id="voiceOverlayClose" aria-label="Close voice console">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+            <canvas id="voiceWaveform" width="480" height="160" aria-hidden="true"></canvas>
+            <div class="voice-overlay-status">
+                <span id="voiceOverlayStatus">Voice mode idle</span>
+                <span id="voiceOverlayHint">Powered by MiniMax streaming</span>
+            </div>
+            <button type="button" class="voice-overlay-button" id="voiceOverlayToggle" aria-label="Toggle live voice conversation">
+                <span class="pulse-ring"></span>
+                <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i>
+            </button>
         </div>
     </div>
 
