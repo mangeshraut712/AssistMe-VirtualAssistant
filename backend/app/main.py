@@ -134,7 +134,7 @@ def _chat_component_status() -> Dict[str, Any]:
     config = getattr(grok_client, "config", {}) or {}
     provider = (config.get("provider") or "openrouter").lower()
     dev_mode = bool(config.get("dev_mode"))
-    api_key_present = bool(config.get("api_key"))
+    api_key = config.get("api_key", "").strip()
 
     component["provider"] = provider
     component["dev_mode"] = dev_mode
@@ -144,9 +144,11 @@ def _chat_component_status() -> Dict[str, Any]:
         component["message"] = "Development mode enabled. Mock responses active."
         return component
 
-    if not api_key_present:
+    # Check if API key is missing or is a placeholder
+    placeholder_keys = {"", "your_openrouter_api_key_here", "your_minimax_api_key_here", "your_new_openrouter_api_key_here"}
+    if not api_key or api_key in placeholder_keys:
         provider_name = "MiniMax" if provider == "minimax" else "OpenRouter"
-        component["message"] = f"{provider_name} API key is not configured."
+        component["message"] = f"{provider_name} API key is not configured or is invalid."
         return component
 
     component["ready"] = True
