@@ -1,6 +1,7 @@
 const markedLib = window.marked || null;
 const hljsLib = window.hljs || null;
 const katexAutoRender = window.renderMathInElement || null;
+const ChartLib = window.Chart || null;
 
 const STORAGE_KEY = 'assistme.conversations.v2';
 const THEME_KEY = 'assistme.theme';
@@ -250,6 +251,11 @@ const elements = {
     benchmarkCommand: document.getElementById('benchmarkCommand'),
     benchmarkCopy: document.getElementById('benchmarkCopy'),
     benchmarkAccelerators: document.getElementById('benchmarkAccelerators'),
+    latencyChart: document.getElementById('latencyChart'),
+    throughputChart: document.getElementById('throughputChart'),
+    benchmarkThroughputAvg: document.getElementById('benchmarkThroughputAvg'),
+    benchmarkLatencyDelta: document.getElementById('benchmarkLatencyDelta'),
+    benchmarkGpuBadge: document.getElementById('benchmarkGpuBadge'),
     ai4bharatBtn: document.getElementById('ai4bharatBtn'),
     ai4bharatModal: document.getElementById('ai4bharatModal'),
     ai4bharatBackdrop: document.getElementById('ai4bharatBackdrop'),
@@ -300,6 +306,11 @@ const state = {
         index: -1,
     },
     activeBenchmarkScenario: 'general',
+};
+
+const benchmarkCharts = {
+    latency: null,
+    throughput: null,
 };
 
 const ALLOWED_TAGS = new Set([
@@ -630,6 +641,165 @@ function getBenchmarkScenario(key) {
     return BENCHMARK_SCENARIOS[key];
 }
 
+function parseMetricNumber(value) {
+    const match = String(value || '').replace(/,/g, '').match(/[+\-]?\d+(\.\d+)?/);
+    return match ? parseFloat(match[0]) : 0;
+}
+
+function buildBenchmarkSeries(scenario) {
+    const labels = [];
+    const latencies = [];
+    const throughputs = [];
+    scenario?.models?.forEach((entry) => {
+        labels.push(getModelLabel(entry.id));
+        latencies.push(parseMetricNumber(entry.latency));
+        throughputs.push(parseMetricNumber(entry.throughput));
+    });
+    return { labels, latencies, throughputs };
+}
+
+function createBenchmarkChart(canvas, datasetLabel, gradientStart, gradientEnd, borderColor) {
+    if (!ChartLib || !canvas) return null;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const height = ctx.canvas.height || ctx.canvas.clientHeight || 200;
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, gradientStart);
+    gradient.addColorStop(1, gradientEnd);
+
+    return new ChartLib(ctx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: datasetLabel,
+                    data: [],
+                    backgroundColor: gradient,
+                    borderColor,
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.75,
+                },
+            ],
+        },
+        options: {
+            maintainAspectRatio: false,
+            responsive: true,
+            animation: {
+                duration: 420,
+            },
+            plugins: {
+                legend: {
+                    display: false,
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#dfe8ff',
+                    borderWidth: 0,
+                    padding: 10,
+                },
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false,
+                    },
+                    ticks: {
+                        color: '#cfd8ff',
+                    },
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)',
+                    },
+                    ticks: {
+                        color: '#cfd8ff',
+                    },
+                },
+            },
+        },
+    });
+}
+
+function updateBenchmarkCharts(scenario) {
+    if (!scenario) return;
+    const { labels, latencies, throughputs } = buildBenchmarkSeries(scenario);
+
+    if (elements.latencyChart) {
+        if (!benchmarkCharts.latency) {
+            benchmarkCharts.latency = createBenchmarkChart(
+                elements.latencyChart,
+                'Latency (s)',
+                'rgba(59, 130, 246, 0.9)',
+                'rgba(59, 130, 246, 0.35)',
+                'rgba(99, 102, 241, 0.9)'
+            );
+        }
+        if (benchmarkCharts.latency) {
+            benchmarkCharts.latency.data.labels = labels;
+            benchmarkCharts.latency.data.datasets[0].data = latencies;
+            const maxLatency = latencies.length ? Math.max(...latencies) : 0;
+            benchmarkCharts.latency.options.scales.y.suggestedMax = maxLatency ? maxLatency * 1.25 : undefined;
+            benchmarkCharts.latency.update();
+        }
+    }
+
+    if (elements.throughputChart) {
+        if (!benchmarkCharts.throughput) {
+            benchmarkCharts.throughput = createBenchmarkChart(
+                elements.throughputChart,
+                'Throughput (tok/s)',
+                'rgba(16, 185, 129, 0.9)',
+                'rgba(16, 185, 129, 0.35)',
+                'rgba(16, 185, 129, 0.55)'
+            );
+        }
+        if (benchmarkCharts.throughput) {
+            benchmarkCharts.throughput.data.labels = labels;
+            benchmarkCharts.throughput.data.datasets[0].data = throughputs;
+            const maxThroughput = throughputs.length ? Math.max(...throughputs) : 0;
+            benchmarkCharts.throughput.options.scales.y.suggestedMax = maxThroughput ? maxThroughput * 1.25 : undefined;
+            benchmarkCharts.throughput.update();
+        }
+    }
+}
+
+function updateBenchmarkInsights(scenario) {
+    if (!scenario) return;
+    const models = Array.isArray(scenario.models) ? scenario.models : [];
+    const latencyValues = models.map((entry) => parseMetricNumber(entry.latency));
+    const throughputValues = models.map((entry) => parseMetricNumber(entry.throughput));
+    const averageThroughput = throughputValues.length
+        ? Math.round(
+            throughputValues.reduce((total, value) => total + value, 0) / throughputValues.length
+        )
+        : null;
+    const range = latencyValues.length
+        ? Math.max(...latencyValues) - Math.min(...latencyValues)
+        : null;
+
+    if (elements.benchmarkThroughputAvg) {
+        elements.benchmarkThroughputAvg.textContent = averageThroughput !== null
+            ? `${averageThroughput}`
+            : '—';
+    }
+    if (elements.benchmarkLatencyDelta) {
+        elements.benchmarkLatencyDelta.textContent = range !== null
+            ? range.toFixed(2)
+            : '—';
+    }
+    if (elements.benchmarkGpuBadge) {
+        const recommendedGpu = models[0]?.accelerator
+            || scenario.accelerators?.[0]
+            || 'Adaptive GPU';
+        elements.benchmarkGpuBadge.textContent = recommendedGpu;
+    }
+}
+
 function renderBenchmarkScenario(scenarioKey) {
     const scenario = getBenchmarkScenario(scenarioKey);
     if (!scenario || !elements.benchmarkTableBody) return;
@@ -692,12 +862,16 @@ function renderBenchmarkScenario(scenarioKey) {
 
     if (elements.benchmarkAccelerators) {
         elements.benchmarkAccelerators.replaceChildren();
-        scenario.accelerators.forEach((item) => {
-            const li = document.createElement('li');
-            li.textContent = item;
-            elements.benchmarkAccelerators.appendChild(li);
+        scenario.accelerators?.forEach((item) => {
+            const card = document.createElement('div');
+            card.className = 'accelerator-card';
+            card.innerHTML = `<i class="fa-solid fa-bolt"></i><span>${item}</span>`;
+            elements.benchmarkAccelerators.appendChild(card);
         });
     }
+
+    updateBenchmarkCharts(scenario);
+    updateBenchmarkInsights(scenario);
 }
 
 function openBenchmarkModal() {

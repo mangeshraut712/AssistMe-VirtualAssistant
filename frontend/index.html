@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.8.0/styles/github.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="benchmark.css">
     <meta name="assistme-api-base" content="https://assistme-virtualassistant-production.up.railway.app">
 </head>
 <body>
@@ -316,70 +317,212 @@
                     <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                 </button>
             </div>
-            <div class="modal-content">
-                <section class="benchmark-section highlight">
-                    <h3>Run the AssistMe benchmark locally or in the cloud</h3>
-                    <p>Install our open benchmark pack, point it at your API key, and capture GPU metrics automatically.</p>
-                    <div class="benchmark-command-line">
-                        <code id="benchmarkCommand">curl -fsSL https://get.assistme.ai/bench.sh | bash</code>
-                        <button class="command-copy" id="benchmarkCopy" aria-label="Copy benchmark command">
-                            <i class="fa-solid fa-copy" aria-hidden="true"></i>
-                            Copy
+            <div class="modal-content benchmark-dashboard">
+                <section class="benchmark-hero">
+                    <div class="hero-content">
+                        <div class="hero-badge">
+                            <i class="fa-solid fa-rocket"></i> 2025 Benchmark Suite
+                        </div>
+                        <h3>Run AssistMe benchmark locally or in the cloud</h3>
+                        <p>Real-time GPU metrics, cost tracking, and performance insights for 10+ AI models</p>
+                        <div class="benchmark-command-line">
+                            <code id="benchmarkCommand">assistme-bench run --scenario general --output logs/general.json</code>
+                            <button class="command-copy" id="benchmarkCopy" aria-label="Copy benchmark command">
+                                <i class="fa-solid fa-copy"></i>
+                                Copy
+                            </button>
+                        </div>
+                        <div class="benchmark-features">
+                            <div class="feature-pill">
+                                <i class="fa-solid fa-microchip"></i>
+                                <span>A100 / H100 / RTX 4090</span>
+                            </div>
+                            <div class="feature-pill">
+                                <i class="fa-solid fa-chart-line"></i>
+                                <span>Real-time metrics</span>
+                            </div>
+                            <div class="feature-pill">
+                                <i class="fa-solid fa-file-export"></i>
+                                <span>CSV & Grafana export</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="benchmark-scenarios">
+                    <div class="section-header">
+                        <div>
+                            <h3>Performance Comparison</h3>
+                            <p>Real-world benchmarks across different workloads</p>
+                        </div>
+                        <a class="doc-link" href="https://github.com/mangeshraut712/AssistMe-VirtualAssistant/wiki/Benchmarking" target="_blank" rel="noopener">
+                            <span>Documentation</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="scenario-tabs" id="benchmarkTabs" role="tablist">
+                        <button type="button" class="benchmark-tab active" data-scenario="general" role="tab" aria-selected="true">
+                            <i class="fa-solid fa-comment"></i>
+                            <div class="tab-content">
+                                <span class="tab-title">General Q&A</span>
+                                <span class="tab-desc">256 tokens</span>
+                            </div>
+                        </button>
+                        <button type="button" class="benchmark-tab" data-scenario="coding" role="tab" aria-selected="false">
+                            <i class="fa-solid fa-code"></i>
+                            <div class="tab-content">
+                                <span class="tab-title">Coding</span>
+                                <span class="tab-desc">512 tokens</span>
+                            </div>
+                        </button>
+                        <button type="button" class="benchmark-tab" data-scenario="creative" role="tab" aria-selected="false">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <div class="tab-content">
+                                <span class="tab-title">Creative</span>
+                                <span class="tab-desc">512 tokens</span>
+                            </div>
                         </button>
                     </div>
-                    <div class="benchmark-tags">
-                        <span class="badge">Supports A100 / H100 / RTX 4090</span>
-                        <span class="badge">Tracks cost + latency</span>
-                        <span class="badge">Exports to CSV &amp; Grafana</span>
+
+                    <p class="scenario-description" id="benchmarkDescription"></p>
+
+                    <div class="benchmark-stats">
+                        <div class="kpi-card">
+                            <p>Avg. throughput</p>
+                            <strong id="benchmarkThroughputAvg">—</strong>
+                            <span>tokens/sec</span>
+                        </div>
+                        <div class="kpi-card">
+                            <p>Latency swing</p>
+                            <strong id="benchmarkLatencyDelta">—</strong>
+                            <span>seconds range</span>
+                        </div>
+                        <div class="kpi-card">
+                            <p>Recommended GPU</p>
+                            <strong id="benchmarkGpuBadge">—</strong>
+                            <span>from scenario</span>
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <i class="fa-solid fa-gauge-high"></i>
+                                <span>Latency Comparison</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="latencyChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <i class="fa-solid fa-tachometer-alt"></i>
+                                <span>Throughput Analysis</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="throughputChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="performance-table">
+                        <div class="table-header">
+                            <h4>Detailed Metrics</h4>
+                            <div class="table-actions">
+                                <button class="table-action" title="Export data">
+                                    <i class="fa-solid fa-download"></i>
+                                </button>
+                                <button class="table-action" title="Refresh data">
+                                    <i class="fa-solid fa-rotate"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="benchmark-table">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fa-solid fa-brain"></i> Model</th>
+                                        <th><i class="fa-solid fa-clock"></i> Latency</th>
+                                        <th><i class="fa-solid fa-bolt"></i> Throughput</th>
+                                        <th><i class="fa-solid fa-database"></i> Context</th>
+                                        <th><i class="fa-solid fa-star"></i> Best For</th>
+                                        <th><i class="fa-solid fa-microchip"></i> GPU</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="benchmarkTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
 
-                <section class="benchmark-section">
-                    <div class="section-heading">
-                        <h3>Compare scenarios</h3>
-                        <a class="benchmark-doc-link" href="https://github.com/mangeshraut712/AssistMe-VirtualAssistant/wiki/Benchmarking" target="_blank" rel="noopener">Read benchmarking guide<i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+                <section class="accelerator-section">
+                    <div class="section-header">
+                        <div>
+                            <h3><i class="fa-solid fa-server"></i> GPU Recommendations</h3>
+                            <p>Optimized hardware configurations for your workload</p>
+                        </div>
                     </div>
-                    <div class="benchmark-tabs" id="benchmarkTabs" role="tablist">
-                        <button type="button" class="benchmark-tab" data-scenario="general" role="tab" aria-selected="true">General Q&amp;A</button>
-                        <button type="button" class="benchmark-tab" data-scenario="coding" role="tab" aria-selected="false">Coding &amp; reasoning</button>
-                        <button type="button" class="benchmark-tab" data-scenario="creative" role="tab" aria-selected="false">Creative writing</button>
-                    </div>
-                    <p class="benchmark-description" id="benchmarkDescription"></p>
-                    <div class="benchmark-table-wrapper">
-                        <table class="benchmark-table">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Model</th>
-                                    <th scope="col">Latency (p95)</th>
-                                    <th scope="col">Throughput</th>
-                                    <th scope="col">Context</th>
-                                    <th scope="col">Best for</th>
-                                    <th scope="col">Accelerator</th>
-                                </tr>
-                            </thead>
-                            <tbody id="benchmarkTableBody"></tbody>
-                        </table>
+                    <div class="accelerator-grid" id="benchmarkAccelerators"></div>
+                    <div class="quick-links">
+                        <a href="https://cloud.google.com/compute/docs/gpus" target="_blank" class="quick-link">
+                            <i class="fa-brands fa-google"></i>
+                            <span>Google Cloud GPUs</span>
+                        </a>
+                        <a href="https://www.latent.space/p/benchmarking" target="_blank" class="quick-link">
+                            <i class="fa-solid fa-flask"></i>
+                            <span>Methodology</span>
+                        </a>
+                        <a href="https://openrouter.ai/docs#benchmarks" target="_blank" class="quick-link">
+                            <i class="fa-solid fa-chart-bar"></i>
+                            <span>Model Stats</span>
+                        </a>
                     </div>
                 </section>
 
-                <section class="benchmark-section">
-                    <h3>Accelerator recommendations</h3>
-                    <ul class="benchmark-accelerators" id="benchmarkAccelerators"></ul>
-                    <div class="benchmark-links">
-                        <a href="https://cloud.google.com/compute/docs/gpus" target="_blank" rel="noopener" class="badge-link">Reserve GPU on GCP</a>
-                        <a href="https://www.latent.space/p/benchmarking" target="_blank" rel="noopener" class="badge-link">Benchmark methodology</a>
-                        <a href="https://openrouter.ai/docs#benchmarks" target="_blank" rel="noopener" class="badge-link">OpenRouter model stats</a>
+                <section class="protips-section">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-lightbulb"></i> Pro Tips</h3>
                     </div>
-                </section>
-
-                <section class="benchmark-section fine-print">
-                    <h3>Pro tips</h3>
-                    <ul>
-                        <li>Warm the model for 3–5 requests before recording latency to avoid cold-start spikes.</li>
-                        <li>Use <code>--accelerator=H100</code> to test the same prompt set across different GPUs.</li>
-                        <li>Record both streaming latency and total completion time for a balanced comparison.</li>
-                        <li>Tag benchmark runs with <code>--label &quot;release-2025.02&quot;</code> to track regressions over time.</li>
-                    </ul>
+                    <div class="tips-grid">
+                        <div class="tip-card">
+                            <div class="tip-icon">
+                                <i class="fa-solid fa-fire"></i>
+                            </div>
+                            <div class="tip-content">
+                                <h5>Warm-up Phase</h5>
+                                <p>Run 3–5 warm-up requests before recording latency to avoid cold-start spikes</p>
+                            </div>
+                        </div>
+                        <div class="tip-card">
+                            <div class="tip-icon">
+                                <i class="fa-solid fa-sliders"></i>
+                            </div>
+                            <div class="tip-content">
+                                <h5>GPU Testing</h5>
+                                <p>Use <code>--accelerator=H100</code> to test across different GPUs with same prompts</p>
+                            </div>
+                        </div>
+                        <div class="tip-card">
+                            <div class="tip-icon">
+                                <i class="fa-solid fa-chart-column"></i>
+                            </div>
+                            <div class="tip-content">
+                                <h5>Balanced Metrics</h5>
+                                <p>Record both streaming latency and total completion time for accurate comparison</p>
+                            </div>
+                        </div>
+                        <div class="tip-card">
+                            <div class="tip-icon">
+                                <i class="fa-solid fa-tag"></i>
+                            </div>
+                            <div class="tip-content">
+                                <h5>Version Tracking</h5>
+                                <p>Tag runs with <code>--label "v2025.02"</code> to track performance regressions</p>
+                            </div>
+                        </div>
+                    </div>
                 </section>
             </div>
         </div>
@@ -389,6 +532,7 @@
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <script>
         (function () {
             const meta = document.querySelector('meta[name="assistme-api-base"]');

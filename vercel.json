@@ -11,15 +11,19 @@
   ],
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://assistme-virtualassistant-production.up.railway.app/api/:path*"
-    },
-    {
       "source": "/health",
       "destination": "https://assistme-virtualassistant-production.up.railway.app/health"
     },
     {
-      "source": "/:path*",
+      "source": "/api/:path*",
+      "destination": "https://assistme-virtualassistant-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/debug",
+      "destination": "https://assistme-virtualassistant-production.up.railway.app/debug"
+    },
+    {
+      "source": "/((?!assets|favicon\\.ico|.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)).*)",
       "destination": "/index.html"
     }
   ],

@@ -362,12 +362,9 @@ def health(request: Request):
     kimi_status = "available" if KIMI_CLIENT_AVAILABLE and kimi_client and kimi_client.is_available() else "unavailable"
     
     # Determine overall status
-    if chat_status == "unavailable" and not api_key_configured:
+    overall_status = "healthy"
+    if db_status == "error":
         overall_status = "degraded"
-    elif db_status == "error":
-        overall_status = "degraded"
-    else:
-        overall_status = "healthy"
     
     payload = {
         "status": overall_status,
