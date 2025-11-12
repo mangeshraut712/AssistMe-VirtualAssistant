@@ -14,8 +14,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ['marked', 'highlight.js']
         }
-      },
-      external: ['katex']
+      }
     },
     cssCodeSplit: true,
     assetsInlineLimit: 4096
