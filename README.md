@@ -1,45 +1,44 @@
 # AssistMe Virtual Assistant
 
-A cutting-edge AI-powered web assistant featuring multimodal AI integration, real-time streaming, local model inference, and advanced conversational capabilities. Built for 2025 with next-generation AI technologies including RAG, function calling, and multi-agent architectures.
+A modern AI-powered web assistant featuring real-time chat, AI4Bharat language processing, and seamless integration with leading AI models. Built with FastAPI backend and vanilla JavaScript frontend, deployed on Vercel and Railway.
 
 ![Status](https://img.shields.io/badge/status-production--ready-green)
-![AI](https://img.shields.io/badge/AI-Multimodal--RAG-blue)
-![Models](https://img.shields.io/badge/Models-341+--supported-purple)
+![AI](https://img.shields.io/badge/AI-OpenRouter--Integration-blue)
+![Languages](https://img.shields.io/badge/Languages-11--Indian--Languages-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Version](https://img.shields.io/badge/version-2.0.0-orange)
 
 ## 🎯 Core Features
 
-### 🤖 Advanced AI Integration (2025)
-- **Multimodal AI**: Text, image, and audio processing capabilities
-- **RAG (Retrieval-Augmented Generation)**: Knowledge base integration for accurate responses
-- **Function Calling**: AI agents can execute tools and APIs autonomously
-- **Multi-Agent Architecture**: Specialized AI agents for different tasks
-- **Context-Aware Model Selection**: Automatic model switching based on query complexity
-- **Fine-tuning Support**: Custom model adaptation for specific domains
-- **OpenRouter API**: Access to 341+ AI models from leading providers
-- **Kimi-K2-Thinking**: Local model with quantized inference for privacy
-- **AI4Bharat**: Advanced Indian language processing and translation
+### 🤖 AI Integration
+- **OpenRouter API**: Access to 10+ premium AI models from leading providers
+- **Real-time Streaming**: Live chat responses with token-by-token streaming
+- **Model Selection**: Choose from Google Gemini, Meta Llama, Qwen, DeepSeek, and more
+- **Context Preservation**: Maintains conversation history and context
+- **Fallback System**: Automatic model switching for reliability
+
+### 🌍 AI4Bharat Language Processing
+- **11 Indian Languages**: Hindi, Tamil, Telugu, Kannada, Malayalam, Bengali, Gujarati, Marathi, Punjabi, Odia, English
+- **Advanced Translation**: High-accuracy AI-powered translation using Kimi-K2-Thinking model
+- **Language Detection**: Automatic language identification
+- **Transliteration**: Script conversion between languages
+- **Cultural Context**: Context-aware translations with regional nuances
 
 ### 🎨 Modern User Experience
-- **Progressive Web App (PWA)**: Offline functionality and native app experience
-- **Real-time Collaboration**: Multi-user sessions with live cursors
-- **Voice & Video Integration**: WebRTC-powered communication
-- **Advanced UI Components**: Web Components with shadow DOM
-- **Accessibility First**: WCAG 2.1 AA compliance with screen reader support
-- **Dark/Light Mode**: System preference detection and manual toggle
-- **Responsive Design**: Container queries and fluid typography
-- **Gesture Support**: Touch and gesture-based interactions
+- **Clean Interface**: Intuitive chat interface with modern design
+- **Real-time Updates**: Live message streaming and typing indicators
+- **Conversation Management**: Save, organize, and manage chat history
+- **Responsive Design**: Works seamlessly on desktop and mobile
+- **Dark/Light Mode**: Automatic theme switching based on system preferences
+- **Accessibility**: Screen reader support and keyboard navigation
 
-### ⚡ Technical Excellence (2025)
-- **Edge Computing**: Vercel Edge Functions for global performance
-- **WebAssembly**: High-performance client-side processing
-- **Serverless Architecture**: Railway serverless functions
-- **GraphQL API**: Efficient data fetching with Apollo Client
-- **WebSockets**: Real-time bidirectional communication
-- **Service Workers**: Advanced caching and background sync
-- **Zero-Trust Security**: End-to-end encryption and authentication
-- **Privacy-Preserving AI**: Federated learning and differential privacy
+### ⚡ Technical Excellence
+- **FastAPI Backend**: High-performance Python web framework
+- **Vanilla JavaScript**: No heavy frameworks, lightweight and fast
+- **Docker Deployment**: Containerized backend for consistent deployment
+- **Database Integration**: SQLite with SQLAlchemy ORM
+- **RESTful API**: Clean, documented API endpoints
+- **Error Handling**: Comprehensive error management and logging
 
 ## 🏗️ Architecture
 
@@ -48,62 +47,37 @@ A cutting-edge AI-powered web assistant featuring multimodal AI integration, rea
 │   Vercel    │    │   Railway   │    │ OpenRouter  │
 │  Frontend   │◄──►│   Backend   │◄──►│    API      │
 │             │    │             │    │             │
-│ - HTML/CSS/JS   │ FastAPI      │   - 341+ Models │
-│ - Real-time UI  │ - PostgreSQL │   - Rate limits │
-│ - SPA routing   │ - Redis      │   - Streaming   │
+│ - HTML/CSS/JS   │ FastAPI      │   - 10+ Models  │
+│ - Real-time UI  │ - SQLite     │   - Streaming   │
+│ - SPA routing   │ - Docker     │   - Rate limits │
 └─────────────┘    └─────────────┘    └─────────────┘
                       │
                       ▼
                ┌─────────────┐
-               │   Kimi      │
-               │ Local Model │
+               │ AI4Bharat   │
+               │ Translation │
                │             │
-               │ - Transformers│
-               │ - GPU/CPU    │
-               │ - Streaming   │
+               │ - Kimi-K2   │
+               │ - 11 Indian │
+               │ - Real-time │
                └─────────────┘
 ```
 
 ### Services
-- **Frontend (Vercel)**: Static web assets with SPA routing and Edge Functions
-- **Backend (Railway)**: FastAPI serverless functions with AI integrations
-- **Database**: PostgreSQL with vector extensions for RAG
-- **Cache**: Redis Cluster for distributed rate limiting
-- **AI Models**: OpenRouter API + Local quantized models
-- **CDN**: Vercel Edge Network for global distribution
-- **Monitoring**: Railway metrics and Vercel analytics
+- **Frontend (Vercel)**: Static web application with modern JavaScript
+- **Backend (Railway)**: FastAPI application with Docker deployment
+- **Database**: SQLite with SQLAlchemy ORM (development), PostgreSQL (production)
+- **AI Models**: OpenRouter API integration with 10+ premium models
+- **Language Processing**: AI4Bharat integration for Indian languages
+- **Deployment**: Automated CI/CD with GitHub Actions
 
-## 🚀 Advanced AI Features (2025)
-
-### Multimodal AI Integration
-- **Text + Image Processing**: Vision-language models for document analysis
-- **Audio Processing**: Speech-to-text and text-to-speech with emotion detection
-- **Code Generation**: Multi-language code completion and debugging
-- **Real-time Translation**: 100+ languages with cultural context preservation
-
-### RAG (Retrieval-Augmented Generation)
-- **Vector Database**: Pinecone/ChromaDB integration for knowledge bases
-- **Document Processing**: PDF, DOCX, and web content ingestion
-- **Semantic Search**: Context-aware information retrieval
-- **Knowledge Graphs**: Connected information for complex queries
-
-### Function Calling & Tools
-- **API Integration**: Weather, calendar, email, and custom APIs
-- **Database Queries**: Natural language to SQL conversion
-- **File Operations**: Document creation, editing, and analysis
-- **Web Scraping**: Real-time data extraction and summarization
-
-### Multi-Agent Architecture
-- **Specialized Agents**: Code review, testing, documentation agents
-- **Collaborative Workflows**: Agent-to-agent communication
-- **Task Decomposition**: Complex tasks broken into manageable steps
-- **Quality Assurance**: Multi-agent review and validation
-
-### Context-Aware Intelligence
-- **User Profiling**: Personalized responses based on conversation history
-- **Mood Detection**: Emotional intelligence in responses
-- **Learning Adaptation**: Continuous improvement from user feedback
-- **Privacy Preservation**: Federated learning without data sharing
+### Technology Stack
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3, Vite build system
+- **Backend**: Python 3.12, FastAPI, Uvicorn ASGI server
+- **Database**: SQLAlchemy ORM, Alembic migrations
+- **AI Integration**: OpenRouter API, Kimi-K2-Thinking model
+- **Deployment**: Vercel (frontend), Railway (backend), Docker
+- **Development**: Git, npm, pip, GitHub Actions CI/CD
 
 ## 🚀 Quick Start
 
@@ -161,6 +135,37 @@ npm run serve:backend   # Backend on :8001
 
 ## 📖 API Documentation
 
+### Core Endpoints
+
+#### GET `/health`
+Health check endpoint.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "service": "assistme-api",
+  "version": "1.0.0",
+  "timestamp": "2025-11-12T17:09:21.169206"
+}
+```
+
+#### GET `/api/status`
+Get comprehensive API status and configuration.
+
+**Response:**
+```json
+{
+  "status": "operational",
+  "service": "AssistMe API",
+  "version": "1.0.0",
+  "timestamp": "2025-11-12T17:09:21.169206",
+  "chat_available": true,
+  "database_connected": true,
+  "api_key_configured": true
+}
+```
+
 ### Chat Endpoints
 
 #### POST `/api/chat/text`
@@ -172,9 +177,10 @@ Single chat completion with AI models.
   "messages": [
     {"role": "user", "content": "Hello, how are you?"}
   ],
-  "model": "meta-llama/llama-3.3-70b-instruct:free",
+  "model": "google/gemini-2.0-flash-exp:free",
   "temperature": 0.7,
-  "max_tokens": 1024
+  "max_tokens": 1024,
+  "conversation_id": 123
 }
 ```
 
@@ -183,7 +189,7 @@ Single chat completion with AI models.
 {
   "response": "Hello! I'm doing well, thank you for asking...",
   "usage": {"tokens": 156},
-  "model": "meta-llama/llama-3.3-70b-instruct:free",
+  "model": "google/gemini-2.0-flash-exp:free",
   "conversation_id": 123,
   "title": "Hello, how are you?"
 }
@@ -201,7 +207,7 @@ event: delta
 data: {"content": "!"}
 
 event: done
-data: {"response": "Hello!", "tokens": 2, "model": "kimi-k2-thinking"}
+data: {"response": "Hello!", "tokens": 12, "model": "google/gemini-2.0-flash-exp:free", "conversation_id": 123}
 ```
 
 ### Model Endpoints
@@ -220,9 +226,27 @@ Get available AI models.
     {
       "id": "meta-llama/llama-3.3-70b-instruct:free",
       "name": "Meta Llama 3.3 70B Instruct"
+    },
+    {
+      "id": "moonshotai/kimi-k2-thinking",
+      "name": "Kimi-K2-Thinking (Local)"
     }
   ],
   "default": "google/gemini-2.0-flash-exp:free"
+}
+```
+
+#### GET `/api/openrouter/status`
+Check OpenRouter API status.
+
+**Response:**
+```json
+{
+  "configured": true,
+  "base_url": "https://openrouter.ai/api/v1",
+  "has_api_key": true,
+  "default_model": "google/gemini-2.0-flash-exp:free",
+  "dev_mode": false
 }
 ```
 
@@ -244,10 +268,140 @@ Check Kimi local model status.
 ### Conversation Management
 
 #### GET `/api/conversations`
-List user conversations.
+List all conversations.
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "title": "Hello, how are you?",
+    "created_at": "2025-11-12T17:09:21.169206"
+  }
+]
+```
 
 #### GET `/api/conversations/{id}`
-Get specific conversation details.
+Get specific conversation with messages.
+
+**Response:**
+```json
+{
+  "id": 1,
+  "title": "Hello, how are you?",
+  "created_at": "2025-11-12T17:09:21.169206",
+  "messages": [
+    {
+      "id": 1,
+      "role": "user",
+      "content": "Hello, how are you?",
+      "created_at": "2025-11-12T17:09:21.169206"
+    },
+    {
+      "id": 2,
+      "role": "assistant",
+      "content": "Hello! I'm doing well, thank you for asking...",
+      "created_at": "2025-11-12T17:09:21.169206"
+    }
+  ]
+}
+```
+
+### AI4Bharat Language Processing
+
+#### GET `/api/ai4bharat/languages`
+Get list of supported Indian languages.
+
+**Response:**
+```json
+{
+  "success": true,
+  "languages": [
+    {
+      "code": "hi",
+      "name": "Hindi",
+      "native_name": "हिंदी"
+    },
+    {
+      "code": "ta",
+      "name": "Tamil",
+      "native_name": "தமிழ்"
+    }
+  ],
+  "count": 11
+}
+```
+
+#### POST `/api/ai4bharat/translate`
+Translate text between Indian languages.
+
+**Request:**
+```json
+{
+  "text": "Hello, how are you today?",
+  "source_language": "en",
+  "target_language": "hi"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "original_text": "Hello, how are you today?",
+  "translated_text": "नमस्ते, आज आप कैसे हैं?",
+  "source_language": "en",
+  "target_language": "hi",
+  "source_language_name": "English",
+  "target_language_name": "Hindi",
+  "model_used": "kimi-k2-thinking-openrouter",
+  "confidence": 0.95
+}
+```
+
+#### POST `/api/ai4bharat/detect-language`
+Detect language of given text.
+
+**Request:**
+```json
+{
+  "text": "नमस्ते दुनिया, यह एक परीक्षण संदेश है"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "text": "नमस्ते दुनिया, यह एक परीक्षण संदेश है",
+  "detected_language": "hi",
+  "language_name": "Hindi",
+  "confidence": 0.85
+}
+```
+
+#### POST `/api/ai4bharat/transliterate`
+Transliterate text between scripts.
+
+**Request:**
+```json
+{
+  "text": "नमस्ते",
+  "source_script": "hi",
+  "target_script": "en"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "original_text": "नमस्ते",
+  "transliterated_text": "namaste",
+  "source_script": "hi",
+  "target_script": "en"
+}
+```
 
 ## 🤖 AI Models Supported
 
@@ -269,77 +423,24 @@ Get specific conversation details.
 |-------|-----------|--------|
 | Kimi-K2-Thinking | Transformers | ⚠️ Python 3.12 compat |
 
-## 🚀 DevOps & Infrastructure (2025)
+## 🚀 Deployment & DevOps
 
-### GitOps & CI/CD
-- **Automated Deployments**: GitHub Actions with Railway integration
-- **Infrastructure as Code**: Terraform configurations for cloud resources
-- **Multi-Environment**: Development, staging, and production pipelines
-- **Blue-Green Deployments**: Zero-downtime updates with traffic shifting
+### CI/CD Pipeline
+- **GitHub Actions**: Automated testing and deployment
+- **Multi-Platform Deployment**: Vercel (frontend) + Railway (backend)
+- **Docker Containerization**: Consistent backend deployment
+- **Environment Management**: Separate dev/staging/production configs
 
-### Multi-Cloud Architecture
-- **Hybrid Deployment**: Vercel (frontend) + Railway (backend) + AWS (storage)
-- **Global CDN**: Vercel Edge Network with 300+ PoPs worldwide
-- **Auto-scaling**: Railway's serverless scaling based on demand
-- **Disaster Recovery**: Multi-region failover with data replication
+### Production Deployment
+- **Frontend**: Vercel with global CDN and edge caching
+- **Backend**: Railway with Docker and health monitoring
+- **Database**: SQLite (dev) / PostgreSQL (production)
+- **Monitoring**: Railway metrics and Vercel analytics
 
-### Monitoring & Observability
-- **Real-time Metrics**: Railway dashboard with custom KPIs
-- **Error Tracking**: Sentry integration for frontend and backend
-- **Performance Monitoring**: Vercel Analytics with Core Web Vitals
-- **AI Model Metrics**: Response times, token usage, and accuracy tracking
-
-### Security & Compliance
-- **Zero-Trust Architecture**: Identity verification for all API calls
-- **End-to-End Encryption**: TLS 1.3 with perfect forward secrecy
-- **GDPR Compliance**: Data minimization and user consent management
-- **Audit Logging**: Comprehensive security event tracking
-
-## 🔐 Advanced Security (2025)
-
-### Privacy-Preserving AI
-- **Federated Learning**: Model training without data sharing
-- **Differential Privacy**: Statistical noise for user data protection
-- **Homomorphic Encryption**: Computation on encrypted data
-- **Secure Multi-Party Computation**: Collaborative AI without data exposure
-
-### Authentication & Authorization
-- **Passkey Support**: FIDO2/WebAuthn for passwordless authentication
-- **OAuth 2.1 + OIDC**: Modern identity standards
-- **JWT with JWE**: Encrypted JSON Web Tokens
-- **Role-Based Access Control**: Fine-grained permissions
-
-### Network Security
-- **Web Application Firewall**: Cloudflare WAF integration
-- **DDoS Protection**: Railway's built-in DDoS mitigation
-- **API Gateway**: Rate limiting and request validation
-- **Certificate Management**: Automated SSL/TLS certificate renewal
-
-## ⚡ Performance & Scalability (2025)
-
-### Edge Computing
-- **Vercel Edge Functions**: Serverless functions at 300+ locations
-- **Edge Caching**: Static asset delivery from nearest PoP
-- **Edge AI**: Model inference at the edge for reduced latency
-- **Real-time Synchronization**: CRDTs for collaborative features
-
-### Advanced Caching Strategies
-- **Multi-Level Caching**: Browser → CDN → Redis → Database
-- **Cache Invalidation**: Smart purging with surrogate keys
-- **Predictive Prefetching**: ML-based content preloading
-- **Service Worker Caching**: Offline-first PWA capabilities
-
-### Database Optimization
-- **Vector Extensions**: PostgreSQL with pgvector for RAG
-- **Read Replicas**: Distributed read operations
-- **Connection Pooling**: Efficient database connection management
-- **Query Optimization**: Automatic query planning and indexing
-
-### AI Performance
-- **Model Quantization**: 4-bit quantization for faster inference
-- **Batch Processing**: Parallel request handling
-- **Model Caching**: Pre-loaded models in memory
-- **GPU Acceleration**: CUDA support for local model inference
+### Production URLs
+- **Frontend**: https://assist-me-virtual-assistant.vercel.app
+- **Backend**: https://assistme-virtualassistant-production.up.railway.app
+- **API Health**: https://assistme-virtualassistant-production.up.railway.app/health
 
 ## 🌐 Deployment
 
@@ -499,29 +600,34 @@ cd backend && pylint app/
 ### Project Structure
 ```
 ├── frontend/                    # Static web application
-│   ├── index.html              # Main HTML page
-│   ├── script.js               # Frontend JavaScript
-│   └── style.css               # Application styles
+│   ├── index.html              # Main HTML page with chat interface
+│   ├── script.js               # Frontend JavaScript (vanilla JS)
+│   └── style.css               # Application styles and themes
 ├── backend/                     # FastAPI backend application
 │   ├── alembic/                # Database migrations
 │   │   ├── versions/           # Migration files
 │   │   └── env.py             # Migration environment
 │   ├── app/                    # Application modules
-│   │   ├── main.py            # FastAPI main application
-│   │   ├── kimi_client.py     # Kimi-K2-Thinking integration
-│   │   ├── ai4bharat.py       # AI4Bharat language support
+│   │   ├── main.py            # FastAPI main application & routes
+│   │   ├── ai4bharat.py       # AI4Bharat language processing
 │   │   ├── chat_client.py     # OpenRouter API client
+│   │   ├── compat.py          # Compatibility utilities
 │   │   ├── database.py        # Database configuration
+│   │   ├── kimi_client.py     # Kimi-K2-Thinking integration
 │   │   ├── models.py          # SQLAlchemy models
-│   │   ├── settings.py        # Application settings
-│   │   └── compat.py          # Compatibility utilities
+│   │   └── settings.py        # Application settings
 │   ├── requirements.txt       # Python dependencies
-│   ├── start.sh              # Startup script
-│   └── test.db               # SQLite database (dev)
-├── scripts/                     # Build scripts
-│   └── generate-legacy-entry.js # Legacy build compatibility
+│   ├── Dockerfile             # Docker configuration
+│   └── start.sh              # Startup script
+├── scripts/                     # Build and utility scripts
+│   └── generate-legacy-entry.js # Legacy browser compatibility
+├── .github/workflows/          # CI/CD workflows
+│   └── nodejs-ci.yml          # GitHub Actions CI pipeline
+├── .env.example               # Environment variables template
 ├── .gitignore                 # Git ignore rules
-├── .vercelignore              # Vercel ignore rules
+├── .railwayignore            # Railway deployment ignore rules
+├── .vercelignore              # Vercel deployment ignore rules
+├── Dockerfile                 # Root Docker configuration
 ├── package.json               # NPM configuration
 ├── package-lock.json          # NPM lock file
 ├── railway.toml               # Railway deployment config
