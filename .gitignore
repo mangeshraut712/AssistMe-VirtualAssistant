@@ -1,14 +1,67 @@
+# Dependencies
 node_modules/
 venv/
-__pycache__/
-*.pyc
-! .env.example
-.env*
-secrets.env
-credentials.json
-.vercel/
 backend/.venv/
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+# AI/ML Cache
+backend/hf_cache/
+backend/test.db
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Environment variables
+.env*
+!.env.example
+secrets.env
+credentials.json
+
+# Vercel
+.vercel/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
 
 #Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
