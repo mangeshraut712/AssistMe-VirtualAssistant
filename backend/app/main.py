@@ -12,8 +12,8 @@ except ImportError:  # pragma: no cover - optional in production
     load_dotenv = None  # type: ignore[assignment]
 
 if load_dotenv:
-    load_dotenv('../secrets.env')  # Load secrets.env from parent directory
-    load_dotenv('.env')            # Override with .env if needed
+    load_dotenv('.env')            # Load from .env file in current directory
+    load_dotenv()                  # Also load from system environment variables
 
 from fastapi import FastAPI, WebSocket, Depends, HTTPException, Request  # type: ignore[import-not-found]
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-not-found]
@@ -38,6 +38,8 @@ except Exception as e:
 
 from .database import get_db
 from .models import Conversation, Message as MessageModel
+from .ai4bharat import ai4bharat_client
+from .kimi_client import kimi_client
 
 def _normalise_origin(value: Optional[str]) -> Optional[str]:
     if not value:
@@ -275,17 +277,36 @@ def debug():
     return "OK"
 
 
-@app.get("/env")
-def get_env():
-    # Debug endpoint to check what env vars are loaded
-    return {
-        "OPENROUTER_API_KEY": os.getenv("OPENROUTER_API_KEY", "NOT_SET")[:20] + "..." if os.getenv("OPENROUTER_API_KEY") else "NOT_SET",
-        "DEV_MODE": os.getenv("DEV_MODE", "NOT_SET"),
-        "APP_URL": os.getenv("APP_URL", "NOT_SET"),
-        "DATABASE_URL": os.getenv("DATABASE_URL", "NOT_SET")[:30] + "..." if os.getenv("DATABASE_URL") else "NOT_SET",
-        "CHAT_AVAILABLE": CHAT_CLIENT_AVAILABLE,
-        "UPTIME": "Application responding"
-    }
+@app.get("/api/status")
+def api_status(request: Request):
+    """Get comprehensive API status and configuration."""
+    headers = _cors_headers(request)
+    return JSONResponse(
+        content={
+            "status": "operational",
+            "service": "AssistMe API",
+            "version": "1.0.0",
+            "timestamp": datetime.now().isoformat(),
+            "chat_available": CHAT_CLIENT_AVAILABLE,
+            "database_connected": bool(os.getenv("DATABASE_URL")),
+            "api_key_configured": bool(os.getenv("OPENROUTER_API_KEY")),
+        },
+        headers=headers
+    )
+
+@app.options("/api/status")
+async def api_status_options(request: Request) -> Response:
+    """Handle CORS preflight for status endpoint."""
+    headers = _cors_headers(request, methods="GET, OPTIONS")
+    headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return Response(status_code=204, headers=headers)
+
+@app.options("/{path:path}")
+async def options_handler(request: Request, path: str) -> Response:
+    """Catch-all OPTIONS handler for CORS preflight requests."""
+    headers = _cors_headers(request, methods="GET, POST, PUT, DELETE, OPTIONS, HEAD")
+    headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+    return Response(status_code=204, headers=headers)
 
 @app.get("/")
 def root():
@@ -300,20 +321,36 @@ def _ensure_chat_client() -> None:
 async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depends(get_db)):
     logging.info("Chat API called with messages: %s", [m.content for m in request.messages])
 
-    try:
-        _ensure_chat_client()
-    except HTTPException as exc:
-        return {"error": exc.detail}
+    # Check if requesting Kimi model
+    if request.model and "kimi" in request.model.lower():
+        if not kimi_client.is_available():
+            return {"error": "Kimi model is not available. Please check server configuration."}
+        
+        current_conversation_id, payload_messages = _prepare_conversation_context(request, db)
+        
+        result = await run_in_threadpool(
+            kimi_client.generate_response,
+            payload_messages,
+            request.temperature or 0.7,
+            request.max_tokens or 1024,
+        )
+    else:
+        # Use OpenRouter client for other models
+        try:
+            _ensure_chat_client()
+        except HTTPException as exc:
+            return {"error": exc.detail}
 
-    current_conversation_id, payload_messages = _prepare_conversation_context(request, db)
+        current_conversation_id, payload_messages = _prepare_conversation_context(request, db)
 
-    result = await run_in_threadpool(
-        grok_client.generate_response,
-        payload_messages,
-        request.model or None,  # type: ignore
-        request.temperature or 0.7,
-        request.max_tokens or 1024,
-    )
+        result = await run_in_threadpool(
+            grok_client.generate_response,
+            payload_messages,
+            request.model or None,  # type: ignore
+            request.temperature or 0.7,
+            request.max_tokens or 1024,
+        )
+    
     if "error" in result:
         return {"error": result["error"]}
 
@@ -340,10 +377,19 @@ async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depend
 async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] = Depends(get_db)):
     logging.info("Chat stream API called with messages: %s", [m.content for m in request.messages])
 
-    if not CHAT_CLIENT_AVAILABLE or grok_client is None:
-        def error_generator():
-            yield _sse_event("error", {"message": "Chat functionality is not available. Please check server configuration."})
-        return StreamingResponse(error_generator(), media_type="text/event-stream")
+    # Check if requesting Kimi model
+    use_kimi = request.model and "kimi" in request.model.lower()
+    
+    if use_kimi:
+        if not kimi_client.is_available():
+            def error_generator():
+                yield _sse_event("error", {"message": "Kimi model is not available. Please check server configuration."})
+            return StreamingResponse(error_generator(), media_type="text/event-stream")
+    else:
+        if not CHAT_CLIENT_AVAILABLE or grok_client is None:
+            def error_generator():
+                yield _sse_event("error", {"message": "Chat functionality is not available. Please check server configuration."})
+            return StreamingResponse(error_generator(), media_type="text/event-stream")
 
     current_conversation_id, payload_messages = _prepare_conversation_context(request, db)
     candidate_title = generate_conversation_title_from_messages(request.messages)
@@ -357,12 +403,21 @@ async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] =
         final_tokens: Optional[int] = None
 
         # Run the streaming call directly since we're in a sync context
-        for chunk in grok_client.generate_response_stream(
-            payload_messages,
-            model_id,
-            temperature,
-            max_tokens,
-        ):
+        if use_kimi:
+            stream_source = kimi_client.generate_response_stream(
+                payload_messages,
+                temperature,
+                max_tokens,
+            )
+        else:
+            stream_source = grok_client.generate_response_stream(
+                payload_messages,
+                model_id,
+                temperature,
+                max_tokens,
+            )
+
+        for chunk in stream_source:
             if chunk.get("error"):
                 error_message = str(chunk.get("error"))
                 yield _sse_event(
@@ -440,8 +495,17 @@ async def chat_text_options(request: Request) -> Response:
 @app.get("/api/models")
 def list_models():
     _ensure_chat_client()
+    models = grok_client.get_available_models()
+    
+    # Add Kimi model if available
+    if kimi_client.is_available():
+        models.append({
+            "id": "moonshotai/kimi-k2-thinking",
+            "name": "Kimi-K2-Thinking (Local)",
+        })
+    
     return {
-        "models": grok_client.get_available_models(),
+        "models": models,
         "default": grok_client.get_default_model(),
     }
 
@@ -471,10 +535,26 @@ def openrouter_status():
     }
 
 
+@app.get("/api/kimi/status")
+def kimi_status():
+    """Get status of Kimi-K2-Thinking local model."""
+    return {
+        "available": kimi_client.is_available(),
+        "model_info": kimi_client.get_model_info(),
+    }
+
+
 @app.options("/api/openrouter/status")
 async def openrouter_status_options(request: Request) -> Response:
     headers = _cors_headers(request, methods="GET, OPTIONS")
     return Response(status_code=204, headers=headers)
+
+
+@app.options("/api/kimi/status")
+async def kimi_status_options(request: Request) -> Response:
+    headers = _cors_headers(request, methods="GET, OPTIONS")
+    return Response(status_code=204, headers=headers)
+
 
 @app.get("/api/conversations")
 def get_conversations(db: Optional[SessionType] = Depends(get_db)) -> List[dict]:
@@ -544,6 +624,119 @@ async def voice_chat(websocket: WebSocket):
         await websocket.send_json({"error": str(e)})
     finally:
         await websocket.close()
+
+# AI4Bharat Endpoints for Indian Language Support
+
+@app.get("/api/ai4bharat/languages")
+def get_supported_languages(request: Request):
+    """Get list of supported Indian languages"""
+    headers = _cors_headers(request)
+    languages = ai4bharat_client.get_supported_languages()
+    return JSONResponse(
+        content={
+            "success": True,
+            "languages": languages,
+            "count": len(languages)
+        },
+        headers=headers
+    )
+
+@app.post("/api/ai4bharat/translate")
+async def translate_text(request: Request):
+    """Translate text between Indian languages"""
+    headers = _cors_headers(request)
+    
+    try:
+        data = await request.json()
+        text = data.get("text", "")
+        source_lang = data.get("source_language", "en")
+        target_lang = data.get("target_language", "hi")
+        
+        if not text:
+            return JSONResponse(
+                content={"success": False, "error": "Text is required"},
+                status_code=400,
+                headers=headers
+            )
+        
+        result = await ai4bharat_client.translate(text, source_lang, target_lang)
+        
+        return JSONResponse(
+            content=result,
+            headers=headers
+        )
+    
+    except Exception as e:
+        logging.error(f"Translation error: {e}")
+        return JSONResponse(
+            content={"success": False, "error": str(e)},
+            status_code=500,
+            headers=headers
+        )
+
+@app.post("/api/ai4bharat/detect-language")
+async def detect_language(request: Request):
+    """Detect language of given text"""
+    headers = _cors_headers(request)
+    
+    try:
+        data = await request.json()
+        text = data.get("text", "")
+        
+        if not text:
+            return JSONResponse(
+                content={"success": False, "error": "Text is required"},
+                status_code=400,
+                headers=headers
+            )
+        
+        result = await ai4bharat_client.detect_language(text)
+        
+        return JSONResponse(
+            content=result,
+            headers=headers
+        )
+    
+    except Exception as e:
+        logging.error(f"Language detection error: {e}")
+        return JSONResponse(
+            content={"success": False, "error": str(e)},
+            status_code=500,
+            headers=headers
+        )
+
+@app.post("/api/ai4bharat/transliterate")
+async def transliterate_text(request: Request):
+    """Transliterate text between scripts"""
+    headers = _cors_headers(request)
+    
+    try:
+        data = await request.json()
+        text = data.get("text", "")
+        source_script = data.get("source_script", "hi")
+        target_script = data.get("target_script", "en")
+        
+        if not text:
+            return JSONResponse(
+                content={"success": False, "error": "Text is required"},
+                status_code=400,
+                headers=headers
+            )
+        
+        result = await ai4bharat_client.transliterate(text, source_script, target_script)
+        
+        return JSONResponse(
+            content=result,
+            headers=headers
+        )
+    
+    except Exception as e:
+        logging.error(f"Transliteration error: {e}")
+        return JSONResponse(
+            content={"success": False, "error": str(e)},
+            status_code=500,
+            headers=headers
+        )
 
 if __name__ == "__main__":
     import uvicorn  # type: ignore[import-not-found]

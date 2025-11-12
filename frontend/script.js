@@ -250,6 +250,30 @@ const elements = {
     benchmarkCommand: document.getElementById('benchmarkCommand'),
     benchmarkCopy: document.getElementById('benchmarkCopy'),
     benchmarkAccelerators: document.getElementById('benchmarkAccelerators'),
+    ai4bharatBtn: document.getElementById('ai4bharatBtn'),
+    ai4bharatModal: document.getElementById('ai4bharatModal'),
+    ai4bharatBackdrop: document.getElementById('ai4bharatBackdrop'),
+    ai4bharatClose: document.getElementById('ai4bharatClose'),
+    ai4bharatTabs: document.getElementById('ai4bharatTabs'),
+    translatePanel: document.getElementById('translatePanel'),
+    detectPanel: document.getElementById('detectPanel'),
+    transliteratePanel: document.getElementById('transliteratePanel'),
+    translateSource: document.getElementById('translateSource'),
+    translateTarget: document.getElementById('translateTarget'),
+    translateInput: document.getElementById('translateInput'),
+    translateBtn: document.getElementById('translateBtn'),
+    translateResult: document.getElementById('translateResult'),
+    translateOutput: document.getElementById('translateOutput'),
+    detectInput: document.getElementById('detectInput'),
+    detectBtn: document.getElementById('detectBtn'),
+    detectResult: document.getElementById('detectResult'),
+    detectOutput: document.getElementById('detectOutput'),
+    transliterateSource: document.getElementById('transliterateSource'),
+    transliterateTarget: document.getElementById('transliterateTarget'),
+    transliterateInput: document.getElementById('transliterateInput'),
+    transliterateBtn: document.getElementById('transliterateBtn'),
+    transliterateResult: document.getElementById('transliterateResult'),
+    transliterateOutput: document.getElementById('transliterateOutput'),
     inlineSuggestions: document.getElementById('inlineSuggestions'),
     latencyMetric: document.getElementById('latencyMetric'),
     tokenMetric: document.getElementById('tokenMetric'),
@@ -290,7 +314,6 @@ const TABLE_HEADER_ATTRS = Object.freeze(['colspan', 'rowspan']);
 const TABLE_CELL_ATTRS = Object.freeze(['colspan', 'rowspan']);
 const HEALTH_POLL_INTERVAL_MS = 30000;
 let healthPollTimer = null;
-let composerAutofocusInitialized = false;
 
 function getAllowedAttributes(tag) {
     switch (tag) {
@@ -393,10 +416,84 @@ function focusMessageInput() {
         try {
             const length = elements.messageInput.value.length;
             elements.messageInput.setSelectionRange(length, length);
-        } catch (error) {
+        } catch {
             // setSelectionRange may fail on some platforms; safe to ignore
         }
     });
+}
+
+async function checkBackendHealth() {
+    try {
+        const response = await fetch(`${API_BASE}/api/status`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(5000)
+        });
+
+        if (!response.ok) {
+            console.warn('Status endpoint returned non-ok response, trying fallback');
+            return fallbackHealthCheck();
+        }
+
+        const statusData = await response.json();
+
+        const isProduction = statusData.api_key_configured === true;
+        const isHealthy = statusData.status === 'operational' && statusData.chat_available === true;
+        setBackendStatus(isHealthy, isHealthy ? null : 'Backend health check reported degraded status', isProduction);
+        return isHealthy;
+    } catch (error) {
+        console.warn('Backend status request failed:', error);
+        return fallbackHealthCheck();
+    }
+}
+
+async function fallbackHealthCheck() {
+    try {
+        const healthResponse = await fetch(`${API_BASE}/health`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(5000)
+        });
+
+        if (healthResponse.ok) {
+            console.log('Fallback health endpoint successful');
+            setBackendStatus(true);
+            return true;
+        }
+
+        console.warn('Fallback health endpoint failed with status:', healthResponse.status);
+    } catch (error) {
+        console.warn('Fallback health check error:', error);
+    }
+
+    setBackendStatus(false, 'Backend health check failed');
+    return false;
+}
+
+function setBackendStatus(healthy, message = null, isProduction = false) {
+    const wasHealthy = state.backendHealthy;
+    state.backendHealthy = healthy;
+
+    if (elements.assistantStatus) {
+        if (healthy) {
+            elements.assistantStatus.classList.remove('offline');
+            if (elements.statusDot) elements.statusDot.classList.add('live');
+            if (elements.statusText) {
+                if (isProduction) {
+                    elements.statusText.textContent = 'All systems operational · Responses stream in realtime';
+                } else {
+                    elements.statusText.textContent = 'AssistMe online';
+                }
+            }
+        } else {
+            elements.assistantStatus.classList.add('offline');
+            if (elements.statusDot) elements.statusDot.classList.remove('live');
+            if (elements.statusText) elements.statusText.textContent = message || 'AssistMe offline';
+        }
+    }
+
+    if (wasHealthy !== healthy) {
+        console.log(`Backend status changed: ${healthy ? 'online' : 'offline'}${isProduction ? ' (production mode)' : ''}`);
+    }
 }
 
 function ensureHealthMonitoring() {
@@ -412,7 +509,7 @@ function ensureHealthMonitoring() {
 function generateOfflineResponse(prompt) {
     const text = (prompt || '').trim();
     if (!text) {
-        const fallback = "I'm in offline preview mode right now. Once the AssistMe backend reconnects I'll be able to fetch live answers again.";
+        const fallback = "🔌 **Backend Offline** - I'm in preview mode. The backend will reconnect automatically. Your messages are saved locally.";
         return { response: fallback, tokens: fallback.split(/\s+/).length };
     }
 
@@ -420,13 +517,15 @@ function generateOfflineResponse(prompt) {
     let response;
 
     if (lower.includes('hello') || lower.includes('hi')) {
-        response = "Hello there! I'm running in offline preview mode, so this response is simulated. Try again soon for a live answer.";
-    } else if (lower.includes('code') || lower.includes('python') || lower.includes('bug')) {
-        response = "I'm currently offline, but here’s a quick tip: break the problem down, add logging, and once the backend is back you'll get full diagnostic help.";
-    } else if (lower.includes('help') || lower.includes('support')) {
-        response = "I've noted your request. While I'm offline you'll see a concise preview reply, and when AssistMe reconnects you'll receive a detailed answer.";
+        response = "👋 Hello! I'm in offline preview mode right now. This response is simulated, but your message is saved. I'll reconnect automatically when the backend comes back online.";
+    } else if (lower.includes('code') || lower.includes('python') || lower.includes('javascript') || lower.includes('bug') || lower.includes('error')) {
+        response = "💻 **Code Help (Offline Preview)** - I can't analyze code right now, but here's a tip: check your error message, search Stack Overflow, and I'll give you detailed help when I reconnect. Your code snippet is saved locally.";
+    } else if (lower.includes('help') || lower.includes('support') || lower.includes('issue')) {
+        response = "🆘 **Support (Offline Mode)** - I've saved your request. While offline, I can only provide basic guidance. When the backend reconnects, you'll get a full detailed response. Keep trying - I'll be back soon!";
+    } else if (lower.includes('status') || lower.includes('online') || lower.includes('backend')) {
+        response = "🔄 **Status Check** - The backend is currently offline. Health checks run every 30 seconds. You can keep using the app - all messages are saved locally and will sync when I reconnect.";
     } else {
-        response = `I'm offline right now, so this is a lightweight preview response. Once AssistMe reconnects, I'll provide a complete answer to: "${text}".`;
+        response = `📝 **Offline Preview** - I'm offline, so this is a lightweight response. Your full question is saved: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}" - I'll provide a complete answer when I reconnect.`;
     }
 
     return {
@@ -648,6 +747,182 @@ function handleGlobalKeydown(event) {
         event.preventDefault();
         closeBenchmarkModal();
     }
+    if (event.key === 'Escape' && isAI4BharatModalOpen()) {
+        event.preventDefault();
+        closeAI4BharatModal();
+    }
+}
+
+// AI4Bharat Modal Functions
+function openAI4BharatModal() {
+    if (!elements.ai4bharatModal) return;
+    elements.ai4bharatModal.classList.add('open');
+    elements.ai4bharatModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    // Default to translate tab
+    switchAI4BharatPanel('translate');
+    const focusTarget = elements.ai4bharatClose || elements.ai4bharatModal.querySelector('button');
+    focusTarget?.focus({ preventScroll: true });
+}
+
+function closeAI4BharatModal() {
+    if (!elements.ai4bharatModal) return;
+    elements.ai4bharatModal.classList.remove('open');
+    elements.ai4bharatModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    elements.ai4bharatBtn?.focus({ preventScroll: true });
+}
+
+function isAI4BharatModalOpen() {
+    return Boolean(elements.ai4bharatModal?.classList.contains('open'));
+}
+
+function handleAI4BharatTabClick(event) {
+    const button = event.target.closest('.ai4bharat-tab');
+    if (!button?.dataset.tab) return;
+    switchAI4BharatPanel(button.dataset.tab);
+}
+
+function switchAI4BharatPanel(tabName) {
+    // Update tab active states
+    elements.ai4bharatTabs?.querySelectorAll('.ai4bharat-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+
+    // Update panel visibility
+    [elements.translatePanel, elements.detectPanel, elements.transliteratePanel].forEach(panel => {
+        if (panel) {
+            panel.classList.toggle('active', panel.id === `${tabName}Panel`);
+        }
+    });
+}
+
+async function handleTranslate() {
+    if (!elements.translateInput || !elements.translateOutput || !elements.translateResult) return;
+
+    const text = elements.translateInput.value.trim();
+    const sourceLang = elements.translateSource?.value || 'en';
+    const targetLang = elements.translateTarget?.value || 'hi';
+
+    if (!text) {
+        showToast('Please enter text to translate', 'warning');
+        return;
+    }
+
+    try {
+        elements.translateBtn.disabled = true;
+        elements.translateBtn.textContent = 'Translating...';
+
+        const response = await fetch(`${API_BASE}/api/ai4bharat/translate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text: text,
+                source_language: sourceLang,
+                target_language: targetLang
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            elements.translateOutput.textContent = result.translated_text || result.response || 'Translation completed';
+            elements.translateResult.style.display = 'block';
+            showToast('Translation completed', 'success');
+        } else {
+            throw new Error(result.error || 'Translation failed');
+        }
+    } catch (error) {
+        console.error('Translation error:', error);
+        showToast(`Translation failed: ${error.message}`, 'error');
+    } finally {
+        elements.translateBtn.disabled = false;
+        elements.translateBtn.textContent = 'Translate';
+    }
+}
+
+async function handleDetectLanguage() {
+    if (!elements.detectInput || !elements.detectOutput || !elements.detectResult) return;
+
+    const text = elements.detectInput.value.trim();
+
+    if (!text) {
+        showToast('Please enter text to analyze', 'warning');
+        return;
+    }
+
+    try {
+        elements.detectBtn.disabled = true;
+        elements.detectBtn.textContent = 'Detecting...';
+
+        const response = await fetch(`${API_BASE}/api/ai4bharat/detect-language`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const langName = result.language_name || result.detected_language;
+            const confidence = result.confidence ? ` (${Math.round(result.confidence * 100)}% confidence)` : '';
+            elements.detectOutput.textContent = `Detected: ${langName}${confidence}`;
+            elements.detectResult.style.display = 'block';
+            showToast('Language detected', 'success');
+        } else {
+            throw new Error(result.error || 'Language detection failed');
+        }
+    } catch (error) {
+        console.error('Language detection error:', error);
+        showToast(`Detection failed: ${error.message}`, 'error');
+    } finally {
+        elements.detectBtn.disabled = false;
+        elements.detectBtn.textContent = 'Detect Language';
+    }
+}
+
+async function handleTransliterate() {
+    if (!elements.transliterateInput || !elements.transliterateOutput || !elements.transliterateResult) return;
+
+    const text = elements.transliterateInput.value.trim();
+    const sourceScript = elements.transliterateSource?.value || 'hi';
+    const targetScript = elements.transliterateTarget?.value || 'en';
+
+    if (!text) {
+        showToast('Please enter text to transliterate', 'warning');
+        return;
+    }
+
+    try {
+        elements.transliterateBtn.disabled = true;
+        elements.transliterateBtn.textContent = 'Transliterating...';
+
+        const response = await fetch(`${API_BASE}/api/ai4bharat/transliterate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text: text,
+                source_script: sourceScript,
+                target_script: targetScript
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            elements.transliterateOutput.textContent = result.transliterated_text || result.response || 'Transliteration completed';
+            elements.transliterateResult.style.display = 'block';
+            showToast('Transliteration completed', 'success');
+        } else {
+            throw new Error(result.error || 'Transliteration failed');
+        }
+    } catch (error) {
+        console.error('Transliteration error:', error);
+        showToast(`Transliteration failed: ${error.message}`, 'error');
+    } finally {
+        elements.transliterateBtn.disabled = false;
+        elements.transliterateBtn.textContent = 'Transliterate';
+    }
 }
 
 function renderAssistantContent(target, content) {
@@ -730,25 +1005,6 @@ function formatRelative(timestamp) {
     if (diffHours < 24) return `${diffHours}h ago`;
     const date = new Date(timestamp);
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-function escapeHtml(value) {
-    return value.replace(/[&<>"']/g, (char) => {
-        switch (char) {
-            case '&':
-                return '&amp;';
-            case '<':
-                return '&lt;';
-            case '>':
-                return '&gt;';
-            case '"':
-                return '&quot;';
-            case "'":
-                return '&#39;';
-            default:
-                return char;
-        }
-    });
 }
 
 function renderConversations(filterText = '') {
@@ -1294,8 +1550,7 @@ async function streamAssistantResponse(userMessage) {
         payload.conversation_id = state.activeConversation.serverId;
     }
 
-    console.log('Sending request to:', endpoints.stream);
-    console.log('Payload:', payload);
+
 
     const controller = new AbortController();
     state.abortController = controller;
@@ -1364,7 +1619,6 @@ async function streamAssistantResponse(userMessage) {
         const decoder = new TextDecoder();
         let buffer = '';
 
-        // eslint-disable-next-line no-constant-condition
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
@@ -1388,16 +1642,12 @@ async function streamAssistantResponse(userMessage) {
 
                 const rawEvent = buffer.slice(0, boundaryIndex);
                 buffer = buffer.slice(boundaryIndex + boundaryLength);
-                console.log('Raw SSE event:', rawEvent); // Debug SSE events
                 const parsed = parseSseEvent(rawEvent);
-                console.log('Parsed SSE event:', parsed); // Debug parsed data
                 if (!parsed) continue;
 
                 if (parsed.event === 'delta' && parsed.data?.content) {
-                    console.log('Adding delta content:', parsed.data.content); // Debug content adding
                     assistantMessage.content += parsed.data.content;
                     assistantFragment.text.textContent = assistantMessage.content;
-                    console.log('Updated content:', assistantMessage.content); // Debug content display
                 }
 
                 if (parsed.event === 'error') {
@@ -1405,7 +1655,6 @@ async function streamAssistantResponse(userMessage) {
                 }
 
                 if (parsed.event === 'done') {
-                    console.log('Stream done, final data:', parsed.data); // Debug final data
                     assistantMessage.content = parsed.data?.response || assistantMessage.content;
                     assistantFragment.text.textContent = assistantMessage.content;
                     tokensUsed = parsed.data?.tokens || null;
@@ -1759,6 +2008,15 @@ function initInlineHandlers() {
     elements.voiceBtn?.addEventListener('click', toggleVoiceInput);
     elements.uploadBtn?.addEventListener('click', () => showToast('File uploads are coming soon.', 'info'));
 
+    // AI4Bharat handlers
+    elements.ai4bharatBtn?.addEventListener('click', openAI4BharatModal);
+    elements.ai4bharatClose?.addEventListener('click', closeAI4BharatModal);
+    elements.ai4bharatBackdrop?.addEventListener('click', closeAI4BharatModal);
+    elements.ai4bharatTabs?.addEventListener('click', handleAI4BharatTabClick);
+    elements.translateBtn?.addEventListener('click', handleTranslate);
+    elements.detectBtn?.addEventListener('click', handleDetectLanguage);
+    elements.transliterateBtn?.addEventListener('click', handleTransliterate);
+
     document.addEventListener('click', handleClickOutside);
 }
 
@@ -1836,7 +2094,6 @@ function restoreInitialState() {
     // Clear any invalid models from cache (force refresh of model selection)
     const validModels = MODEL_OPTIONS.map(m => m.id);
     if (storedModel && !validModels.includes(storedModel)) {
-        console.log('Clearing invalid cached model:', storedModel);
         localStorage.removeItem(MODEL_KEY);
     }
 
@@ -1867,7 +2124,6 @@ function restoreInitialState() {
 async function bootstrap() {
     restoreInitialState();
     initInlineHandlers();
-    initComposerAutofocus();
     initVoice();
     setBackendStatus(true);
     await checkBackendHealth();

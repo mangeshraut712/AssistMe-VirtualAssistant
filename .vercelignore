@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+backend/venv/
+backend/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+
+# Development files
+.vscode/
+.idea/
+*.log
+*.tmp
+.DS_Store
+
+# Source files not needed for frontend build
+src/
+backend/
+*.md
+KIMI_*
+QUICK_START_GUIDE.md
+ALL_PHASES_COMPLETE_SUMMARY.md
+COMPLETE_UPGRADE_CHECKLIST.md
+PHASES_2_3_4_IMPLEMENTATION.md
+FRONTEND_UPGRADE_INDEX.md
+FRONTEND_UPGRADE_SUMMARY.md
+FRONTEND_PHASE1_IMPLEMENTATION.md
+FRONTEND_ANALYSIS.md
+
+# Test files
+**/*.test.*
+**/*.spec.*
+vitest.config.*
+coverage/
+
+# Build artifacts
+dist/
+build/
+
+# Git
+.git/
+.gitignore
+
+# Environment files
+.env*
+!.env.example
+
+# Documentation
+README.md
+docs/

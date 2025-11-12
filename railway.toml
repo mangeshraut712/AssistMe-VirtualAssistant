@@ -12,7 +12,12 @@ healthcheckPath = "/health"
 healthcheckTimeout = 300
 # Use start.sh script for proper uvicorn startup with PORT resolution
 
+[deploy.env]
 # REQUIRED ENVIRONMENT VARIABLES for OpenRouter integration:
 # OPENROUTER_API_KEY - Your OpenRouter API key (obtain from https://openrouter.ai/keys)
 # DATABASE_URL - PostgreSQL connection string (auto-provided by Railway)
 # APP_URL - Frontend URL for OpenRouter referrer (default: production Vercel URL)
+# DEV_MODE - Set to false for production
+OPENROUTER_API_KEY = "${OPENROUTER_API_KEY}"
+APP_URL = "https://assist-me-virtual-assistant.vercel.app"
+DEV_MODE = "false"
