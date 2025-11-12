@@ -39,7 +39,20 @@ except Exception as e:
 from .database import get_db
 from .models import Conversation, Message as MessageModel
 from .ai4bharat import ai4bharat_client
-from .kimi_client import kimi_client
+
+# Import kimi_client with graceful error handling
+try:
+    from .kimi_client import kimi_client
+    KIMI_CLIENT_AVAILABLE = True
+    logging.info("Successfully imported Kimi client")
+except ImportError as e:
+    logging.warning("Kimi client import failed: %s. Kimi features will be disabled.", e)
+    kimi_client = None
+    KIMI_CLIENT_AVAILABLE = False
+except Exception as e:
+    logging.error("Kimi client error: %s. Features disabled.", e)
+    kimi_client = None
+    KIMI_CLIENT_AVAILABLE = False
 
 def _normalise_origin(value: Optional[str]) -> Optional[str]:
     if not value:
@@ -323,7 +336,7 @@ async def chat_text(request: TextChatRequest, db: Optional[SessionType] = Depend
 
     # Check if requesting Kimi model
     if request.model and "kimi" in request.model.lower():
-        if not kimi_client.is_available():
+        if not KIMI_CLIENT_AVAILABLE or not kimi_client or not kimi_client.is_available():
             return {"error": "Kimi model is not available. Please check server configuration."}
         
         current_conversation_id, payload_messages = _prepare_conversation_context(request, db)
@@ -381,7 +394,7 @@ async def chat_text_stream(request: TextChatRequest, db: Optional[SessionType] =
     use_kimi = request.model and "kimi" in request.model.lower()
     
     if use_kimi:
-        if not kimi_client.is_available():
+        if not KIMI_CLIENT_AVAILABLE or not kimi_client or not kimi_client.is_available():
             def error_generator():
                 yield _sse_event("error", {"message": "Kimi model is not available. Please check server configuration."})
             return StreamingResponse(error_generator(), media_type="text/event-stream")
@@ -496,14 +509,14 @@ async def chat_text_options(request: Request) -> Response:
 def list_models():
     _ensure_chat_client()
     models = grok_client.get_available_models()
-    
+
     # Add Kimi model if available
-    if kimi_client.is_available():
+    if KIMI_CLIENT_AVAILABLE and kimi_client and kimi_client.is_available():
         models.append({
             "id": "moonshotai/kimi-k2-thinking",
             "name": "Kimi-K2-Thinking (Local)",
         })
-    
+
     return {
         "models": models,
         "default": grok_client.get_default_model(),
@@ -538,6 +551,12 @@ def openrouter_status():
 @app.get("/api/kimi/status")
 def kimi_status():
     """Get status of Kimi-K2-Thinking local model."""
+    if not KIMI_CLIENT_AVAILABLE or not kimi_client:
+        return {
+            "available": False,
+            "error": "Kimi client not available - ML dependencies not installed",
+        }
+
     return {
         "available": kimi_client.is_available(),
         "model_info": kimi_client.get_model_info(),
