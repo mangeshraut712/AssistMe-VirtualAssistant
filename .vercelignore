@@ -32,8 +32,7 @@ FRONTEND_ANALYSIS.md
 vitest.config.*
 coverage/
 
-# Build artifacts
-dist/
+# Build artifacts (keep dist/ for Vercel deployment)
 build/
 
 # Git

@@ -2,6 +2,6 @@
 (function () {
   var script = document.createElement('script')
   script.type = 'module'
-  script.src = '/assets/index-CRAOFdYk.js'
+  script.src = '/assets/index-COBfWKD2.js'
   document.head.appendChild(script)
 })()
