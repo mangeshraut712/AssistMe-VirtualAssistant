@@ -2,5 +2,8 @@
   "python.defaultInterpreterPath": "./backend/venv/bin/python",
   "python.terminal.activateEnvironment": true,
   "python.linting.enabled": true,
-  "python.formatting.provider": "autopep8"
+  "python.formatting.provider": "autopep8",
+  "typescript.check.npmIsInstalled": false,
+  "typescript.validate.enable": false,
+  "javascript.validate.enable": true
 }
