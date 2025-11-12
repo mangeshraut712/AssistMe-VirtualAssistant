@@ -1,5 +1,6 @@
 [build]
 builder = "DOCKERFILE"
+buildCommand = "docker build -t assistme-backend ."
 
 [deploy]
 # Railway provides PORT environment variable

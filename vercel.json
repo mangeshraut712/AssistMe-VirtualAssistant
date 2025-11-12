@@ -59,7 +59,6 @@
       ]
     }
   ],
-  "functions": {},
   "regions": ["fra1"],
   "env": {
     "NODE_ENV": "production"
