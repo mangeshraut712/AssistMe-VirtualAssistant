@@ -1,16 +1,11 @@
 [build]
-builder = "NIXPACKS"
-
-[build.env]
-# Enable V2 runtime for better FastAPI support
-NIXPACKS_V2 = "true"
+builder = "DOCKERFILE"
 
 [deploy]
-# V2 runtime: uvicorn startup in backend directory
-startCommand = "./start.sh"
+# Railway provides PORT environment variable
 healthcheckPath = "/health"
 healthcheckTimeout = 300
-# Use start.sh script for proper uvicorn startup with PORT resolution
+restartPolicyType = "ON_FAILURE"
 
 [deploy.env]
 # REQUIRED ENVIRONMENT VARIABLES for OpenRouter integration:
@@ -21,3 +16,5 @@ healthcheckTimeout = 300
 OPENROUTER_API_KEY = "${OPENROUTER_API_KEY}"
 APP_URL = "https://assist-me-virtual-assistant.vercel.app"
 DEV_MODE = "false"
+FASTAPI_BIND_HOST = "0.0.0.0"
+PYTHONUNBUFFERED = "1"
