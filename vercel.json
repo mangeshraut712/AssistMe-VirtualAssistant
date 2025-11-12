@@ -15,6 +15,10 @@
       "destination": "https://assistme-virtualassistant-production.up.railway.app/api/:path*"
     },
     {
+      "source": "/health",
+      "destination": "https://assistme-virtualassistant-production.up.railway.app/health"
+    },
+    {
       "source": "/:path*",
       "destination": "/index.html"
     }
@@ -38,6 +42,32 @@
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "X-DNS-Prefetch-Control",
+          "value": "on"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
         }
       ]
     },
@@ -55,16 +85,20 @@
         {
           "key": "Access-Control-Allow-Headers",
           "value": "Content-Type, Authorization"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
         }
       ]
     }
   ],
-  "regions": ["fra1"],
+  "regions": ["iad1"],
   "env": {
     "NODE_ENV": "production"
   },
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
+  "installCommand": "npm ci",
   "framework": null
 }

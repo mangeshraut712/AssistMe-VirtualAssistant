@@ -94,7 +94,70 @@ ALLOWED_ORIGINS.extend(_env_configured_origins())
 ALLOWED_ORIGINS = sorted({origin for origin in ALLOWED_ORIGINS if origin})
 VERCEL_ORIGIN_PATTERN = re.compile(r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app")
 
-app = FastAPI(title="AssistMe API", version="1.0.0")
+app = FastAPI(title="AssistMe API", version="2.0.0")
+
+# Startup validation
+@app.on_event("startup")
+async def startup_validation():
+    """Validate critical environment variables and log warnings"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    warnings = []
+    errors = []
+    
+    # Check OpenRouter API key
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        warnings.append("OPENROUTER_API_KEY not set - chat features will be limited")
+    elif api_key.startswith("your-") or api_key == "sk-or-v1-your-actual-api-key-here":
+        errors.append("OPENROUTER_API_KEY appears to be a placeholder - please set a real API key")
+    else:
+        logging.info("✓ OpenRouter API key configured")
+    
+    # Check database configuration
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        logging.info("✓ Database URL configured")
+    else:
+        logging.info("ℹ Using SQLite fallback database")
+    
+    # Check app URL for CORS
+    app_url = os.getenv("APP_URL")
+    if not app_url:
+        warnings.append("APP_URL not set - CORS may not work correctly in production")
+    else:
+        logging.info(f"✓ App URL configured: {app_url}")
+    
+    # Check port configuration
+    port = os.getenv("PORT", "8001")
+    logging.info(f"✓ Server will bind to port {port}")
+    
+    # Log all warnings
+    for warning in warnings:
+        logging.warning(f"⚠ {warning}")
+    
+    # Log all errors
+    for error in errors:
+        logging.error(f"✗ {error}")
+    
+    if errors:
+        logging.error("\n" + "="*60)
+        logging.error("CRITICAL: Application started with configuration errors!")
+        logging.error("Please fix the above errors for full functionality.")
+        logging.error("="*60 + "\n")
+    elif warnings:
+        logging.warning("\n" + "="*60)
+        logging.warning("Application started with warnings")
+        logging.warning("Some features may not work as expected.")
+        logging.warning("="*60 + "\n")
+    else:
+        logging.info("\n" + "="*60)
+        logging.info("✓ All environment variables configured correctly")
+        logging.info("✓ AssistMe API started successfully")
+        logging.info("="*60 + "\n")
 
 # Configure CORS for cross-origin requests
 app.add_middleware(
@@ -269,14 +332,66 @@ def _sse_event(event: str, data: dict) -> str:
 
 @app.get("/health")
 def health(request: Request):
+    """Enhanced health check with comprehensive diagnostics"""
     headers = _cors_headers(request)
+    
+    # Check database connectivity
+    db_status = "not_configured"
+    db_error = None
+    try:
+        from .database import engine, _ensure_database_setup
+        if _ensure_database_setup() and engine is not None:
+            # Try a simple query to verify connection
+            with engine.connect() as conn:
+                conn.execute("SELECT 1")
+            db_status = "connected"
+        elif engine is None:
+            db_status = "failed"
+    except Exception as e:
+        db_status = "error"
+        db_error = str(e)
+        logging.warning(f"Health check database error: {e}")
+    
+    # Check API key configuration
+    api_key_configured = bool(os.getenv("OPENROUTER_API_KEY"))
+    
+    # Check chat client availability
+    chat_status = "available" if CHAT_CLIENT_AVAILABLE and grok_client is not None else "unavailable"
+    
+    # Check Kimi client availability
+    kimi_status = "available" if KIMI_CLIENT_AVAILABLE and kimi_client and kimi_client.is_available() else "unavailable"
+    
+    # Determine overall status
+    if chat_status == "unavailable" and not api_key_configured:
+        overall_status = "degraded"
+    elif db_status == "error":
+        overall_status = "degraded"
+    else:
+        overall_status = "healthy"
+    
     payload = {
-        "status": "ok",
+        "status": overall_status,
         "service": "assistme-api",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "timestamp": datetime.now().isoformat(),
+        "components": {
+            "database": {
+                "status": db_status,
+                "error": db_error
+            },
+            "chat_client": {
+                "status": chat_status,
+                "api_key_configured": api_key_configured
+            },
+            "kimi_client": {
+                "status": kimi_status
+            }
+        }
     }
-    return JSONResponse(content=payload, headers=headers)
+    
+    # Return appropriate status code
+    status_code = 200 if overall_status == "healthy" else 503
+    return JSONResponse(content=payload, headers=headers, status_code=status_code)
 
 
 @app.options("/health")

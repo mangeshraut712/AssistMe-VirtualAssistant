@@ -1,0 +1,78 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+.github
+
+# Node modules and build artifacts
+node_modules
+npm-debug.log
+package-lock.json
+dist
+.vite
+.vercel
+
+# Python virtual environments and cache
+venv
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+.pytest_cache
+.coverage
+htmlcov
+
+# Environment files (sensitive)
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Railway and Vercel
+railway.toml
+.railwayignore
+vercel.json
+.vercelignore
+
+# Documentation and misc
+README.md
+LICENSE
+*.md
+docs
+
+# Test files
+test
+tests
+*.test.js
+*.spec.js
+*.test.py
+*.spec.py
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+test.db
+
+# ML models cache (too large for Docker)
+hf_cache
+.cache
+models
+
+# Logs
+*.log
+logs

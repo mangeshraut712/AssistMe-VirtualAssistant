@@ -1,14 +1,27 @@
 from __future__ import annotations
 
 import logging
+import os
 from importlib import import_module
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from .settings import get_database_url
 
+# Get database URL from settings
 db_url = get_database_url()
+
+# If no database URL is configured, use SQLite in a data directory
+if not db_url:
+    data_dir = Path(os.getenv("DATA_DIR", "."))
+    data_dir.mkdir(exist_ok=True)
+    sqlite_path = data_dir / "assistme.db"
+    db_url = f"sqlite:///{sqlite_path}"
+    logging.info(f"Using SQLite database at {sqlite_path}")
+else:
+    logging.info(f"Using configured database: {db_url.split('@')[-1] if '@' in db_url else 'SQLite'}")
 
 Base = declarative_base()
 engine = None
