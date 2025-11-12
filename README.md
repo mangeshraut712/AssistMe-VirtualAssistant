@@ -128,6 +128,17 @@ npm run serve:frontend  # Frontend on :3000
 npm run serve:backend   # Backend on :8001
 ```
 
+### Optional ML stack for Kimi
+
+If you want to run the local Kimi-K2-Thinking client, install the heavier Transformer + torch dependencies separately to keep the production Docker image slim:
+
+```bash
+cd backend
+pip install -r requirements-ml.txt
+```
+
+The backend already handles missing ML libraries gracefully, so you can skip this step on Railway/staging builds that must stay under 4 GB.
+
 ### 5. Access Application
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8001
