@@ -34,8 +34,8 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 flex flex-col items-center justify-center px-8 md:px-16 lg:px-24 relative z-10">
-                    <div className="w-full max-w-5xl space-y-10 text-center">
+                <div className="flex-1 flex flex-col items-center justify-center px-5 sm:px-8 md:px-16 lg:px-24 relative z-10 w-full">
+                    <div className="w-full max-w-5xl space-y-8 sm:space-y-10 text-center mx-auto">
                         {/* Logo/Icon */}
                         <div className="flex justify-center mb-4">
                             <div className="relative">
@@ -51,17 +51,17 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                         {/* Greeting */}
                         <div className="space-y-3">
                             <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 tracking-wide uppercase">Welcome back</p>
-                            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-neutral-900 via-neutral-700 to-neutral-900 dark:from-white dark:via-neutral-200 dark:to-white bg-clip-text text-transparent leading-tight">
+                            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-neutral-900 via-neutral-700 to-neutral-900 dark:from-white dark:via-neutral-200 dark:to-white bg-clip-text text-transparent leading-tight">
                                 How can I help you today?
                             </h1>
-                            <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto leading-relaxed">
+                            <p className="text-base sm:text-lg md:text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto leading-relaxed">
                                 Ask me anything, generate images, translate text, or explore powerful AI features.
                             </p>
                         </div>
 
                         {/* Feature Highlights Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl mx-auto pt-4">
-                            <div className="group p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 max-w-4xl mx-auto pt-2 sm:pt-4">
+                            <div className="group p-5 sm:p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                     <MessageSquare className="h-6 w-6 text-white" />
                                 </div>
@@ -69,7 +69,7 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                                 <p className="text-sm text-neutral-600 dark:text-neutral-400">Chat with advanced AI models for any task</p>
                             </div>
 
-                            <div className="group p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-purple-500/30 dark:hover:border-purple-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
+                            <div className="group p-5 sm:p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-purple-500/30 dark:hover:border-purple-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                     <ImageIcon className="h-6 w-6 text-white" />
                                 </div>
@@ -77,7 +77,7 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                                 <p className="text-sm text-neutral-600 dark:text-neutral-400">Create stunning visuals with AI</p>
                             </div>
 
-                            <div className="group p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10">
+                            <div className="group p-5 sm:p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                     <Code className="h-6 w-6 text-white" />
                                 </div>
@@ -89,7 +89,7 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                 </div>
 
                 {/* Input Area at Bottom */}
-                <div className="flex-none pb-6 px-8 md:px-16 lg:px-24 relative z-10">
+                <div className="flex-none pb-4 sm:pb-6 px-5 sm:px-8 md:px-16 lg:px-24 relative z-10 safe-area-bottom">
                     <div className="max-w-5xl mx-auto">
                         {inputProps && <InputArea {...inputProps} variant="hero" />}
                     </div>
@@ -101,8 +101,8 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
     return (
         <div className="h-full flex flex-col bg-white dark:bg-black">
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto">
-                <div className="max-w-3xl mx-auto w-full p-4 md:p-6 space-y-6 pt-20 pb-32">
+            <div className="flex-1 overflow-y-auto overscroll-contain">
+                <div className="max-w-3xl mx-auto w-full p-4 sm:p-6 space-y-6 pt-20 pb-28 sm:pb-32">
                     {messages.map((msg, idx) => (
                         <MessageBubble
                             key={idx}
@@ -124,7 +124,7 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
             </div>
 
             {/* Input Area Fixed at Bottom */}
-            <div className="flex-none bg-white dark:bg-black pb-6">
+            <div className="flex-none bg-white dark:bg-black pb-5 sm:pb-6 safe-area-bottom border-t border-border/60">
                 {inputProps && <InputArea {...inputProps} variant="docked" />}
             </div>
         </div>

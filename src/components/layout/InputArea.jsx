@@ -108,8 +108,8 @@ const InputArea = ({
     };
 
     const containerClass = isHero
-        ? 'w-full max-w-3xl mx-auto px-2 md:px-4'
-        : 'w-full px-4 pb-4 md:pb-6 pt-4';
+        ? 'w-full max-w-3xl mx-auto px-3 sm:px-4'
+        : 'w-full px-3 sm:px-4 pb-4 sm:pb-5 md:pb-6 pt-4';
 
     return (
         <div className={containerClass}>

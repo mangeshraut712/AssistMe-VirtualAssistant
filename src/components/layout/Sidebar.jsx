@@ -81,7 +81,7 @@ const Sidebar = ({ show, onClose, onNewChat, onNavigate, conversations = [], cur
                     }`}
             >
                 {/* Header - Fixed */}
-                <div className="flex items-center justify-between gap-3 px-3 pt-4 pb-3 flex-none">
+                <div className="flex items-center justify-between gap-3 px-3 pt-4 pb-3 flex-none safe-area-top">
                     <div className="flex items-center gap-3">
                         <img
                             src="/assets/logo.png"
@@ -236,7 +236,7 @@ const Sidebar = ({ show, onClose, onNewChat, onNavigate, conversations = [], cur
                     </div>
                 )}
 
-                <div className="p-4 border-t border-border/60 flex items-center justify-between gap-3 flex-none">
+                <div className="p-4 border-t border-border/60 flex items-center justify-between gap-3 flex-none safe-area-bottom">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-foreground text-background flex items-center justify-center text-sm font-semibold">
                             G

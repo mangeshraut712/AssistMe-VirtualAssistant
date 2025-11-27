@@ -106,6 +106,23 @@ function App() {
         root.classList.add(theme);
     }, [settings.theme]);
 
+    // Keep viewport height accurate on mobile Safari/Chrome
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const syncAppHeight = () => {
+            document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+        };
+
+        syncAppHeight();
+        window.addEventListener('resize', syncAppHeight);
+        window.addEventListener('orientationchange', syncAppHeight);
+        return () => {
+            window.removeEventListener('resize', syncAppHeight);
+            window.removeEventListener('orientationchange', syncAppHeight);
+        };
+    }, []);
+
     // Chat Management
     const createNewChat = () => {
         const newChat = { id: Date.now(), title: 'New Chat', messages: [] };
@@ -307,7 +324,10 @@ function App() {
     };
 
     return (
-        <div className="flex h-screen bg-background text-foreground overflow-hidden selection:bg-primary/20">
+        <div
+            className="flex min-h-screen bg-background text-foreground overflow-auto md:overflow-hidden selection:bg-primary/20"
+            style={{ minHeight: 'var(--app-height)' }}
+        >
             <Sidebar
                 show={showSidebar}
                 onClose={() => setShowSidebar(false)}
@@ -328,7 +348,7 @@ function App() {
                 }`}>
                 <Header onOpenSidebar={() => setShowSidebar(true)} showSidebar={showSidebar} />
 
-                <div className="flex-1 overflow-hidden pt-16">
+                <div className="flex-1 overflow-hidden header-offset">
                     <Routes>
                         <Route
                             path="/"

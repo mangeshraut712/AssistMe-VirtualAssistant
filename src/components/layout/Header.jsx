@@ -4,7 +4,10 @@ import { Link } from 'react-router-dom';
 
 const Header = ({ onOpenSidebar, showSidebar = false }) => {
     return (
-        <header className="fixed top-0 left-0 right-0 h-16 z-40 flex items-center justify-end px-6">
+        <header
+            className="fixed top-0 left-0 right-0 z-40 flex items-center justify-end px-4 sm:px-6 py-3 safe-area-top bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70 border-b border-border/60"
+            style={{ minHeight: 'calc(env(safe-area-inset-top) + 4rem)' }}
+        >
             <div className="flex items-center justify-between w-full">
                 <button
                     onClick={onOpenSidebar}

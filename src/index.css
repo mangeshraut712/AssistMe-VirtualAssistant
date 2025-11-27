@@ -47,6 +47,7 @@
         --sidebar-bg: 0 0% 98%;
         /* Slightly off-white for sidebar */
         --surface: 0 0% 100%;
+        --app-height: 100vh;
     }
 
     .dark {
@@ -94,19 +95,38 @@
     }
 }
 
+@supports (height: 100dvh) {
+    :root {
+        --app-height: 100dvh;
+    }
+}
+
 @layer base {
     * {
         @apply border-border;
+    }
+
+    #root {
+        min-height: var(--app-height);
     }
 
     body {
         @apply bg-background text-foreground antialiased min-h-screen overflow-x-hidden;
         font-family: 'Sora', 'SF Pro Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
         letter-spacing: -0.01em;
+        -webkit-text-size-adjust: 100%;
     }
 
     .safe-area-bottom {
         padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .safe-area-top {
+        padding-top: env(safe-area-inset-top);
+    }
+
+    .header-offset {
+        padding-top: calc(env(safe-area-inset-top) + 4rem);
     }
 
     /* Improve default selection contrast */
