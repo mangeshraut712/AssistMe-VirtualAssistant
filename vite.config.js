@@ -18,6 +18,9 @@ export default defineConfig({
     emptyOutDir: true,
     cssMinify: true,
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'frontend/index.html')
+      },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'marked', 'highlight.js']
