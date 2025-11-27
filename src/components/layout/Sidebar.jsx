@@ -72,16 +72,25 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
                     }`}
             >
                 {/* Header - Fixed */}
-                <div className="flex items-center gap-3 px-3 pt-4 pb-3 flex-none">
-                    <img
-                        src="/assets/logo.png"
-                        alt="AssistMe logo"
-                        className="h-10 w-10 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] object-cover bg-white"
-                    />
-                    <div>
-                        <p className="text-lg font-semibold leading-5">AssistMe</p>
-                        <p className="text-xs text-muted-foreground">All-in-one</p>
+                <div className="flex items-center justify-between gap-3 px-3 pt-4 pb-3 flex-none">
+                    <div className="flex items-center gap-3">
+                        <img
+                            src="/assets/logo.png"
+                            alt="AssistMe logo"
+                            className="h-10 w-10 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] object-cover bg-white"
+                        />
+                        <div>
+                            <p className="text-lg font-semibold leading-5">AssistMe</p>
+                            <p className="text-xs text-muted-foreground">All-in-one</p>
+                        </div>
                     </div>
+                    <button
+                        onClick={onClose}
+                        className="md:hidden p-2 rounded-xl hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="Close sidebar"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
                 </div>
 
                 {/* New Chat & Search - Fixed */}
