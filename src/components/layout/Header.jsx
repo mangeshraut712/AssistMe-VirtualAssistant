@@ -8,8 +8,9 @@ const Header = ({ onOpenSidebar, showSidebar = false }) => {
             <div className="flex items-center justify-between w-full">
                 <button
                     onClick={onOpenSidebar}
-                    className={`p-2 rounded-xl border border-border bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)] text-foreground transition-opacity ${showSidebar ? 'md:hidden' : ''
+                    className={`p-2 rounded-xl border border-border bg-card text-foreground shadow-sm hover:shadow-md transition-all ${showSidebar ? 'md:hidden' : ''
                         }`}
+                    title="Open sidebar"
                 >
                     <Menu className="h-5 w-5" />
                 </button>

@@ -15,14 +15,14 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
         { id: 'google/gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image' },
     ];
 
-    // Mock initial gallery data
+    // Updated gallery with AI-themed images
     const [gallery, setGallery] = useState([
-        { id: 1, url: 'https://images.unsplash.com/photo-1706502755298-5407e7df4386?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-[2/3]' },
-        { id: 2, url: 'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-square' },
-        { id: 3, url: 'https://images.unsplash.com/photo-1706463629335-d92264bbfd6f?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-[3/4]' },
-        { id: 4, url: 'https://images.unsplash.com/photo-1682687982501-1e58ab814714?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-[16/9]' },
-        { id: 5, url: 'https://images.unsplash.com/photo-1706066236826-68194464db6e?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-[4/5]' },
-        { id: 6, url: 'https://images.unsplash.com/photo-1705516956428-c11451f25339?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-square' },
+        { id: 1, url: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-[2/3]' }, // AI robot
+        { id: 2, url: 'https://images.unsplash.com/photo-1686191128892-c0557e5a4e93?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-square' }, // Digital art
+        { id: 3, url: 'https://images.unsplash.com/photo-1675271591433-d2c5c4c3f9a3?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-[3/4]' }, // AI generated landscape
+        { id: 4, url: 'https://images.unsplash.com/photo-1696258686454-60082b2c33e2?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-[16/9]' }, // Futuristic city
+        { id: 5, url: 'https://images.unsplash.com/photo-1707343843437-caacff5cfa74?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-[4/5]' }, // Abstract AI art
+        { id: 6, url: 'https://images.unsplash.com/photo-1706885093476-b1e54f26d4b6?q=80&w=800&auto=format&fit=crop', aspect: 'aspect-square' }, // Digital creation
     ]);
 
     const handleGenerate = async () => {
@@ -66,7 +66,6 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
             }
         } catch (error) {
             console.error("Generation failed", error);
-            // No fallback - let the user know or rely on backend error handling
         } finally {
             setIsGenerating(false);
             setPrompt('');
@@ -87,7 +86,6 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
             window.URL.revokeObjectURL(blobUrl);
         } catch (e) {
             console.error("Download failed", e);
-            // Fallback for cross-origin images
             window.open(url, '_blank');
         }
     };
@@ -105,23 +103,23 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black z-50 flex flex-col font-sans text-white overflow-hidden">
+        <div className="fixed inset-0 bg-background z-50 flex flex-col font-sans text-foreground overflow-hidden">
             {/* Header */}
-            <header className="h-16 flex items-center justify-between px-6 bg-black/50 backdrop-blur sticky top-0 z-10">
+            <header className="h-16 flex items-center justify-between px-6 bg-background/80 backdrop-blur border-b border-border sticky top-0 z-10">
                 <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-purple-500" />
                     <span className="font-bold text-lg">Imagine</span>
                 </div>
-                <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <button onClick={onClose} className="p-2 hover:bg-foreground/10 rounded-full transition-colors">
                     <X className="h-6 w-6" />
                 </button>
             </header>
 
             {/* Main Content - Masonry Grid */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-muted/30">
                 <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4 max-w-7xl mx-auto pb-32">
                     {gallery.map((item) => (
-                        <div key={item.id} className={`relative group rounded-xl overflow-hidden bg-neutral-900 border border-white/5 shadow-lg break-inside-avoid ${item.aspect}`}>
+                        <div key={item.id} className={`relative group rounded-xl overflow-hidden bg-card border border-border shadow-lg break-inside-avoid ${item.aspect}`}>
                             <img
                                 src={item.url}
                                 alt="Gallery item"
@@ -154,7 +152,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                 </div>
                             </div>
                             {item.isNew && (
-                                <span className="absolute top-3 right-3 px-2 py-1 bg-purple-500/90 backdrop-blur text-xs font-bold rounded-full shadow-lg border border-white/20 animate-in fade-in zoom-in">
+                                <span className="absolute top-3 right-3 px-2 py-1 bg-purple-500/90 backdrop-blur text-xs font-bold rounded-full shadow-lg border border-white/20 animate-in fade-in zoom-in text-white">
                                     NEW
                                 </span>
                             )}
@@ -165,11 +163,11 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
 
             {/* Floating Input Bar */}
             <div className="absolute bottom-8 left-0 right-0 px-4 flex justify-center z-20">
-                <div className="w-full max-w-3xl bg-neutral-900/90 backdrop-blur-xl border border-white/10 rounded-3xl p-2 shadow-2xl flex flex-col gap-2">
+                <div className="w-full max-w-3xl bg-card/90 backdrop-blur-xl border border-border rounded-3xl p-2 shadow-2xl flex flex-col gap-2">
                     {/* Input Area */}
                     <div className="flex items-center gap-3 px-2">
-                        <div className="p-2 bg-neutral-800 rounded-full">
-                            <Sparkles className="h-5 w-5 text-purple-400" />
+                        <div className="p-2 bg-muted rounded-full">
+                            <Sparkles className="h-5 w-5 text-purple-500" />
                         </div>
                         <input
                             type="text"
@@ -177,15 +175,15 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                             onChange={(e) => setPrompt(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
                             placeholder="Enter prompt to create image"
-                            className="flex-1 bg-transparent border-none text-white placeholder:text-neutral-500 focus:outline-none h-12 text-lg"
+                            className="flex-1 bg-transparent border-none text-foreground placeholder:text-muted-foreground focus:outline-none h-12 text-lg"
                             autoFocus
                         />
                         <button
                             onClick={handleGenerate}
                             disabled={!prompt.trim() || isGenerating}
                             className={`p-2 rounded-full transition-all ${prompt.trim()
-                                ? 'bg-white text-black hover:bg-neutral-200'
-                                : 'bg-neutral-800 text-neutral-500'
+                                ? 'bg-foreground text-background hover:opacity-90'
+                                : 'bg-muted text-muted-foreground'
                                 }`}
                         >
                             {isGenerating ? (
@@ -197,12 +195,12 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                     </div>
 
                     {/* Toolbar */}
-                    <div className="flex items-center justify-between px-2 pt-1 border-t border-white/5">
+                    <div className="flex items-center justify-between px-2 pt-1 border-t border-border">
                         <div className="flex items-center gap-1">
                             <div className="relative">
                                 <button
                                     onClick={() => setShowSettings(!showSettings)}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-white/5 text-xs font-medium text-neutral-400 hover:text-white transition-colors"
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-foreground/5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     <Settings2 className="h-3.5 w-3.5" />
                                     <span>Settings</span>
@@ -210,42 +208,42 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
 
                                 {/* Settings Popover */}
                                 {showSettings && (
-                                    <div className="absolute bottom-full left-0 mb-2 w-72 bg-neutral-800 border border-white/10 rounded-xl p-4 shadow-xl animate-in fade-in slide-in-from-bottom-2">
+                                    <div className="absolute bottom-full left-0 mb-2 w-72 bg-card border border-border rounded-xl p-4 shadow-xl animate-in fade-in slide-in-from-bottom-2">
 
                                         {/* Model Selector */}
                                         <div className="mb-4">
-                                            <h4 className="text-xs font-bold text-neutral-500 uppercase mb-2">Model</h4>
+                                            <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Model</h4>
                                             <div className="relative">
                                                 <select
                                                     value={selectedModel}
                                                     onChange={(e) => setSelectedModel(e.target.value)}
-                                                    className="w-full bg-neutral-900 border border-white/10 rounded-lg py-2 px-3 text-sm text-white focus:outline-none focus:border-purple-500 appearance-none"
+                                                    className="w-full bg-background border border-border rounded-lg py-2 px-3 text-sm text-foreground focus:outline-none focus:border-purple-500 appearance-none"
                                                 >
                                                     {models.map(m => (
                                                         <option key={m.id} value={m.id}>{m.name}</option>
                                                     ))}
                                                 </select>
-                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none" />
+                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                             </div>
                                         </div>
 
-                                        <h4 className="text-xs font-bold text-neutral-500 uppercase mb-2">Aspect Ratio</h4>
+                                        <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Aspect Ratio</h4>
                                         <div className="flex gap-2 mb-4">
                                             <button
                                                 onClick={() => setAspectRatio('1:1')}
-                                                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${aspectRatio === '1:1' ? 'bg-white text-black border-white' : 'border-white/10 hover:bg-white/5'}`}
+                                                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${aspectRatio === '1:1' ? 'bg-foreground text-background border-foreground' : 'border-border hover:bg-foreground/5'}`}
                                             >
                                                 Square
                                             </button>
                                             <button
                                                 onClick={() => setAspectRatio('16:9')}
-                                                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${aspectRatio === '16:9' ? 'bg-white text-black border-white' : 'border-white/10 hover:bg-white/5'}`}
+                                                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${aspectRatio === '16:9' ? 'bg-foreground text-background border-foreground' : 'border-border hover:bg-foreground/5'}`}
                                             >
                                                 Landscape
                                             </button>
                                             <button
                                                 onClick={() => setAspectRatio('9:16')}
-                                                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${aspectRatio === '9:16' ? 'bg-white text-black border-white' : 'border-white/10 hover:bg-white/5'}`}
+                                                className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${aspectRatio === '9:16' ? 'bg-foreground text-background border-foreground' : 'border-border hover:bg-foreground/5'}`}
                                             >
                                                 Portrait
                                             </button>
@@ -254,25 +252,25 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                 )}
                             </div>
 
-                            <div className="h-4 w-[1px] bg-white/10 mx-1" />
+                            <div className="h-4 w-[1px] bg-border mx-1" />
 
                             <button
                                 onClick={() => setMode('image')}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${mode === 'image' ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white'}`}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${mode === 'image' ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                             >
                                 <ImageIcon className="h-3.5 w-3.5" />
                                 <span>Image</span>
                             </button>
                             <button
                                 onClick={() => setMode('video')}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${mode === 'video' ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white'}`}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${mode === 'video' ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                             >
                                 <Video className="h-3.5 w-3.5" />
                                 <span>Video</span>
                             </button>
                         </div>
 
-                        <div className="text-[10px] text-neutral-600 font-mono hidden md:block">
+                        <div className="text-[10px] text-muted-foreground font-mono hidden md:block">
                             Powered by {models.find(m => m.id === selectedModel)?.name}
                         </div>
                     </div>

@@ -1,16 +1,16 @@
 import React from 'react';
-import { X, Sun, Moon, Monitor, Globe2, Sparkles, Palette } from 'lucide-react';
+import { X, Sun, Moon, Monitor, Globe2, Palette } from 'lucide-react';
 
 const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-4">
             <div className="w-full max-w-2xl rounded-2xl border bg-card p-6 shadow-[0_20px_70px_rgba(0,0,0,0.2)] animate-in fade-in zoom-in duration-200">
                 <div className="flex items-start justify-between mb-4">
                     <div>
                         <h2 className="text-xl font-semibold">Settings</h2>
-                        <p className="text-sm text-muted-foreground">Tailor your experience across theme, language, and power features.</p>
+                        <p className="text-sm text-muted-foreground">Choose language, theme, and backend endpoint.</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -82,26 +82,20 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
 
                     <div className="p-4 rounded-xl border border-border bg-background space-y-3 md:col-span-2">
                         <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4" />
+                            <Globe2 className="h-4 w-4" />
                             <div>
-                                <p className="font-semibold text-sm">Advanced mode</p>
-                                <p className="text-xs text-muted-foreground">Toggle beta/experimental controls across panels.</p>
+                                <p className="font-semibold text-sm">Backend URL</p>
+                                <p className="text-xs text-muted-foreground">Override API base (leave blank to use relative /api).</p>
                             </div>
                         </div>
-                        <label className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 cursor-pointer hover:border-foreground/40 transition-colors">
-                            <div>
-                                <p className="font-medium text-sm">Enable advanced UI</p>
-                                <p className="text-xs text-muted-foreground">Adds power features where available. Use this to unlock premium models and experimental tools.</p>
-                            </div>
-                            <input
-                                type="checkbox"
-                                id="advanced"
-                                name="advanced-mode"
-                                checked={settings.advanced || false}
-                                onChange={(e) => onSettingsChange('advanced', e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                        </label>
+                        <input
+                            type="text"
+                            value={settings.backendUrl || ''}
+                            onChange={(e) => onSettingsChange('backendUrl', e.target.value)}
+                            placeholder="https://your-backend.example.com"
+                            className="w-full rounded-xl border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            autoComplete="off"
+                        />
                     </div>
                 </div>
 

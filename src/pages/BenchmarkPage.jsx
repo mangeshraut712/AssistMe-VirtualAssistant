@@ -49,20 +49,22 @@ const BENCHMARK_DATA = [
 
 // 2. Global AI Leadership
 const GLOBAL_AI_DATA = [
-    { name: 'USA', value: 48, fill: '#3b82f6', region: 'North America' },
-    { name: 'China', value: 24, fill: '#ef4444', region: 'Asia' },
-    { name: 'UK', value: 9, fill: '#8b5cf6', region: 'Europe' },
-    { name: 'EU (Other)', value: 10, fill: '#10b981', region: 'Europe' },
-    { name: 'Canada', value: 4, fill: '#f97316', region: 'North America' },
-    { name: 'Other', value: 5, fill: '#6b7280', region: 'Rest of World' },
+    { name: 'USA', value: 45, fill: '#3b82f6', region: 'North America' },
+    { name: 'China', value: 27, fill: '#ef4444', region: 'Asia' },
+    { name: 'UK', value: 8, fill: '#8b5cf6', region: 'Europe' },
+    { name: 'EU (Other)', value: 11, fill: '#10b981', region: 'Europe' },
+    { name: 'India', value: 5, fill: '#f59e0b', region: 'Asia' },
+    { name: 'Canada', value: 3, fill: '#0ea5e9', region: 'North America' },
+    { name: 'Other', value: 1, fill: '#6b7280', region: 'Rest of World' },
 ];
 
 // 3. Top Companies
 const COMPANY_DATA = [
-    { name: 'OpenAI', models: 12, share: 38, quality: 94, growth: '+12%' },
-    { name: 'xAI', models: 4, share: 22, quality: 96, growth: '+450%' },
-    { name: 'Google', models: 15, share: 25, quality: 90, growth: '+8%' },
-    { name: 'Anthropic', models: 5, share: 15, quality: 93, growth: '+18%' },
+    { name: 'OpenAI', models: 14, share: 34, quality: 95, growth: '+9%' },
+    { name: 'xAI', models: 6, share: 24, quality: 97, growth: '+380%' },
+    { name: 'Google', models: 16, share: 22, quality: 91, growth: '+11%' },
+    { name: 'Anthropic', models: 6, share: 13, quality: 94, growth: '+15%' },
+    { name: 'Meta', models: 8, share: 7, quality: 90, growth: '+6%' },
 ];
 
 // 4. API Traffic Data
@@ -93,10 +95,37 @@ const SYSTEM_METRICS = [
 
 // 7. AI News
 const AI_NEWS = [
-    { title: "xAI releases Grok 4.1 Fast: The new speed king", source: "Artificial Analysis", time: "10m ago" },
-    { title: "OpenAI teases GPT-5 capabilities in closed beta", source: "TechCrunch", time: "1h ago" },
+    { title: "xAI releases Grok 4.1 Fast: The new speed king", source: "Artificial Analysis", time: "12m ago" },
+    { title: "OpenAI expands GPT-4o multimodal endpoints for developers", source: "TechCrunch", time: "1h ago" },
     { title: "Meta open sources Llama 3.3 70B with improved reasoning", source: "Meta AI", time: "3h ago" },
-    { title: "Google integrates Gemini 1.5 Pro into Android 15", source: "The Verge", time: "5h ago" },
+    { title: "Google rolls out Gemini 3 Pro preview for enterprise", source: "The Verge", time: "5h ago" },
+    { title: "Anthropic updates Claude 3.5 with better coding reliability", source: "Anthropic Blog", time: "6h ago" },
+    { title: "Microsoft previews Phi-4 for lightweight edge deployments", source: "MSAI Journal", time: "8h ago" },
+    { title: "Stability AI hints at SDXL Turbo 2 for ultra-fast gen", source: "Stability Blog", time: "10h ago" },
+];
+
+// 8. Cost trends & reliability
+const COST_TRENDS = [
+    { month: 'Jan', cost: 5.2 },
+    { month: 'Feb', cost: 4.9 },
+    { month: 'Mar', cost: 4.6 },
+    { month: 'Apr', cost: 4.2 },
+    { month: 'May', cost: 3.9 },
+    { month: 'Jun', cost: 3.7 },
+];
+
+const RELIABILITY_DATA = [
+    { name: 'OpenAI', uptime: 99.7 },
+    { name: 'xAI', uptime: 99.6 },
+    { name: 'Google', uptime: 99.4 },
+    { name: 'Anthropic', uptime: 99.3 },
+    { name: 'Meta', uptime: 99.1 },
+];
+
+const SATISFACTION_DATA = [
+    { name: 'Positive', value: 72, color: '#10b981' },
+    { name: 'Neutral', value: 22, color: '#f59e0b' },
+    { name: 'Negative', value: 6, color: '#ef4444' },
 ];
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#14b8a6', '#6366f1'];
@@ -224,9 +253,9 @@ const BenchmarkPage = () => {
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                                    <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis yAxisId="left" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis yAxisId="right" orientation="right" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                                    <XAxis dataKey="time" stroke="var(--foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis yAxisId="left" stroke="var(--foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis yAxisId="right" orientation="right" stroke="var(--foreground)" fontSize={12} tickLine={false} axisLine={false} />
                                     <Tooltip
                                         contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '12px', color: 'var(--foreground)' }}
                                         itemStyle={{ color: 'var(--foreground)' }}
@@ -255,7 +284,7 @@ const BenchmarkPage = () => {
                                         ))}
                                     </Pie>
                                     <Tooltip contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} />
-                                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ color: 'var(--text-muted)' }} />
+                                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ color: 'var(--foreground)' }} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -276,7 +305,7 @@ const BenchmarkPage = () => {
                                 <BarChart layout="vertical" data={GLOBAL_AI_DATA} margin={{ top: 0, right: 30, left: 40, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
                                     <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 12, fill: 'var(--foreground)' }} axisLine={false} tickLine={false} />
                                     <Tooltip cursor={{ fill: 'var(--accent)' }} contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} />
                                     <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
                                         {GLOBAL_AI_DATA.map((entry, index) => (
@@ -378,15 +407,15 @@ const BenchmarkPage = () => {
                         <ResponsiveContainer width="100%" height={320}>
                             <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                                <XAxis type="number" dataKey="x" name="Price" stroke="var(--text-muted)" label={{ value: 'Price ($/1M Tokens)', position: 'bottom', offset: 0, fill: 'var(--text-muted)' }} />
-                                <YAxis type="number" dataKey="y" name="AAII" stroke="var(--text-muted)" domain={[70, 100]} label={{ value: 'AAII Score', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)' }} />
+                                <XAxis type="number" dataKey="x" name="Price" stroke="var(--foreground)" label={{ value: 'Price ($/1M Tokens)', position: 'bottom', offset: 0, fill: 'var(--foreground)' }} />
+                                <YAxis type="number" dataKey="y" name="AAII" stroke="var(--foreground)" domain={[70, 100]} label={{ value: 'AAII Score', angle: -90, position: 'insideLeft', fill: 'var(--foreground)' }} />
                                 <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} />
                                 <Scatter name="Models" data={qualityPriceData} fill="#8884d8">
                                     {qualityPriceData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                     ))}
                                 </Scatter>
-                                <Legend payload={[{ value: 'Open Weights', type: 'circle', color: '#10b981' }, { value: 'Proprietary', type: 'circle', color: '#3b82f6' }]} wrapperStyle={{ color: 'var(--text-muted)' }} />
+                                <Legend payload={[{ value: 'Open Weights', type: 'circle', color: '#10b981' }, { value: 'Proprietary', type: 'circle', color: '#3b82f6' }]} wrapperStyle={{ color: 'var(--foreground)' }} />
                             </ScatterChart>
                         </ResponsiveContainer>
                     </div>
@@ -406,13 +435,69 @@ const BenchmarkPage = () => {
                                 Speed: m.speed / 2, // Normalized
                             }))}>
                                 <PolarGrid stroke="var(--border)" />
-                                <PolarAngleAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                                <PolarAngleAxis dataKey="name" tick={{ fill: 'var(--foreground)', fontSize: 10 }} />
                                 <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="var(--border)" />
                                 <Radar name="Intelligence" dataKey="Intelligence" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} />
                                 <Radar name="Coding" dataKey="Coding" stroke="#ec4899" fill="#ec4899" fillOpacity={0.3} />
-                                <Legend wrapperStyle={{ color: 'var(--text-muted)' }} />
+                                <Legend wrapperStyle={{ color: 'var(--foreground)' }} />
                                 <Tooltip contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} />
                             </RadarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </section>
+
+                {/* --- Section 5: Cost, Reliability & Satisfaction --- */}
+                <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Cost Trend */}
+                    <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                        <h3 className="text-base font-semibold mb-4 text-foreground flex items-center gap-2">
+                            <DollarSign className="h-5 w-5 text-emerald-500" />
+                            Inference Cost Trend (per 1M tokens)
+                        </h3>
+                        <ResponsiveContainer width="100%" height={240}>
+                            <LineChart data={COST_TRENDS}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                                <XAxis dataKey="month" stroke="var(--foreground)" />
+                                <YAxis stroke="var(--foreground)" />
+                                <Tooltip contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '10px', color: 'var(--foreground)' }} />
+                                <Line type="monotone" dataKey="cost" stroke="#10b981" strokeWidth={2} dot={{ r: 4, fill: '#10b981' }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* Reliability */}
+                    <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                        <h3 className="text-base font-semibold mb-4 text-foreground flex items-center gap-2">
+                            <Gauge className="h-5 w-5 text-sky-500" />
+                            Provider Uptime (90d)
+                        </h3>
+                        <ResponsiveContainer width="100%" height={240}>
+                            <BarChart data={RELIABILITY_DATA}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                                <XAxis dataKey="name" stroke="var(--foreground)" tick={{ fill: 'var(--foreground)' }} />
+                                <YAxis domain={[98.5, 100]} stroke="var(--foreground)" tickFormatter={(v) => `${v}%`} tick={{ fill: 'var(--foreground)' }} />
+                                <Tooltip formatter={(v) => `${v}%`} contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '10px', color: 'var(--foreground)' }} />
+                                <Bar dataKey="uptime" radius={[6, 6, 0, 0]} fill="#0ea5e9" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* Satisfaction */}
+                    <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                        <h3 className="text-base font-semibold mb-4 text-foreground flex items-center gap-2">
+                            <Users className="h-5 w-5 text-pink-500" />
+                            User Satisfaction (NPS-style)
+                        </h3>
+                        <ResponsiveContainer width="100%" height={240}>
+                            <PieChart>
+                                <Pie data={SATISFACTION_DATA} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} label>
+                                    {SATISFACTION_DATA.map((entry) => (
+                                        <Cell key={entry.name} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <Tooltip contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} />
+                                <Legend wrapperStyle={{ color: 'var(--foreground)' }} />
+                            </PieChart>
                         </ResponsiveContainer>
                     </div>
                 </section>
@@ -436,10 +521,10 @@ const BenchmarkPage = () => {
                             <ResponsiveContainer width="100%" height={300}>
                                 <BarChart data={filteredModels}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
-                                    <YAxis domain={[60, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'var(--foreground)' }} />
+                                    <YAxis domain={[60, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12, fill: 'var(--foreground)' }} />
                                     <Tooltip formatter={(v) => `${v}%`} labelStyle={{ color: 'var(--foreground)' }} contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '12px', color: 'var(--foreground)' }} />
-                                    <Bar dataKey="accuracy" radius={[6, 6, 0, 0]} label={{ position: 'top', formatter: (v) => `${v}%`, fill: 'var(--text-muted)' }}>
+                                    <Bar dataKey="accuracy" radius={[6, 6, 0, 0]} label={{ position: 'top', formatter: (v) => `${v}%`, fill: 'var(--foreground)' }}>
                                         {filteredModels.map((entry, index) => (
                                             <Cell key={`cell-${entry.id}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
@@ -458,7 +543,7 @@ const BenchmarkPage = () => {
                                         ))}
                                     </Pie>
                                     <Tooltip contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} />
-                                    <Legend wrapperStyle={{ color: 'var(--text-muted)' }} />
+                                    <Legend wrapperStyle={{ color: 'var(--foreground)' }} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -471,8 +556,8 @@ const BenchmarkPage = () => {
                             <ResponsiveContainer width="100%" height={300}>
                                 <ScatterChart>
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                                    <XAxis type="number" dataKey="price" name="Price ($/unit)" stroke="var(--text-muted)" />
-                                    <YAxis type="number" dataKey="latency" name="Latency (ms)" stroke="var(--text-muted)" />
+                                    <XAxis type="number" dataKey="price" name="Price ($/unit)" stroke="var(--foreground)" />
+                                    <YAxis type="number" dataKey="latency" name="Latency (ms)" stroke="var(--foreground)" />
                                     <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} />
                                     <Scatter data={latencyVsCost} fill="#6366f1">
                                         {latencyVsCost.map((item, idx) => (

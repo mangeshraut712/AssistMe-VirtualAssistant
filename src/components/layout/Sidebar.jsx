@@ -29,7 +29,7 @@ const NavItem = ({ icon: Icon, label, active, onClick }) => (
     </button>
 );
 
-const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], currentChatId, onSelectChat, onRenameChat, onDeleteChat }) => {
+const Sidebar = ({ show, onClose, onNewChat, onNavigate, conversations = [], currentChatId, onSelectChat, onRenameChat, onDeleteChat, activePath }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [editingChatId, setEditingChatId] = useState(null);
     const [editTitle, setEditTitle] = useState('');
@@ -57,6 +57,15 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
     const cancelEdit = () => {
         setEditingChatId(null);
     };
+
+    const featureLinks = [
+        { icon: ImageIcon, label: 'Imagine', path: '/imagine' },
+        { icon: Mic, label: 'Voice Mode', path: '/voice' },
+        { icon: BookOpen, label: 'Grokipedia', path: '/grokipedia' },
+        { icon: Languages, label: 'AI4Bharat', path: '/ai4bharat' },
+        { icon: Wand2, label: 'Writing Tools', path: '/writing-tools' },
+        { icon: Gauge, label: 'Speedtest', path: '/speedtest' },
+    ];
 
     return (
         <>
@@ -123,12 +132,15 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
                     <div className="pb-2">
                         <p className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Features</p>
                         <div className="space-y-1">
-                            <NavItem icon={ImageIcon} label="Imagine" onClick={() => openModal('imageGen')} />
-                            <NavItem icon={Mic} label="Voice Mode" onClick={() => openModal('voiceMode')} />
-                            <NavItem icon={BookOpen} label="Grokipedia" onClick={() => openModal('grokipedia')} />
-                            <NavItem icon={Languages} label="AI4Bharat" onClick={() => openModal('ai4bharat')} />
-                            <NavItem icon={Wand2} label="Writing Tools" onClick={() => openModal('grammar')} />
-                            <NavItem icon={Gauge} label="Speedtest" onClick={() => openModal('speedtest')} />
+                            {featureLinks.map((item) => (
+                                <NavItem
+                                    key={item.path}
+                                    icon={item.icon}
+                                    label={item.label}
+                                    active={activePath?.startsWith(item.path)}
+                                    onClick={() => onNavigate(item.path)}
+                                />
+                            ))}
                         </div>
                     </div>
                 </nav>
@@ -185,14 +197,14 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
                                                 </div>
                                                 <p className="text-[11px] text-muted-foreground">Chat #{idx + 1}</p>
                                             </div>
-                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                            <div className="flex items-center gap-1 flex-shrink-0 bg-card/70 backdrop-blur border border-border rounded-xl px-1.5 py-1">
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         startEditing(chat);
                                                     }}
-                                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+                                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                                                     aria-label="Rename chat"
                                                     title="Rename"
                                                 >
@@ -236,13 +248,13 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
                     <div className="flex items-center gap-1">
                         <button
                             onClick={onClose}
-                            className="p-2 rounded-xl hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors hidden md:block"
+                            className="p-2 rounded-xl hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors hidden md:block border border-transparent hover:border-border"
                             title="Collapse sidebar"
                         >
                             <ChevronLeft className="h-[18px] w-[18px]" />
                         </button>
                         <button
-                            onClick={() => openModal('settings')}
+                            onClick={() => onNavigate('/settings')}
                             className="p-2 rounded-xl hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors"
                             title="Settings"
                         >

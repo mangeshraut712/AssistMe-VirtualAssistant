@@ -118,15 +118,47 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-8">
-            <div className="bg-background w-full max-w-6xl h-[85vh] rounded-3xl shadow-2xl border border-border flex overflow-hidden">
+        <div className="min-h-screen bg-background text-foreground flex flex-col">
+            {/* Top Bar */}
+            <header className="h-16 flex items-center justify-between px-4 md:px-6 border-b border-border bg-background/90 backdrop-blur">
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20 flex items-center justify-center">
+                        <Wand2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold">Writing Tools</h2>
+                        <p className="text-xs text-muted-foreground">Paraphrase, grammar, summary, and translation in one place.</p>
+                    </div>
+                    <div className="hidden md:flex items-center gap-2 ml-4">
+                        <span className="px-3 py-1 text-[11px] rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20">Premium unlocked</span>
+                        <span className="px-3 py-1 text-[11px] rounded-full bg-muted text-muted-foreground">Model: {model}</span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="md:hidden">
+                        <select
+                            value={activeTool}
+                            onChange={(e) => setActiveTool(e.target.value)}
+                            className="text-sm rounded-lg border border-border bg-card px-3 py-1.5"
+                        >
+                            {TOOLS.map(tool => (
+                                <option key={tool.id} value={tool.id}>{tool.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-muted transition-colors" aria-label="Close writing tools">
+                        <X className="h-5 w-5 text-muted-foreground" />
+                    </button>
+                </div>
+            </header>
 
+            <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar */}
                 <aside className="w-64 bg-muted/30 border-r border-border flex flex-col hidden md:flex">
                     <div className="p-6 border-b border-border/50">
                         <div className="flex items-center gap-2 font-bold text-lg">
                             <Wand2 className="h-5 w-5 text-emerald-500" />
-                            <span>Writing Tools</span>
+                            <span>Toolbox</span>
                         </div>
                     </div>
 
@@ -136,42 +168,30 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                                 key={tool.id}
                                 onClick={() => setActiveTool(tool.id)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTool === tool.id
-                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                     }`}
                             >
                                 <tool.icon className={`h-5 w-5 ${activeTool === tool.id ? 'text-emerald-500' : ''}`} />
                                 <div className="text-left">
                                     <div>{tool.label}</div>
+                                    <p className="text-[11px] text-muted-foreground">{tool.description}</p>
                                 </div>
                             </button>
                         ))}
                     </nav>
-
-                    <div className="p-4 border-t border-border/50">
-                        <div className="bg-emerald-500/10 rounded-xl p-4">
-                            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold text-sm mb-1">
-                                <Sparkles className="h-4 w-4" />
-                                Premium Features
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                Unlimited words and advanced modes enabled.
-                            </p>
-                        </div>
-                    </div>
                 </aside>
 
                 {/* Main Content */}
                 <main className="flex-1 flex flex-col min-w-0 bg-background">
 
-                    {/* Header */}
-                    <header className="h-16 border-b border-border flex items-center justify-between px-6 flex-shrink-0">
-                        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
-                            <span className="font-semibold text-lg whitespace-nowrap md:hidden">
+                    {/* Mode Bar */}
+                    <div className="h-16 border-b border-border flex items-center justify-between px-4 md:px-6 flex-shrink-0 bg-background/80 backdrop-blur">
+                        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
+                            <span className="font-semibold text-sm md:text-base whitespace-nowrap">
                                 {TOOLS.find(t => t.id === activeTool)?.label}
                             </span>
 
-                            {/* Mode Selectors */}
                             {activeTool === 'paraphrase' && (
                                 <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
                                     {PARAPHRASE_MODES.map(mode => (
@@ -179,7 +199,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                                             key={mode.id}
                                             onClick={() => setActiveMode(mode.id)}
                                             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
-                                                    ? 'bg-background text-foreground shadow-sm'
+                                                    ? 'bg-background text-foreground shadow-sm border border-border'
                                                     : 'text-muted-foreground hover:text-foreground'
                                                 }`}
                                         >
@@ -196,7 +216,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                                             key={mode.id}
                                             onClick={() => setActiveMode(mode.id)}
                                             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
-                                                    ? 'bg-background text-foreground shadow-sm'
+                                                    ? 'bg-background text-foreground shadow-sm border border-border'
                                                     : 'text-muted-foreground hover:text-foreground'
                                                 }`}
                                         >
@@ -212,7 +232,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                                     <select
                                         value={targetLang}
                                         onChange={(e) => setTargetLang(e.target.value)}
-                                        className="bg-muted/50 border-none text-sm rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500"
+                                        className="bg-muted/50 border border-border text-sm rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500"
                                     >
                                         {LANGUAGES.map(lang => (
                                             <option key={lang.id} value={lang.id}>{lang.label}</option>
@@ -221,18 +241,14 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                                 </div>
                             )}
                         </div>
-
-                        <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors ml-4">
-                            <X className="h-5 w-5 text-muted-foreground" />
-                        </button>
-                    </header>
+                    </div>
 
                     {/* Editor Area */}
                     <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
 
                         {/* Input Pane */}
                         <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-border min-h-[300px]">
-                            <div className="flex-1 p-6 relative group">
+                    <div className="flex-1 p-4 md:p-6 relative group">
                                 <textarea
                                     value={inputText}
                                     onChange={(e) => setInputText(e.target.value)}
@@ -259,7 +275,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                             </div>
 
                             {/* Input Footer */}
-                            <div className="h-14 border-t border-border flex items-center justify-between px-6 bg-muted/10">
+                            <div className="h-14 border-t border-border flex items-center justify-between px-4 md:px-6 bg-muted/10">
                                 <div className="text-xs text-muted-foreground font-medium">
                                     {inputText.split(/\s+/).filter(w => w).length} words
                                 </div>
@@ -288,7 +304,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
 
                         {/* Output Pane */}
                         <div className="flex-1 flex flex-col bg-muted/10">
-                            <div className="flex-1 p-6 overflow-y-auto">
+                        <div className="flex-1 p-4 md:p-6 overflow-y-auto">
                                 {outputText ? (
                                     <div className="prose dark:prose-invert max-w-none">
                                         <p className="text-base leading-relaxed whitespace-pre-wrap">{outputText}</p>
@@ -302,7 +318,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                             </div>
 
                             {/* Output Footer */}
-                            <div className="h-14 border-t border-border flex items-center justify-between px-6 bg-muted/20">
+                            <div className="h-14 border-t border-border flex items-center justify-between px-4 md:px-6 bg-muted/20">
                                 <div className="flex items-center gap-2">
                                     {outputText && (
                                         <>

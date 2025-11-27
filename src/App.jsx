@@ -1,13 +1,13 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { marked } from 'marked';
 import { Code, Image, MessageSquare } from 'lucide-react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 // Quick action icons removed as homepage quick actions are hidden
 
 // Layout Components
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import ChatArea from './components/layout/ChatArea';
-import InputArea from './components/layout/InputArea';
 
 // Feature Modals (Lazy Loaded)
 const SettingsModal = lazy(() => import('./components/features/SettingsModal'));
@@ -46,7 +46,16 @@ const QUICK_ACTIONS = [
     { icon: Image, label: 'Image', key: 'imageGen' }
 ];
 
+const LoadingOverlay = () => (
+    <div className="fixed inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+    </div>
+);
+
 function App() {
+    const navigate = useNavigate();
+    const location = useLocation();
+
     // State Management
     const [conversations, setConversations] = useState(() => {
         const saved = localStorage.getItem('conversations');
@@ -75,18 +84,6 @@ function App() {
     const currentConversation = conversations.find(c => c.id === currentChatId) || conversations[0];
     const messages = currentConversation.messages;
 
-    // Modal States
-    const [modals, setModals] = useState({
-        settings: false,
-        ai4bharat: false,
-        grokipedia: false,
-        voiceMode: false,
-        fileUpload: false,
-        imageGen: false,
-        grammar: false,
-        speedtest: false
-    });
-
     const [settings, setSettings] = useState({
         language: 'en',
         theme: 'light',
@@ -109,21 +106,19 @@ function App() {
         root.classList.add(theme);
     }, [settings.theme]);
 
-    // Modal Control
-    const openModal = (modalName) => setModals(prev => ({ ...prev, [modalName]: true }));
-    const closeModal = (modalName) => setModals(prev => ({ ...prev, [modalName]: false }));
-
     // Chat Management
     const createNewChat = () => {
         const newChat = { id: Date.now(), title: 'New Chat', messages: [] };
         setConversations(prev => [newChat, ...prev]);
         setCurrentChatId(newChat.id);
         setShowSidebar(false); // Close sidebar on mobile after creating new chat
+        navigate('/');
     };
 
     const selectChat = (chatId) => {
         setCurrentChatId(chatId);
         setShowSidebar(false); // Close sidebar on mobile after selecting chat
+        navigate('/');
     };
 
     const renameChat = (chatId, newTitle) => {
@@ -154,11 +149,24 @@ function App() {
         ));
     };
 
+    const featureRoutes = {
+        imageGen: '/imagine',
+        voiceMode: '/voice',
+        grokipedia: '/grokipedia',
+        ai4bharat: '/ai4bharat',
+        grammar: '/writing-tools',
+        speedtest: '/speedtest',
+        fileUpload: '/files',
+        settings: '/settings'
+    };
+
     // Quick Action Handler
     const handleQuickAction = (action) => {
-        if (action.key) {
-            openModal(action.key);
-        } else if (action.text) {
+        if (action.key && featureRoutes[action.key]) {
+            navigate(featureRoutes[action.key]);
+            return;
+        }
+        if (action.text) {
             setInput(action.text);
         }
     };
@@ -304,97 +312,151 @@ function App() {
                 show={showSidebar}
                 onClose={() => setShowSidebar(false)}
                 onNewChat={createNewChat}
-                openModal={openModal}
+                onNavigate={(path) => {
+                    navigate(path);
+                    setShowSidebar(false);
+                }}
                 conversations={conversations}
                 currentChatId={currentChatId}
                 onSelectChat={selectChat}
                 onRenameChat={renameChat}
                 onDeleteChat={deleteChat}
+                activePath={location.pathname}
             />
 
             <div className={`flex-1 flex flex-col relative min-w-0 transition-all duration-300 ${showSidebar ? 'md:ml-96' : 'md:ml-0'
                 }`}>
                 <Header onOpenSidebar={() => setShowSidebar(true)} showSidebar={showSidebar} />
 
-                <div className="flex-1 overflow-y-auto scroll-smooth pt-16">
-                    <ChatArea
-                        messages={messages}
-                        isLoading={isLoading}
-                        renderContent={renderContent}
-                        showWelcome={messages.length === 0}
-                        quickActions={QUICK_ACTIONS}
-                        onQuickAction={handleQuickAction}
-                        inputProps={{
-                            input,
-                            setInput,
-                            isLoading,
-                            sendMessage,
-                            onFileUpload: () => openModal('fileUpload'),
-                            onVoiceTranscription: (text) => setInput(text),
-                            onOpenVoiceMode: () => openModal('voiceMode'),
-                            models: MODELS,
-                            selectedModel,
-                            onModelChange: (e) => setSelectedModel(e.target.value)
-                        }}
-                    />
+                <div className="flex-1 overflow-hidden pt-16">
+                    <Routes>
+                        <Route
+                            path="/"
+                            element={
+                                <div className="h-full overflow-y-auto scroll-smooth">
+                                    <ChatArea
+                                        messages={messages}
+                                        isLoading={isLoading}
+                                        renderContent={renderContent}
+                                        showWelcome={messages.length === 0}
+                                        quickActions={QUICK_ACTIONS}
+                                        onQuickAction={handleQuickAction}
+                                        inputProps={{
+                                            input,
+                                            setInput,
+                                            isLoading,
+                                            sendMessage,
+                                            onFileUpload: () => navigate(featureRoutes.fileUpload),
+                                            onVoiceTranscription: (text) => setInput(text),
+                                            onOpenVoiceMode: () => navigate(featureRoutes.voiceMode),
+                                            models: MODELS,
+                                            selectedModel,
+                                            onModelChange: (e) => setSelectedModel(e.target.value)
+                                        }}
+                                    />
+                                </div>
+                            }
+                        />
+                        <Route
+                            path="/imagine"
+                            element={
+                                <Suspense fallback={<LoadingOverlay />}>
+                                    <ImageGenerationPanel
+                                        isOpen={true}
+                                        onClose={() => navigate('/')}
+                                    />
+                                </Suspense>
+                            }
+                        />
+                        <Route
+                            path="/voice"
+                            element={
+                                <Suspense fallback={<LoadingOverlay />}>
+                                    <AdvancedVoiceMode
+                                        isOpen={true}
+                                        onClose={() => navigate('/')}
+                                        onSendMessage={handleVoiceConversation}
+                                        settings={settings}
+                                        selectedModel={selectedModel}
+                                    />
+                                </Suspense>
+                            }
+                        />
+                        <Route
+                            path="/grokipedia"
+                            element={
+                                <Suspense fallback={<LoadingOverlay />}>
+                                    <GrokipediaPanel
+                                        isOpen={true}
+                                        onClose={() => navigate('/')}
+                                    />
+                                </Suspense>
+                            }
+                        />
+                        <Route
+                            path="/ai4bharat"
+                            element={
+                                <Suspense fallback={<LoadingOverlay />}>
+                                    <AI4BharatPanel
+                                        isOpen={true}
+                                        onClose={() => navigate('/')}
+                                    />
+                                </Suspense>
+                            }
+                        />
+                        <Route
+                            path="/files"
+                            element={
+                                <Suspense fallback={<LoadingOverlay />}>
+                                    <FileUploadPanel
+                                        isOpen={true}
+                                        onClose={() => navigate('/')}
+                                        onFileProcess={(results) => console.log('Files processed:', results)}
+                                    />
+                                </Suspense>
+                            }
+                        />
+                        <Route
+                            path="/writing-tools"
+                            element={
+                                <Suspense fallback={<LoadingOverlay />}>
+                                    <GrammarlyQuillbotPanel
+                                        isOpen={true}
+                                        onClose={() => navigate('/')}
+                                        model={selectedModel}
+                                    />
+                                </Suspense>
+                            }
+                        />
+                        <Route
+                            path="/speedtest"
+                            element={
+                                <Suspense fallback={<LoadingOverlay />}>
+                                    <SpeedtestPanel
+                                        isOpen={true}
+                                        onClose={() => navigate('/')}
+                                    />
+                                </Suspense>
+                            }
+                        />
+                        <Route
+                            path="/settings"
+                            element={
+                                <Suspense fallback={<LoadingOverlay />}>
+                                    <SettingsModal
+                                        isOpen={true}
+                                        onClose={() => navigate('/')}
+                                        settings={settings}
+                                        onSettingsChange={(key, value) => setSettings(prev => ({ ...prev, [key]: value }))}
+                                    />
+                                </Suspense>
+                            }
+                        />
+                    </Routes>
                 </div>
 
 
             </div>
-
-            {/* Modals */}
-            <Suspense fallback={
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-                </div>
-            }>
-                <SettingsModal
-                    isOpen={modals.settings}
-                    onClose={() => closeModal('settings')}
-                    settings={settings}
-                    onSettingsChange={(key, value) => setSettings(prev => ({ ...prev, [key]: value }))}
-                />
-
-                <AI4BharatPanel
-                    isOpen={modals.ai4bharat}
-                    onClose={() => closeModal('ai4bharat')}
-                />
-
-                <GrokipediaPanel
-                    isOpen={modals.grokipedia}
-                    onClose={() => closeModal('grokipedia')}
-                />
-
-                <AdvancedVoiceMode
-                    isOpen={modals.voiceMode}
-                    onClose={() => closeModal('voiceMode')}
-                    onSendMessage={handleVoiceConversation}
-                    settings={settings}
-                    selectedModel={selectedModel}
-                />
-
-                <FileUploadPanel
-                    isOpen={modals.fileUpload}
-                    onClose={() => closeModal('fileUpload')}
-                    onFileProcess={(results) => console.log('Files processed:', results)}
-                />
-
-                <ImageGenerationPanel
-                    isOpen={modals.imageGen}
-                    onClose={() => closeModal('imageGen')}
-                />
-
-                <GrammarlyQuillbotPanel
-                    isOpen={modals.grammar}
-                    onClose={() => closeModal('grammar')}
-                    model={selectedModel}
-                />
-
-                <SpeedtestPanel
-                    isOpen={modals.speedtest}
-                    onClose={() => closeModal('speedtest')}
-                />
-            </Suspense>
         </div>
     );
 }
