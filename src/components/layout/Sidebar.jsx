@@ -67,7 +67,7 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
             )}
 
             <aside
-                className={`fixed top-0 left-0 bottom-0 w-80 bg-[hsl(var(--sidebar-bg))] border-r border-border/70 flex flex-col overflow-hidden z-50 transition-transform duration-300 md:translate-x-0 md:static ${show ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed top-0 left-0 bottom-0 w-96 bg-[hsl(var(--sidebar-bg))] border-r border-border/70 flex flex-col overflow-hidden z-50 transition-transform duration-300 md:translate-x-0 md:static ${show ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
                 {/* Header - Fixed */}

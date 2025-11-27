@@ -4,6 +4,7 @@ from typing import Optional
 import logging
 import os
 import httpx
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -104,8 +105,24 @@ class ImageService:
     ) -> str:
         """Generate image using OpenRouter API via chat/completions."""
         logger.info(f"Attempting OpenRouter image generation with model: {model}")
-        
-        # OpenRouter uses chat/completions for multimodal generation
+        payload = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    # Using block content keeps compatibility with Gemini image models
+                    "content": [
+                        {"type": "text", "text": prompt}
+                    ]
+                }
+            ]
+        }
+
+        # Map common sizes to aspect ratios for Gemini image models
+        aspect_ratio = self._aspect_ratio_from_size(size)
+        if aspect_ratio:
+            payload["image_config"] = {"aspect_ratio": aspect_ratio}
+
         async with httpx.AsyncClient(timeout=60.0) as client:
             try:
                 response = await client.post(
@@ -116,12 +133,7 @@ class ImageService:
                         "HTTP-Referer": "https://assistme.app",
                         "X-Title": "AssistMe Virtual Assistant"
                     },
-                    json={
-                        "model": model,
-                        "messages": [
-                            {"role": "user", "content": f"Generate an image of: {prompt}"}
-                        ]
-                    }
+                    json=payload
                 )
                 
                 logger.info(f"OpenRouter response status: {response.status_code}")
@@ -132,27 +144,10 @@ class ImageService:
                     raise Exception(f"OpenRouter returned {response.status_code}: {error_text}")
                 
                 data = response.json()
-                
-                # Parse OpenRouter multimodal response
-                if "choices" in data and len(data["choices"]) > 0:
-                    message = data["choices"][0].get("message", {})
-                    
-                    # Check for images in the message (Gemini style on OpenRouter)
-                    if "images" in message and len(message["images"]) > 0:
-                        image_info = message["images"][0]
-                        if "image_url" in image_info and "url" in image_info["image_url"]:
-                            image_url = image_info["image_url"]["url"]
-                            logger.info("Image URL received from OpenRouter message")
-                            return image_url
-                            
-                    # Fallback: Check content for markdown image or url (some models might do this)
-                    content = message.get("content", "")
-                    if "http" in content and (".png" in content or ".jpg" in content or ".webp" in content):
-                        # Simple extraction attempt (could be improved)
-                        import re
-                        urls = re.findall(r'(https?://[^\s)]+)', content)
-                        if urls:
-                            return urls[0]
+                image_url = self._extract_image_from_openrouter(data)
+                if image_url:
+                    logger.info("Image URL extracted from OpenRouter response")
+                    return image_url
                 
                 logger.error(f"No image data found in OpenRouter response: {data}")
                 raise Exception("No image data found in response")
@@ -160,6 +155,88 @@ class ImageService:
             except httpx.HTTPError as e:
                 logger.error(f"HTTP error during OpenRouter request: {e}")
                 raise Exception(f"Network error: {str(e)}")
+
+    def _aspect_ratio_from_size(self, size: str) -> Optional[str]:
+        """Translate size strings to OpenRouter image_config aspect ratios."""
+        size_map = {
+            "1024x1024": "1:1",
+            "1024x1792": "9:16",
+            "1792x1024": "16:9"
+        }
+        if size in size_map:
+            return size_map[size]
+        try:
+            w, h = size.lower().split("x")
+            w, h = int(w), int(h)
+            if h == 0:
+                return None
+            # Reduce ratio to simplest form
+            from math import gcd
+            g = gcd(w, h)
+            return f"{w//g}:{h//g}"
+        except Exception:
+            return None
+
+    def _extract_image_from_openrouter(self, data: dict) -> Optional[str]:
+        """Handle the various image response shapes from OpenRouter (Gemini/SD/Flux)."""
+        choices = data.get("choices", [])
+        if not choices:
+            return None
+
+        message = choices[0].get("message", {})
+
+        # Legacy Gemini shape: message.images[0].image_url.url
+        images = message.get("images") or []
+        if images:
+            image_info = images[0]
+            url = image_info.get("image_url", {}).get("url")
+            if url:
+                return url
+
+        content = message.get("content")
+
+        # Modern shape: content is a list of blocks
+        if isinstance(content, list):
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                block_type = block.get("type", "")
+
+                # Direct image URL block
+                if block_type in {"image_url", "output_image", "image", "generated_image"}:
+                    url = block.get("image_url", {}).get("url") or block.get("url")
+                    if url:
+                        return url
+                    if "b64_json" in block:
+                        return f"data:image/png;base64,{block['b64_json']}"
+
+                # Sometimes image_url is nested even if type isn't set
+                if "image_url" in block and isinstance(block["image_url"], dict):
+                    url = block["image_url"].get("url")
+                    if url:
+                        return url
+
+                # Text block might contain a URL
+                if block_type == "text" and isinstance(block.get("text"), str):
+                    url = self._extract_url_from_text(block["text"])
+                    if url:
+                        return url
+
+        # Content as a plain string
+        if isinstance(content, str):
+            url = self._extract_url_from_text(content)
+            if url:
+                return url
+
+        return None
+
+    def _extract_url_from_text(self, text: str) -> Optional[str]:
+        """Find the first plausible image URL in freeform text."""
+        matches = re.findall(r'(https?://[^\s)]+)', text or "")
+        for url in matches:
+            if any(url.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp"]):
+                return url
+        return matches[0] if matches else None
 
     def _placeholder_image(self, prompt: str) -> str:
         """Return a placeholder image URL."""

@@ -25,8 +25,8 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
 
     if (showWelcome) {
         return (
-            <div className="h-full flex flex-col items-center justify-center px-4 md:px-6 bg-white dark:bg-black">
-                <div className="w-full max-w-2xl space-y-12">
+            <div className="h-full flex flex-col items-center justify-center px-6 md:px-12 bg-white dark:bg-black">
+                <div className="w-full max-w-3xl space-y-12">
                     {/* Greeting */}
                     <div className="space-y-3">
                         <p className="text-sm text-neutral-500 dark:text-neutral-400">Hi there,</p>
@@ -48,7 +48,7 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                     </div>
 
                     {/* Input Area at Bottom */}
-                    <div className="fixed bottom-6 left-0 right-0 md:left-64 p-4 md:p-6 bg-white dark:bg-black">
+                    <div className="fixed bottom-6 left-0 right-0 md:left-96 px-6 md:px-12 bg-white dark:bg-black">
                         {inputProps && <InputArea {...inputProps} variant="hero" />}
                     </div>
                 </div>

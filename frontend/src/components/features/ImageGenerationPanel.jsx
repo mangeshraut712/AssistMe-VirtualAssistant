@@ -33,24 +33,13 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
 
     const callGenerationApi = async () => {
         try {
-            const sizeMap = {
-                '1:1': '1024x1024',
-                '16:9': '1792x1024',
-                '9:16': '1024x1792'
-            };
-            const aspectClassMap = {
-                '1:1': 'aspect-square',
-                '16:9': 'aspect-[16/9]',
-                '9:16': 'aspect-[9/16]'
-            };
-
             const response = await fetch('/api/images/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     prompt: prompt,
                     model: selectedModel,
-                    size: sizeMap[aspectRatio] || '1024x1024',
+                    size: aspectRatio === '1:1' ? '1024x1024' : '1024x1792',
                     num_images: 1
                 })
             });
@@ -59,7 +48,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                 const newImg = {
                     id: Date.now(),
                     url: data.data[0].url || `data:image/png;base64,${data.data[0].b64_json}`,
-                    aspect: aspectClassMap[aspectRatio] || 'aspect-square',
+                    aspect: aspectRatio === '1:1' ? 'aspect-square' : 'aspect-[9/16]',
                     isNew: true
                 };
                 setGallery(prev => [newImg, ...prev]);
