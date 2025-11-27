@@ -25,7 +25,7 @@ import {
 } from 'recharts';
 import {
     ArrowLeft, TrendingUp, Zap, DollarSign, Clock, Download, Gauge, Filter,
-    Activity, Server, Users, Globe, Cpu, Award, Briefcase, BarChart2, Newspaper, Terminal
+    Activity, Server, Users, Globe, Cpu, Award, Briefcase, BarChart2, Newspaper, Terminal, X
 } from 'lucide-react';
 
 // --- DATASETS ---
@@ -95,13 +95,48 @@ const SYSTEM_METRICS = [
 
 // 7. AI News
 const AI_NEWS = [
-    { title: "xAI releases Grok 4.1 Fast: The new speed king", source: "Artificial Analysis", time: "12m ago" },
-    { title: "OpenAI expands GPT-4o multimodal endpoints for developers", source: "TechCrunch", time: "1h ago" },
-    { title: "Meta open sources Llama 3.3 70B with improved reasoning", source: "Meta AI", time: "3h ago" },
-    { title: "Google rolls out Gemini 3 Pro preview for enterprise", source: "The Verge", time: "5h ago" },
-    { title: "Anthropic updates Claude 3.5 with better coding reliability", source: "Anthropic Blog", time: "6h ago" },
-    { title: "Microsoft previews Phi-4 for lightweight edge deployments", source: "MSAI Journal", time: "8h ago" },
-    { title: "Stability AI hints at SDXL Turbo 2 for ultra-fast gen", source: "Stability Blog", time: "10h ago" },
+    {
+        title: "xAI releases Grok 4.1 Fast: The new speed king",
+        source: "Artificial Analysis",
+        time: "12m ago",
+        content: "xAI has launched Grok 4.1 Fast, a new variant of their Grok model optimized for speed. Benchmarks show it achieves up to 140 tokens per second while maintaining high accuracy scores across multiple tasks. The model is available through xAI's API with competitive pricing at $4.50 per million tokens."
+    },
+    {
+        title: "OpenAI expands GPT-4o multimodal endpoints for developers",
+        source: "TechCrunch",
+        time: "1h ago",
+        content: "OpenAI has announced expanded multimodal capabilities for GPT-4o, including enhanced image understanding and generation features. The new endpoints support advanced vision tasks, code interpretation from images, and improved text-to-image generation quality. Developers can now access these features through the updated API."
+    },
+    {
+        title: "Meta open sources Llama 3.3 70B with improved reasoning",
+        source: "Meta AI",
+        time: "3h ago",
+        content: "Meta has released Llama 3.3 70B, their latest open-source model featuring significant improvements in reasoning capabilities. The model achieves 89% accuracy on coding benchmarks and includes enhanced multilingual support. Available for free download on Hugging Face, it represents a major advancement in open-source AI development."
+    },
+    {
+        title: "Google rolls out Gemini 3 Pro preview for enterprise",
+        source: "The Verge",
+        time: "5h ago",
+        content: "Google has begun a limited preview of Gemini 3 Pro, their most advanced AI model yet. With 2 million token context window and superior performance across enterprise tasks, it's designed for complex data analysis and long-form content generation. Enterprise customers can apply for early access through Google's AI platform."
+    },
+    {
+        title: "Anthropic updates Claude 3.5 with better coding reliability",
+        source: "Anthropic Blog",
+        time: "6h ago",
+        content: "Anthropic has released updates to Claude 3.5 Sonnet, focusing on improved coding reliability and error handling. The model now achieves 94% accuracy on software engineering tasks and includes better support for debugging and code review. These improvements make it more suitable for production development environments."
+    },
+    {
+        title: "Microsoft previews Phi-4 for lightweight edge deployments",
+        source: "MSAI Journal",
+        time: "8h ago",
+        content: "Microsoft has previewed Phi-4, a compact language model optimized for edge computing and mobile devices. Despite its small size, it maintains competitive performance across various tasks. The model is designed for offline AI applications and resource-constrained environments."
+    },
+    {
+        title: "Stability AI hints at SDXL Turbo 2 for ultra-fast gen",
+        source: "Stability Blog",
+        time: "10h ago",
+        content: "Stability AI has teased their upcoming SDXL Turbo 2 model, promising ultra-fast image generation with improved quality. The model is expected to generate high-resolution images in under 2 seconds while maintaining artistic control and prompt fidelity. Beta testing begins next month for select users."
+    },
 ];
 
 // 8. Cost trends & reliability
@@ -133,6 +168,7 @@ const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444'
 const BenchmarkPage = () => {
     const [filterType, setFilterType] = useState('All');
     const [sortBy, setSortBy] = useState('aaii');
+    const [selectedNews, setSelectedNews] = useState(null);
 
     // --- Derived Data ---
     const filteredModels = useMemo(() =>
@@ -468,7 +504,7 @@ const BenchmarkPage = () => {
                     {/* Reliability */}
                     <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
                         <h3 className="text-base font-semibold mb-4 text-foreground flex items-center gap-2">
-                            <Gauge className="h-5 w-5 text-sky-500" />
+                            <Gauge className="h-5 w-5 text-green-500" />
                             Provider Uptime (90d)
                         </h3>
                         <ResponsiveContainer width="100%" height={240}>
@@ -477,7 +513,7 @@ const BenchmarkPage = () => {
                                 <XAxis dataKey="name" stroke="var(--foreground)" tick={{ fill: 'var(--foreground)' }} />
                                 <YAxis domain={[98.5, 100]} stroke="var(--foreground)" tickFormatter={(v) => `${v}%`} tick={{ fill: 'var(--foreground)' }} />
                                 <Tooltip formatter={(v) => `${v}%`} contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '10px', color: 'var(--foreground)' }} />
-                                <Bar dataKey="uptime" radius={[6, 6, 0, 0]} fill="#0ea5e9" />
+                                <Bar dataKey="uptime" radius={[6, 6, 0, 0]} fill="#10b981" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -598,7 +634,7 @@ const BenchmarkPage = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {AI_NEWS.map((news, idx) => (
-                            <div key={idx} className="p-4 bg-card border border-border rounded-xl shadow-sm hover:bg-accent/50 transition-colors cursor-pointer">
+                            <div key={idx} className="p-4 bg-card border border-border rounded-xl shadow-sm hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedNews(news)}>
                                 <p className="font-semibold text-foreground mb-1">{news.title}</p>
                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                                     <span>{news.source}</span>
@@ -610,6 +646,27 @@ const BenchmarkPage = () => {
                 </section>
 
             </div>
+
+            {/* News Modal */}
+            {selectedNews && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-card border border-border rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <h3 className="text-xl font-bold text-foreground pr-4">{selectedNews.title}</h3>
+                                <button onClick={() => setSelectedNews(null)} className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-accent transition-colors">
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+                                <span className="font-medium">{selectedNews.source}</span>
+                                <span>{selectedNews.time}</span>
+                            </div>
+                            <p className="text-foreground leading-relaxed">{selectedNews.content}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
