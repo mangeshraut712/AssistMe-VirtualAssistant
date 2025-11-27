@@ -171,17 +171,18 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
                                                 <p className="text-[11px] text-muted-foreground">Chat #{idx + 1}</p>
                                             </div>
 
-                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-l from-white via-white to-transparent dark:from-neutral-900 dark:via-neutral-900 pl-6 py-1">
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         startEditing(chat);
                                                     }}
-                                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
                                                     aria-label="Rename chat"
+                                                    title="Rename"
                                                 >
-                                                    <Edit2 className="h-4 w-4" />
+                                                    <Edit2 className="h-3.5 w-3.5" />
                                                 </button>
                                                 <button
                                                     type="button"
@@ -189,10 +190,11 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
                                                         e.stopPropagation();
                                                         onDeleteChat(chat.id);
                                                     }}
-                                                    className="p-1.5 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                                     aria-label="Delete chat"
+                                                    title="Delete"
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-3.5 w-3.5" />
                                                 </button>
                                             </div>
                                         </button>
