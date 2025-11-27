@@ -1,36 +1,76 @@
-import React, { useState } from 'react';
-import { X, Wand2, Copy, Check, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+    X, Wand2, Copy, Check, Sparkles,
+    RefreshCw, FileText, Languages,
+    AlignLeft, CheckCircle, ArrowRight,
+    Upload, ClipboardPaste, RotateCcw
+} from 'lucide-react';
 
-const modes = [
-    { id: 'grammar', label: 'Grammar Fix', hint: 'Correct grammar, tone, and clarity.' },
-    { id: 'paraphrase', label: 'Paraphrase', hint: 'Rewrite with fresh phrasing.' },
-    { id: 'summarize', label: 'Summarize', hint: 'Condense into key points.' },
+const TOOLS = [
+    { id: 'paraphrase', label: 'Paraphraser', icon: RefreshCw, description: 'Rewrite text with improved phrasing.' },
+    { id: 'grammar', label: 'Grammar Checker', icon: CheckCircle, description: 'Fix grammar, spelling, and punctuation.' },
+    { id: 'summarize', label: 'Summarizer', icon: AlignLeft, description: 'Condense text into key points.' },
+    { id: 'translate', label: 'Translator', icon: Languages, description: 'Translate text to another language.' },
+];
+
+const PARAPHRASE_MODES = [
+    { id: 'standard', label: 'Standard', prompt: 'Rewrite this text to improve clarity and flow while maintaining the original meaning.' },
+    { id: 'fluency', label: 'Fluency', prompt: 'Rewrite this text to sound more natural and fluent.' },
+    { id: 'formal', label: 'Formal', prompt: 'Rewrite this text in a formal, professional tone.' },
+    { id: 'simple', label: 'Simple', prompt: 'Rewrite this text using simple language and short sentences.' },
+    { id: 'creative', label: 'Creative', prompt: 'Rewrite this text creatively, using more descriptive vocabulary.' },
+];
+
+const SUMMARIZE_MODES = [
+    { id: 'paragraph', label: 'Paragraph', prompt: 'Summarize this text into a concise paragraph.' },
+    { id: 'bullets', label: 'Bullet Points', prompt: 'Summarize this text into key bullet points.' },
+];
+
+const LANGUAGES = [
+    { id: 'es', label: 'Spanish' },
+    { id: 'fr', label: 'French' },
+    { id: 'de', label: 'German' },
+    { id: 'hi', label: 'Hindi' },
+    { id: 'zh', label: 'Chinese' },
+    { id: 'ja', label: 'Japanese' },
 ];
 
 const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-flash-exp:free' }) => {
-    const [mode, setMode] = useState('grammar');
+    const [activeTool, setActiveTool] = useState('paraphrase');
+    const [activeMode, setActiveMode] = useState('standard');
+    const [targetLang, setTargetLang] = useState('es');
+
     const [inputText, setInputText] = useState('');
     const [outputText, setOutputText] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [copied, setCopied] = useState(false);
 
+    // Reset state when tool changes
+    useEffect(() => {
+        setOutputText('');
+        if (activeTool === 'paraphrase') setActiveMode('standard');
+        if (activeTool === 'summarize') setActiveMode('paragraph');
+    }, [activeTool]);
+
     if (!isOpen) return null;
 
-    const promptForMode = (text) => {
-        if (mode === 'paraphrase') {
-            return `Rewrite this text with improved phrasing and flow, preserve meaning:\n\n${text}`;
+    const getPrompt = () => {
+        if (activeTool === 'paraphrase') {
+            const mode = PARAPHRASE_MODES.find(m => m.id === activeMode);
+            return `${mode?.prompt || 'Rewrite this text.'}\n\nText:\n${inputText}`;
         }
-        if (mode === 'summarize') {
-            return `Summarize this text into concise bullet points and a one-line TL;DR:\n\n${text}`;
+        if (activeTool === 'grammar') {
+            return `Act as a professional grammar checker. Fix all grammar, spelling, punctuation, and style errors in the following text. Return ONLY the corrected text.\n\nText:\n${inputText}`;
         }
-        return `Act as a premium grammar assistant (Grammarly/Quillbot style). Fix grammar, punctuation, clarity, and tone. Return the improved text only.\n\n${text}`;
-    };
-
-    const handleCopy = async () => {
-        if (!outputText) return;
-        await navigator.clipboard.writeText(outputText);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1200);
+        if (activeTool === 'summarize') {
+            const mode = SUMMARIZE_MODES.find(m => m.id === activeMode);
+            return `${mode?.prompt || 'Summarize this text.'}\n\nText:\n${inputText}`;
+        }
+        if (activeTool === 'translate') {
+            const lang = LANGUAGES.find(l => l.id === targetLang)?.label || targetLang;
+            return `Translate the following text to ${lang}. Return ONLY the translated text.\n\nText:\n${inputText}`;
+        }
+        return inputText;
     };
 
     const runEnhance = async () => {
@@ -44,8 +84,8 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: [
-                        { role: 'system', content: 'You are a concise writing assistant. Keep formatting minimal.' },
-                        { role: 'user', content: promptForMode(inputText) }
+                        { role: 'system', content: 'You are an expert writing assistant. Provide high-quality, direct responses without conversational filler.' },
+                        { role: 'user', content: getPrompt() }
                     ],
                     model,
                     preferred_language: 'en'
@@ -61,83 +101,238 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
-            <div className="bg-card border border-border rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.15)]">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-[hsl(var(--surface))]">
-                    <div>
-                        <h2 className="text-lg font-semibold flex items-center gap-2">
-                            <Wand2 className="h-5 w-5" />
-                            Grammarly / Quillbot
-                        </h2>
-                        <p className="text-sm text-muted-foreground">Polish, paraphrase, or summarize in one click.</p>
-                    </div>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-foreground/5">
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
+    const handleCopy = async () => {
+        if (!outputText) return;
+        await navigator.clipboard.writeText(outputText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1200);
+    };
 
-                <div className="p-6 space-y-4">
-                    <div className="flex flex-wrap gap-2">
-                        {modes.map((m) => (
+    const handlePaste = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            setInputText(text);
+        } catch (err) {
+            console.error('Failed to read clipboard', err);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-8">
+            <div className="bg-background w-full max-w-6xl h-[85vh] rounded-3xl shadow-2xl border border-border flex overflow-hidden">
+
+                {/* Sidebar */}
+                <aside className="w-64 bg-muted/30 border-r border-border flex flex-col hidden md:flex">
+                    <div className="p-6 border-b border-border/50">
+                        <div className="flex items-center gap-2 font-bold text-lg">
+                            <Wand2 className="h-5 w-5 text-emerald-500" />
+                            <span>Writing Tools</span>
+                        </div>
+                    </div>
+
+                    <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+                        {TOOLS.map(tool => (
                             <button
-                                key={m.id}
-                                onClick={() => setMode(m.id)}
-                                className={`px-3 py-2 rounded-full border text-sm transition-all ${mode === m.id
-                                        ? 'border-foreground bg-foreground text-background shadow-[0_12px_30px_rgba(0,0,0,0.12)]'
-                                        : 'border-border bg-background hover:border-foreground/40'
+                                key={tool.id}
+                                onClick={() => setActiveTool(tool.id)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTool === tool.id
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                     }`}
                             >
-                                {m.label}
+                                <tool.icon className={`h-5 w-5 ${activeTool === tool.id ? 'text-emerald-500' : ''}`} />
+                                <div className="text-left">
+                                    <div>{tool.label}</div>
+                                </div>
                             </button>
                         ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{modes.find(m => m.id === mode)?.hint}</p>
+                    </nav>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Input</label>
-                            <textarea
-                                value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
-                                placeholder="Paste or write your text..."
-                                className="w-full min-h-[180px] rounded-xl border border-border bg-background p-3 focus:outline-none focus:ring-2 focus:ring-foreground/10 resize-none"
-                            />
+                    <div className="p-4 border-t border-border/50">
+                        <div className="bg-emerald-500/10 rounded-xl p-4">
+                            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold text-sm mb-1">
+                                <Sparkles className="h-4 w-4" />
+                                Premium Features
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Unlimited words and advanced modes enabled.
+                            </p>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium flex items-center gap-2">
-                                Output
-                                {outputText && (
-                                    <button
-                                        onClick={handleCopy}
-                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border border-border hover:border-foreground/50 transition-colors"
+                    </div>
+                </aside>
+
+                {/* Main Content */}
+                <main className="flex-1 flex flex-col min-w-0 bg-background">
+
+                    {/* Header */}
+                    <header className="h-16 border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+                        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
+                            <span className="font-semibold text-lg whitespace-nowrap md:hidden">
+                                {TOOLS.find(t => t.id === activeTool)?.label}
+                            </span>
+
+                            {/* Mode Selectors */}
+                            {activeTool === 'paraphrase' && (
+                                <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+                                    {PARAPHRASE_MODES.map(mode => (
+                                        <button
+                                            key={mode.id}
+                                            onClick={() => setActiveMode(mode.id)}
+                                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
+                                                    ? 'bg-background text-foreground shadow-sm'
+                                                    : 'text-muted-foreground hover:text-foreground'
+                                                }`}
+                                        >
+                                            {mode.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {activeTool === 'summarize' && (
+                                <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+                                    {SUMMARIZE_MODES.map(mode => (
+                                        <button
+                                            key={mode.id}
+                                            onClick={() => setActiveMode(mode.id)}
+                                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
+                                                    ? 'bg-background text-foreground shadow-sm'
+                                                    : 'text-muted-foreground hover:text-foreground'
+                                                }`}
+                                        >
+                                            {mode.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {activeTool === 'translate' && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">To:</span>
+                                    <select
+                                        value={targetLang}
+                                        onChange={(e) => setTargetLang(e.target.value)}
+                                        className="bg-muted/50 border-none text-sm rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500"
                                     >
-                                        {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                                        {copied ? 'Copied' : 'Copy'}
-                                    </button>
+                                        {LANGUAGES.map(lang => (
+                                            <option key={lang.id} value={lang.id}>{lang.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors ml-4">
+                            <X className="h-5 w-5 text-muted-foreground" />
+                        </button>
+                    </header>
+
+                    {/* Editor Area */}
+                    <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+
+                        {/* Input Pane */}
+                        <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-border min-h-[300px]">
+                            <div className="flex-1 p-6 relative group">
+                                <textarea
+                                    value={inputText}
+                                    onChange={(e) => setInputText(e.target.value)}
+                                    placeholder="Paste text or write here to start..."
+                                    className="w-full h-full bg-transparent border-none resize-none focus:outline-none text-base leading-relaxed placeholder:text-muted-foreground/50"
+                                    spellCheck="false"
+                                />
+
+                                {!inputText && (
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-3">
+                                        <button
+                                            onClick={handlePaste}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors text-sm font-medium"
+                                        >
+                                            <ClipboardPaste className="h-4 w-4" />
+                                            Paste Text
+                                        </button>
+                                        <button className="flex items-center gap-2 px-4 py-2 rounded-full border border-border text-muted-foreground hover:bg-muted transition-colors text-sm font-medium cursor-not-allowed opacity-60">
+                                            <Upload className="h-4 w-4" />
+                                            Upload Doc
+                                        </button>
+                                    </div>
                                 )}
-                            </label>
-                            <div className="w-full min-h-[180px] rounded-xl border border-border bg-muted p-3 text-sm overflow-auto">
-                                {outputText || <span className="text-muted-foreground">Your improved text will appear here.</span>}
+                            </div>
+
+                            {/* Input Footer */}
+                            <div className="h-14 border-t border-border flex items-center justify-between px-6 bg-muted/10">
+                                <div className="text-xs text-muted-foreground font-medium">
+                                    {inputText.split(/\s+/).filter(w => w).length} words
+                                </div>
+                                <button
+                                    onClick={runEnhance}
+                                    disabled={!inputText.trim() || isProcessing}
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:shadow-none transition-all flex items-center gap-2"
+                                >
+                                    {isProcessing ? (
+                                        <>
+                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            {activeTool === 'paraphrase' && 'Paraphrase'}
+                                            {activeTool === 'grammar' && 'Fix Errors'}
+                                            {activeTool === 'summarize' && 'Summarize'}
+                                            {activeTool === 'translate' && 'Translate'}
+                                            <ArrowRight className="h-4 w-4" />
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </div>
-                    </div>
 
-                    <button
-                        onClick={runEnhance}
-                        disabled={isProcessing || !inputText.trim()}
-                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-foreground text-background font-semibold hover:opacity-90 disabled:opacity-40 transition-all shadow-[0_14px_40px_rgba(0,0,0,0.18)]"
-                    >
-                        {isProcessing ? 'Processing...' : (
-                            <>
-                                <Sparkles className="h-4 w-4" />
-                                {mode === 'grammar' && 'Fix Grammar'}
-                                {mode === 'paraphrase' && 'Paraphrase'}
-                                {mode === 'summarize' && 'Summarize'}
-                            </>
-                        )}
-                    </button>
-                </div>
+                        {/* Output Pane */}
+                        <div className="flex-1 flex flex-col bg-muted/10">
+                            <div className="flex-1 p-6 overflow-y-auto">
+                                {outputText ? (
+                                    <div className="prose dark:prose-invert max-w-none">
+                                        <p className="text-base leading-relaxed whitespace-pre-wrap">{outputText}</p>
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40">
+                                        <Sparkles className="h-12 w-12 mb-4 opacity-20" />
+                                        <p className="text-sm">AI output will appear here</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Output Footer */}
+                            <div className="h-14 border-t border-border flex items-center justify-between px-6 bg-muted/20">
+                                <div className="flex items-center gap-2">
+                                    {outputText && (
+                                        <>
+                                            <button
+                                                onClick={handleCopy}
+                                                className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-foreground transition-colors relative group"
+                                                title="Copy to clipboard"
+                                            >
+                                                {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                                            </button>
+                                            <button
+                                                onClick={runEnhance}
+                                                className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                                                title="Regenerate"
+                                            >
+                                                <RotateCcw className="h-4 w-4" />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                                {outputText && (
+                                    <div className="text-xs text-muted-foreground font-medium">
+                                        {outputText.split(/\s+/).filter(w => w).length} words
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
+                </main>
             </div>
         </div>
     );
