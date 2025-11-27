@@ -34,8 +34,8 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 flex flex-col items-center justify-center px-6 md:px-12 relative z-10">
-                    <div className="w-full max-w-4xl space-y-12 text-center">
+                <div className="flex-1 flex flex-col items-center justify-center px-8 md:px-16 lg:px-24 relative z-10">
+                    <div className="w-full max-w-5xl space-y-12 text-center">
                         {/* Logo/Icon */}
                         <div className="flex justify-center mb-6">
                             <div className="relative">
@@ -60,7 +60,7 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                         </div>
 
                         {/* Feature Highlights Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
                             <div className="group p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                     <MessageSquare className="h-6 w-6 text-white" />
@@ -89,8 +89,8 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                 </div>
 
                 {/* Input Area at Bottom */}
-                <div className="flex-none pb-8 px-6 md:px-12 relative z-10">
-                    <div className="max-w-4xl mx-auto">
+                <div className="flex-none pb-8 px-8 md:px-16 lg:px-24 relative z-10">
+                    <div className="max-w-5xl mx-auto">
                         {inputProps && <InputArea {...inputProps} variant="hero" />}
                     </div>
                 </div>
