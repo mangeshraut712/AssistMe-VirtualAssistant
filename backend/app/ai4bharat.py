@@ -4,31 +4,25 @@ Provides translation, language detection, and multilingual chat support
 """
 
 import logging
-from typing import Dict, List, Optional
 from enum import Enum
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
-# Import OpenRouter client for AI-powered translations using Kimi model
+# Import AI Provider Factory
 try:
-    from .chat_client import grok_client
-    OPENROUTER_AVAILABLE = True
-    logger.info("OpenRouter client available for AI4Bharat translations")
+    from .providers import get_provider
+
+    PROVIDER_AVAILABLE = True
+    logger.info("AI Provider available for AI4Bharat translations")
 except ImportError:
-    grok_client = None
-    OPENROUTER_AVAILABLE = False
-    logger.warning("OpenRouter client not available, using fallback translations")
+    PROVIDER_AVAILABLE = False
+    logger.warning("AI Provider not available, using fallback translations")
 
-# Direct OpenRouter API access for Kimi model (bypassing rate limits)
-import os
-import requests
-import json
-
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 class IndianLanguage(str, Enum):
     """Supported Indian languages"""
+
     HINDI = "hi"
     TAMIL = "ta"
     TELUGU = "te"
@@ -41,6 +35,7 @@ class IndianLanguage(str, Enum):
     ODIA = "or"
     ENGLISH = "en"
 
+
 LANGUAGE_NAMES = {
     "hi": {"name": "Hindi", "native": "हिंदी"},
     "ta": {"name": "Tamil", "native": "தமிழ்"},
@@ -52,8 +47,24 @@ LANGUAGE_NAMES = {
     "mr": {"name": "Marathi", "native": "मराठी"},
     "pa": {"name": "Punjabi", "native": "ਪੰਜਾਬੀ"},
     "or": {"name": "Odia", "native": "ଓଡ଼ିଆ"},
-    "en": {"name": "English", "native": "English"}
+    "en": {"name": "English", "native": "English"},
+    "code_mix": {"name": "Code-mixed (Indic + English)", "native": "Code-mix"},
 }
+
+CULTURAL_CONTEXT = {
+    "hi": "Use Indian examples, Hindi idioms where helpful, and IN date/time/currency formats.",
+    "ta": "Use Tamil Nadu examples, Tamil idioms where helpful, and INR formatting.",
+    "te": "Use Telugu cultural context (Andhra/Telangana), INR, and local idioms.",
+    "ka": "Use Kannada context (Karnataka), INR, and local expressions.",
+    "ml": "Use Malayalam context (Kerala), INR, and local expressions.",
+    "bn": "Use Bengali context (West Bengal), INR, and local idioms.",
+    "gu": "Use Gujarati context, INR, and Gujarati idioms.",
+    "mr": "Use Marathi context (Maharashtra), INR, and Marathi idioms.",
+    "pa": "Use Punjabi context, INR, and local expressions.",
+    "or": "Use Odia context, INR, and local expressions.",
+    "code_mix": "Preserve code-mixed style, use transliteration when user writes Indic words in Latin script.",
+}
+
 
 class AI4BharatClient:
     """Client for AI4Bharat services"""
@@ -61,122 +72,51 @@ class AI4BharatClient:
     def __init__(self):
         self.base_url = "https://api.ai4bharat.org/v1"
         self.supported_languages = list(IndianLanguage)
-        self.openrouter_headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "HTTP-Referer": "https://assist-me-virtual-assistant.vercel.app",
-            "X-Title": "AssistMe Virtual Assistant",
-        } if OPENROUTER_API_KEY else None
         logger.info("AI4Bharat client initialized")
 
-    def _call_openrouter_kimi(self, prompt: str) -> Dict:
-        """Direct call to OpenRouter Kimi model for translation"""
-        if not self.openrouter_headers:
-            return {"error": "OpenRouter API key not configured"}
-
+    async def _call_openrouter_translation(self, prompt: str) -> Dict:
+        """Direct call to AI Provider for translation via IndicLLMService (OpenRouter)."""
         try:
-            # Try Kimi model first, fallback to Llama if Kimi fails
-            models_to_try = [
-                "moonshotai/kimi-dev-72b:free",
-                "meta-llama/llama-3.3-70b-instruct:free"
-            ]
+            from .services.indic_llm import indic_llm_service
 
-            for model in models_to_try:
-                payload = {
-                    "model": model,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.3,
-                    "max_tokens": 500
-                }
-
-                response = requests.post(
-                    f"{OPENROUTER_BASE_URL}/chat/completions",
-                    json=payload,
-                    headers=self.openrouter_headers,
-                    timeout=30
-                )
-
-                if response.status_code == 200:
-                    data = response.json()
-                    choice = data.get("choices", [{}])[0]
-                    message = choice.get("message", {})
-                    content = message.get("content", "").strip()
-                    tokens = data.get("usage", {}).get("total_tokens", 0)
-
-                    return {"response": content, "tokens": tokens, "model_used": model}
-                elif response.status_code == 404 and model == "moonshotai/kimi-dev-72b:free":
-                    # Kimi model not available, try next model
-                    continue
-                else:
-                    # Other error, return it
-                    return {"error": f"OpenRouter API error: {response.status_code}"}
-
-            # All models failed
-            return {"error": "All translation models unavailable"}
-
-            response = requests.post(
-                f"{OPENROUTER_BASE_URL}/chat/completions",
-                json=payload,
-                headers=self.openrouter_headers,
-                timeout=30
+            messages = [{"role": "user", "content": prompt}]
+            model = "google/gemini-2.0-flash"
+            result = await indic_llm_service.generate_response(
+                messages=messages,
+                language="en",
+                model=model,
+                temperature=0.3,
+                max_tokens=500,
             )
-
-            if response.status_code == 200:
-                data = response.json()
-                choice = data.get("choices", [{}])[0]
-                message = choice.get("message", {})
-                content = message.get("content", "").strip()
-                tokens = data.get("usage", {}).get("total_tokens", 0)
-
-                return {"response": content, "tokens": tokens}
-            else:
-                return {"error": f"OpenRouter API error: {response.status_code}"}
-
+            result["model_used"] = model
+            return result
         except Exception as e:
-            return {"error": f"OpenRouter request failed: {str(e)}"}
-    
+            return {"error": f"Provider request failed: {str(e)}"}
+
     async def translate(
-        self,
-        text: str,
-        source_language: str,
-        target_language: str
+        self, text: str, source_language: str, target_language: str
     ) -> Dict:
-        """
-        Translate text between Indian languages using Kimi K2 Thinking model
-
-        Args:
-            text: Text to translate
-            source_language: Source language code (e.g., 'hi')
-            target_language: Target language code (e.g., 'ta')
-
-        Returns:
-            Dict with translated text and metadata
-        """
+        """Translate text between Indian languages using OpenRouter (Gemini 2.0 Flash)."""
         try:
             # Validate languages
             if source_language not in LANGUAGE_NAMES:
                 return {
                     "success": False,
-                    "error": f"Unsupported source language: {source_language}"
+                    "error": f"Unsupported source language: {source_language}",
                 }
 
             if target_language not in LANGUAGE_NAMES:
                 return {
                     "success": False,
-                    "error": f"Unsupported target language: {target_language}"
+                    "error": f"Unsupported target language: {target_language}",
                 }
 
-            # Use Kimi model via direct OpenRouter API call for AI-powered translation
-            if self.openrouter_headers:
-                try:
-                    # Import run_in_threadpool for async execution
-                    from starlette.concurrency import run_in_threadpool
+            # Use OpenRouter (Gemini) for AI-powered translation
+            try:
+                source_name = LANGUAGE_NAMES[source_language]["name"]
+                target_name = LANGUAGE_NAMES[target_language]["name"]
 
-                    # Create translation prompt for Kimi model
-                    source_name = LANGUAGE_NAMES[source_language]["name"]
-                    target_name = LANGUAGE_NAMES[target_language]["name"]
-
-                    translation_prompt = f"""You are an expert translator specializing in Indian languages.
+                translation_prompt = f"""You are an expert translator specializing in Indian languages.
 
 Translate the following text from {source_name} to {target_name}. Provide only the translated text without any additional explanations or notes.
 
@@ -184,39 +124,41 @@ Text to translate: "{text}"
 
 Translation:"""
 
-                    # Use direct OpenRouter API call to Kimi model
-                    result = await run_in_threadpool(
-                        self._call_openrouter_kimi,
-                        translation_prompt
+                result = await self._call_openrouter_translation(translation_prompt)
+
+                if "response" in result and result["response"].strip():
+                    translated_text = result["response"].strip().strip('"').strip("'")
+
+                    logger.info(
+                        f"AI translation successful: '{text}' -> '{translated_text}'"
                     )
-
-                    if "response" in result and result["response"].strip():
-                        translated_text = result["response"].strip()
-                        # Clean up the response (remove quotes if present)
-                        translated_text = translated_text.strip('"').strip("'")
-
-                        logger.info(f"AI translation successful: '{text}' -> '{translated_text}' using Kimi model")
-                        return {
-                            "success": True,
-                            "original_text": text,
-                            "translated_text": translated_text,
-                            "source_language": source_language,
-                            "target_language": target_language,
-                            "source_language_name": source_name,
-                            "target_language_name": target_name,
-                            "model_used": "kimi-k2-thinking-openrouter",
-                            "confidence": 0.95
-                        }
-                    else:
-                        logger.warning(f"Kimi model via OpenRouter returned error: {result}, falling back to dictionary")
-                except Exception as kimi_error:
-                    logger.warning(f"Kimi translation via OpenRouter failed: {kimi_error}, falling back to dictionary")
+                    return {
+                        "success": True,
+                        "original_text": text,
+                        "translated_text": translated_text,
+                        "source_language": source_language,
+                        "target_language": target_language,
+                        "source_language_name": source_name,
+                        "target_language_name": target_name,
+                        "model_used": result.get("model_used"),
+                        "confidence": 0.95,
+                    }
+                else:
+                    logger.warning(
+                        f"Translation model returned error: {result}, falling back to dictionary"
+                    )
+            except Exception as translation_error:
+                logger.warning(
+                    f"OpenRouter translation failed: {translation_error}, falling back to dictionary"
+                )
 
             # Fallback to dictionary-based translation if Kimi is not available or failed
             logger.info("Using dictionary-based translation fallback")
 
             # Simple translation mappings for common phrases
-            translations = self._get_translation_mappings(source_language, target_language)
+            translations = self._get_translation_mappings(
+                source_language, target_language
+            )
 
             # Try exact match first
             translated_text = translations.get(text.lower().strip(), "")
@@ -226,13 +168,17 @@ Translation:"""
                 words = text.lower().split()
                 translated_words = []
                 for word in words:
-                    translated_word = translations.get(word, word)  # Keep original if no translation
+                    translated_word = translations.get(
+                        word, word
+                    )  # Keep original if no translation
                     translated_words.append(translated_word)
                 translated_text = " ".join(translated_words)
 
             # If still no translation, provide a fallback
             if not translated_text or translated_text == text.lower():
-                translated_text = self._get_fallback_translation(text, source_language, target_language)
+                translated_text = self._get_fallback_translation(
+                    text, source_language, target_language
+                )
 
             return {
                 "success": True,
@@ -243,88 +189,94 @@ Translation:"""
                 "source_language_name": LANGUAGE_NAMES[source_language]["name"],
                 "target_language_name": LANGUAGE_NAMES[target_language]["name"],
                 "model_used": "dictionary-fallback",
-                "confidence": 0.85
+                "confidence": 0.85,
             }
 
         except Exception as e:
             logger.error(f"Translation error: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
-    
+            return {"success": False, "error": str(e)}
+
     async def detect_language(self, text: str) -> Dict:
         """
         Detect language of given text
-        
+
         Args:
             text: Text to detect language for
-        
+
         Returns:
             Dict with detected language and confidence
         """
         try:
-            # Simple heuristic-based detection
-            # In production, use actual ML model
+            # Simple heuristic-based detection with code-mix awareness
             detected_lang = self._heuristic_detect(text)
-            
+
             return {
                 "success": True,
                 "text": text,
                 "detected_language": detected_lang,
-                "language_name": LANGUAGE_NAMES.get(detected_lang, {}).get("name", "Unknown"),
-                "confidence": 0.85
+                "language_name": LANGUAGE_NAMES.get(detected_lang, {}).get(
+                    "name", "Unknown"
+                ),
+                "confidence": 0.85,
             }
-        
+
         except Exception as e:
             logger.error(f"Language detection error: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
-    
+            return {"success": False, "error": str(e)}
+
     def _heuristic_detect(self, text: str) -> str:
-        """Simple heuristic to detect Indian language"""
+        """Simple heuristic to detect Indian language, including code-mix."""
+        if not text:
+            return "en"
+
+        # Mix of ASCII + Indic scripts → treat as code-mix
+        has_ascii = any("a" <= c.lower() <= "z" for c in text)
+        has_indic = any("\u0900" <= char <= "\u0d7f" for char in text)
+        if has_ascii and has_indic:
+            return "code_mix"
+
         # Check for Devanagari script (Hindi, Marathi, Sanskrit)
-        if any('\u0900' <= char <= '\u097F' for char in text):
+        if any("\u0900" <= char <= "\u097f" for char in text):
             return "hi"
 
         # Check for Tamil script
-        if any('\u0B80' <= char <= '\u0BFF' for char in text):
+        if any("\u0b80" <= char <= "\u0bff" for char in text):
             return "ta"
 
         # Check for Telugu script
-        if any('\u0C00' <= char <= '\u0C7F' for char in text):
+        if any("\u0c00" <= char <= "\u0c7f" for char in text):
             return "te"
 
         # Check for Kannada script
-        if any('\u0C80' <= char <= '\u0CFF' for char in text):
+        if any("\u0c80" <= char <= "\u0cff" for char in text):
             return "ka"
 
         # Check for Malayalam script
-        if any('\u0D00' <= char <= '\u0D7F' for char in text):
+        if any("\u0d00" <= char <= "\u0d7f" for char in text):
             return "ml"
 
         # Check for Bengali script
-        if any('\u0980' <= char <= '\u09FF' for char in text):
+        if any("\u0980" <= char <= "\u09ff" for char in text):
             return "bn"
 
         # Check for Gujarati script
-        if any('\u0A80' <= char <= '\u0AFF' for char in text):
+        if any("\u0a80" <= char <= "\u0aff" for char in text):
             return "gu"
 
         # Check for Gurmukhi script (Punjabi)
-        if any('\u0A00' <= char <= '\u0A7F' for char in text):
+        if any("\u0a00" <= char <= "\u0a7f" for char in text):
             return "pa"
 
         # Check for Odia script
-        if any('\u0B00' <= char <= '\u0B7F' for char in text):
+        if any("\u0b00" <= char <= "\u0b7f" for char in text):
             return "or"
 
         # Default to English
         return "en"
 
-    def _get_translation_mappings(self, source_lang: str, target_lang: str) -> Dict[str, str]:
+    def _get_translation_mappings(
+        self, source_lang: str, target_lang: str
+    ) -> Dict[str, str]:
         """Get translation mappings for common phrases"""
         # English to Hindi
         if source_lang == "en" and target_lang == "hi":
@@ -355,7 +307,7 @@ Translation:"""
                 "hot": "गरम",
                 "cold": "ठंडा",
                 "fast": "तेज़",
-                "slow": "धीमा"
+                "slow": "धीमा",
             }
 
         # Hindi to English
@@ -387,13 +339,15 @@ Translation:"""
                 "गरम": "hot",
                 "ठंडा": "cold",
                 "तेज़": "fast",
-                "धीमा": "slow"
+                "धीमा": "slow",
             }
 
         # Add more language pairs as needed
         return {}
 
-    def _get_fallback_translation(self, text: str, source_lang: str, target_lang: str) -> str:
+    def _get_fallback_translation(
+        self, text: str, source_lang: str, target_lang: str
+    ) -> str:
         """Provide fallback translation when exact match not found"""
         # Simple transliteration approach for demonstration
         if source_lang == "en" and target_lang == "hi":
@@ -405,23 +359,16 @@ Translation:"""
         else:
             # For other language pairs, just indicate the translation attempt
             return f"{text} [{LANGUAGE_NAMES.get(source_lang, {}).get('name', source_lang)} → {LANGUAGE_NAMES.get(target_lang, {}).get('name', target_lang)}]"
-    
+
     def get_supported_languages(self) -> List[Dict]:
         """Get list of supported languages"""
         return [
-            {
-                "code": code,
-                "name": info["name"],
-                "native_name": info["native"]
-            }
+            {"code": code, "name": info["name"], "native_name": info["native"]}
             for code, info in LANGUAGE_NAMES.items()
         ]
-    
+
     async def transliterate(
-        self,
-        text: str,
-        source_script: str,
-        target_script: str
+        self, text: str, source_script: str, target_script: str
     ) -> Dict:
         """
         Transliterate text between scripts
@@ -436,39 +383,76 @@ Translation:"""
         """
         try:
             # Simple transliteration for demonstration
-            transliterated_text = self._simple_transliterate(text, source_script, target_script)
+            transliterated_text = self._simple_transliterate(
+                text, source_script, target_script
+            )
 
             return {
                 "success": True,
                 "original_text": text,
                 "transliterated_text": transliterated_text,
                 "source_script": source_script,
-                "target_script": target_script
+                "target_script": target_script,
             }
 
         except Exception as e:
             logger.error(f"Transliteration error: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
-    def _simple_transliterate(self, text: str, source_script: str, target_script: str) -> str:
+    def _simple_transliterate(
+        self, text: str, source_script: str, target_script: str
+    ) -> str:
         """Simple character-by-character transliteration"""
         # For Hindi to English, provide basic mappings
         if source_script == "hi" and target_script == "en":
             # Basic Devanagari to Roman transliteration
             mappings = {
-                'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ee', 'उ': 'u', 'ऊ': 'oo',
-                'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au',
-                'क': 'ka', 'ख': 'kha', 'ग': 'ga', 'घ': 'gha', 'ङ': 'nga',
-                'च': 'cha', 'छ': 'chha', 'ज': 'ja', 'झ': 'jha', 'ञ': 'nya',
-                'ट': 'ta', 'ठ': 'tha', 'ड': 'da', 'ढ': 'dha', 'ण': 'na',
-                'त': 'ta', 'थ': 'tha', 'द': 'da', 'ध': 'dha', 'न': 'na',
-                'प': 'pa', 'फ': 'pha', 'ब': 'ba', 'भ': 'bha', 'म': 'ma',
-                'य': 'ya', 'र': 'ra', 'ल': 'la', 'व': 'va', 'श': 'sha',
-                'ष': 'sha', 'स': 'sa', 'ह': 'ha',
-                'ं': 'n', 'ः': 'h', '्': '',  # diacritics
+                "अ": "a",
+                "आ": "aa",
+                "इ": "i",
+                "ई": "ee",
+                "उ": "u",
+                "ऊ": "oo",
+                "ए": "e",
+                "ऐ": "ai",
+                "ओ": "o",
+                "औ": "au",
+                "क": "ka",
+                "ख": "kha",
+                "ग": "ga",
+                "घ": "gha",
+                "ङ": "nga",
+                "च": "cha",
+                "छ": "chha",
+                "ज": "ja",
+                "झ": "jha",
+                "ञ": "nya",
+                "ट": "ta",
+                "ठ": "tha",
+                "ड": "da",
+                "ढ": "dha",
+                "ण": "na",
+                "त": "ta",
+                "थ": "tha",
+                "द": "da",
+                "ध": "dha",
+                "न": "na",
+                "प": "pa",
+                "फ": "pha",
+                "ब": "ba",
+                "भ": "bha",
+                "म": "ma",
+                "य": "ya",
+                "र": "ra",
+                "ल": "la",
+                "व": "va",
+                "श": "sha",
+                "ष": "sha",
+                "स": "sa",
+                "ह": "ha",
+                "ं": "n",
+                "ः": "h",
+                "्": "",  # diacritics
             }
 
             result = ""
@@ -478,6 +462,7 @@ Translation:"""
 
         # For other combinations, return as-is for now
         return text
+
 
 # Global instance
 ai4bharat_client = AI4BharatClient()

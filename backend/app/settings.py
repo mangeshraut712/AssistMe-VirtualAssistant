@@ -31,12 +31,19 @@ def get_database_url() -> str | None:
     pg_port = os.getenv("PGPORT", "5432")
 
     if all([pg_host, pg_user, pg_password, pg_db]):
-        return f"postgresql+psycopg://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+        return (
+            f"postgresql+psycopg://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+        )
 
     # Only provide fallback for local development
     if os.getenv("RAILWAY_PROJECT_ID") is None:
+        # Check if running in development mode with SQLite
+        if os.getenv("DEV_MODE", "false").lower() == "true":
+            return "sqlite:///./assistme.db"
         # Local default (docker-compose)
-        return "postgresql+psycopg://assistme_user:assistme_password@db:5432/assistme_db"
+        return (
+            "postgresql+psycopg://assistme_user:assistme_password@db:5432/assistme_db"
+        )
 
     # In Railway without database, return None
     return None

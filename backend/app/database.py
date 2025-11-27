@@ -21,12 +21,15 @@ if not db_url:
     db_url = f"sqlite:///{sqlite_path}"
     logging.info(f"Using SQLite database at {sqlite_path}")
 else:
-    logging.info(f"Using configured database: {db_url.split('@')[-1] if '@' in db_url else 'SQLite'}")
+    logging.info(
+        f"Using configured database: {db_url.split('@')[-1] if '@' in db_url else 'SQLite'}"
+    )
 
 Base = declarative_base()
 engine = None
 SessionLocal = None
 _tables_initialized = False
+
 
 def _load_models() -> None:
     """
@@ -37,6 +40,7 @@ def _load_models() -> None:
         import_module(".models", package=__package__)
     except ImportError:
         import_module("app.models")
+
 
 def _ensure_database_setup() -> bool:
     """Create the engine/session and lazily create tables if a DB URL is configured."""
@@ -67,6 +71,7 @@ def _ensure_database_setup() -> bool:
             return False
 
     return SessionLocal is not None
+
 
 def get_db():
     if not _ensure_database_setup() or SessionLocal is None:

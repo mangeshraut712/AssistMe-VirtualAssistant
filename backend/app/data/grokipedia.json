@@ -1,0 +1,115 @@
+[
+  {
+    "title": "Artificial Intelligence",
+    "content": "Artificial Intelligence (AI) is the simulation of human intelligence processes by machines, especially computer systems. These processes include learning (the acquisition of information and rules for using the information), reasoning (using rules to reach approximate or definite conclusions), and self-correction. AI applications include expert systems, natural language processing, speech recognition, and machine vision.",
+    "category": "Technology",
+    "tags": [
+      "AI",
+      "Machine Learning",
+      "Technology",
+      "Computer Science"
+    ]
+  },
+  {
+    "title": "Machine Learning",
+    "content": "Machine Learning is a subset of artificial intelligence that provides systems the ability to automatically learn and improve from experience without being explicitly programmed. ML focuses on the development of computer programs that can access data and use it to learn for themselves. The process of learning begins with observations or data, such as examples, direct experience, or instruction, in order to look for patterns in data and make better decisions in the future.",
+    "category": "Technology",
+    "tags": [
+      "ML",
+      "AI",
+      "Data Science",
+      "Neural Networks"
+    ]
+  },
+  {
+    "title": "Deep Learning",
+    "content": "Deep Learning is a subset of machine learning that uses neural networks with multiple layers (deep neural networks) to progressively extract higher-level features from raw input. For example, in image processing, lower layers may identify edges, while higher layers may identify concepts relevant to a human such as digits, letters, or faces. Deep learning has been particularly successful in areas like computer vision, natural language processing, and speech recognition.",
+    "category": "Technology",
+    "tags": [
+      "Deep Learning",
+      "Neural Networks",
+      "AI",
+      "Computer Vision"
+    ]
+  },
+  {
+    "title": "Natural Language Processing",
+    "content": "Natural Language Processing (NLP) is a branch of artificial intelligence that helps computers understand, interpret, and manipulate human language. NLP draws from many disciplines, including computer science and computational linguistics, to bridge the gap between human communication and computer understanding. Common NLP tasks include text classification, sentiment analysis, machine translation, question answering, and text generation.",
+    "category": "Technology",
+    "tags": [
+      "NLP",
+      "AI",
+      "Language",
+      "Text Processing"
+    ]
+  },
+  {
+    "title": "Large Language Models",
+    "content": "Large Language Models (LLMs) are AI models trained on vast amounts of text data to understand and generate human-like text. Examples include GPT-4, Claude, Gemini, and LLaMA. These models use transformer architecture and are trained on billions of parameters, enabling them to perform tasks like text completion, translation, summarization, question answering, and creative writing. LLMs have revolutionized natural language processing and are the foundation of modern AI assistants.",
+    "category": "Technology",
+    "tags": [
+      "LLM",
+      "GPT",
+      "Transformers",
+      "AI",
+      "NLP"
+    ]
+  },
+  {
+    "title": "Python Programming",
+    "content": "Python is a high-level, interpreted programming language known for its simplicity and readability. Created by Guido van Rossum and first released in 1991, Python emphasizes code readability with its use of significant indentation. It supports multiple programming paradigms including procedural, object-oriented, and functional programming. Python is widely used in web development, data science, machine learning, automation, and scientific computing.",
+    "category": "Programming",
+    "tags": [
+      "Python",
+      "Programming",
+      "Software Development",
+      "Data Science"
+    ]
+  },
+  {
+    "title": "React Framework",
+    "content": "React is a free and open-source JavaScript library for building user interfaces based on components. Developed by Facebook (now Meta), React allows developers to create reusable UI components and manage application state efficiently. Key features include the virtual DOM for performance optimization, JSX syntax for writing HTML-like code in JavaScript, and a rich ecosystem of tools and libraries. React is widely used for building single-page applications and mobile apps (via React Native).",
+    "category": "Web Development",
+    "tags": [
+      "React",
+      "JavaScript",
+      "Frontend",
+      "Web Development",
+      "UI"
+    ]
+  },
+  {
+    "title": "FastAPI",
+    "content": "FastAPI is a modern, fast (high-performance) web framework for building APIs with Python based on standard Python type hints. It's designed to be easy to use and learn while providing automatic interactive API documentation. FastAPI is built on Starlette for web parts and Pydantic for data parts, offering async support, automatic validation, serialization, and OpenAPI schema generation. It's particularly popular for building microservices and machine learning APIs.",
+    "category": "Backend Development",
+    "tags": [
+      "FastAPI",
+      "Python",
+      "API",
+      "Backend",
+      "Web Framework"
+    ]
+  },
+  {
+    "title": "Quantum Computing",
+    "content": "Quantum computing is a type of computation that harnesses quantum mechanical phenomena like superposition and entanglement to process information. Unlike classical computers that use bits (0 or 1), quantum computers use quantum bits or qubits, which can exist in multiple states simultaneously. This allows quantum computers to solve certain problems exponentially faster than classical computers, particularly in areas like cryptography, optimization, and molecular simulation.",
+    "category": "Technology",
+    "tags": [
+      "Quantum Computing",
+      "Physics",
+      "Technology",
+      "Computing"
+    ]
+  },
+  {
+    "title": "Blockchain Technology",
+    "content": "Blockchain is a distributed ledger technology that maintains a continuously growing list of records (blocks) secured using cryptography. Each block contains a cryptographic hash of the previous block, a timestamp, and transaction data. Blockchain is the underlying technology for cryptocurrencies like Bitcoin and Ethereum, but its applications extend to supply chain management, voting systems, smart contracts, and decentralized finance (DeFi).",
+    "category": "Technology",
+    "tags": [
+      "Blockchain",
+      "Cryptocurrency",
+      "Distributed Systems",
+      "Security"
+    ]
+  }
+]

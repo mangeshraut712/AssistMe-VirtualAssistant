@@ -37,11 +37,18 @@ def _patch_forward_ref_evaluate() -> None:
     if type_params_param is not None:
         type_params_default = type_params_param.default
 
-    def _evaluate(self, globalns, localns, type_params=type_params_default, recursive_guard=None):
+    def _evaluate(
+        self, globalns, localns, type_params=type_params_default, recursive_guard=None
+    ):
         if recursive_guard is None:
             recursive_guard = set()
         if type_params_param is None or type_params is type_params_default:
-            return original(self, globalns=globalns, localns=localns, recursive_guard=recursive_guard)
+            return original(
+                self,
+                globalns=globalns,
+                localns=localns,
+                recursive_guard=recursive_guard,
+            )
         return original(
             self,
             globalns=globalns,
