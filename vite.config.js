@@ -1,15 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 export default defineConfig({
-  root: 'frontend',
+  root: resolve(__dirname, 'frontend'),
   plugins: [react()],
   build: {
     manifest: true,
     target: 'es2020',
     minify: 'terser',
     sourcemap: false,
-    outDir: '../dist',
+    outDir: resolve(__dirname, 'dist'),
     emptyOutDir: true,
     cssMinify: true,
     rollupOptions: {
