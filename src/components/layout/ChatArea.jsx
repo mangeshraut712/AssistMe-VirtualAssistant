@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { MessageSquare, Code, Image as ImageIcon } from 'lucide-react';
 import InputArea from './InputArea';
 import MessageBubble from './MessageBubble';
 
@@ -25,30 +26,71 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
 
     if (showWelcome) {
         return (
-            <div className="h-full flex flex-col items-center justify-center px-6 md:px-12 bg-white dark:bg-black">
-                <div className="w-full max-w-3xl space-y-12">
-                    {/* Greeting */}
-                    <div className="space-y-3">
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400">Hi there,</p>
-                        <h1 className="text-4xl md:text-5xl font-normal text-black dark:text-white">
-                            Where should we start?
-                        </h1>
-                    </div>
+            <div className="h-full flex flex-col bg-gradient-to-br from-white via-neutral-50/30 to-white dark:from-black dark:via-neutral-900/30 dark:to-black relative overflow-hidden">
+                {/* Decorative Background Elements */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 -left-48 w-96 h-96 bg-gradient-to-br from-blue-500/5 to-purple-500/5 dark:from-blue-500/10 dark:to-purple-500/10 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 dark:from-emerald-500/10 dark:to-cyan-500/10 rounded-full blur-3xl"></div>
+                </div>
 
-                    {/* Quick Actions */}
-                    <div className="flex flex-wrap gap-2.5">
-                        {quickActions.map((action, idx) => (
-                            <QuickActionPill
-                                key={idx}
-                                icon={action.icon}
-                                label={action.label}
-                                onClick={() => onQuickAction(action)}
-                            />
-                        ))}
-                    </div>
+                {/* Main Content */}
+                <div className="flex-1 flex flex-col items-center justify-center px-6 md:px-12 relative z-10">
+                    <div className="w-full max-w-4xl space-y-12 text-center">
+                        {/* Logo/Icon */}
+                        <div className="flex justify-center mb-6">
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl blur-xl opacity-20"></div>
+                                <img
+                                    src="/assets/logo.png"
+                                    alt="AssistMe"
+                                    className="h-20 w-20 rounded-3xl shadow-2xl relative z-10 ring-4 ring-white/50 dark:ring-black/50"
+                                />
+                            </div>
+                        </div>
 
-                    {/* Input Area at Bottom */}
-                    <div className="fixed bottom-6 left-0 right-0 md:left-96 px-6 md:px-12 bg-white dark:bg-black">
+                        {/* Greeting */}
+                        <div className="space-y-4">
+                            <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 tracking-wide uppercase">Welcome back</p>
+                            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-neutral-900 via-neutral-700 to-neutral-900 dark:from-white dark:via-neutral-200 dark:to-white bg-clip-text text-transparent leading-tight">
+                                How can I help you today?
+                            </h1>
+                            <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto leading-relaxed">
+                                Ask me anything, generate images, translate text, or explore powerful AI features.
+                            </p>
+                        </div>
+
+                        {/* Feature Highlights Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+                            <div className="group p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <MessageSquare className="h-6 w-6 text-white" />
+                                </div>
+                                <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">Smart Conversations</h3>
+                                <p className="text-sm text-neutral-600 dark:text-neutral-400">Chat with advanced AI models for any task</p>
+                            </div>
+
+                            <div className="group p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-purple-500/30 dark:hover:border-purple-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <ImageIcon className="h-6 w-6 text-white" />
+                                </div>
+                                <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">Image Generation</h3>
+                                <p className="text-sm text-neutral-600 dark:text-neutral-400">Create stunning visuals with AI</p>
+                            </div>
+
+                            <div className="group p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <Code className="h-6 w-6 text-white" />
+                                </div>
+                                <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">Writing Tools</h3>
+                                <p className="text-sm text-neutral-600 dark:text-neutral-400">Polish, paraphrase, and perfect your text</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Input Area at Bottom */}
+                <div className="flex-none pb-8 px-6 md:px-12 relative z-10">
+                    <div className="max-w-4xl mx-auto">
                         {inputProps && <InputArea {...inputProps} variant="hero" />}
                     </div>
                 </div>
