@@ -8,6 +8,7 @@ const __dirname = dirname(__filename)
 
 export default defineConfig({
   plugins: [react()],
+  root: resolve(__dirname, '.'),
   build: {
     manifest: true,
     target: 'es2020',
@@ -17,6 +18,9 @@ export default defineConfig({
     emptyOutDir: true,
     cssMinify: true,
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html')
+      },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'marked', 'highlight.js']
