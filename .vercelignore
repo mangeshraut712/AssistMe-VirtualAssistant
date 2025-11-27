@@ -26,6 +26,11 @@ FRONTEND_UPGRADE_SUMMARY.md
 FRONTEND_PHASE1_IMPLEMENTATION.md
 FRONTEND_ANALYSIS.md
 
+# Keep build sources for Vercel
+!src/**
+!public/**
+!index.html
+
 # Test files
 **/*.test.*
 **/*.spec.*
