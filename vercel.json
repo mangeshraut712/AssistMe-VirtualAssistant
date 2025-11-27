@@ -23,10 +23,6 @@
       "dest": "frontend/$1"
     }
   ],
-  "env": {
-    "OPENROUTER_API_KEY": "@openrouter_api_key",
-    "DEV_MODE": "false"
-  },
   "build": {
     "env": {
       "PYTHON_VERSION": "3.11"
