@@ -1,236 +1,285 @@
-
-import React, { useMemo, useState } from 'react';
-import { X, Gauge, RefreshCcw, Activity, Server, Zap, Brain } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { X, Settings, Share2, Server, Activity, Zap, Brain, RotateCcw } from 'lucide-react';
 
 const SpeedtestPanel = ({ isOpen, onClose }) => {
+    const [status, setStatus] = useState('idle'); // idle, pinging, llm, complete
+    const [progress, setProgress] = useState(0);
+    const [displayValue, setDisplayValue] = useState(0);
     const [results, setResults] = useState(null);
-    const [isRunning, setIsRunning] = useState(false);
-    const [stage, setStage] = useState(''); // 'api', 'llm', 'complete'
-    const [error, setError] = useState('');
+    const [server, setServer] = useState('AssistMe Cloud (US-East)');
 
-    const stats = useMemo(() => {
-        if (!results) return null;
-        const { apiSamples, llmLatency } = results;
+    // Animation refs
+    const requestRef = useRef();
+    const startTimeRef = useRef();
 
-        const avgApi = apiSamples.reduce((sum, v) => sum + v, 0) / apiSamples.length;
-        const jitter = Math.sqrt(apiSamples.reduce((s, v) => s + Math.pow(v - avgApi, 2), 0) / apiSamples.length);
+    // Reset state when opened
+    useEffect(() => {
+        if (isOpen) {
+            setStatus('idle');
+            setProgress(0);
+            setDisplayValue(0);
+            setResults(null);
+        }
+    }, [isOpen]);
 
-        return {
-            api: {
-                avg: Math.round(avgApi),
-                min: Math.min(...apiSamples).toFixed(0),
-                max: Math.max(...apiSamples).toFixed(0),
-                jitter: Math.round(jitter),
-            },
-            llm: {
-                latency: llmLatency ? Math.round(llmLatency) : null
+    const animateValue = (start, end, duration) => {
+        startTimeRef.current = performance.now();
+
+        const animate = (time) => {
+            const timeFraction = (time - startTimeRef.current) / duration;
+            const progress = Math.min(timeFraction, 1);
+
+            // Ease out quart
+            const ease = 1 - Math.pow(1 - progress, 4);
+
+            const currentVal = start + (end - start) * ease;
+            setDisplayValue(currentVal);
+
+            if (progress < 1) {
+                requestRef.current = requestAnimationFrame(animate);
             }
         };
-    }, [results]);
 
-    if (!isOpen) return null;
+        requestRef.current = requestAnimationFrame(animate);
+    };
 
     const pingApi = async () => {
         const start = performance.now();
-        await fetch(`/health?ts=${Date.now()}`);
-        return performance.now() - start;
+        try {
+            await fetch(`/health?ts=${Date.now()}`);
+            return performance.now() - start;
+        } catch (e) {
+            return 0;
+        }
     };
 
     const testLlm = async () => {
         const start = performance.now();
-        await fetch('/api/chat/text', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                messages: [{ role: 'user', content: 'ping' }],
-                model: 'meta-llama/llama-3.3-70b-instruct:free'
-            })
-        });
-        return performance.now() - start;
-    };
-
-    const runTest = async () => {
-        setIsRunning(true);
-        setError('');
-        setResults(null);
-        setStage('api');
-
         try {
-            // 1. API Latency Test
-            const apiSamples = [];
-            for (let i = 0; i < 5; i++) {
-                const duration = await pingApi();
-                apiSamples.push(duration);
-                // Small delay between pings
-                await new Promise(r => setTimeout(r, 100));
-            }
-
-            // 2. LLM Latency Test
-            setStage('llm');
-            const llmLatency = await testLlm();
-
-            setResults({ apiSamples, llmLatency });
-            setStage('complete');
-        } catch (err) {
-            setError(err.message);
-            setStage('error');
-        } finally {
-            setIsRunning(false);
+            await fetch('/api/chat/text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [{ role: 'user', content: 'ping' }],
+                    model: 'meta-llama/llama-3.3-70b-instruct:free'
+                })
+            });
+            return performance.now() - start;
+        } catch (e) {
+            return 0;
         }
     };
 
+    const runTest = async () => {
+        if (status !== 'idle' && status !== 'complete') return;
+
+        setStatus('pinging');
+        setProgress(0);
+
+        // Phase 1: API Latency (Simulate "Download" phase visually)
+        const apiSamples = [];
+        let currentAvg = 0;
+
+        for (let i = 0; i < 20; i++) {
+            const latency = await pingApi();
+            apiSamples.push(latency);
+
+            // Update UI
+            currentAvg = apiSamples.reduce((a, b) => a + b, 0) / apiSamples.length;
+            setDisplayValue(currentAvg);
+            setProgress((i + 1) / 40 * 100); // First half of progress
+
+            await new Promise(r => setTimeout(r, 50));
+        }
+
+        // Phase 2: LLM Response (Simulate "Upload" phase visually)
+        setStatus('llm');
+        const llmStart = performance.now();
+        const llmLatency = await testLlm();
+
+        // Animate to final LLM value
+        animateValue(currentAvg, llmLatency, 1000);
+        setProgress(100);
+
+        setTimeout(() => {
+            setStatus('complete');
+            setResults({
+                api: {
+                    avg: Math.round(apiSamples.reduce((a, b) => a + b, 0) / apiSamples.length),
+                    min: Math.min(...apiSamples).toFixed(0),
+                    max: Math.max(...apiSamples).toFixed(0),
+                    jitter: Math.round(Math.sqrt(apiSamples.reduce((s, v) => s + Math.pow(v - currentAvg, 2), 0) / apiSamples.length))
+                },
+                llm: {
+                    latency: Math.round(llmLatency)
+                }
+            });
+        }, 1000);
+    };
+
+    if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div className="bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-800 border border-white/10 rounded-3xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-                {/* Header */}
-                <div className="relative p-6 border-b border-white/5 bg-white/5">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400">
-                                <Gauge className="h-6 w-6" />
+        <div className="fixed inset-0 bg-[#0b0d14] z-50 flex flex-col font-sans text-white overflow-hidden animate-in fade-in duration-300">
+            {/* Header */}
+            <header className="flex items-center justify-between px-6 py-4 z-10">
+                <div className="flex items-center gap-2">
+                    <Activity className="h-6 w-6 text-cyan-400" />
+                    <span className="font-bold text-xl tracking-tight">SPEEDTEST</span>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                    <X className="h-6 w-6" />
+                </button>
+            </header>
+
+            {/* Main Content */}
+            <main className="flex-1 flex flex-col items-center justify-center relative">
+
+                {/* Gauge Container */}
+                <div className="relative w-80 h-80 md:w-96 md:h-96 flex items-center justify-center">
+
+                    {/* Background Circle */}
+                    <svg className="absolute inset-0 w-full h-full rotate-90" viewBox="0 0 100 100">
+                        <circle
+                            cx="50" cy="50" r="45"
+                            fill="none"
+                            stroke="#1a1d26"
+                            strokeWidth="1"
+                        />
+                        {/* Ticks */}
+                        {Array.from({ length: 60 }).map((_, i) => (
+                            <line
+                                key={i}
+                                x1="50" y1="5"
+                                x2="50" y2="8"
+                                transform={`rotate(${i * 6} 50 50)`}
+                                stroke={i % 5 === 0 ? "#333" : "#222"}
+                                strokeWidth="0.5"
+                            />
+                        ))}
+                    </svg>
+
+                    {/* Active Progress Arc */}
+                    <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                        <circle
+                            cx="50" cy="50" r="45"
+                            fill="none"
+                            stroke="url(#gradient)"
+                            strokeWidth="2"
+                            strokeDasharray={`${2 * Math.PI * 45}`}
+                            strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
+                            strokeLinecap="round"
+                            className="transition-all duration-300 ease-out"
+                        />
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#06b6d4" />
+                                <stop offset="100%" stopColor="#8b5cf6" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+
+                    {/* Center Display */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        {status === 'idle' ? (
+                            <button
+                                onClick={runTest}
+                                className="w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-cyan-500/30 bg-black/50 backdrop-blur-sm text-cyan-400 hover:text-white hover:border-cyan-400 hover:bg-cyan-500/10 transition-all duration-500 flex flex-col items-center justify-center group shadow-[0_0_40px_-10px_rgba(6,182,212,0.3)] hover:shadow-[0_0_60px_-5px_rgba(6,182,212,0.5)]"
+                            >
+                                <span className="text-4xl md:text-5xl font-light group-hover:scale-110 transition-transform duration-300">GO</span>
+                            </button>
+                        ) : (
+                            <div className="flex flex-col items-center animate-in zoom-in duration-300">
+                                <div className="text-6xl md:text-8xl font-bold tracking-tighter tabular-nums text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                                    {Math.round(displayValue)}
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-sm font-medium text-neutral-400 uppercase tracking-widest">
+                                        {status === 'pinging' ? 'API Latency' : 'AI Response'}
+                                    </span>
+                                    <span className="text-sm font-bold text-cyan-400">ms</span>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-white">System Benchmark</h2>
-                                <p className="text-sm text-neutral-400">Analyze API & AI Model Performance</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
+                        )}
                     </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-8 space-y-8">
-                    {/* Control Center */}
-                    <div className="flex flex-col items-center justify-center py-4">
-                        <button
-                            onClick={runTest}
-                            disabled={isRunning}
-                            className={`
-                                relative group px-8 py-4 rounded-full font-bold text-lg transition-all duration-300
-                                ${isRunning
-                                    ? 'bg-neutral-800 text-neutral-400 cursor-wait'
-                                    : 'bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white shadow-lg hover:shadow-blue-500/25 hover:scale-105'
-                                }
-                            `}
-                        >
-                            <span className="flex items-center gap-3">
-                                {isRunning ? (
-                                    <>
-                                        <RefreshCcw className="h-5 w-5 animate-spin" />
-                                        Running Diagnostics...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Zap className="h-5 w-5 fill-current" />
-                                        Start Benchmark
-                                    </>
-                                )}
-                            </span>
-                        </button>
-
-                        {/* Status Indicator */}
-                        <div className="mt-4 h-6">
-                            {stage === 'api' && <span className="text-sm text-blue-400 animate-pulse">Testing API Latency...</span>}
-                            {stage === 'llm' && <span className="text-sm text-violet-400 animate-pulse">Testing AI Model Response...</span>}
-                            {stage === 'complete' && <span className="text-sm text-green-400">Benchmark Complete</span>}
-                            {error && <span className="text-sm text-red-400">{error}</span>}
+                {/* Status Text */}
+                <div className="h-8 mt-8">
+                    {status === 'pinging' && (
+                        <div className="flex items-center gap-2 text-cyan-400 animate-pulse">
+                            <Activity className="h-4 w-4" />
+                            <span className="text-sm font-medium">Measuring System Latency...</span>
                         </div>
-                    </div>
-
-                    {/* Results Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* API Health Card */}
-                        <div className={`
-                            p-5 rounded-2xl border transition-all duration-500
-                            ${stats ? 'bg-blue-500/10 border-blue-500/20' : 'bg-white/5 border-white/5'}
-                        `}>
-                            <div className="flex items-center gap-3 mb-4">
-                                <Server className={`h-5 w-5 ${stats ? 'text-blue-400' : 'text-neutral-500'}`} />
-                                <h3 className="font-semibold text-white">API Latency</h3>
-                            </div>
-
-                            {stats ? (
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="text-3xl font-bold text-white mb-1">
-                                            {stats.api.avg} <span className="text-lg text-neutral-400 font-medium">ms</span>
-                                        </div>
-                                        <div className="text-xs text-blue-300/80 font-medium">Average Response Time</div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/10">
-                                        <div>
-                                            <div className="text-xs text-neutral-500">Jitter</div>
-                                            <div className="text-sm font-mono text-white">{stats.api.jitter}ms</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-xs text-neutral-500">Peak</div>
-                                            <div className="text-sm font-mono text-white">{stats.api.max}ms</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="h-24 flex items-center justify-center text-neutral-600 text-sm">
-                                    Ready to test
-                                </div>
-                            )}
-                        </div>
-
-                        {/* AI Performance Card */}
-                        <div className={`
-                            p-5 rounded-2xl border transition-all duration-500
-                            ${stats?.llm ? 'bg-violet-500/10 border-violet-500/20' : 'bg-white/5 border-white/5'}
-                        `}>
-                            <div className="flex items-center gap-3 mb-4">
-                                <Brain className={`h-5 w-5 ${stats?.llm ? 'text-violet-400' : 'text-neutral-500'}`} />
-                                <h3 className="font-semibold text-white">AI Response</h3>
-                            </div>
-
-                            {stats?.llm ? (
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="text-3xl font-bold text-white mb-1">
-                                            {stats.llm.latency} <span className="text-lg text-neutral-400 font-medium">ms</span>
-                                        </div>
-                                        <div className="text-xs text-violet-300/80 font-medium">Time to First Token (Est.)</div>
-                                    </div>
-
-                                    <div className="pt-2 border-t border-white/10">
-                                        <div className="flex items-center gap-2 text-xs text-neutral-400">
-                                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                            Model: Llama 3.3 70B
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="h-24 flex items-center justify-center text-neutral-600 text-sm">
-                                    Ready to test
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Detailed Samples */}
-                    {results && (
-                        <div className="pt-4 border-t border-white/10">
-                            <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">Raw Samples</p>
-                            <div className="flex flex-wrap gap-2">
-                                {results.apiSamples.map((s, idx) => (
-                                    <div key={idx} className="px-3 py-1.5 rounded-lg bg-neutral-800 border border-white/5 text-xs font-mono text-neutral-300 flex items-center gap-2">
-                                        <Activity className="h-3 w-3 text-blue-500" />
-                                        {Math.round(s)}ms
-                                    </div>
-                                ))}
-                            </div>
+                    )}
+                    {status === 'llm' && (
+                        <div className="flex items-center gap-2 text-violet-400 animate-pulse">
+                            <Brain className="h-4 w-4" />
+                            <span className="text-sm font-medium">Testing AI Model Response...</span>
                         </div>
                     )}
                 </div>
-            </div>
+
+            </main>
+
+            {/* Footer Stats */}
+            <footer className="bg-[#0f1119] border-t border-white/5 p-6 md:p-8">
+                <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                    {/* Server Info */}
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-full bg-neutral-800/50 text-neutral-400">
+                            <Server className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">Server</div>
+                            <div className="text-sm text-cyan-400 font-medium flex items-center gap-2">
+                                {server}
+                                <Settings className="h-3 w-3 opacity-50 hover:opacity-100 cursor-pointer" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* API Stats */}
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-full bg-neutral-800/50 text-neutral-400">
+                            <Zap className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">API Latency</div>
+                            <div className="flex items-baseline gap-3">
+                                <span className="text-xl font-bold text-white">
+                                    {results ? results.api.avg : '-'} <span className="text-sm font-normal text-neutral-500">ms</span>
+                                </span>
+                                {results && (
+                                    <span className="text-xs text-neutral-500">
+                                        ±{results.api.jitter}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* AI Stats */}
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-full bg-neutral-800/50 text-neutral-400">
+                            <Brain className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <div className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">AI Response</div>
+                            <div className="flex items-baseline gap-3">
+                                <span className="text-xl font-bold text-white">
+                                    {results ? results.llm.latency : '-'} <span className="text-sm font-normal text-neutral-500">ms</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </footer>
         </div>
     );
 };
