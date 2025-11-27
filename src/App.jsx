@@ -312,7 +312,8 @@ function App() {
                 onDeleteChat={deleteChat}
             />
 
-            <div className="flex-1 flex flex-col relative min-w-0">
+            <div className={`flex-1 flex flex-col relative min-w-0 transition-all duration-300 ${showSidebar ? 'md:ml-96' : 'md:ml-0'
+                }`}>
                 <Header onOpenSidebar={() => setShowSidebar(true)} showSidebar={showSidebar} />
 
                 <div className="flex-1 overflow-y-auto scroll-smooth pt-16">
