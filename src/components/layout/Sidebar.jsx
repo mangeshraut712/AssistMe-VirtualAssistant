@@ -67,7 +67,7 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
             )}
 
             <aside
-                className={`fixed top-0 left-0 bottom-0 w-64 bg-[hsl(var(--sidebar-bg))] border-r border-border/70 flex flex-col overflow-hidden z-50 transition-transform duration-300 md:translate-x-0 md:static ${show ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed top-0 left-0 bottom-0 w-80 bg-[hsl(var(--sidebar-bg))] border-r border-border/70 flex flex-col overflow-hidden z-50 transition-transform duration-300 md:translate-x-0 md:static ${show ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
                 {/* Header - Fixed */}
@@ -158,7 +158,7 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
                                     ) : (
                                         <button
                                             onClick={() => onSelectChat(chat.id)}
-                                            className={`w-full text-left px-3 py-3 rounded-2xl border transition-all duration-150 flex items-center gap-3 relative ${currentChatId === chat.id
+                                            className={`w-full text-left px-3 py-3 rounded-2xl border transition-all duration-150 flex items-center gap-3 ${currentChatId === chat.id
                                                 ? 'border-foreground/20 bg-foreground/5 shadow-sm'
                                                 : 'border-transparent bg-white dark:bg-neutral-900 hover:border-foreground/10 hover:bg-foreground/5'
                                                 }`}
@@ -166,12 +166,16 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
                                             <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border flex-shrink-0">
                                                 <MessageSquare className="h-[16px] w-[16px]" />
                                             </div>
-                                            <div className="flex-1 min-w-0 pr-16">
-                                                <p className="text-sm font-semibold truncate">{chat.title || 'Untitled'}</p>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <p className="text-sm font-semibold truncate">{chat.title || 'Untitled'}</p>
+                                                    {currentChatId === chat.id && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold shrink-0">Active</span>
+                                                    )}
+                                                </div>
                                                 <p className="text-[11px] text-muted-foreground">Chat #{idx + 1}</p>
                                             </div>
-
-                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-l from-white via-white to-transparent dark:from-neutral-900 dark:via-neutral-900 pl-6 py-1">
+                                            <div className="flex items-center gap-1 flex-shrink-0">
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
