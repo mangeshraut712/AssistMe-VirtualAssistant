@@ -66,7 +66,10 @@ function App() {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [selectedModel, setSelectedModel] = useState('google/gemini-2.0-flash-001:free');
-    const [showSidebar, setShowSidebar] = useState(false);
+    const [showSidebar, setShowSidebar] = useState(() => {
+        // Show sidebar by default on desktop (md breakpoint is 768px)
+        return typeof window !== 'undefined' && window.innerWidth >= 768;
+    });
 
     // Derived state for current messages
     const currentConversation = conversations.find(c => c.id === currentChatId) || conversations[0];
@@ -309,8 +312,8 @@ function App() {
                 onDeleteChat={deleteChat}
             />
 
-            <div className="flex-1 flex flex-col relative md:ml-96">
-                <Header onOpenSidebar={() => setShowSidebar(true)} />
+            <div className="flex-1 flex flex-col relative min-w-0">
+                <Header onOpenSidebar={() => setShowSidebar(true)} showSidebar={showSidebar} />
 
                 <div className="flex-1 overflow-y-auto scroll-smooth pt-16">
                     <ChatArea

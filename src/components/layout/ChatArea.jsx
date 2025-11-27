@@ -34,8 +34,8 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 flex flex-col items-center justify-center px-12 md:px-20 lg:px-32 relative z-10">
-                    <div className="w-full max-w-6xl space-y-10 text-center">
+                <div className="flex-1 flex flex-col items-center justify-center px-8 md:px-16 lg:px-24 relative z-10">
+                    <div className="w-full max-w-5xl space-y-10 text-center">
                         {/* Logo/Icon */}
                         <div className="flex justify-center mb-4">
                             <div className="relative">
@@ -51,16 +51,16 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                         {/* Greeting */}
                         <div className="space-y-3">
                             <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 tracking-wide uppercase">Welcome back</p>
-                            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-neutral-900 via-neutral-700 to-neutral-900 dark:from-white dark:via-neutral-200 dark:to-white bg-clip-text text-transparent leading-tight px-4">
+                            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-neutral-900 via-neutral-700 to-neutral-900 dark:from-white dark:via-neutral-200 dark:to-white bg-clip-text text-transparent leading-tight">
                                 How can I help you today?
                             </h1>
-                            <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto leading-relaxed px-4">
+                            <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto leading-relaxed">
                                 Ask me anything, generate images, translate text, or explore powerful AI features.
                             </p>
                         </div>
 
                         {/* Feature Highlights Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl mx-auto pt-4">
                             <div className="group p-6 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-800/50 hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                     <MessageSquare className="h-6 w-6 text-white" />
@@ -89,8 +89,8 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, quickAction
                 </div>
 
                 {/* Input Area at Bottom */}
-                <div className="flex-none pb-6 px-12 md:px-20 lg:px-32 relative z-10">
-                    <div className="max-w-6xl mx-auto">
+                <div className="flex-none pb-6 px-8 md:px-16 lg:px-24 relative z-10">
+                    <div className="max-w-5xl mx-auto">
                         {inputProps && <InputArea {...inputProps} variant="hero" />}
                     </div>
                 </div>

@@ -12,7 +12,8 @@ import {
     Trash2,
     Edit2,
     Check,
-    X
+    X,
+    ChevronLeft
 } from 'lucide-react';
 
 const NavItem = ({ icon: Icon, label, active, onClick }) => (
@@ -67,7 +68,7 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
             )}
 
             <aside
-                className={`fixed top-0 left-0 bottom-0 w-96 bg-[hsl(var(--sidebar-bg))] border-r border-border/70 flex flex-col overflow-hidden z-50 transition-transform duration-300 md:translate-x-0 md:static ${show ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed top-0 left-0 bottom-0 w-96 bg-[hsl(var(--sidebar-bg))] border-r border-border/70 flex flex-col overflow-hidden z-50 transition-transform duration-300 ${show ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
                 {/* Header - Fixed */}
@@ -223,12 +224,22 @@ const Sidebar = ({ show, onClose, onNewChat, openModal, conversations = [], curr
                             <p className="text-sm font-medium leading-tight">Guest</p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => openModal('settings')}
-                        className="p-2 rounded-xl hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                        <Settings className="h-[18px] w-[18px]" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-xl hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors hidden md:block"
+                            title="Collapse sidebar"
+                        >
+                            <ChevronLeft className="h-[18px] w-[18px]" />
+                        </button>
+                        <button
+                            onClick={() => openModal('settings')}
+                            className="p-2 rounded-xl hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors"
+                            title="Settings"
+                        >
+                            <Settings className="h-[18px] w-[18px]" />
+                        </button>
+                    </div>
                 </div>
             </aside>
         </>
