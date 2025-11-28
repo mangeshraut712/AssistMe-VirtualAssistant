@@ -2,23 +2,18 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "functions": {
-    "api/**/*.py": {
-      "runtime": "python3.9"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api/index"
+      "destination": "https://assistme-virtualassistant-production.up.railway.app/api/:path*"
     },
     {
       "source": "/health",
-      "destination": "/api/index"
+      "destination": "https://assistme-virtualassistant-production.up.railway.app/health"
     },
     {
       "source": "/debug",
-      "destination": "/api/index"
+      "destination": "https://assistme-virtualassistant-production.up.railway.app/debug"
     }
   ],
   "headers": [
