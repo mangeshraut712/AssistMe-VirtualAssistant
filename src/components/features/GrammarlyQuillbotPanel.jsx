@@ -152,10 +152,6 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                         <h2 className="text-lg font-semibold">Writing Tools</h2>
                         <p className="text-xs text-muted-foreground">Paraphrase, grammar, summary, and translation in one place.</p>
                     </div>
-                    <div className="hidden md:flex items-center gap-2 ml-4">
-                        <span className="px-3 py-1 text-[11px] rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20">Premium unlocked</span>
-                        <span className="px-3 py-1 text-[11px] rounded-full bg-muted text-muted-foreground">Model: {model}</span>
-                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="md:hidden">

@@ -1,44 +1,41 @@
 import React, { useState } from 'react';
-import { X, Languages, ArrowRightLeft, Globe, Mic, Type, FileText, Cpu, Keyboard, Volume2, ScanText } from 'lucide-react';
+import {
+    X, Languages, ArrowRightLeft, Globe, Mic, Type, FileText,
+    Cpu, Keyboard, Volume2, ScanText, Sparkles, Check, Copy, RotateCcw
+} from 'lucide-react';
 
 const AI4BharatPanel = ({ isOpen, onClose }) => {
-    const [activeTab, setActiveTab] = useState('overview'); // overview, demo
+    const [activeTab, setActiveTab] = useState('overview'); // overview, translate, transliterate, summarize, grammar
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-background z-50 flex flex-col font-sans text-foreground overflow-hidden">
             {/* Header */}
-            <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-background/95 backdrop-blur sticky top-0 z-10">
+            <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-background/95 backdrop-blur-xl sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-xl">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-orange-500/20">
                         AI
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold tracking-tight">AI4Bharat</h2>
-                        <p className="text-xs text-muted-foreground">Building AI for India</p>
+                        <h2 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300">AI4Bharat</h2>
+                        <p className="text-xs text-muted-foreground font-medium">Building AI for India</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
-                    <nav className="hidden md:flex gap-1 bg-muted/50 p-1 rounded-lg">
-                        <button
-                            onClick={() => setActiveTab('overview')}
-                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'overview'
-                                ? 'bg-background text-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                        >
-                            Overview
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('demo')}
-                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'demo'
-                                ? 'bg-background text-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                        >
-                            Live Demo
-                        </button>
+                    <nav className="hidden md:flex gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
+                        {['overview', 'translate', 'transliterate', 'summarize', 'grammar'].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all capitalize ${activeTab === tab
+                                    ? 'bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                                    }`}
+                            >
+                                {tab}
+                            </button>
+                        ))}
                     </nav>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <X className="h-6 w-6" />
@@ -47,163 +44,133 @@ const AI4BharatPanel = ({ isOpen, onClose }) => {
             </header>
 
             {/* Content */}
-            <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-neutral-950">
-                {activeTab === 'overview' ? <OverviewSection /> : <DemoSection />}
+            <main className="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-neutral-950/50">
+                {activeTab === 'overview' && <OverviewSection onTryDemo={() => setActiveTab('translate')} />}
+                {activeTab === 'translate' && <ToolSection tool="translate" />}
+                {activeTab === 'transliterate' && <ToolSection tool="transliterate" />}
+                {activeTab === 'summarize' && <ToolSection tool="summarize" />}
+                {activeTab === 'grammar' && <ToolSection tool="grammar" />}
             </main>
         </div>
     );
 };
 
-const OverviewSection = () => {
+const OverviewSection = ({ onTryDemo }) => {
     const features = [
         {
             icon: FileText,
             title: "Large Language Models",
             models: ["IndicBERT", "IndicBART", "Airavata"],
-            description: "Multilingual LLMs tailored for Indian languages, trained on extensive diverse datasets like IndicCorpora and Sangraha.",
+            description: "Multilingual LLMs tailored for Indian languages, trained on extensive diverse datasets.",
             color: "text-orange-600",
-            bg: "bg-orange-50 dark:bg-orange-950/20"
+            bg: "bg-orange-50 dark:bg-orange-950/20",
+            border: "border-orange-100 dark:border-orange-900/30"
         },
         {
             icon: Languages,
             title: "Machine Translation",
             models: ["IndicTransv2", "Samanantar"],
-            description: "State-of-the-art translation models built on large-scale datasets mined from the web and carefully curated human translations.",
+            description: "State-of-the-art translation models built on large-scale datasets mined from the web.",
             color: "text-blue-600",
-            bg: "bg-blue-50 dark:bg-blue-950/20"
+            bg: "bg-blue-50 dark:bg-blue-950/20",
+            border: "border-blue-100 dark:border-blue-900/30"
         },
         {
             icon: Keyboard,
             title: "Transliteration",
             models: ["IndicXlit", "Aksharantar"],
-            description: "Convert text between scripts of Indian languages and English, leveraging large scale datasets.",
+            description: "Convert text between scripts of Indian languages and English seamlessly.",
             color: "text-green-600",
-            bg: "bg-green-50 dark:bg-green-950/20"
+            bg: "bg-green-50 dark:bg-green-950/20",
+            border: "border-green-100 dark:border-green-900/30"
         },
         {
             icon: Mic,
-            title: "Automatic Speech Recognition",
+            title: "Speech Recognition",
             models: ["IndicWav2Vec", "IndicWhisper"],
-            description: "ASR models trained on rich datasets like Kathbath, Shrutilipi and IndicVoices covering multiple Indian languages.",
+            description: "ASR models trained on rich datasets covering multiple Indian languages.",
             color: "text-purple-600",
-            bg: "bg-purple-50 dark:bg-purple-950/20"
+            bg: "bg-purple-50 dark:bg-purple-950/20",
+            border: "border-purple-100 dark:border-purple-900/30"
         },
         {
             icon: Volume2,
             title: "Text to Speech",
             models: ["AI4BTTS", "Rasa", "Saffron"],
-            description: "Natural-sounding synthetic voices for Indian languages using a mix of web-crawled data and curated recordings.",
+            description: "Natural-sounding synthetic voices for Indian languages.",
             color: "text-pink-600",
-            bg: "bg-pink-50 dark:bg-pink-950/20"
+            bg: "bg-pink-50 dark:bg-pink-950/20",
+            border: "border-pink-100 dark:border-pink-900/30"
         },
         {
             icon: ScanText,
-            title: "Optical Character Recognition",
+            title: "OCR & Layout",
             models: ["IndicOCR", "Document Layout"],
-            description: "Models and datasets for advancing Document Layout Parsing and OCR technologies for Indian languages.",
+            description: "Advanced Document Layout Parsing and OCR technologies for Indian scripts.",
             color: "text-red-600",
-            bg: "bg-red-50 dark:bg-red-950/20"
+            bg: "bg-red-50 dark:bg-red-950/20",
+            border: "border-red-100 dark:border-red-900/30"
         }
     ];
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-12 space-y-16">
             {/* Hero */}
-            <div className="text-center space-y-6 max-w-3xl mx-auto">
-                <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-foreground">
+            <div className="text-center space-y-8 max-w-3xl mx-auto">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-semibold uppercase tracking-wider">
+                    <Sparkles className="h-3 w-3" />
+                    Powered by Grok 4.1
+                </div>
+                <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground">
                     Building AI <br />
-                    <span className="text-orange-500">for India!</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-white to-green-500 dark:from-orange-400 dark:via-neutral-200 dark:to-green-400 animate-gradient">for India!</span>
                 </h1>
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                    AI4Bharat is a research lab at IIT Madras dedicated to advancing AI technology for Indian languages through open-source contributions.
+                    Experience the power of Indian Language AI. Translate, transliterate, and interact in 22+ languages with state-of-the-art models.
                 </p>
+                <button
+                    onClick={onTryDemo}
+                    className="px-8 py-4 bg-foreground text-background rounded-full font-bold text-lg hover:opacity-90 transition-opacity shadow-xl shadow-foreground/10"
+                >
+                    Try Live Demo
+                </button>
             </div>
 
             {/* Features Grid */}
             <div>
-                <h2 className="text-3xl font-bold mb-8 text-center">Cutting-edge work across areas</h2>
+                <h2 className="text-3xl font-bold mb-10 text-center">Cutting-edge Technology</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {features.map((feature, idx) => (
-                        <div key={idx} className={`p-6 rounded-2xl border border-border transition-all hover:shadow-lg ${feature.bg}`}>
-                            <div className={`h-12 w-12 rounded-xl bg-white dark:bg-neutral-900 flex items-center justify-center mb-4 shadow-sm ${feature.color}`}>
-                                <feature.icon className="h-6 w-6" />
+                        <div key={idx} className={`p-6 rounded-3xl border transition-all hover:shadow-xl hover:-translate-y-1 duration-300 ${feature.bg} ${feature.border}`}>
+                            <div className={`h-14 w-14 rounded-2xl bg-white dark:bg-neutral-900 flex items-center justify-center mb-6 shadow-sm ${feature.color}`}>
+                                <feature.icon className="h-7 w-7" />
                             </div>
-                            <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
+                            <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
                             <div className="flex flex-wrap gap-2 mb-4">
                                 {feature.models.map((m, i) => (
-                                    <span key={i} className="px-2 py-1 text-xs font-medium bg-white/80 dark:bg-black/20 rounded-md border border-black/5">
+                                    <span key={i} className="px-2.5 py-1 text-xs font-bold bg-white/60 dark:bg-black/20 rounded-lg border border-black/5 backdrop-blur-sm">
                                         {m}
                                     </span>
                                 ))}
                             </div>
-                            <p className="text-muted-foreground leading-relaxed text-sm">
+                            <p className="text-muted-foreground leading-relaxed text-sm font-medium opacity-80">
                                 {feature.description}
                             </p>
                         </div>
                     ))}
                 </div>
             </div>
-
-            {/* Importance for Indians */}
-            <div className="bg-white dark:bg-neutral-900 rounded-3xl p-8 md:p-12 border border-border shadow-sm">
-                <div className="grid md:grid-cols-2 gap-12 items-center">
-                    <div className="space-y-6">
-                        <h2 className="text-3xl font-bold">Why is this important for India?</h2>
-                        <div className="space-y-4">
-                            <div className="flex gap-4">
-                                <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0 text-orange-600">
-                                    <Globe className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <h4 className="font-semibold text-lg">Digital Inclusion</h4>
-                                    <p className="text-muted-foreground">Enabling millions of non-English speakers to access the internet and digital services in their native tongues.</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 text-blue-600">
-                                    <Cpu className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <h4 className="font-semibold text-lg">Technological Sovereignty</h4>
-                                    <p className="text-muted-foreground">Building indigenous AI models ensures data privacy and solutions tailored to India's unique cultural context.</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 text-green-600">
-                                    <Languages className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <h4 className="font-semibold text-lg">Preserving Heritage</h4>
-                                    <p className="text-muted-foreground">Digitizing and preserving low-resource Indian languages for future generations through AI.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="relative h-full min-h-[300px] bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/20 dark:to-neutral-900 rounded-2xl flex items-center justify-center p-8 text-center">
-                        <div className="space-y-4">
-                            <p className="text-4xl font-serif text-orange-600 dark:text-orange-400">
-                                "Welcome"
-                            </p>
-                            <div className="text-2xl font-serif text-muted-foreground space-y-2">
-                                <p>स्वागत हे</p>
-                                <p>സ്വാഗതം</p>
-                                <p>வரவேற்பு</p>
-                                <p>స్వాగతం</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };
 
-const DemoSection = () => {
+const ToolSection = ({ tool }) => {
     const [sourceLanguage, setSourceLanguage] = useState('en');
     const [targetLanguage, setTargetLanguage] = useState('hi');
     const [inputText, setInputText] = useState('');
     const [outputText, setOutputText] = useState('');
-    const [isTranslating, setIsTranslating] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     const indianLanguages = [
         { code: 'en', name: 'English' },
@@ -220,97 +187,178 @@ const DemoSection = () => {
         { code: 'or', name: 'Odia' },
     ];
 
-    const handleTranslate = async () => {
+    const getSystemPrompt = () => {
+        const src = indianLanguages.find(l => l.code === sourceLanguage)?.name;
+        const tgt = indianLanguages.find(l => l.code === targetLanguage)?.name;
+
+        if (tool === 'translate') return `You are an expert translator. Translate the following text from ${src} to ${tgt}. Return ONLY the translated text.`;
+        if (tool === 'transliterate') return `You are an expert transliterator. Convert the following text from ${src} script to ${tgt} script (phonetic transliteration). Return ONLY the transliterated text.`;
+        if (tool === 'summarize') return `You are an expert summarizer. Summarize the following ${src} text into a concise paragraph in ${src}.`;
+        if (tool === 'grammar') return `You are an expert grammar checker. Correct the grammar and spelling of the following ${src} text. Return ONLY the corrected text.`;
+        return '';
+    };
+
+    const handleAction = async () => {
         if (!inputText.trim()) return;
-        setIsTranslating(true);
+        setIsProcessing(true);
+        setOutputText('');
+
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: [
-                        { role: 'system', content: `You are an expert translator. Translate the following text from ${indianLanguages.find(l => l.code === sourceLanguage)?.name} to ${indianLanguages.find(l => l.code === targetLanguage)?.name}. Return ONLY the translated text.` },
+                        { role: 'system', content: getSystemPrompt() },
                         { role: 'user', content: inputText }
                     ],
                     model: 'x-ai/grok-4.1-fast:free',
-                    stream: false
+                    stream: true
                 })
             });
-            const data = await response.json();
 
-            if (data.choices && data.choices[0].message) {
-                setOutputText(data.choices[0].message.content);
-            } else if (data.error) {
-                setOutputText(`Error: ${data.error.message || JSON.stringify(data.error)}`);
-            } else {
-                setOutputText('Translation failed');
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let accumulatedContent = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.content) {
+                                accumulatedContent += data.content;
+                                setOutputText(accumulatedContent);
+                            }
+                        } catch (e) { }
+                    }
+                }
             }
         } catch (error) {
             setOutputText('Error: ' + error.message);
         } finally {
-            setIsTranslating(false);
+            setIsProcessing(false);
         }
     };
 
-    return (
-        <div className="max-w-4xl mx-auto px-6 py-12">
-            <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                    <ArrowRightLeft className="h-6 w-6 text-primary" />
-                    IndicTransv2 Demo
-                </h2>
+    const handleCopy = async () => {
+        if (!outputText) return;
+        await navigator.clipboard.writeText(outputText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1200);
+    };
 
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Source Language</label>
+    return (
+        <div className="max-w-5xl mx-auto px-6 py-12">
+            <div className="bg-card border border-border rounded-3xl p-8 shadow-xl shadow-black/5">
+                <div className="flex items-center justify-between mb-8">
+                    <h2 className="text-2xl font-bold flex items-center gap-3">
+                        {tool === 'translate' && <ArrowRightLeft className="h-7 w-7 text-blue-500" />}
+                        {tool === 'transliterate' && <Keyboard className="h-7 w-7 text-green-500" />}
+                        {tool === 'summarize' && <FileText className="h-7 w-7 text-orange-500" />}
+                        {tool === 'grammar' && <Check className="h-7 w-7 text-purple-500" />}
+                        <span className="capitalize">{tool}</span>
+                    </h2>
+
+                    {/* Language Selectors */}
+                    <div className="flex items-center gap-3 bg-muted/50 p-1.5 rounded-xl">
                         <select
                             value={sourceLanguage}
                             onChange={(e) => setSourceLanguage(e.target.value)}
-                            className="w-full p-2.5 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="bg-transparent text-sm font-medium px-2 py-1 focus:outline-none cursor-pointer"
                         >
                             {indianLanguages.map(lang => (
                                 <option key={lang.code} value={lang.code}>{lang.name}</option>
                             ))}
                         </select>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Target Language</label>
-                        <select
-                            value={targetLanguage}
-                            onChange={(e) => setTargetLanguage(e.target.value)}
-                            className="w-full p-2.5 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                        >
-                            {indianLanguages.map(lang => (
-                                <option key={lang.code} value={lang.code}>{lang.name}</option>
-                            ))}
-                        </select>
+                        {(tool === 'translate' || tool === 'transliterate') && (
+                            <>
+                                <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                                <select
+                                    value={targetLanguage}
+                                    onChange={(e) => setTargetLanguage(e.target.value)}
+                                    className="bg-transparent text-sm font-medium px-2 py-1 focus:outline-none cursor-pointer"
+                                >
+                                    {indianLanguages.map(lang => (
+                                        <option key={lang.code} value={lang.code}>{lang.name}</option>
+                                    ))}
+                                </select>
+                            </>
+                        )}
                     </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Input Text</label>
-                        <textarea
-                            value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
-                            placeholder="Enter text here..."
-                            className="w-full h-48 p-4 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none text-lg"
-                        />
+                <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                        <label className="text-sm font-semibold text-muted-foreground ml-1">Input</label>
+                        <div className="relative group">
+                            <textarea
+                                value={inputText}
+                                onChange={(e) => setInputText(e.target.value)}
+                                placeholder="Enter text here..."
+                                className="w-full h-64 p-6 border border-border rounded-2xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none text-lg leading-relaxed transition-all shadow-sm group-hover:shadow-md"
+                            />
+                            {inputText && (
+                                <button
+                                    onClick={() => setInputText('')}
+                                    className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Translation</label>
-                        <div className="w-full h-48 p-4 border border-border rounded-xl bg-muted/50 overflow-y-auto text-lg">
-                            {outputText || <span className="text-muted-foreground">Translation will appear here...</span>}
+                    <div className="space-y-3">
+                        <label className="text-sm font-semibold text-muted-foreground ml-1">Output</label>
+                        <div className="relative h-64 p-6 border border-border rounded-2xl bg-muted/30 overflow-y-auto text-lg leading-relaxed shadow-inner">
+                            {outputText ? (
+                                <p className="whitespace-pre-wrap">{outputText}</p>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40">
+                                    <Sparkles className="h-8 w-8 mb-3 opacity-20" />
+                                    <p className="text-sm font-medium">AI output will appear here</p>
+                                </div>
+                            )}
+                            {outputText && (
+                                <div className="absolute top-4 right-4 flex gap-2">
+                                    <button
+                                        onClick={handleCopy}
+                                        className="p-2 bg-background/80 backdrop-blur rounded-lg border border-border/50 shadow-sm hover:bg-background transition-all"
+                                        title="Copy"
+                                    >
+                                        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 <button
-                    onClick={handleTranslate}
-                    disabled={isTranslating || !inputText.trim()}
-                    className="w-full mt-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 disabled:opacity-50 transition-colors font-medium text-lg flex items-center justify-center gap-2"
+                    onClick={handleAction}
+                    disabled={isProcessing || !inputText.trim()}
+                    className="w-full mt-8 py-4 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-2xl hover:opacity-90 disabled:opacity-50 transition-all font-bold text-lg flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20 active:scale-[0.99]"
                 >
-                    {isTranslating ? 'Translating...' : 'Translate Now'}
+                    {isProcessing ? (
+                        <>
+                            <RotateCcw className="h-5 w-5 animate-spin" />
+                            Processing...
+                        </>
+                    ) : (
+                        <>
+                            <Sparkles className="h-5 w-5" />
+                            {tool === 'translate' && 'Translate Now'}
+                            {tool === 'transliterate' && 'Transliterate'}
+                            {tool === 'summarize' && 'Summarize Text'}
+                            {tool === 'grammar' && 'Fix Grammar'}
+                        </>
+                    )}
                 </button>
             </div>
         </div>
