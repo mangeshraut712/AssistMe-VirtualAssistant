@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
     X, Languages, ArrowRightLeft, Globe, Mic, Type, FileText,
-    Cpu, Keyboard, Volume2, ScanText, Sparkles, Check, Copy, RotateCcw
+    Cpu, Keyboard, Volume2, ScanText, Sparkles, Check, Copy, RotateCcw,
+    BookA, MoveHorizontal
 } from 'lucide-react';
 
 const AI4BharatPanel = ({ isOpen, onClose }) => {
-    const [activeTab, setActiveTab] = useState('overview'); // overview, translate, transliterate, summarize, grammar
+    const [activeTab, setActiveTab] = useState('overview'); // overview, translate, transliterate, script_convert, dictionary
 
     if (!isOpen) return null;
 
@@ -24,16 +25,22 @@ const AI4BharatPanel = ({ isOpen, onClose }) => {
                 </div>
                 <div className="flex items-center gap-4">
                     <nav className="hidden md:flex gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
-                        {['overview', 'translate', 'transliterate', 'summarize', 'grammar'].map((tab) => (
+                        {[
+                            { id: 'overview', label: 'Overview' },
+                            { id: 'translate', label: 'Translate' },
+                            { id: 'transliterate', label: 'Transliterate' },
+                            { id: 'script_convert', label: 'Script Converter' },
+                            { id: 'dictionary', label: 'Dictionary' }
+                        ].map((tab) => (
                             <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all capitalize ${activeTab === tab
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all capitalize ${activeTab === tab.id
                                     ? 'bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                                     }`}
                             >
-                                {tab}
+                                {tab.label}
                             </button>
                         ))}
                     </nav>
@@ -48,8 +55,8 @@ const AI4BharatPanel = ({ isOpen, onClose }) => {
                 {activeTab === 'overview' && <OverviewSection onTryDemo={() => setActiveTab('translate')} />}
                 {activeTab === 'translate' && <ToolSection tool="translate" />}
                 {activeTab === 'transliterate' && <ToolSection tool="transliterate" />}
-                {activeTab === 'summarize' && <ToolSection tool="summarize" />}
-                {activeTab === 'grammar' && <ToolSection tool="grammar" />}
+                {activeTab === 'script_convert' && <ToolSection tool="script_convert" />}
+                {activeTab === 'dictionary' && <ToolSection tool="dictionary" />}
             </main>
         </div>
     );
@@ -193,8 +200,8 @@ const ToolSection = ({ tool }) => {
 
         if (tool === 'translate') return `You are an expert translator. Translate the following text from ${src} to ${tgt}. Return ONLY the translated text.`;
         if (tool === 'transliterate') return `You are an expert transliterator. Convert the following text from ${src} script to ${tgt} script (phonetic transliteration). Return ONLY the transliterated text.`;
-        if (tool === 'summarize') return `You are an expert summarizer. Summarize the following ${src} text into a concise paragraph in ${src}.`;
-        if (tool === 'grammar') return `You are an expert grammar checker. Correct the grammar and spelling of the following ${src} text. Return ONLY the corrected text.`;
+        if (tool === 'script_convert') return `You are an expert script converter. Convert the following text (which may be in any script) into the ${tgt} script. Preserve the phonetic sound, just change the script. Return ONLY the converted text.`;
+        if (tool === 'dictionary') return `You are an expert dictionary. Provide the meaning, synonyms, and 2 usage examples for the word/phrase "${inputText}" in ${tgt}. Format clearly.`;
         return '';
     };
 
@@ -261,36 +268,38 @@ const ToolSection = ({ tool }) => {
                     <h2 className="text-2xl font-bold flex items-center gap-3">
                         {tool === 'translate' && <ArrowRightLeft className="h-7 w-7 text-blue-500" />}
                         {tool === 'transliterate' && <Keyboard className="h-7 w-7 text-green-500" />}
-                        {tool === 'summarize' && <FileText className="h-7 w-7 text-orange-500" />}
-                        {tool === 'grammar' && <Check className="h-7 w-7 text-purple-500" />}
-                        <span className="capitalize">{tool}</span>
+                        {tool === 'script_convert' && <MoveHorizontal className="h-7 w-7 text-orange-500" />}
+                        {tool === 'dictionary' && <BookA className="h-7 w-7 text-purple-500" />}
+                        <span className="capitalize">{tool === 'script_convert' ? 'Script Converter' : tool}</span>
                     </h2>
 
                     {/* Language Selectors */}
                     <div className="flex items-center gap-3 bg-muted/50 p-1.5 rounded-xl">
+                        {tool !== 'dictionary' && (
+                            <select
+                                value={sourceLanguage}
+                                onChange={(e) => setSourceLanguage(e.target.value)}
+                                className="bg-transparent text-sm font-medium px-2 py-1 focus:outline-none cursor-pointer"
+                            >
+                                {indianLanguages.map(lang => (
+                                    <option key={lang.code} value={lang.code}>{lang.name}</option>
+                                ))}
+                            </select>
+                        )}
+
+                        {(tool === 'translate' || tool === 'transliterate' || tool === 'script_convert') && (
+                            <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                        )}
+
                         <select
-                            value={sourceLanguage}
-                            onChange={(e) => setSourceLanguage(e.target.value)}
+                            value={targetLanguage}
+                            onChange={(e) => setTargetLanguage(e.target.value)}
                             className="bg-transparent text-sm font-medium px-2 py-1 focus:outline-none cursor-pointer"
                         >
                             {indianLanguages.map(lang => (
                                 <option key={lang.code} value={lang.code}>{lang.name}</option>
                             ))}
                         </select>
-                        {(tool === 'translate' || tool === 'transliterate') && (
-                            <>
-                                <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                                <select
-                                    value={targetLanguage}
-                                    onChange={(e) => setTargetLanguage(e.target.value)}
-                                    className="bg-transparent text-sm font-medium px-2 py-1 focus:outline-none cursor-pointer"
-                                >
-                                    {indianLanguages.map(lang => (
-                                        <option key={lang.code} value={lang.code}>{lang.name}</option>
-                                    ))}
-                                </select>
-                            </>
-                        )}
                     </div>
                 </div>
 
@@ -301,7 +310,7 @@ const ToolSection = ({ tool }) => {
                             <textarea
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
-                                placeholder="Enter text here..."
+                                placeholder={tool === 'dictionary' ? "Enter a word to define..." : "Enter text here..."}
                                 className="w-full h-64 p-6 border border-border rounded-2xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none text-lg leading-relaxed transition-all shadow-sm group-hover:shadow-md"
                             />
                             {inputText && (
@@ -355,8 +364,8 @@ const ToolSection = ({ tool }) => {
                             <Sparkles className="h-5 w-5" />
                             {tool === 'translate' && 'Translate Now'}
                             {tool === 'transliterate' && 'Transliterate'}
-                            {tool === 'summarize' && 'Summarize Text'}
-                            {tool === 'grammar' && 'Fix Grammar'}
+                            {tool === 'script_convert' && 'Convert Script'}
+                            {tool === 'dictionary' && 'Get Definition'}
                         </>
                     )}
                 </button>
