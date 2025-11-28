@@ -1,4 +1,4 @@
 from backend.app.main import app
 
-# Export the FastAPI app for Vercel
-# Vercel will automatically handle ASGI requests
+# Vercel automatically detects the 'app' variable if it's a FastAPI instance
+# No special handler function is needed for the latest Vercel Python runtime
