@@ -4,16 +4,16 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://assistme-virtualassistant-production.up.railway.app/api/:path*"
+      "source": "/api/(.*)",
+      "destination": "/api"
     },
     {
       "source": "/health",
-      "destination": "https://assistme-virtualassistant-production.up.railway.app/health"
+      "destination": "/api"
     },
     {
       "source": "/debug",
-      "destination": "https://assistme-virtualassistant-production.up.railway.app/debug"
+      "destination": "/api"
     }
   ],
   "headers": [
