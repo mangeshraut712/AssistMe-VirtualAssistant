@@ -224,18 +224,27 @@ const DemoSection = () => {
         if (!inputText.trim()) return;
         setIsTranslating(true);
         try {
-            const response = await fetch('/api/ai4bharat/translate', {
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    text: inputText,
-                    source_lang: sourceLanguage,
-                    target_lang: targetLanguage,
-                    action: 'translate'
+                    messages: [
+                        { role: 'system', content: `You are an expert translator. Translate the following text from ${indianLanguages.find(l => l.code === sourceLanguage)?.name} to ${indianLanguages.find(l => l.code === targetLanguage)?.name}. Return ONLY the translated text.` },
+                        { role: 'user', content: inputText }
+                    ],
+                    model: 'meta-llama/llama-3.3-70b-instruct:free',
+                    stream: false
                 })
             });
             const data = await response.json();
-            setOutputText(data.translated_text || data.result || 'Translation failed');
+
+            if (data.choices && data.choices[0].message) {
+                setOutputText(data.choices[0].message.content);
+            } else if (data.error) {
+                setOutputText(`Error: ${data.error.message || JSON.stringify(data.error)}`);
+            } else {
+                setOutputText('Translation failed');
+            }
         } catch (error) {
             setOutputText('Error: ' + error.message);
         } finally {

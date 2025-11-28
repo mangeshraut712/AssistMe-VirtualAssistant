@@ -29,7 +29,7 @@ const GrokipediaPanel = ({ isOpen, onClose }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'x-ai/grok-beta:free',
+                    model: 'meta-llama/llama-3.3-70b-instruct:free',
                     messages: [
                         { role: 'system', content: 'You are Grokipedia, an advanced AI encyclopedia. Provide a comprehensive, well-structured, and factual article about the user\'s query. Use Markdown headers (##, ###) to organize sections. Include a "References" section at the end if possible.' },
                         { role: 'user', content: query }

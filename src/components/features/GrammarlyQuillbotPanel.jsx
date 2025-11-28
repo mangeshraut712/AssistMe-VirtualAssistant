@@ -87,7 +87,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                         { role: 'system', content: 'You are an expert writing assistant. Provide high-quality, direct responses without conversational filler.' },
                         { role: 'user', content: getPrompt() }
                     ],
-                    model: 'x-ai/grok-beta:free',
+                    model: 'meta-llama/llama-3.3-70b-instruct:free',
                     stream: false
                 })
             });
