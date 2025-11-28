@@ -178,12 +178,19 @@ const Sidebar = ({ show, onClose, onNewChat, onNavigate, conversations = [], cur
                                             <button onClick={cancelEdit} className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg"><X className="h-4 w-4" /></button>
                                         </div>
                                     ) : (
-                                        <button
+                                        <div
                                             onClick={() => onSelectChat(chat.id)}
-                                            className={`w-full text-left px-3 py-3 rounded-2xl border transition-all duration-150 flex items-center gap-3 active:scale-[0.98] touch-manipulation ${currentChatId === chat.id
+                                            className={`w-full text-left px-3 py-3 rounded-2xl border transition-all duration-150 flex items-center gap-3 active:scale-[0.98] touch-manipulation cursor-pointer ${currentChatId === chat.id
                                                 ? 'border-foreground/20 bg-foreground/5 shadow-sm'
                                                 : 'border-transparent bg-white/50 dark:bg-neutral-900/30 hover:border-foreground/10 hover:bg-foreground/5'
                                                 }`}
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    onSelectChat(chat.id);
+                                                }
+                                            }}
                                         >
                                             <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/50 bg-background/50 flex-shrink-0">
                                                 <MessageSquare className="h-4 w-4 opacity-70" />
@@ -197,7 +204,7 @@ const Sidebar = ({ show, onClose, onNewChat, onNavigate, conversations = [], cur
                                                 </div>
                                                 <p className="text-[11px] text-muted-foreground mt-0.5">Chat #{idx + 1}</p>
                                             </div>
-                                            <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-0 opacity-100">
+                                            <div className="flex items-center gap-1 flex-shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
@@ -221,7 +228,7 @@ const Sidebar = ({ show, onClose, onNewChat, onNavigate, conversations = [], cur
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </button>
                                             </div>
-                                        </button>
+                                        </div>
                                     )}
                                 </div>
                             ))}
@@ -261,7 +268,7 @@ const Sidebar = ({ show, onClose, onNewChat, onNavigate, conversations = [], cur
                         </button>
                     </div>
                 </div>
-            </aside>
+            </aside >
         </>
     );
 };
