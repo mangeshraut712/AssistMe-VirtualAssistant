@@ -79,7 +79,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
         setOutputText('');
 
         try {
-            const response = await fetch('/api/chat/text', {
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -87,13 +87,20 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                         { role: 'system', content: 'You are an expert writing assistant. Provide high-quality, direct responses without conversational filler.' },
                         { role: 'user', content: getPrompt() }
                     ],
-                    model,
-                    preferred_language: 'en'
+                    model: 'x-ai/grok-beta:free',
+                    stream: false
                 })
             });
 
             const data = await response.json();
-            setOutputText(data.response || data.error || 'No response generated.');
+
+            if (data.choices && data.choices[0].message) {
+                setOutputText(data.choices[0].message.content);
+            } else if (data.error) {
+                setOutputText(`Error: ${data.error.message || JSON.stringify(data.error)}`);
+            } else {
+                setOutputText('No response generated.');
+            }
         } catch (err) {
             setOutputText(`Error: ${err.message}`);
         } finally {
@@ -168,8 +175,8 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                                 key={tool.id}
                                 onClick={() => setActiveTool(tool.id)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTool === tool.id
-                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                     }`}
                             >
                                 <tool.icon className={`h-5 w-5 ${activeTool === tool.id ? 'text-emerald-500' : ''}`} />
@@ -199,8 +206,8 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                                             key={mode.id}
                                             onClick={() => setActiveMode(mode.id)}
                                             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
-                                                    ? 'bg-background text-foreground shadow-sm border border-border'
-                                                    : 'text-muted-foreground hover:text-foreground'
+                                                ? 'bg-background text-foreground shadow-sm border border-border'
+                                                : 'text-muted-foreground hover:text-foreground'
                                                 }`}
                                         >
                                             {mode.label}
@@ -216,8 +223,8 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                                             key={mode.id}
                                             onClick={() => setActiveMode(mode.id)}
                                             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
-                                                    ? 'bg-background text-foreground shadow-sm border border-border'
-                                                    : 'text-muted-foreground hover:text-foreground'
+                                                ? 'bg-background text-foreground shadow-sm border border-border'
+                                                : 'text-muted-foreground hover:text-foreground'
                                                 }`}
                                         >
                                             {mode.label}
@@ -248,7 +255,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
 
                         {/* Input Pane */}
                         <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-border min-h-[300px]">
-                    <div className="flex-1 p-4 md:p-6 relative group">
+                            <div className="flex-1 p-4 md:p-6 relative group">
                                 <textarea
                                     value={inputText}
                                     onChange={(e) => setInputText(e.target.value)}
@@ -304,7 +311,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
 
                         {/* Output Pane */}
                         <div className="flex-1 flex flex-col bg-muted/10">
-                        <div className="flex-1 p-4 md:p-6 overflow-y-auto">
+                            <div className="flex-1 p-4 md:p-6 overflow-y-auto">
                                 {outputText ? (
                                     <div className="prose dark:prose-invert max-w-none">
                                         <p className="text-base leading-relaxed whitespace-pre-wrap">{outputText}</p>

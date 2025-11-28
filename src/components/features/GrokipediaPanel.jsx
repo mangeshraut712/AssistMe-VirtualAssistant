@@ -25,29 +25,34 @@ const GrokipediaPanel = ({ isOpen, onClose }) => {
         setToc([]);
 
         try {
-            const response = await fetch('/api/knowledge/grokipedia', {
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    query: query,
-                    max_results: 5,
-                    search_depth: 'advanced'
+                    model: 'x-ai/grok-beta:free',
+                    messages: [
+                        { role: 'system', content: 'You are Grokipedia, an advanced AI encyclopedia. Provide a comprehensive, well-structured, and factual article about the user\'s query. Use Markdown headers (##, ###) to organize sections. Include a "References" section at the end if possible.' },
+                        { role: 'user', content: query }
+                    ],
+                    stream: false
                 })
             });
 
             const data = await response.json();
 
-            if (data.success) {
-                const content = data.answer;
+            if (data.choices && data.choices[0].message) {
+                const content = data.choices[0].message.content;
                 const generatedToc = parseToc(content);
 
                 setArticle({
-                    title: data.query, // Use query as title or extract from content
+                    title: query,
                     content: content,
-                    lastUpdated: 'Just now',
-                    sources: data.sources
+                    lastUpdated: new Date().toLocaleDateString(),
+                    sources: [] // Chat API doesn't return sources separately usually
                 });
                 setToc(generatedToc);
+            } else if (data.error) {
+                console.error('Search error:', data.error);
             }
         } catch (error) {
             console.error('Search failed:', error);

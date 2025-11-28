@@ -23,7 +23,7 @@ export default async function handler(req) {
     }
 
     try {
-        const { messages, model } = await req.json();
+        const { messages, model, stream = true } = await req.json();
         const apiKey = process.env.OPENROUTER_API_KEY;
 
         if (!apiKey) {
@@ -44,7 +44,7 @@ export default async function handler(req) {
             body: JSON.stringify({
                 model: model || 'google/gemini-2.0-flash-001:free',
                 messages: messages,
-                stream: true,
+                stream: stream,
                 include_usage: true, // Request usage data explicitly
             }),
         });
@@ -54,6 +54,17 @@ export default async function handler(req) {
             return new Response(JSON.stringify({ error: `OpenRouter API error: ${errorText}` }), {
                 status: response.status,
                 headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        if (!stream) {
+            const data = await response.json();
+            return new Response(JSON.stringify(data), {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
             });
         }
 
