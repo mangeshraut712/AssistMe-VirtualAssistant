@@ -11,12 +11,11 @@ import ChatArea from './components/layout/ChatArea';
 
 // Feature Modals (Lazy Loaded)
 const SettingsModal = lazy(() => import('./components/features/SettingsModal'));
-const AI4BharatPanel = lazy(() => import('./components/features/AI4BharatPanel'));
+const UnifiedToolsPanel = lazy(() => import('./components/features/UnifiedToolsPanel'));
 const GrokipediaPanel = lazy(() => import('./components/features/GrokipediaPanel'));
 const AdvancedVoiceMode = lazy(() => import('./components/features/AdvancedVoiceMode'));
 const FileUploadPanel = lazy(() => import('./components/features/FileUploadPanel'));
 const ImageGenerationPanel = lazy(() => import('./components/features/ImageGenerationPanel'));
-const GrammarlyQuillbotPanel = lazy(() => import('./components/features/GrammarlyQuillbotPanel'));
 const SpeedtestPanel = lazy(() => import('./components/features/SpeedtestPanel'));
 
 const MODELS = [
@@ -170,8 +169,7 @@ function App() {
         imageGen: '/imagine',
         voiceMode: '/voice',
         grokipedia: '/grokipedia',
-        ai4bharat: '/ai4bharat',
-        grammar: '/writing-tools',
+        aiStudio: '/ai-studio',
         speedtest: '/speedtest',
         fileUpload: '/files',
         settings: '/settings'
@@ -440,10 +438,10 @@ function App() {
                             }
                         />
                         <Route
-                            path="/ai4bharat"
+                            path="/ai-studio"
                             element={
                                 <Suspense fallback={<LoadingOverlay />}>
-                                    <AI4BharatPanel
+                                    <UnifiedToolsPanel
                                         isOpen={true}
                                         onClose={() => navigate('/')}
                                     />
@@ -458,18 +456,6 @@ function App() {
                                         isOpen={true}
                                         onClose={() => navigate('/')}
                                         onFileProcess={(results) => console.log('Files processed:', results)}
-                                    />
-                                </Suspense>
-                            }
-                        />
-                        <Route
-                            path="/writing-tools"
-                            element={
-                                <Suspense fallback={<LoadingOverlay />}>
-                                    <GrammarlyQuillbotPanel
-                                        isOpen={true}
-                                        onClose={() => navigate('/')}
-                                        model={selectedModel}
                                     />
                                 </Suspense>
                             }

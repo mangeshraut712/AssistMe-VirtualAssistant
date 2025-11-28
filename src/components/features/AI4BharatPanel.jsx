@@ -5,26 +5,73 @@ import {
     BookA, MoveHorizontal
 } from 'lucide-react';
 
-const AI4BharatPanel = ({ isOpen, onClose }) => {
+const AI4BharatPanel = ({ isOpen, onClose, isEmbedded = false }) => {
     const [activeTab, setActiveTab] = useState('overview'); // overview, translate, transliterate, script_convert, dictionary
 
-    if (!isOpen) return null;
+    if (!isOpen && !isEmbedded) return null;
+
+    const containerClasses = isEmbedded
+        ? "h-full flex flex-col font-sans text-foreground overflow-hidden bg-slate-50/50 dark:bg-neutral-950/50"
+        : "fixed inset-0 bg-background z-50 flex flex-col font-sans text-foreground overflow-hidden";
 
     return (
-        <div className="fixed inset-0 bg-background z-50 flex flex-col font-sans text-foreground overflow-hidden">
+        <div className={containerClasses}>
             {/* Header */}
-            <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-background/95 backdrop-blur-xl sticky top-0 z-10 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-orange-500/20">
-                        AI
+            {!isEmbedded && (
+                <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-background/95 backdrop-blur-xl sticky top-0 z-10 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-orange-500/20">
+                            AI
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300">AI4Bharat</h2>
+                            <p className="text-xs text-muted-foreground font-medium">Building AI for India</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300">AI4Bharat</h2>
-                        <p className="text-xs text-muted-foreground font-medium">Building AI for India</p>
+                    <div className="flex items-center gap-4">
+                        <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors">
+                            <X className="h-6 w-6" />
+                        </button>
                     </div>
+                </header>
+            )}
+
+            {/* Embedded Nav */}
+            {isEmbedded && (
+                <div className="flex items-center gap-2 px-6 py-4 border-b border-border/50 bg-background/50 backdrop-blur-sm">
+                    <div className="flex items-center gap-2 mr-4">
+                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                            AI
+                        </div>
+                        <span className="font-bold text-lg">AI4Bharat</span>
+                    </div>
+                    <nav className="flex gap-1 bg-muted/50 p-1 rounded-lg overflow-x-auto no-scrollbar">
+                        {[
+                            { id: 'overview', label: 'Overview' },
+                            { id: 'translate', label: 'Translate' },
+                            { id: 'transliterate', label: 'Transliterate' },
+                            { id: 'script_convert', label: 'Script' },
+                            { id: 'dictionary', label: 'Dictionary' }
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize whitespace-nowrap ${activeTab === tab.id
+                                    ? 'bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                                    }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </nav>
                 </div>
-                <div className="flex items-center gap-4">
-                    <nav className="hidden md:flex gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
+            )}
+
+            {/* Original Nav for Modal Mode */}
+            {!isEmbedded && (
+                <div className="px-6 py-2 border-b border-border bg-muted/10 flex justify-center">
+                    <nav className="flex gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
                         {[
                             { id: 'overview', label: 'Overview' },
                             { id: 'translate', label: 'Translate' },
@@ -44,11 +91,8 @@ const AI4BharatPanel = ({ isOpen, onClose }) => {
                             </button>
                         ))}
                     </nav>
-                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors">
-                        <X className="h-6 w-6" />
-                    </button>
                 </div>
-            </header>
+            )}
 
             {/* Content */}
             <main className="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-neutral-950/50">

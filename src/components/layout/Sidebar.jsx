@@ -13,7 +13,8 @@ import {
     Edit2,
     Check,
     X,
-    ChevronLeft
+    ChevronLeft,
+    LayoutGrid
 } from 'lucide-react';
 
 const NavItem = ({ icon: Icon, label, active, onClick }) => (
@@ -62,8 +63,7 @@ const Sidebar = ({ show, onClose, onNewChat, onNavigate, conversations = [], cur
         { icon: ImageIcon, label: 'Imagine', path: '/imagine' },
         { icon: Mic, label: 'Voice Mode', path: '/voice' },
         { icon: BookOpen, label: 'Grokipedia', path: '/grokipedia' },
-        { icon: Languages, label: 'AI4Bharat', path: '/ai4bharat' },
-        { icon: Wand2, label: 'Writing Tools', path: '/writing-tools' },
+        { icon: LayoutGrid, label: 'AI Studio', path: '/ai-studio' },
         { icon: Gauge, label: 'Speedtest', path: '/speedtest' },
     ];
 

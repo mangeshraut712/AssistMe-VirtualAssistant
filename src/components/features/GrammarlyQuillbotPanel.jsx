@@ -37,7 +37,7 @@ const LANGUAGES = [
     { id: 'ja', label: 'Japanese' },
 ];
 
-const GrammarlyQuillbotPanel = ({ isOpen, onClose }) => {
+const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false }) => {
     const [activeTool, setActiveTool] = useState('paraphrase');
     const [activeMode, setActiveMode] = useState('standard');
     const [targetLang, setTargetLang] = useState('es');
@@ -55,7 +55,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose }) => {
         if (activeTool === 'summarize') setActiveMode('paragraph');
     }, [activeTool]);
 
-    if (!isOpen) return null;
+    if (!isOpen && !isEmbedded) return null;
 
     const getPrompt = () => {
         if (activeTool === 'paraphrase') {
@@ -141,28 +141,32 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose }) => {
         }
     };
 
+    const containerClasses = isEmbedded
+        ? "h-full flex flex-col font-sans text-foreground overflow-hidden"
+        : "fixed inset-0 bg-background z-50 flex flex-col font-sans text-foreground overflow-hidden";
+
     return (
-        <div className="fixed inset-0 bg-background z-50 flex flex-col font-sans text-foreground overflow-hidden">
+        <div className={containerClasses}>
             {/* Top Bar - Indigo Theme */}
-            <header className="h-14 flex items-center justify-between px-4 border-b border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 backdrop-blur-xl">
+            <header className={`flex items-center justify-between px-4 border-b border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 backdrop-blur-xl ${isEmbedded ? 'h-12' : 'h-14'}`}>
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                         <Wand2 className="h-5 w-5" />
                         <span className="font-bold text-lg tracking-tight">Writing Studio</span>
                     </div>
                     <div className="h-4 w-px bg-indigo-500/20 mx-2" />
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
                         {TOOLS.map(tool => (
                             <button
                                 key={tool.id}
                                 onClick={() => setActiveTool(tool.id)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${activeTool === tool.id
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 whitespace-nowrap ${activeTool === tool.id
                                     ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
                                     : 'text-muted-foreground hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
                                     }`}
                             >
                                 <tool.icon className="h-3.5 w-3.5" />
-                                <span className="hidden md:inline">{tool.label}</span>
+                                <span className="hidden lg:inline">{tool.label}</span>
                             </button>
                         ))}
                     </div>
@@ -175,9 +179,11 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose }) => {
                     >
                         {viewMode === 'split' ? <Maximize2 className="h-4 w-4" /> : <SplitSquareHorizontal className="h-4 w-4" />}
                     </button>
-                    <button onClick={onClose} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-colors">
-                        <X className="h-5 w-5" />
-                    </button>
+                    {!isEmbedded && (
+                        <button onClick={onClose} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-colors">
+                            <X className="h-5 w-5" />
+                        </button>
+                    )}
                 </div>
             </header>
 
