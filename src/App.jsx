@@ -19,6 +19,9 @@ const ImageGenerationPanel = lazy(() => import('./components/features/ImageGener
 const SpeedtestPanel = lazy(() => import('./components/features/SpeedtestPanel'));
 
 const MODELS = [
+    // Default / Featured
+    { id: 'x-ai/grok-4.1-fast:free', name: 'xAI: Grok 4.1 Fast (Free)', provider: 'xAI', free: true },
+
     // Voice-Optimized (Priority 0)
     { id: 'google/gemini-2.0-flash-001:free', name: '🎤 Google: Gemini 2.0 Flash (Free)', provider: 'Google', free: true, voiceOptimized: true },
 
@@ -32,7 +35,6 @@ const MODELS = [
 
     // Premium Models (Priority 2)
     { id: 'x-ai/grok-code-fast-1', name: 'xAI: Grok Code Fast 1', provider: 'xAI', free: false },
-    { id: 'x-ai/grok-4.1-fast', name: 'xAI: Grok 4.1 Fast', provider: 'xAI', free: false },
     { id: 'perplexity/sonar', name: 'Perplexity: Sonar', provider: 'Perplexity', free: false },
     { id: 'google/gemini-2.5-flash', name: 'Google: Gemini 2.5 Flash', provider: 'Google', free: false },
     { id: 'anthropic/claude-3-haiku', name: 'Anthropic Claude 3 Haiku', provider: 'Anthropic', free: false },
@@ -73,7 +75,7 @@ function App() {
 
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [selectedModel, setSelectedModel] = useState('google/gemini-2.0-flash-001:free');
+    const [selectedModel, setSelectedModel] = useState('x-ai/grok-4.1-fast:free');
     const [showSidebar, setShowSidebar] = useState(() => {
         // Show sidebar by default on desktop (md breakpoint is 768px)
         return typeof window !== 'undefined' && window.innerWidth >= 768;
