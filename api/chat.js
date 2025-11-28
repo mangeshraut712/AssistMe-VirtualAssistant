@@ -45,6 +45,7 @@ export default async function handler(req) {
                 model: model || 'google/gemini-2.0-flash-001:free',
                 messages: messages,
                 stream: true,
+                include_usage: true, // Request usage data explicitly
             }),
         });
 
@@ -60,11 +61,16 @@ export default async function handler(req) {
         const encoder = new TextEncoder();
         const decoder = new TextDecoder();
         let accumulatedContent = '';
+        let buffer = ''; // Buffer for incomplete lines
 
         const transformStream = new TransformStream({
             async transform(chunk, controller) {
-                const text = decoder.decode(chunk);
-                const lines = text.split('\n');
+                const text = decoder.decode(chunk, { stream: true });
+                buffer += text;
+
+                const lines = buffer.split('\n');
+                // Keep the last line in the buffer as it might be incomplete
+                buffer = lines.pop() || '';
 
                 for (const line of lines) {
                     if (line.trim() === '' || line.trim() === 'data: [DONE]') continue;
@@ -96,14 +102,20 @@ export default async function handler(req) {
                                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ metadata })}\n\n`));
                             }
                         } catch (e) {
-                            // Ignore parse errors for partial chunks
+                            // If JSON parse fails, it might be a weird partial line, just ignore or log
+                            // But since we buffer, this should happen much less often for valid lines
                         }
                     }
                 }
             },
             flush(controller) {
-                // Ensure we send metadata if we haven't seen it yet (fallback)
-                // This runs when the stream ends
+                // Process any remaining buffer
+                if (buffer.trim() !== '' && buffer.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(buffer.slice(6));
+                        // Handle content/metadata in the final chunk if needed
+                    } catch (e) { }
+                }
             }
         });
 
