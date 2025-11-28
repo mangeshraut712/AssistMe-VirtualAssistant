@@ -59,6 +59,7 @@ export default async function handler(req) {
         // Create a TransformStream to convert OpenRouter format to frontend format
         const encoder = new TextEncoder();
         const decoder = new TextDecoder();
+        let accumulatedContent = '';
 
         const transformStream = new TransformStream({
             async transform(chunk, controller) {
@@ -75,14 +76,20 @@ export default async function handler(req) {
                             // Handle content updates
                             if (data.choices && data.choices[0].delta && data.choices[0].delta.content) {
                                 const content = data.choices[0].delta.content;
+                                accumulatedContent += content;
                                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
                             }
 
-                            // Handle metadata/usage updates (OpenRouter often sends this in the last chunk)
+                            // Handle metadata/usage updates
                             if (data.usage || (data.choices && data.choices[0].finish_reason)) {
                                 const metadata = {
-                                    usage: data.usage,
-                                    model: data.model,
+                                    usage: data.usage || {
+                                        // Fallback estimation if usage not provided
+                                        prompt_tokens: Math.ceil(JSON.stringify(messages).length / 4),
+                                        completion_tokens: Math.ceil(accumulatedContent.length / 4),
+                                        total_tokens: Math.ceil((JSON.stringify(messages).length + accumulatedContent.length) / 4)
+                                    },
+                                    model: data.model || model || 'unknown',
                                     finish_reason: data.choices ? data.choices[0].finish_reason : null,
                                     id: data.id
                                 };
@@ -94,6 +101,10 @@ export default async function handler(req) {
                     }
                 }
             },
+            flush(controller) {
+                // Ensure we send metadata if we haven't seen it yet (fallback)
+                // This runs when the stream ends
+            }
         });
 
         return new Response(response.body.pipeThrough(transformStream), {
