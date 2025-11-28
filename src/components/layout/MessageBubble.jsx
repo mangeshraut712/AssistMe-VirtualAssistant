@@ -46,7 +46,10 @@ const MessageBubble = ({ message, renderContent, onRegenerate }) => {
     }
 
     // Use real data if available, otherwise hide or use smart defaults
-    const latency = message.latency ? `${message.latency.toFixed(1)}s` : null;
+    const metadata = message.metadata || {};
+    const latency = metadata.latency ? `${(metadata.latency / 1000).toFixed(2)}s` : (message.latency ? `${message.latency.toFixed(1)}s` : null);
+    const model = metadata.model || null;
+    const tokens = metadata.usage ? metadata.usage.total_tokens : null;
     const sources = message.sources || [];
     const followUps = message.followUps || [];
 
@@ -85,31 +88,29 @@ const MessageBubble = ({ message, renderContent, onRegenerate }) => {
                             </button>
                         </div>
 
-                        {/* Latency & Sources - Only show if available */}
-                        {(latency || sources.length > 0) && (
+                        {/* Latency & Metadata - Only show if available */}
+                        {(latency || model || tokens) && (
                             <div className="flex items-center gap-3 ml-auto text-xs text-neutral-400 font-medium">
-                                {latency && (
-                                    <span className="flex items-center gap-1.5">
-                                        {latency} Fast
+                                {model && (
+                                    <span className="flex items-center gap-1.5" title="Model">
+                                        {model.split('/').pop()}
                                     </span>
                                 )}
-                                {latency && sources.length > 0 && (
+                                {model && (latency || tokens) && (
                                     <div className="h-3 w-px bg-neutral-200 dark:bg-neutral-700" />
                                 )}
-                                {sources.length > 0 && (
-                                    <div className="flex items-center gap-1.5 cursor-pointer hover:text-black dark:hover:text-white transition-colors">
-                                        <div className="flex -space-x-1.5">
-                                            {sources.map((source, idx) => (
-                                                <img
-                                                    key={idx}
-                                                    src={source.icon || `https://www.google.com/s2/favicons?domain=${source.url}`}
-                                                    alt={source.name}
-                                                    className="w-4 h-4 rounded-full border border-white dark:border-black bg-white"
-                                                />
-                                            ))}
-                                        </div>
-                                        <span>{sources.length} sources</span>
-                                    </div>
+                                {latency && (
+                                    <span className="flex items-center gap-1.5" title="Latency">
+                                        {latency}
+                                    </span>
+                                )}
+                                {latency && tokens && (
+                                    <div className="h-3 w-px bg-neutral-200 dark:bg-neutral-700" />
+                                )}
+                                {tokens && (
+                                    <span className="flex items-center gap-1.5" title="Total Tokens">
+                                        {tokens} tokens
+                                    </span>
                                 )}
                             </div>
                         )}

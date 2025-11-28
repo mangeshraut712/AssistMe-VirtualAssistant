@@ -227,6 +227,9 @@ function App() {
             const decoder = new TextDecoder();
             let assistantContent = '';
             let buffer = '';
+            const startTime = Date.now();
+            let firstTokenTime = null;
+            let metadata = null;
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -247,11 +250,34 @@ function App() {
                             const data = JSON.parse(line.slice(6));
 
                             if (data.content) {
+                                if (!firstTokenTime) firstTokenTime = Date.now();
                                 assistantContent += data.content;
                                 // Update the UI with the accumulated content
                                 updateCurrentChatMessages([
                                     ...updatedMessages,
-                                    { ...assistantMsg, content: assistantContent }
+                                    {
+                                        ...assistantMsg,
+                                        content: assistantContent,
+                                        metadata: metadata ? {
+                                            ...metadata,
+                                            latency: firstTokenTime ? firstTokenTime - startTime : 0,
+                                            totalTime: Date.now() - startTime
+                                        } : null
+                                    }
+                                ]);
+                            } else if (data.metadata) {
+                                metadata = data.metadata;
+                                updateCurrentChatMessages([
+                                    ...updatedMessages,
+                                    {
+                                        ...assistantMsg,
+                                        content: assistantContent,
+                                        metadata: {
+                                            ...metadata,
+                                            latency: firstTokenTime ? firstTokenTime - startTime : 0,
+                                            totalTime: Date.now() - startTime
+                                        }
+                                    }
                                 ]);
                             } else if (data.error) {
                                 throw new Error(data.error.message || 'Stream error');

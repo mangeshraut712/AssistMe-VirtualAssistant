@@ -71,10 +71,22 @@ export default async function handler(req) {
                     if (line.startsWith('data: ')) {
                         try {
                             const data = JSON.parse(line.slice(6));
+
+                            // Handle content updates
                             if (data.choices && data.choices[0].delta && data.choices[0].delta.content) {
                                 const content = data.choices[0].delta.content;
-                                // Send in the format expected by frontend
                                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+                            }
+
+                            // Handle metadata/usage updates (OpenRouter often sends this in the last chunk)
+                            if (data.usage || (data.choices && data.choices[0].finish_reason)) {
+                                const metadata = {
+                                    usage: data.usage,
+                                    model: data.model,
+                                    finish_reason: data.choices ? data.choices[0].finish_reason : null,
+                                    id: data.id
+                                };
+                                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ metadata })}\n\n`));
                             }
                         } catch (e) {
                             // Ignore parse errors for partial chunks
