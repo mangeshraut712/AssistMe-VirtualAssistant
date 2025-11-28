@@ -1,32 +1,37 @@
-export default async function handler(req, res) {
-    // Handle CORS
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader(
-        'Access-Control-Allow-Headers',
-        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-    );
+export const config = {
+    runtime: 'edge',
+};
 
+export default async function handler(req) {
+    // Handle CORS
     if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+        return new Response(null, {
+            status: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+        });
     }
 
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+            status: 405,
+            headers: { 'Content-Type': 'application/json' },
+        });
     }
 
     try {
-        const { messages, model } = req.body;
+        const { messages, model } = await req.json();
         const apiKey = process.env.OPENROUTER_API_KEY;
 
         if (!apiKey) {
-            console.error('OPENROUTER_API_KEY is missing');
-            return res.status(500).json({ error: 'Server configuration error: API key missing' });
+            return new Response(JSON.stringify({ error: 'OpenRouter API key not configured' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' },
+            });
         }
-
-        console.log(`Sending request to OpenRouter with model: ${model || 'google/gemini-2.0-flash-001:free'}`);
 
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
@@ -39,36 +44,27 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 model: model || 'google/gemini-2.0-flash-001:free',
                 messages: messages,
-                stream: true, // Enable streaming
+                stream: true,
             }),
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`OpenRouter API error: ${response.status} ${errorText}`);
-            return res.status(response.status).json({ error: `OpenRouter API error: ${errorText}` });
+            return new Response(JSON.stringify({ error: `OpenRouter API error: ${errorText}` }), {
+                status: response.status,
+                headers: { 'Content-Type': 'application/json' },
+            });
         }
 
-        // Set headers for streaming
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-
-        // Pipe the response stream
-        const reader = response.body.getReader();
+        // Create a TransformStream to convert OpenRouter format to frontend format
+        const encoder = new TextEncoder();
         const decoder = new TextDecoder();
 
-        try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+        const transformStream = new TransformStream({
+            async transform(chunk, controller) {
+                const text = decoder.decode(chunk);
+                const lines = text.split('\n');
 
-                const chunk = decoder.decode(value);
-                // Transform OpenRouter stream format to our frontend format if needed
-                // OpenRouter returns standard OpenAI format: data: {"choices":[{"delta":{"content":"..."}}]}
-                // Our frontend expects: data: {"content":"..."}
-
-                const lines = chunk.split('\n');
                 for (const line of lines) {
                     if (line.trim() === '' || line.trim() === 'data: [DONE]') continue;
 
@@ -77,24 +73,32 @@ export default async function handler(req, res) {
                             const data = JSON.parse(line.slice(6));
                             if (data.choices && data.choices[0].delta && data.choices[0].delta.content) {
                                 const content = data.choices[0].delta.content;
-                                res.write(`data: ${JSON.stringify({ content })}\n\n`);
+                                // Send in the format expected by frontend
+                                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
                             }
                         } catch (e) {
-                            console.warn('Error parsing chunk:', e);
+                            // Ignore parse errors for partial chunks
                         }
                     }
                 }
-            }
-        } catch (error) {
-            console.error('Stream error:', error);
-            res.write(`data: ${JSON.stringify({ error: { message: error.message } })}\n\n`);
-        } finally {
-            res.end();
-        }
+            },
+        });
+
+        return new Response(response.body.pipeThrough(transformStream), {
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Access-Control-Allow-Origin': '*',
+            },
+        });
     } catch (error) {
-        console.error('Internal server error:', error);
-        if (!res.headersSent) {
-            return res.status(500).json({ error: `Internal server error: ${error.message}` });
-        }
+        return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+            },
+        });
     }
 }
