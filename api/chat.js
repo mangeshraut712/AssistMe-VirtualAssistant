@@ -39,6 +39,7 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 model: model || 'google/gemini-2.0-flash-001:free',
                 messages: messages,
+                stream: true, // Enable streaming
             }),
         });
 
@@ -48,10 +49,52 @@ export default async function handler(req, res) {
             return res.status(response.status).json({ error: `OpenRouter API error: ${errorText}` });
         }
 
-        const data = await response.json();
-        return res.status(200).json(data);
+        // Set headers for streaming
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        // Pipe the response stream
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                // Transform OpenRouter stream format to our frontend format if needed
+                // OpenRouter returns standard OpenAI format: data: {"choices":[{"delta":{"content":"..."}}]}
+                // Our frontend expects: data: {"content":"..."}
+
+                const lines = chunk.split('\n');
+                for (const line of lines) {
+                    if (line.trim() === '' || line.trim() === 'data: [DONE]') continue;
+
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.choices && data.choices[0].delta && data.choices[0].delta.content) {
+                                const content = data.choices[0].delta.content;
+                                res.write(`data: ${JSON.stringify({ content })}\n\n`);
+                            }
+                        } catch (e) {
+                            console.warn('Error parsing chunk:', e);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Stream error:', error);
+            res.write(`data: ${JSON.stringify({ error: { message: error.message } })}\n\n`);
+        } finally {
+            res.end();
+        }
     } catch (error) {
         console.error('Internal server error:', error);
-        return res.status(500).json({ error: `Internal server error: ${error.message}` });
+        if (!res.headersSent) {
+            return res.status(500).json({ error: `Internal server error: ${error.message}` });
+        }
     }
 }
