@@ -12,10 +12,19 @@ backend/**/*.pyo
 *.tmp
 .DS_Store
 
-# Source files not needed for frontend build
+# Backend files not needed for serverless (keep app/ directory)
+backend/uploads/
+backend/assistme.db
+backend/alembic/
+backend/alembic.ini
+backend/Dockerfile
+backend/start.sh
+backend/requirements-ml.txt
+backend/requirements-speech.txt
+backend/.env
 
-backend/
-*.md
+# Documentation (keep VERCEL_DEPLOYMENT.md)
+README.md
 KIMI_*
 QUICK_START_GUIDE.md
 ALL_PHASES_COMPLETE_SUMMARY.md
@@ -25,11 +34,14 @@ FRONTEND_UPGRADE_INDEX.md
 FRONTEND_UPGRADE_SUMMARY.md
 FRONTEND_PHASE1_IMPLEMENTATION.md
 FRONTEND_ANALYSIS.md
+MOBILE_IMPROVEMENTS.md
 
 # Keep build sources for Vercel
 !src/**
 !public/**
 !index.html
+!api/**
+!backend/app/**
 
 # Test files
 **/*.test.*
@@ -44,10 +56,6 @@ build/
 .git/
 .gitignore
 
-# Environment files
+# Environment files (Vercel uses environment variables)
 .env*
 !.env.example
-
-# Documentation
-README.md
-docs/

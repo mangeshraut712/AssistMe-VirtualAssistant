@@ -108,56 +108,39 @@ const InputArea = ({
     };
 
     const containerClass = isHero
-        ? 'w-full max-w-3xl mx-auto px-3 sm:px-4'
-        : 'w-full px-3 sm:px-4 pb-4 sm:pb-5 md:pb-6 pt-4';
+        ? 'w-full max-w-3xl mx-auto'
+        : 'w-full max-w-3xl mx-auto px-2 pb-4';
 
     return (
         <div className={containerClass}>
             {/* Uploaded Files Preview */}
             {uploadedFiles.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
+                <div className="mb-3 flex flex-wrap gap-2 px-2">
                     {uploadedFiles.map((file, index) => (
                         <div
                             key={index}
-                            className="flex items-center gap-2 px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-xl text-sm"
+                            className="flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-sm border border-neutral-200 dark:border-neutral-700"
                         >
-                            <FileText className="h-4 w-4 text-blue-400" />
-                            <span className="text-white font-medium truncate max-w-[150px]">
+                            <FileText className="h-4 w-4 text-blue-500" />
+                            <span className="text-neutral-700 dark:text-neutral-200 font-medium truncate max-w-[150px]">
                                 {file.name}
                             </span>
                             <button
                                 onClick={() => removeFile(index)}
-                                className="p-0.5 hover:bg-neutral-700 rounded-full transition-colors"
+                                className="p-0.5 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-full transition-colors"
                             >
-                                <X className="h-3 w-3 text-neutral-400" />
+                                <X className="h-3 w-3 text-neutral-500" />
                             </button>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* Main Input Shell */}
-            <div className="relative flex flex-col gap-2 rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] focus-within:border-neutral-400 dark:focus-within:border-neutral-600 transition-all">
+            {/* Main Input Shell - Gemini Style */}
+            <div className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-[2rem] p-5 shadow-sm border border-transparent focus-within:border-neutral-200 dark:focus-within:border-neutral-800 focus-within:bg-white dark:focus-within:bg-black transition-all duration-300">
 
-
-
-                {/* Main Input Row */}
-                <div className="flex items-end gap-2 px-4 pb-3 pt-2">
-                    {/* File Upload Button */}
-                    <label className="p-2.5 rounded-xl text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer flex-shrink-0">
-                        <Paperclip className="h-5 w-5" />
-                        <input
-                            id="file-upload"
-                            name="file-upload"
-                            type="file"
-                            multiple
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            accept=".txt,.pdf,.doc,.docx,.md"
-                        />
-                    </label>
-
-                    {/* Text Input */}
+                {/* Top Row: Text Input */}
+                <div className="flex-1 min-h-[44px]">
                     <textarea
                         id="chat-input"
                         name="message"
@@ -170,81 +153,99 @@ const InputArea = ({
                                 sendMessage();
                             }
                         }}
-                        placeholder="Ask me anything..."
-                        className="flex-1 bg-transparent focus:outline-none resize-none text-sm md:text-base placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-black dark:text-white py-2 min-w-0"
+                        placeholder="Ask AssistMe"
+                        className="w-full bg-transparent focus:outline-none resize-none text-lg text-neutral-900 dark:text-white placeholder:text-neutral-500 dark:placeholder:text-neutral-500 leading-relaxed"
                         disabled={isLoading}
                         rows={1}
-                        style={{ minHeight: '24px', maxHeight: '140px' }}
+                        style={{ minHeight: '44px', maxHeight: '200px' }}
                         autoComplete="off"
                     />
+                </div>
 
-                    {/* Model Selector */}
-                    {models.length > 0 && (
-                        <div className="hidden md:flex items-center gap-1.5 px-2 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800/50 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors flex-shrink-0 mb-0.5">
-                            <Sparkles className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                            <select
-                                value={selectedModel}
-                                onChange={onModelChange}
-                                className="bg-transparent focus:outline-none text-xs font-medium appearance-none pr-4 text-black dark:text-white cursor-pointer max-w-[120px] truncate"
-                                title="Select AI Model"
-                            >
-                                <optgroup label="Free Models">
-                                    {models.filter(m => m.free).map(m => (
-                                        <option key={m.id} value={m.id} className="bg-white dark:bg-neutral-900">{m.name.replace(' (Free)', '')}</option>
-                                    ))}
-                                </optgroup>
-                                <optgroup label="Premium Models">
-                                    {models.filter(m => !m.free).map(m => (
-                                        <option key={m.id} value={m.id} className="bg-white dark:bg-neutral-900">{m.name}</option>
-                                    ))}
-                                </optgroup>
-                            </select>
-                            <ChevronDown className="h-3 w-3 text-neutral-500 dark:text-neutral-400 pointer-events-none -ml-3" />
-                        </div>
-                    )}
+                {/* Bottom Row: Actions */}
+                <div className="flex items-center justify-between mt-2">
+                    {/* Left: File Upload */}
+                    <div className="flex items-center gap-2">
+                        <label className="p-2 rounded-full bg-neutral-200/50 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer active:scale-95 touch-manipulation">
+                            <Paperclip className="h-4.5 w-4.5" />
+                            <input
+                                id="file-upload"
+                                name="file-upload"
+                                type="file"
+                                multiple
+                                onChange={handleFileUpload}
+                                className="hidden"
+                                accept=".txt,.pdf,.doc,.docx,.md"
+                            />
+                        </label>
 
-                    {/* Advanced Voice Mode Button */}
-                    <button
-                        onClick={onOpenVoiceMode}
-                        disabled={isLoading}
-                        className="p-2.5 rounded-xl text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all flex-shrink-0"
-                        title="Advanced Voice Mode"
-                    >
-                        <AudioLines className="h-5 w-5" />
-                    </button>
-
-                    {/* Voice Button - Simplified Dictation */}
-                    <button
-                        onClick={toggleListening}
-                        disabled={isLoading}
-                        className={`p-2.5 rounded-xl transition-all flex-shrink-0 ${isListening
-                            ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 animate-pulse'
-                            : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                            }`}
-                        title={isListening ? "Stop Dictation" : "Start Dictation"}
-                    >
-                        <Mic className={`h-5 w-5 ${isListening ? 'fill-current' : ''}`} />
-                    </button>
-
-                    {/* Send Button */}
-                    <button
-                        onClick={() => sendMessage()}
-                        disabled={isLoading || !input.trim()}
-                        className="h-10 w-10 md:h-11 md:w-11 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg flex-shrink-0"
-                    >
-                        {isLoading ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                            <Send className="h-5 w-5" />
+                        {/* Model Selector - Compact */}
+                        {models.length > 0 && (
+                            <div className="relative flex items-center">
+                                <div className="absolute left-2.5 pointer-events-none">
+                                    <Sparkles className="h-3.5 w-3.5 text-blue-500" />
+                                </div>
+                                <select
+                                    value={selectedModel}
+                                    onChange={onModelChange}
+                                    className="appearance-none bg-neutral-200/50 dark:bg-neutral-800 pl-8 pr-8 py-1.5 rounded-full text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors cursor-pointer focus:outline-none max-w-[140px] truncate"
+                                >
+                                    <optgroup label="Free Models">
+                                        {models.filter(m => m.free).map(m => (
+                                            <option key={m.id} value={m.id} className="bg-white dark:bg-neutral-900">{m.name.replace(' (Free)', '').replace('Google: ', '').replace('Meta ', '').replace('NVIDIA ', '')}</option>
+                                        ))}
+                                    </optgroup>
+                                    <optgroup label="Premium Models">
+                                        {models.filter(m => !m.free).map(m => (
+                                            <option key={m.id} value={m.id} className="bg-white dark:bg-neutral-900">{m.name}</option>
+                                        ))}
+                                    </optgroup>
+                                </select>
+                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-neutral-500 pointer-events-none" />
+                            </div>
                         )}
-                    </button>
+                    </div>
+
+                    {/* Right: Voice & Send */}
+                    <div className="flex items-center gap-2">
+                        {/* Voice Mode */}
+                        <button
+                            onClick={onOpenVoiceMode}
+                            disabled={isLoading}
+                            className="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors active:scale-95 touch-manipulation"
+                            title="Advanced Voice Mode"
+                        >
+                            <AudioLines className="h-5 w-5" />
+                        </button>
+
+                        {/* Dictation - Always visible next to Voice Mode */}
+                        <button
+                            onClick={toggleListening}
+                            disabled={isLoading}
+                            className={`p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors active:scale-95 touch-manipulation ${isListening ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-neutral-600 dark:text-neutral-300'}`}
+                            title={isListening ? "Stop Dictation" : "Start Dictation"}
+                        >
+                            <Mic className={`h-5 w-5 ${isListening ? 'fill-current' : ''}`} />
+                        </button>
+
+                        {/* Send Button - Always visible, disabled when empty */}
+                        <button
+                            onClick={() => sendMessage()}
+                            disabled={isLoading || !input.trim()}
+                            className={`h-9 w-9 flex items-center justify-center rounded-full transition-all active:scale-95 shadow-sm touch-manipulation ${input.trim()
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
+                                : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
+                                }`}
+                        >
+                            {isLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Send className="h-4 w-4" />
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
-
-            {/* Footer Text */}
-            <p className={`text-center mt-3 text-xs text-neutral-500 dark:text-neutral-500 font-medium ${isHero ? 'opacity-70' : ''}`}>
-                AI can make mistakes. Verify important information.
-            </p>
         </div>
     );
 };

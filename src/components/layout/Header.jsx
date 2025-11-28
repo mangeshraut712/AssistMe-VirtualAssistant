@@ -5,26 +5,33 @@ import { Link } from 'react-router-dom';
 const Header = ({ onOpenSidebar, showSidebar = false }) => {
     return (
         <header
-            className="fixed top-0 left-0 right-0 z-40 flex items-center justify-end px-4 sm:px-6 py-3 safe-area-top bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70 border-b border-border/60"
-            style={{ minHeight: 'calc(env(safe-area-inset-top) + 4rem)' }}
+            className="fixed top-0 left-0 right-0 z-40 px-4 py-3 safe-area-top bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60"
         >
-            <div className="flex items-center justify-between w-full">
+            <div className="flex items-center justify-between w-full max-w-5xl mx-auto">
+                {/* Left: Menu Button */}
                 <button
                     onClick={onOpenSidebar}
-                    className={`p-2 rounded-xl border border-border bg-card text-foreground shadow-sm hover:shadow-md transition-all ${showSidebar ? 'md:hidden' : ''
-                        }`}
-                    title="Open sidebar"
+                    className="p-2 -ml-2 rounded-full hover:bg-foreground/5 active:scale-95 transition-all touch-manipulation text-foreground"
+                    aria-label="Open menu"
                 >
-                    <Menu className="h-5 w-5" />
+                    <Menu className="h-6 w-6" />
                 </button>
 
-                <Link
-                    to="/benchmark"
-                    className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-white dark:bg-neutral-900 text-foreground shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] text-sm font-semibold hover:border-foreground/60 transition-colors"
-                >
-                    <BarChart3 className="h-4 w-4" />
-                    Benchmark
-                </Link>
+                {/* Center: App Title */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pt-safe-top">
+                    <span className="text-lg font-medium text-foreground/90">AssistMe</span>
+                </div>
+
+                {/* Right: User Avatar (Project Logo) */}
+                <div className="flex justify-end">
+                    <button className="h-8 w-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-neutral-800 shadow-sm active:scale-95 transition-transform">
+                        <img
+                            src="/assets/logo.png"
+                            alt="AssistMe Logo"
+                            className="h-full w-full object-cover bg-white dark:bg-black"
+                        />
+                    </button>
+                </div>
             </div>
         </header>
     );

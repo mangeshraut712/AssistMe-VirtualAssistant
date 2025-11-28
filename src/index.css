@@ -115,14 +115,29 @@
         font-family: 'Sora', 'SF Pro Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
         letter-spacing: -0.01em;
         -webkit-text-size-adjust: 100%;
+        /* Prevent text size adjustment on orientation change */
+        text-size-adjust: 100%;
+        /* Improve touch scrolling on iOS */
+        -webkit-overflow-scrolling: touch;
     }
 
+    /* Prevent zoom on input focus (iOS Safari) */
+    input[type="text"],
+    input[type="search"],
+    input[type="email"],
+    input[type="tel"],
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+
+    /* Safe area handling with fallbacks */
     .safe-area-bottom {
-        padding-bottom: env(safe-area-inset-bottom);
+        padding-bottom: max(env(safe-area-inset-bottom), 1rem);
     }
 
     .safe-area-top {
-        padding-top: env(safe-area-inset-top);
+        padding-top: max(env(safe-area-inset-top), 1rem);
     }
 
     .header-offset {
@@ -133,5 +148,65 @@
     ::selection {
         background-color: rgba(0, 0, 0, 0.08);
         color: hsl(var(--foreground));
+    }
+
+    /* Smooth scrolling for better UX */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Optimize scrolling performance on mobile */
+    .scroll-smooth {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+
+    /* Prevent pull-to-refresh on mobile browsers */
+    body {
+        overscroll-behavior-y: contain;
+    }
+
+    /* Better tap highlighting for mobile */
+    * {
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.05);
+        tap-highlight-color: rgba(0, 0, 0, 0.05);
+    }
+
+    /* Improve button touch targets on mobile */
+    @media (max-width: 768px) {
+        button, a, [role="button"] {
+            min-height: 44px;
+            min-width: 44px;
+        }
+    }
+
+    /* Fix iOS Safari bottom bar issue */
+    @supports (-webkit-touch-callout: none) {
+        body {
+            min-height: -webkit-fill-available;
+        }
+    }
+
+    /* Prevent horizontal scroll on mobile */
+    html, body {
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+
+    /* Better focus states for accessibility */
+    *:focus-visible {
+        outline: 2px solid hsl(var(--primary));
+        outline-offset: 2px;
+    }
+
+    /* Optimize animations for mobile performance */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
     }
 }

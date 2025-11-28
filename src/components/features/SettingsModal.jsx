@@ -5,29 +5,29 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-4">
-            <div className="w-full max-w-2xl rounded-2xl border bg-card p-6 shadow-[0_20px_70px_rgba(0,0,0,0.2)] animate-in fade-in zoom-in duration-200">
-                <div className="flex items-start justify-between mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-4 py-4 sm:py-8">
+            <div className="w-full max-w-2xl rounded-2xl border bg-card p-4 sm:p-6 shadow-[0_20px_70px_rgba(0,0,0,0.2)] animate-in fade-in zoom-in duration-200 max-h-full overflow-y-auto">
+                <div className="flex items-start justify-between mb-4 sm:mb-6">
                     <div>
-                        <h2 className="text-xl font-semibold">Settings</h2>
-                        <p className="text-sm text-muted-foreground">Choose language, theme, and backend endpoint.</p>
+                        <h2 className="text-xl font-bold tracking-tight">Settings</h2>
+                        <p className="text-sm text-muted-foreground mt-1">Choose language, theme, and backend endpoint.</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="rounded-full p-2 hover:bg-foreground/5 transition-colors"
+                        className="rounded-full p-2.5 bg-foreground/5 hover:bg-foreground/10 transition-colors active:scale-95 touch-manipulation"
                     >
-                        <X className="h-4 w-4" />
+                        <X className="h-5 w-5" />
                         <span className="sr-only">Close</span>
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <div className="p-4 rounded-xl border border-border bg-background space-y-3">
-                        <div className="flex items-center gap-2">
-                            <Globe2 className="h-4 w-4" />
+                        <div className="flex items-center gap-2.5">
+                            <Globe2 className="h-4 w-4 text-primary" />
                             <div>
                                 <p className="font-semibold text-sm">Language</p>
-                                <p className="text-xs text-muted-foreground">Used across chat + AI4Bharat translations.</p>
+                                <p className="text-xs text-muted-foreground">Used across chat + translations.</p>
                             </div>
                         </div>
                         <select
@@ -35,7 +35,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                             name="language"
                             value={settings.language}
                             onChange={(e) => onSettingsChange('language', e.target.value)}
-                            className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
                         >
                             <option value="en">English</option>
                             <option value="hi">Hindi</option>
@@ -47,8 +47,8 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                     </div>
 
                     <div className="p-4 rounded-xl border border-border bg-background space-y-3">
-                        <div className="flex items-center gap-2">
-                            <Palette className="h-4 w-4" />
+                        <div className="flex items-center gap-2.5">
+                            <Palette className="h-4 w-4 text-primary" />
                             <div>
                                 <p className="font-semibold text-sm">Theme</p>
                                 <p className="text-xs text-muted-foreground">Preview light/dark and apply instantly.</p>
@@ -63,17 +63,17 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                                 <button
                                     key={item.id}
                                     onClick={() => onSettingsChange('theme', item.id)}
-                                    className={`flex flex-col items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors ${settings.theme === item.id
+                                    className={`flex flex-col items-center gap-2 rounded-xl border px-2 py-2 text-sm transition-all active:scale-95 touch-manipulation ${settings.theme === item.id
                                         ? 'border-foreground bg-foreground text-background shadow-[0_10px_30px_rgba(0,0,0,0.08)]'
                                         : 'border-border bg-card hover:border-foreground/40'
                                         }`}
                                 >
-                                    <div className={`w-full h-10 rounded-lg ${item.swatch} flex items-center justify-center text-xs font-semibold`}>
+                                    <div className={`w-full h-8 sm:h-10 rounded-lg ${item.swatch} flex items-center justify-center text-xs font-semibold`}>
                                         {item.label}
                                     </div>
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <item.icon className="h-3.5 w-3.5" />
-                                        Live preview
+                                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                                        <item.icon className="h-3 w-3" />
+                                        <span className="hidden sm:inline">Preview</span>
                                     </div>
                                 </button>
                             ))}
@@ -81,8 +81,8 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                     </div>
 
                     <div className="p-4 rounded-xl border border-border bg-background space-y-3 md:col-span-2">
-                        <div className="flex items-center gap-2">
-                            <Globe2 className="h-4 w-4" />
+                        <div className="flex items-center gap-2.5">
+                            <Globe2 className="h-4 w-4 text-primary" />
                             <div>
                                 <p className="font-semibold text-sm">Backend URL</p>
                                 <p className="text-xs text-muted-foreground">Override API base (leave blank to use relative /api).</p>
@@ -93,7 +93,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                             value={settings.backendUrl || ''}
                             onChange={(e) => onSettingsChange('backendUrl', e.target.value)}
                             placeholder="https://your-backend.example.com"
-                            className="w-full rounded-xl border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
                             autoComplete="off"
                         />
                     </div>
@@ -102,7 +102,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                 <div className="mt-6 flex justify-end">
                     <button
                         onClick={onClose}
-                        className="inline-flex items-center justify-center rounded-full text-sm font-semibold bg-foreground text-background hover:opacity-90 transition-opacity h-10 px-5"
+                        className="inline-flex items-center justify-center rounded-full text-sm font-semibold bg-foreground text-background hover:opacity-90 active:scale-95 transition-all h-11 px-6 shadow-lg"
                     >
                         Done
                     </button>

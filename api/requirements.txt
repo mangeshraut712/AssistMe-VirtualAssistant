@@ -1,0 +1,31 @@
+# Vercel serverless function requirements
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+sqlalchemy==2.0.36
+psycopg[binary]==3.2.3
+alembic==1.14.0
+pydantic==2.9.2
+email-validator>=2.1.0
+httpx==0.28.0
+python-dotenv==1.0.1
+python-multipart==0.0.17
+
+# Performance optimizations
+orjson==3.10.11
+aiofiles==24.1.0
+requests==2.32.3
+
+# Web Search and HTTP
+aiohttp==3.10.11
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# RAG / Vector Embeddings (lightweight for serverless)
+sentence-transformers>=3.0.0
+faiss-cpu>=1.8.0
+pypdf==3.17.4
+
+# TTS Service
+gtts==2.6.1

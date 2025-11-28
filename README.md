@@ -1,6 +1,6 @@
 # AssistMe - Next-Generation AI Virtual Assistant
 
-![AssistMe Logo](frontend/public/assets/logo.png)
+![AssistMe Logo](public/assets/logo.png)
 
 **Your Intelligent Companion** - A cutting-edge AI-powered virtual assistant featuring multimodal interactions, advanced RAG systems, real-time voice processing, and comprehensive multilingual support. Built with the latest technologies for unparalleled user experience.
 
@@ -95,74 +95,95 @@ git clone https://github.com/YOUR_USERNAME/AssistMe-VirtualAssistant.git
 cd AssistMe-VirtualAssistant
 ```
 
-2. **Install Frontend Dependencies**
+2. **Install Dependencies**
 ```bash
-cd frontend
 npm install
-```
-
-3. **Install Backend Dependencies**
-```bash
-cd ../backend
+cd backend
 pip install -r requirements.txt
+cd ..
 ```
 
-4. **Set up Environment Variables**
+3. **Set up Environment Variables**
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the `backend` directory:
 ```env
 OPENROUTER_API_KEY=your_api_key_here
 DEV_MODE=false
+APP_URL=http://localhost:5173
 ```
 
-5. **Run the Application**
+4. **Run the Application**
 
-**Frontend** (in one terminal):
+**Option A: Using the quick start script**
 ```bash
-cd frontend
+./quick-start.sh
+```
+
+**Option B: Manual start**
+
+Frontend (in one terminal):
+```bash
 npm run dev
 ```
 
-**Backend** (in another terminal):
+Backend (in another terminal):
 ```bash
 cd backend
 python -m uvicorn app.main:app --reload --port 8001
 ```
 
-6. **Access the Application**
+5. **Access the Application**
 
 Open your browser and navigate to: `http://localhost:5173`
 
 ## 📦 Deployment
 
-### Vercel Deployment
+### Vercel Deployment (Recommended)
 
-1. **Install Vercel CLI**
+Deploy both frontend and backend to Vercel with full AI model support:
+
+**1. Environment Variables Setup**
+
+In Vercel Dashboard → Settings → Environment Variables, add:
+- **OPENROUTER_API_KEY**: Your OpenRouter API key (get from https://openrouter.ai/keys)
+- **DEV_MODE**: `false` (for production)
+
+**2. Deploy**
+
 ```bash
+# Option A: Via Vercel Dashboard
+# 1. Import your GitHub repository
+# 2. Add environment variables
+# 3. Click "Deploy"
+
+# Option B: Via CLI
 npm install -g vercel
+vercel --prod
 ```
 
-2. **Deploy**
+**3. Verify Deployment**
+
+Visit `https://your-project.vercel.app/health` - should show:
+```json
+{
+  "status": "healthy",
+  "api_key_configured": true
+}
+```
+
+### Alternative Deployment Options
+
+**Railway / Render**
+1. Build Frontend: `npm run build`
+2. Deploy Backend to Railway/Render
+3. Set environment variables
+4. Point to `backend/app/main.py`
+
+**Docker**
 ```bash
-vercel
+docker build -t assistme .
+docker run -p 8001:8001 -e OPENROUTER_API_KEY=your_key assistme
 ```
-
-3. **Set Environment Variables in Vercel Dashboard**
-- `OPENROUTER_API_KEY`: Your OpenRouter API key
-- `DEV_MODE`: Set to `false`
-
-### Manual Deployment
-
-1. **Build Frontend**
-```bash
-cd frontend
-npm run build
-```
-
-2. **Deploy Backend**
-- Use any Python hosting service (Render, Railway, etc.)
-- Set environment variables
-- Point to `backend/app/main.py`
 
 ## 🛠️ Modern Tech Stack
 
@@ -206,87 +227,76 @@ npm run build
 
 ```
 AssistMe-VirtualAssistant/
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── features/          # Feature-specific components
-│   │   │   │   ├── AdvancedVoiceMode.jsx
-│   │   │   │   ├── AI4BharatPanel.jsx
-│   │   │   │   ├── FileUploadPanel.jsx
-│   │   │   │   ├── GrammarlyQuillbotPanel.jsx
-│   │   │   │   ├── GrokipediaPanel.jsx
-│   │   │   │   ├── ImageGenerationPanel.jsx
-│   │   │   │   ├── SettingsModal.jsx
-│   │   │   │   └── SpeedtestPanel.jsx
-│   │   │   ├── layout/            # Layout components
-│   │   │   │   ├── ChatArea.jsx
-│   │   │   │   ├── Header.jsx
-│   │   │   │   ├── InputArea.jsx
-│   │   │   │   ├── MessageBubble.jsx
-│   │   │   │   └── Sidebar.jsx
-│   │   │   └── ErrorBoundary.jsx
-│   │   ├── pages/                 # Page components
-│   │   │   ├── App.jsx            # Main application
-│   │   │   └── BenchmarkPage.jsx  # Mission Control dashboard
-│   │   ├── App.jsx
-│   │   └── main.jsx               # Application entry point
-│   ├── public/
-│   │   ├── assets/
-│   │   │   └── logo.png
-│   │   ├── manifest.json
-│   │   └── sw.js                 # Service worker for PWA
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── postcss.config.js
+├── src/                        # Frontend source code
+│   ├── components/
+│   │   ├── features/          # Feature-specific components
+│   │   │   ├── AdvancedVoiceMode.jsx
+│   │   │   ├── AI4BharatPanel.jsx
+│   │   │   ├── FileUploadPanel.jsx
+│   │   │   ├── GrammarlyQuillbotPanel.jsx
+│   │   │   ├── GrokipediaPanel.jsx
+│   │   │   ├── ImageGenerationPanel.jsx
+│   │   │   ├── SettingsModal.jsx
+│   │   │   └── SpeedtestPanel.jsx
+│   │   ├── layout/            # Layout components
+│   │   │   ├── ChatArea.jsx
+│   │   │   ├── Header.jsx
+│   │   │   ├── InputArea.jsx
+│   │   │   ├── MessageBubble.jsx
+│   │   │   └── Sidebar.jsx
+│   │   └── ErrorBoundary.jsx
+│   ├── pages/                 # Page components
+│   │   └── BenchmarkPage.jsx  # Mission Control dashboard
+│   ├── App.jsx                # Main application
+│   └── main.jsx               # Application entry point
+├── public/
+│   ├── assets/
+│   │   └── logo.png
+│   ├── manifest.json          # PWA manifest
+│   └── sw.js                  # Service worker
 ├── backend/
 │   ├── app/
-│   │   ├── routes/                # API route handlers
-│   │   │   ├── __init__.py
-│   │   │   ├── auth.py            # Authentication endpoints
-│   │   │   ├── auth_standalone.py # Standalone auth
-│   │   │   ├── files.py           # File upload/processing
-│   │   │   ├── image.py           # Image generation
-│   │   │   ├── knowledge.py       # RAG knowledge base
-│   │   │   ├── multimodal.py      # Multimodal processing
-│   │   │   ├── speech.py          # Speech processing
-│   │   │   └── tts.py            # Text-to-speech
-│   │   ├── services/              # Business logic services
-│   │   │   ├── __init__.py
-│   │   │   ├── cache_service.py   # Redis caching
-│   │   │   ├── embedding_service.py # Vector embeddings
-│   │   │   ├── file_service.py    # File operations
-│   │   │   ├── image_service.py   # Image processing
-│   │   │   ├── indic_llm.py       # Indian LLM integration
-│   │   │   ├── rate_limit_service.py # Rate limiting
-│   │   │   ├── tts_service.py     # TTS processing
-│   │   │   ├── voice_service.py   # Voice interaction
-│   │   │   └── whisper_service.py # Speech recognition
-│   │   ├── providers/             # AI model providers
-│   │   │   ├── __init__.py
-│   │   │   ├── base.py            # Base provider interface
-│   │   │   ├── factory.py         # Provider factory
-│   │   │   └── openrouter.py      # OpenRouter integration
+│   │   ├── routes/            # API route handlers
+│   │   │   ├── auth.py
+│   │   │   ├── files.py
+│   │   │   ├── image.py
+│   │   │   ├── knowledge.py
+│   │   │   ├── multimodal.py
+│   │   │   ├── speech.py
+│   │   │   └── tts.py
+│   │   ├── services/          # Business logic services
+│   │   │   ├── cache_service.py
+│   │   │   ├── embedding_service.py
+│   │   │   ├── file_service.py
+│   │   │   ├── image_service.py
+│   │   │   ├── rate_limit_service.py
+│   │   │   ├── tts_service.py
+│   │   │   ├── voice_service.py
+│   │   │   └── whisper_service.py
+│   │   ├── providers/         # AI model providers
+│   │   │   ├── base.py
+│   │   │   ├── factory.py
+│   │   │   └── openrouter.py
 │   │   ├── data/
-│   │   │   └── grokipedia.json    # Knowledge base data
+│   │   │   └── grokipedia.json
 │   │   ├── core/
-│   │   │   └── security.py        # Security utilities
-│   │   ├── __init__.py
-│   │   ├── ai4bharat.py           # AI4Bharat integration
-│   │   ├── compat.py              # Compatibility layer
-│   │   ├── database.py            # Database configuration
-│   │   ├── main.py                # FastAPI application
-│   │   ├── models.py              # SQLAlchemy models
-│   │   └── schemas.py             # Pydantic schemas
-│   ├── requirements.txt           # Python dependencies
-│   ├── Dockerfile                 # Docker configuration
-│   ├── alembic.ini               # Database migrations config
-│   └── start.sh                  # Startup script
-├── scripts/
-│   └── generate-legacy-entry.js   # Build script
-├── .env.example                   # Environment template
-├── vercel.json                    # Vercel deployment config
-├── package.json                   # Root package config
+│   │   │   └── security.py
+│   │   ├── ai4bharat.py
+│   │   ├── database.py
+│   │   ├── main.py            # FastAPI application
+│   │   ├── models.py
+│   │   └── schemas.py
+│   ├── requirements.txt       # Python dependencies
+│   ├── Dockerfile
+│   └── alembic.ini
+├── api/                       # Vercel serverless functions
+│   ├── index.py               # API entry point
+│   └── requirements.txt       # Serverless dependencies
+├── .env.example               # Environment template
+├── vercel.json                # Vercel deployment config
+├── package.json               # Root package config
+├── vite.config.js             # Vite configuration
+├── tailwind.config.js         # Tailwind CSS config
 └── README.md
 ```
 

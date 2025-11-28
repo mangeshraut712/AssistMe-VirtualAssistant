@@ -1,16 +1,24 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "functions": {
+    "api/**/*.py": {
+      "runtime": "python3.9"
+    }
+  },
   "rewrites": [
     {
-      "source": "/health",
-      "destination": "https://assistme-virtualassistant-production.up.railway.app/health"
+      "source": "/api/:path*",
+      "destination": "/api/index"
     },
     {
-      "source": "/api/:path*",
-      "destination": "https://assistme-virtualassistant-production.up.railway.app/api/:path*"
+      "source": "/health",
+      "destination": "/api/index"
     },
     {
       "source": "/debug",
-      "destination": "https://assistme-virtualassistant-production.up.railway.app/debug"
+      "destination": "/api/index"
     }
   ],
   "headers": [
@@ -44,5 +52,8 @@
         }
       ]
     }
-  ]
+  ],
+  "env": {
+    "OPENROUTER_API_KEY": "@openrouter_api_key"
+  }
 }
