@@ -3,7 +3,9 @@ import {
     X, Wand2, Copy, Check, Sparkles,
     RefreshCw, FileText, Languages,
     AlignLeft, CheckCircle, ArrowRight,
-    Upload, ClipboardPaste, RotateCcw
+    Upload, ClipboardPaste, RotateCcw,
+    Maximize2, Minimize2, SplitSquareHorizontal,
+    Type
 } from 'lucide-react';
 
 const TOOLS = [
@@ -35,7 +37,7 @@ const LANGUAGES = [
     { id: 'ja', label: 'Japanese' },
 ];
 
-const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-flash-exp:free' }) => {
+const GrammarlyQuillbotPanel = ({ isOpen, onClose }) => {
     const [activeTool, setActiveTool] = useState('paraphrase');
     const [activeMode, setActiveMode] = useState('standard');
     const [targetLang, setTargetLang] = useState('es');
@@ -44,6 +46,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
     const [outputText, setOutputText] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [viewMode, setViewMode] = useState('split'); // split, focus
 
     // Reset state when tool changes
     useEffect(() => {
@@ -111,9 +114,7 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                                 accumulatedContent += data.content;
                                 setOutputText(accumulatedContent);
                             }
-                        } catch (e) {
-                            // Ignore parse errors
-                        }
+                        } catch (e) { }
                     }
                 }
             }
@@ -141,233 +142,182 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
     };
 
     return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col">
-            {/* Top Bar */}
-            <header className="h-16 flex items-center justify-between px-4 md:px-6 border-b border-border bg-background/90 backdrop-blur">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20 flex items-center justify-center">
+        <div className="fixed inset-0 bg-background z-50 flex flex-col font-sans text-foreground overflow-hidden">
+            {/* Top Bar - Indigo Theme */}
+            <header className="h-14 flex items-center justify-between px-4 border-b border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 backdrop-blur-xl">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                         <Wand2 className="h-5 w-5" />
+                        <span className="font-bold text-lg tracking-tight">Writing Studio</span>
                     </div>
-                    <div>
-                        <h2 className="text-lg font-semibold">Writing Tools</h2>
-                        <p className="text-xs text-muted-foreground">Paraphrase, grammar, summary, and translation in one place.</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="md:hidden">
-                        <select
-                            value={activeTool}
-                            onChange={(e) => setActiveTool(e.target.value)}
-                            className="text-sm rounded-lg border border-border bg-card px-3 py-1.5"
-                        >
-                            {TOOLS.map(tool => (
-                                <option key={tool.id} value={tool.id}>{tool.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-muted transition-colors" aria-label="Close writing tools">
-                        <X className="h-5 w-5 text-muted-foreground" />
-                    </button>
-                </div>
-            </header>
-
-            <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar */}
-                <aside className="w-64 bg-muted/30 border-r border-border flex flex-col hidden md:flex">
-                    <div className="p-6 border-b border-border/50">
-                        <div className="flex items-center gap-2 font-bold text-lg">
-                            <Wand2 className="h-5 w-5 text-emerald-500" />
-                            <span>Toolbox</span>
-                        </div>
-                    </div>
-
-                    <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+                    <div className="h-4 w-px bg-indigo-500/20 mx-2" />
+                    <div className="flex items-center gap-1">
                         {TOOLS.map(tool => (
                             <button
                                 key={tool.id}
                                 onClick={() => setActiveTool(tool.id)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTool === tool.id
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${activeTool === tool.id
+                                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
+                                    : 'text-muted-foreground hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
                                     }`}
                             >
-                                <tool.icon className={`h-5 w-5 ${activeTool === tool.id ? 'text-emerald-500' : ''}`} />
-                                <div className="text-left">
-                                    <div>{tool.label}</div>
-                                    <p className="text-[11px] text-muted-foreground">{tool.description}</p>
-                                </div>
+                                <tool.icon className="h-3.5 w-3.5" />
+                                <span className="hidden md:inline">{tool.label}</span>
                             </button>
                         ))}
-                    </nav>
-                </aside>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setViewMode(viewMode === 'split' ? 'focus' : 'split')}
+                        className="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 transition-colors hidden md:block"
+                        title={viewMode === 'split' ? "Focus Mode" : "Split View"}
+                    >
+                        {viewMode === 'split' ? <Maximize2 className="h-4 w-4" /> : <SplitSquareHorizontal className="h-4 w-4" />}
+                    </button>
+                    <button onClick={onClose} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-colors">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+            </header>
 
-                {/* Main Content */}
-                <main className="flex-1 flex flex-col min-w-0 bg-background">
+            {/* Toolbar */}
+            <div className="h-12 border-b border-border bg-background/50 flex items-center px-4 gap-4 overflow-x-auto no-scrollbar">
+                {activeTool === 'paraphrase' && (
+                    <div className="flex items-center gap-1">
+                        <span className="text-xs font-semibold text-muted-foreground mr-2 uppercase tracking-wider">Mode:</span>
+                        {PARAPHRASE_MODES.map(mode => (
+                            <button
+                                key={mode.id}
+                                onClick={() => setActiveMode(mode.id)}
+                                className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
+                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                    : 'text-muted-foreground hover:bg-muted'
+                                    }`}
+                            >
+                                {mode.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+                {activeTool === 'summarize' && (
+                    <div className="flex items-center gap-1">
+                        <span className="text-xs font-semibold text-muted-foreground mr-2 uppercase tracking-wider">Length:</span>
+                        {SUMMARIZE_MODES.map(mode => (
+                            <button
+                                key={mode.id}
+                                onClick={() => setActiveMode(mode.id)}
+                                className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
+                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                    : 'text-muted-foreground hover:bg-muted'
+                                    }`}
+                            >
+                                {mode.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+                {activeTool === 'translate' && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Target:</span>
+                        <select
+                            value={targetLang}
+                            onChange={(e) => setTargetLang(e.target.value)}
+                            className="bg-muted/50 border border-border text-xs rounded-md px-2 py-1 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        >
+                            {LANGUAGES.map(lang => (
+                                <option key={lang.id} value={lang.id}>{lang.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+            </div>
 
-                    {/* Mode Bar */}
-                    <div className="h-16 border-b border-border flex items-center justify-between px-4 md:px-6 flex-shrink-0 bg-background/80 backdrop-blur">
-                        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
-                            <span className="font-semibold text-sm md:text-base whitespace-nowrap">
-                                {TOOLS.find(t => t.id === activeTool)?.label}
-                            </span>
+            {/* Main Editor Area */}
+            <div className="flex-1 flex overflow-hidden bg-slate-50/50 dark:bg-neutral-950/50">
+                {/* Input Area */}
+                <div className={`flex-1 flex flex-col border-r border-border transition-all duration-300 ${viewMode === 'focus' && outputText ? 'hidden md:flex' : 'flex'}`}>
+                    <div className="flex-1 relative group">
+                        <textarea
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                            placeholder="Start writing or paste text here..."
+                            className="w-full h-full p-6 bg-transparent border-none resize-none focus:outline-none text-lg leading-relaxed font-serif placeholder:font-sans placeholder:text-muted-foreground/40"
+                            spellCheck="false"
+                        />
+                        {!inputText && (
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-4 opacity-50 pointer-events-none">
+                                <Type className="h-12 w-12 text-indigo-300" />
+                                <p className="text-sm font-medium text-indigo-400">Type or paste to begin</p>
+                            </div>
+                        )}
+                        {inputText && (
+                            <button
+                                onClick={() => setInputText('')}
+                                className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
+                    <div className="p-4 border-t border-border flex justify-between items-center bg-background/50 backdrop-blur-sm">
+                        <div className="text-xs text-muted-foreground font-mono">
+                            {inputText.length} chars • {inputText.split(/\s+/).filter(w => w).length} words
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handlePaste}
+                                className="px-3 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors"
+                            >
+                                Paste
+                            </button>
+                            <button
+                                onClick={runEnhance}
+                                disabled={!inputText.trim() || isProcessing}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-md text-xs font-bold shadow-md shadow-indigo-500/20 disabled:opacity-50 disabled:shadow-none transition-all flex items-center gap-2"
+                            >
+                                {isProcessing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                {activeTool === 'paraphrase' ? 'Rewrite' : activeTool === 'grammar' ? 'Fix' : activeTool === 'summarize' ? 'Summarize' : 'Translate'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-                            {activeTool === 'paraphrase' && (
-                                <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-                                    {PARAPHRASE_MODES.map(mode => (
-                                        <button
-                                            key={mode.id}
-                                            onClick={() => setActiveMode(mode.id)}
-                                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
-                                                ? 'bg-background text-foreground shadow-sm border border-border'
-                                                : 'text-muted-foreground hover:text-foreground'
-                                                }`}
-                                        >
-                                            {mode.label}
-                                        </button>
-                                    ))}
+                {/* Output Area */}
+                {(viewMode === 'split' || outputText) && (
+                    <div className={`flex-1 flex flex-col bg-white dark:bg-neutral-900 transition-all duration-300 ${viewMode === 'focus' && !outputText ? 'hidden' : 'flex'}`}>
+                        <div className="flex-1 p-6 overflow-y-auto">
+                            {outputText ? (
+                                <div className="prose dark:prose-invert max-w-none">
+                                    <p className="text-lg leading-relaxed font-serif whitespace-pre-wrap">{outputText}</p>
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30">
+                                    <div className="h-16 w-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 flex items-center justify-center mb-4">
+                                        <Sparkles className="h-8 w-8 text-indigo-200" />
+                                    </div>
+                                    <p className="text-sm font-medium">AI suggestions will appear here</p>
                                 </div>
                             )}
-
-                            {activeTool === 'summarize' && (
-                                <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-                                    {SUMMARIZE_MODES.map(mode => (
-                                        <button
-                                            key={mode.id}
-                                            onClick={() => setActiveMode(mode.id)}
-                                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
-                                                ? 'bg-background text-foreground shadow-sm border border-border'
-                                                : 'text-muted-foreground hover:text-foreground'
-                                                }`}
-                                        >
-                                            {mode.label}
-                                        </button>
-                                    ))}
+                        </div>
+                        {outputText && (
+                            <div className="p-4 border-t border-border flex justify-between items-center bg-background/50 backdrop-blur-sm">
+                                <div className="text-xs text-muted-foreground font-mono">
+                                    Generated by Grok 4.1
                                 </div>
-                            )}
-
-                            {activeTool === 'translate' && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-muted-foreground">To:</span>
-                                    <select
-                                        value={targetLang}
-                                        onChange={(e) => setTargetLang(e.target.value)}
-                                        className="bg-muted/50 border border-border text-sm rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500"
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleCopy}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-md transition-colors"
                                     >
-                                        {LANGUAGES.map(lang => (
-                                            <option key={lang.id} value={lang.id}>{lang.label}</option>
-                                        ))}
-                                    </select>
+                                        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                        {copied ? 'Copied' : 'Copy'}
+                                    </button>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
-
-                    {/* Editor Area */}
-                    <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-
-                        {/* Input Pane */}
-                        <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-border min-h-[300px]">
-                            <div className="flex-1 p-4 md:p-6 relative group">
-                                <textarea
-                                    value={inputText}
-                                    onChange={(e) => setInputText(e.target.value)}
-                                    placeholder="Paste text or write here to start..."
-                                    className="w-full h-full bg-transparent border-none resize-none focus:outline-none text-base leading-relaxed placeholder:text-muted-foreground/50"
-                                    spellCheck="false"
-                                />
-
-                                {!inputText && (
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-3">
-                                        <button
-                                            onClick={handlePaste}
-                                            className="flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors text-sm font-medium"
-                                        >
-                                            <ClipboardPaste className="h-4 w-4" />
-                                            Paste Text
-                                        </button>
-                                        <button className="flex items-center gap-2 px-4 py-2 rounded-full border border-border text-muted-foreground hover:bg-muted transition-colors text-sm font-medium cursor-not-allowed opacity-60">
-                                            <Upload className="h-4 w-4" />
-                                            Upload Doc
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Input Footer */}
-                            <div className="h-14 border-t border-border flex items-center justify-between px-4 md:px-6 bg-muted/10">
-                                <div className="text-xs text-muted-foreground font-medium">
-                                    {inputText.split(/\s+/).filter(w => w).length} words
-                                </div>
-                                <button
-                                    onClick={runEnhance}
-                                    disabled={!inputText.trim() || isProcessing}
-                                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:shadow-none transition-all flex items-center gap-2"
-                                >
-                                    {isProcessing ? (
-                                        <>
-                                            <RefreshCw className="h-4 w-4 animate-spin" />
-                                            Processing...
-                                        </>
-                                    ) : (
-                                        <>
-                                            {activeTool === 'paraphrase' && 'Paraphrase'}
-                                            {activeTool === 'grammar' && 'Fix Errors'}
-                                            {activeTool === 'summarize' && 'Summarize'}
-                                            {activeTool === 'translate' && 'Translate'}
-                                            <ArrowRight className="h-4 w-4" />
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Output Pane */}
-                        <div className="flex-1 flex flex-col bg-muted/10">
-                            <div className="flex-1 p-4 md:p-6 overflow-y-auto">
-                                {outputText ? (
-                                    <div className="prose dark:prose-invert max-w-none">
-                                        <p className="text-base leading-relaxed whitespace-pre-wrap">{outputText}</p>
-                                    </div>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40">
-                                        <Sparkles className="h-12 w-12 mb-4 opacity-20" />
-                                        <p className="text-sm">AI output will appear here</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Output Footer */}
-                            <div className="h-14 border-t border-border flex items-center justify-between px-4 md:px-6 bg-muted/20">
-                                <div className="flex items-center gap-2">
-                                    {outputText && (
-                                        <>
-                                            <button
-                                                onClick={handleCopy}
-                                                className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-foreground transition-colors relative group"
-                                                title="Copy to clipboard"
-                                            >
-                                                {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-                                            </button>
-                                            <button
-                                                onClick={runEnhance}
-                                                className="p-2 hover:bg-background rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                                                title="Regenerate"
-                                            >
-                                                <RotateCcw className="h-4 w-4" />
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                                {outputText && (
-                                    <div className="text-xs text-muted-foreground font-medium">
-                                        {outputText.split(/\s+/).filter(w => w).length} words
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                    </div>
-                </main>
+                )}
             </div>
         </div>
     );
