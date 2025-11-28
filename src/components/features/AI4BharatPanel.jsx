@@ -232,7 +232,7 @@ const DemoSection = () => {
                         { role: 'system', content: `You are an expert translator. Translate the following text from ${indianLanguages.find(l => l.code === sourceLanguage)?.name} to ${indianLanguages.find(l => l.code === targetLanguage)?.name}. Return ONLY the translated text.` },
                         { role: 'user', content: inputText }
                     ],
-                    model: 'meta-llama/llama-3.3-70b-instruct:free',
+                    model: 'x-ai/grok-4.1-fast:free',
                     stream: false
                 })
             });
