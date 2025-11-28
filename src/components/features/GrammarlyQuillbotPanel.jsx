@@ -88,18 +88,34 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, model = 'google/gemini-2.0-fl
                         { role: 'user', content: getPrompt() }
                     ],
                     model: 'x-ai/grok-4.1-fast:free',
-                    stream: false
+                    stream: true
                 })
             });
 
-            const data = await response.json();
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let accumulatedContent = '';
 
-            if (data.choices && data.choices[0].message) {
-                setOutputText(data.choices[0].message.content);
-            } else if (data.error) {
-                setOutputText(`Error: ${data.error.message || JSON.stringify(data.error)}`);
-            } else {
-                setOutputText('No response generated.');
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.content) {
+                                accumulatedContent += data.content;
+                                setOutputText(accumulatedContent);
+                            }
+                        } catch (e) {
+                            // Ignore parse errors
+                        }
+                    }
+                }
             }
         } catch (err) {
             setOutputText(`Error: ${err.message}`);
