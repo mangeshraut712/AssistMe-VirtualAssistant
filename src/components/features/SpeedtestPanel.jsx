@@ -14,6 +14,13 @@ import { cn } from '@/lib/utils';
 
 const GradientBackground = () => (
     <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+        <style>{`
+            @keyframes dash {
+                to {
+                    stroke-dashoffset: -12;
+                }
+            }
+        `}</style>
         <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-primary/20 blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-purple-500/20 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
     </div>
@@ -458,18 +465,101 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                 )}
                             </AnimatePresence>
 
-                            {/* Location & Map */}
-                            <div className="bg-card/40 border border-border/50 rounded-2xl overflow-hidden h-48 relative group">
-                                <div className="absolute top-4 left-4 z-10 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-semibold border border-border/50 shadow flex items-center gap-2 transform group-hover:scale-105 transition-transform">
-                                    <div className="w-2 h-2 rounded-full bg-primary" />
-                                    {stats.location}
+                            {/* Server Location Card (Enhanced) */}
+                            <div className="bg-card/40 border border-border/50 rounded-2xl overflow-hidden backdrop-blur-sm">
+                                <div className="p-4 border-b border-border/30 flex items-center gap-2">
+                                    <h3 className="font-bold text-lg">Server Location</h3>
+                                    <Info className="h-4 w-4 text-muted-foreground" />
                                 </div>
-                                <AnimatedGlobe />
-                                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                                    <div className="text-xs text-muted-foreground backdrop-blur-sm bg-background/30 px-2 py-1 rounded">
-                                        Server: AWS Mumbai (ap-south-1)
+
+                                {/* Map Visualization */}
+                                <div className="h-64 relative bg-[#f0f0f0] dark:bg-[#1a1b1e] overflow-hidden group">
+                                    {/* Static Map Background (Abstract) */}
+                                    <div className="absolute inset-0 opacity-40 dark:opacity-20 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/India_location_map.svg/1709px-India_location_map.svg.png')] bg-cover bg-[center_top_40%] grayscale contrast-125" />
+
+                                    {/* Connection Line */}
+                                    <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md">
+                                        <defs>
+                                            <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stopColor="#f97316" />
+                                                <stop offset="100%" stopColor="#ef4444" />
+                                            </linearGradient>
+                                            <filter id="glow">
+                                                <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                                                <feMerge>
+                                                    <feMergeNode in="coloredBlur" />
+                                                    <feMergeNode in="SourceGraphic" />
+                                                </feMerge>
+                                            </filter>
+                                        </defs>
+                                        <path
+                                            d="M100,80 Q250,150 400,200"
+                                            fill="none"
+                                            stroke="url(#lineGrad)"
+                                            strokeWidth="3"
+                                            strokeDasharray="8 4"
+                                            className="animate-[dash_1s_linear_infinite]"
+                                            filter="url(#glow)"
+                                        />
+                                        {/* Server Point (Cloud) */}
+                                        <g transform="translate(80, 60)">
+                                            <circle r="6" fill="#f97316" className="animate-ping opacity-75" />
+                                            <circle r="4" fill="#f97316" />
+                                        </g>
+                                        {/* Client Point (Pin) */}
+                                        <g transform="translate(400, 200)">
+                                            <circle r="6" fill="#ef4444" className="animate-ping opacity-75" />
+                                            <circle r="4" fill="#ef4444" />
+                                        </g>
+                                    </svg>
+
+                                    {/* Server Label (Mumbai) */}
+                                    <div className="absolute top-[60px] left-[90px] bg-background/90 px-2 py-1 rounded text-xs font-bold shadow-sm border border-border/20 flex items-center gap-1">
+                                        <div className="text-orange-500">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 19C19.9853 19 22 16.9853 22 14.5C22 12.132 20.177 10.244 17.819 10.022C17.368 6.643 14.394 4 10.5 4C6.671 4 3.737 6.696 3.327 10.16C3.218 10.155 3.109 10.15 3 10.15C1.343 10.15 0 11.493 0 13.15C0 14.807 1.343 16.15 3 16.15V19H17.5Z" /></svg>
+                                        </div>
+                                        Mumbai
                                     </div>
-                                    <MapPin className="h-6 w-6 text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.8)]" />
+
+                                    {/* Client Label (Pune) */}
+                                    <div className="absolute top-[210px] left-[390px] -translate-x-1/2 bg-background/90 px-2 py-1 rounded text-xs font-bold shadow-sm border border-border/20 flex items-center gap-1">
+                                        <MapPin className="h-3 w-3 text-red-500 fill-current" />
+                                        Pune
+                                    </div>
+                                </div>
+
+                                {/* Network Info Details */}
+                                <div className="p-4 space-y-3 bg-card/30 text-sm">
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-muted-foreground"><Globe className="h-4 w-4" /></div>
+                                        <div>
+                                            <span className="text-muted-foreground mr-1">Connected via</span>
+                                            <span className="font-semibold">IPv6</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-muted-foreground">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2" /><rect x="2" y="14" width="20" height="8" rx="2" ry="2" /><line x1="6" y1="6" x2="6.01" y2="6" /><line x1="6" y1="18" x2="6.01" y2="18" /></svg>
+                                        </div>
+                                        <div>
+                                            <span className="text-muted-foreground mr-1">Server location:</span>
+                                            <span className="font-semibold">Mumbai</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-muted-foreground"><MapPin className="h-4 w-4" /></div>
+                                        <div>
+                                            <span className="text-muted-foreground mr-1">Your network:</span>
+                                            <span className="font-semibold text-primary">Bharti Airtel Limited (AS24560)</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-muted-foreground"><Monitor className="h-4 w-4" /></div>
+                                        <div>
+                                            <span className="text-muted-foreground mr-1">Your IP address:</span>
+                                            <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{stats.ip}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
