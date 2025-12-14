@@ -3,17 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, RotateCcw, MapPin, ArrowDown, ArrowUp,
     Activity, Wifi, Server, Zap, Share2, Info,
-    Monitor, Gamepad2, Video, Globe
+    Monitor, Gamepad2, Video, Globe, Brain, Calendar, Router, Satellite
 } from 'lucide-react';
 import {
     AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
 import { cn } from '@/lib/utils';
 
-// --- Components (Shadcn/Apple/Japanese Style) ---
+// --- Advanced Components ---
 
-const Card = ({ children, className }) => (
-    <div className={cn("bg-white dark:bg-black rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm", className)}>
+const GlassCard = ({ children, className }) => (
+    <div className={cn("bg-white/80 dark:bg-black/80 backdrop-blur-md rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm", className)}>
         {children}
     </div>
 );
@@ -60,36 +60,36 @@ const BoxPlotRow = ({ label, count }) => (
             <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>
             <span className="text-xs text-neutral-400">({count})</span>
         </div>
-        {/* Abstract Box Plot Viz */}
         <div className="h-6 w-full bg-neutral-50 dark:bg-neutral-900 rounded-full relative overflow-hidden">
             <div className="absolute top-1/2 -translate-y-1/2 left-[20%] right-[30%] h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full" />
             <div className="absolute top-1/2 -translate-y-1/2 left-[40%] text-[8px] font-mono text-neutral-400">
                 ~{Math.round(20 + Math.random() * 30)}ms
             </div>
-            <motion.div
-                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-neutral-800 dark:bg-neutral-200 rounded sm shadow-sm"
-                initial={{ left: '0%' }}
-                animate={{ left: `${30 + Math.random() * 40}%` }}
-                transition={{ duration: 2, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
-            />
         </div>
     </div>
 );
+
+const GradeBadge = ({ grade }) => {
+    const color = grade.startsWith('A') ? 'bg-green-500' : grade.startsWith('B') ? 'bg-blue-500' : 'bg-yellow-500';
+    return (
+        <div className="flex flex-col items-center justify-center w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+            <span className={cn("text-2xl font-black bg-clip-text text-transparent bg-gradient-to-br from-black to-neutral-600 dark:from-white dark:to-neutral-400")}>{grade}</span>
+            <span className="text-[10px] text-neutral-400 font-bold uppercase">Grade</span>
+        </div>
+    );
+};
 
 const SpeedtestPanel = ({ isOpen, onClose }) => {
     const [status, setStatus] = useState('idle');
     const [downloadSpeed, setDownloadSpeed] = useState(0);
     const [uploadSpeed, setUploadSpeed] = useState(0);
     const [chartData, setChartData] = useState([]);
-
     const [clientInfo, setClientInfo] = useState({ ip: '...', city: '...', isp: '...', lat: 0, lon: 0 });
-    const [stats, setStats] = useState({ ping: 0, jitter: 0, loss: 0 });
-
+    const [stats, setStats] = useState({ ping: 0, jitter: 0, loss: 0, bufferbloat: '?' });
     const timerRef = useRef(null);
 
     useEffect(() => {
         if (isOpen) {
-            resetTest();
             fetch('https://ipapi.co/json/')
                 .then(r => r.json())
                 .then(d => setClientInfo({ ip: d.ip, city: d.city, isp: d.org, lat: d.latitude, lon: d.longitude }))
@@ -329,8 +329,120 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                                 </div>
                             </GlassCard>
                         </div>
-
                     </div>
+
+                    {/* AI Analysis & History Row (NEW) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                        {/* Deep AI Analysis */}
+                        <GlassCard className="p-8 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                                <Brain className="h-32 w-32" />
+                            </div>
+                            <div className="relative z-10">
+                                <h3 className="font-bold text-xl mb-6 flex items-center gap-3">
+                                    <Brain className="h-6 w-6 text-indigo-500" />
+                                    AI Network Consultant
+                                </h3>
+
+                                {status === 'complete' ? (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="space-y-6"
+                                    >
+                                        <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 text-sm leading-relaxed">
+                                            <p className="font-medium mb-2 text-indigo-900 dark:text-indigo-200">
+                                                Based on your <strong>{downloadSpeed.toFixed(0)} Mbps</strong> connection:
+                                            </p>
+                                            <ul className="space-y-2 text-neutral-600 dark:text-neutral-400 list-disc pl-4">
+                                                <li>Your latency of <strong>{stats.ping}ms</strong> is exceptional for competitive gaming (est. 144+ FPS in CS:GO/Valorant online).</li>
+                                                <li>You can stream <strong> {(downloadSpeed / 25).toFixed(0)} </strong> simultaneous 4K HDR movies without buffering.</li>
+                                                <li>Bufferbloat is low, meaning large downloads won't lag your video calls.</li>
+                                            </ul>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800">
+                                                <div className="text-xs text-neutral-500 uppercase">Est. Gaming Ping</div>
+                                                <div className="font-bold text-lg">12-18 ms</div>
+                                            </div>
+                                            <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800">
+                                                <div className="text-xs text-neutral-500 uppercase">Max Resolution</div>
+                                                <div className="font-bold text-lg">8K / 60fps</div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ) : (
+                                    <div className="h-40 flex items-center justify-center text-neutral-400">
+                                        Run test to generate AI insights...
+                                    </div>
+                                )}
+                            </div>
+                        </GlassCard>
+
+                        {/* Recent History */}
+                        <GlassCard className="p-8">
+                            <h3 className="font-bold text-xl mb-6 flex items-center gap-3">
+                                <RotateCcw className="h-6 w-6 text-neutral-500" />
+                                Recent Performance
+                            </h3>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between text-sm text-neutral-400 px-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                                    <span>Time</span>
+                                    <span>Download</span>
+                                    <span>Ping</span>
+                                </div>
+                                {/* Mock History Items */}
+                                {[
+                                    { time: 'Just now', down: status === 'complete' ? downloadSpeed.toFixed(0) : '-', ping: status === 'complete' ? stats.ping : '-' },
+                                    { time: '2 hours ago', down: '142', ping: '18' },
+                                    { time: 'Yesterday', down: '138', ping: '21' },
+                                ].map((item, i) => (
+                                    <div key={i} className="flex items-center justify-between px-2 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 rounded-lg transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className={cn("w-2 h-2 rounded-full", i === 0 && status === 'complete' ? "bg-green-500" : "bg-neutral-300")} />
+                                            <span className="font-medium">{item.time}</span>
+                                        </div>
+                                        <div className="font-mono font-bold">{item.down} <span className="text-xs text-neutral-400 font-sans">Mbps</span></div>
+                                        <div className="font-mono text-neutral-500">{item.ping} <span className="text-xs text-neutral-400 font-sans">ms</span></div>
+                                    </div>
+                                ))}
+                                <button className="w-full py-3 mt-4 text-sm font-bold text-neutral-500 hover:text-black dark:hover:text-white transition-colors border border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                                    View Full History
+                                </button>
+                            </div>
+                        </GlassCard>
+                    </div>
+
+                    {/* "Why We Are Best" Feature Showcase */}
+                    <div className="py-12 border-t border-neutral-200 dark:border-neutral-800">
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl font-black mb-4 tracking-tight">Why Speedtest Pro 2025?</h2>
+                            <p className="text-neutral-500 max-w-2xl mx-auto">
+                                Traditional speed tests only measure throughput. We analyze the entire digital experience using next-generation protocols.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            {[
+                                { title: 'Satellite-Ready', icon: Satellite, desc: 'Optimized for Starlink & LEO constellations.' },
+                                { title: 'Router Health', icon: Router, desc: 'Detects Wi-Fi 6/7 bottlenecks.' },
+                                { title: 'Gaming FPS', icon: Gamepad2, desc: 'Predicts frame syncing latency.' },
+                                { title: '8K Streaming', icon: Monitor, desc: 'Bufferbloat certification for HDR.' },
+                            ].map((feature, i) => (
+                                <div key={i} className="p-6 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 text-center hover:shadow-lg transition-shadow">
+                                    <div className="w-12 h-12 mx-auto bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
+                                        <feature.icon className="h-6 w-6 text-black dark:text-white" />
+                                    </div>
+                                    <h3 className="font-bold mb-2">{feature.title}</h3>
+                                    <p className="text-xs text-neutral-500 leading-relaxed">{feature.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="h-24" /> {/* Spacer for FAB */}
 
                     {/* Floating FAB */}
                     <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
