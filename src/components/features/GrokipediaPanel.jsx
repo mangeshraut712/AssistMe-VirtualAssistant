@@ -213,77 +213,53 @@ Use Markdown formatting. Be factual and comprehensive.`
 
     if (!isOpen) return null;
 
+    // ... (imports remain the same)
+
+    if (!isOpen) return null;
+
     return (
         <AnimatePresence>
             <motion.div
-                className="fixed inset-0 bg-background z-50 flex flex-col"
+                className="fixed inset-0 bg-background z-50 flex flex-col font-sans"
                 variants={panelVariants}
                 initial="hidden"
                 animate="visible"
                 exit="exit"
             >
-                {/* Header */}
+                {/* Header - Minimalist */}
                 <motion.header
                     className={cn(
-                        'h-16 border-b border-border flex items-center justify-between px-4 lg:px-6',
-                        'bg-background/95 backdrop-blur-xl sticky top-0 z-10'
+                        'h-16 border-b border-border/40 flex items-center justify-between px-4 lg:px-6',
+                        'bg-background/95 backdrop-blur-sm sticky top-0 z-10'
                     )}
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.1 }}
                 >
                     <div className="flex items-center gap-3">
-                        <div className={cn(
-                            'h-10 w-10 rounded-xl flex items-center justify-center',
-                            'bg-gradient-to-br from-primary/20 to-primary/5',
-                            'border border-primary/20'
-                        )}>
-                            <BookOpen className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                            <h1 className="font-bold text-lg tracking-tight">Grokipedia</h1>
-                            <p className="text-xs text-muted-foreground">AI-Powered Encyclopedia</p>
-                        </div>
+                        <h1 className="font-serif text-2xl font-medium tracking-tight">Grokipedia <span className="text-muted-foreground text-sm font-sans italic">v0.2</span></h1>
                     </div>
 
-                    {/* Search Bar */}
-                    <div className="flex-1 max-w-xl mx-6">
-                        <div className="relative group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                            <input
-                                type="text"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                onKeyDown={handleSearch}
-                                placeholder="Search any topic..."
-                                className={cn(
-                                    'w-full h-11 pl-11 pr-20 rounded-xl',
-                                    'bg-muted/50 border border-transparent',
-                                    'hover:bg-muted focus:bg-background',
-                                    'focus:border-border focus:ring-2 focus:ring-primary/20',
-                                    'text-sm transition-all outline-none'
-                                )}
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                {isSearching ? (
-                                    <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                    >
-                                        <Sparkles className="h-4 w-4 text-primary" />
-                                    </motion.div>
-                                ) : (
-                                    <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 rounded bg-muted text-[10px] font-medium text-muted-foreground">
-                                        <span>⌘</span>K
-                                    </kbd>
-                                )}
+                    {/* Search Bar - visible in header only when article is present */}
+                    {article && (
+                        <div className="flex-1 max-w-xl mx-6 hidden md:block">
+                            <div className="relative group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    onKeyDown={handleSearch}
+                                    placeholder="Search..."
+                                    className="w-full h-9 pl-9 pr-4 rounded-md bg-muted/30 border-none focus:ring-1 focus:ring-primary/20 text-sm transition-all"
+                                />
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     <motion.button
                         onClick={onClose}
-                        className="p-2.5 hover:bg-muted rounded-xl transition-colors"
+                        className="p-2 hover:bg-muted rounded-full transition-colors"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
@@ -291,223 +267,134 @@ Use Markdown formatting. Be factual and comprehensive.`
                     </motion.button>
                 </motion.header>
 
-                {/* Main Layout */}
+                {/* Main Content */}
                 <div className="flex-1 flex overflow-hidden">
-                    {/* Sidebar (TOC) */}
-                    <motion.aside
-                        className="hidden lg:flex flex-col w-72 border-r border-border bg-background/50"
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                    >
-                        <div className="p-4 border-b border-border/50">
-                            <h3 className="font-semibold text-sm text-muted-foreground">Table of Contents</h3>
-                        </div>
-                        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-                            {article ? (
-                                toc.map((item, index) => (
-                                    <TocItem
-                                        key={item.id}
-                                        item={item}
-                                        index={index}
-                                        isActive={activeSection === item.id}
-                                        onClick={scrollToSection}
-                                    />
-                                ))
-                            ) : (
-                                <div className="space-y-2 p-2">
-                                    <Skeleton className="h-4 w-3/4" />
-                                    <Skeleton className="h-4 w-1/2" />
-                                    <Skeleton className="h-4 w-5/6" />
-                                    <Skeleton className="h-4 w-2/3" />
+                    {article || isSearching ? (
+                        <>
+                            {/* TOC Sidebar */}
+                            <motion.aside
+                                className="hidden lg:flex flex-col w-64 border-r border-border/40 bg-background pt-8"
+                                initial={{ x: -20, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <div className="px-6 pb-4">
+                                    <h3 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Contents</h3>
                                 </div>
-                            )}
-                        </nav>
-                    </motion.aside>
+                                <nav className="flex-1 overflow-y-auto px-4 space-y-0.5">
+                                    {article ? (
+                                        toc.map((item, index) => (
+                                            <TocItem
+                                                key={item.id}
+                                                item={item}
+                                                index={index}
+                                                isActive={activeSection === item.id}
+                                                onClick={scrollToSection}
+                                            />
+                                        ))
+                                    ) : (
+                                        <div className="space-y-3 px-2">
+                                            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-4 w-full opacity-30" />)}
+                                        </div>
+                                    )}
+                                </nav>
+                            </motion.aside>
 
-                    {/* Content Area */}
-                    <main className="flex-1 overflow-y-auto" ref={contentRef}>
-                        <div className="max-w-3xl mx-auto px-6 py-10 md:px-10">
-                            <AnimatePresence mode="wait">
-                                {isSearching && !article?.content ? (
-                                    <motion.div
-                                        key="loading"
-                                        variants={contentVariants}
-                                        initial="hidden"
-                                        animate="visible"
-                                        exit="hidden"
-                                        className="space-y-8"
-                                    >
-                                        <Skeleton className="h-12 w-3/4" />
-                                        <div className="space-y-4">
-                                            <Skeleton className="h-4 w-full" />
-                                            <Skeleton className="h-4 w-full" />
-                                            <Skeleton className="h-4 w-5/6" />
-                                        </div>
-                                        <div className="space-y-4">
-                                            <Skeleton className="h-4 w-full" />
-                                            <Skeleton className="h-4 w-4/5" />
-                                        </div>
-                                    </motion.div>
-                                ) : article ? (
-                                    <motion.article
-                                        key="article"
-                                        variants={contentVariants}
-                                        initial="hidden"
-                                        animate="visible"
-                                        className="prose dark:prose-invert prose-lg max-w-none"
-                                    >
-                                        {/* Article Header */}
-                                        <div className="mb-8 pb-8 border-b border-border">
-                                            <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Sparkles className="h-4 w-4 text-primary" />
-                                                    <span>Generated by Grok</span>
-                                                </div>
-                                                <span>•</span>
-                                                <div className="flex items-center gap-1">
-                                                    <Clock className="h-3.5 w-3.5" />
+                            {/* Article Area */}
+                            <main className="flex-1 overflow-y-auto" ref={contentRef}>
+                                <div className="max-w-3xl mx-auto px-6 py-12 md:px-12">
+                                    <AnimatePresence mode="wait">
+                                        {isSearching && !article?.content ? (
+                                            <motion.div
+                                                key="loading"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                className="space-y-8"
+                                            >
+                                                <Skeleton className="h-16 w-3/4 mb-8" />
+                                                {[1, 2, 3].map(i => (
+                                                    <div key={i} className="space-y-3">
+                                                        <Skeleton className="h-4 w-full" />
+                                                        <Skeleton className="h-4 w-full" />
+                                                        <Skeleton className="h-4 w-5/6" />
+                                                    </div>
+                                                ))}
+                                            </motion.div>
+                                        ) : article ? (
+                                            <motion.article
+                                                key="article"
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="prose dark:prose-invert prose-lg max-w-none prose-headings:font-serif prose-p:leading-relaxed prose-headings:font-medium"
+                                            >
+                                                {/* Meta Info */}
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6 font-medium">
+                                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 border border-border/50">
+                                                        <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                                        <span>Fact-checked by Grok</span>
+                                                    </div>
+                                                    <span className="text-muted-foreground/40">•</span>
                                                     <span>{article.lastUpdated}</span>
                                                 </div>
-                                            </div>
-                                            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-                                                {article.title}
-                                            </h1>
-                                            {/* Action Bar */}
-                                            <div className="flex items-center gap-2 mt-6">
-                                                <motion.button
-                                                    onClick={handleCopy}
-                                                    className={cn(
-                                                        'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm',
-                                                        'bg-muted hover:bg-muted/80 transition-colors'
-                                                    )}
-                                                    whileHover={{ scale: 1.02 }}
-                                                    whileTap={{ scale: 0.98 }}
-                                                >
-                                                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                                    <span>{copied ? 'Copied!' : 'Copy'}</span>
-                                                </motion.button>
-                                                <motion.button
-                                                    className={cn(
-                                                        'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm',
-                                                        'bg-muted hover:bg-muted/80 transition-colors'
-                                                    )}
-                                                    whileHover={{ scale: 1.02 }}
-                                                    whileTap={{ scale: 0.98 }}
-                                                >
-                                                    <Share2 className="h-4 w-4" />
-                                                    <span>Share</span>
-                                                </motion.button>
-                                            </div>
-                                        </div>
 
-                                        {/* Article Body */}
-                                        <div
-                                            className="markdown-content leading-relaxed"
-                                            dangerouslySetInnerHTML={renderMarkdown(article.content)}
-                                        />
-                                    </motion.article>
-                                ) : (
-                                    <motion.div
-                                        key="empty"
-                                        variants={contentVariants}
-                                        initial="hidden"
-                                        animate="visible"
-                                        className="flex flex-col items-center justify-center h-[60vh] text-center"
-                                    >
-                                        <motion.div
-                                            className={cn(
-                                                'w-20 h-20 rounded-2xl flex items-center justify-center mb-6',
-                                                'bg-gradient-to-br from-primary/20 to-primary/5',
-                                                'border border-primary/20'
-                                            )}
-                                            animate={{
-                                                scale: [1, 1.05, 1],
-                                                rotate: [0, 5, -5, 0]
-                                            }}
-                                            transition={{ duration: 4, repeat: Infinity }}
-                                        >
-                                            <BookOpen className="h-10 w-10 text-primary" />
-                                        </motion.div>
-                                        <h2 className="text-3xl font-bold mb-3">Explore Grokipedia</h2>
-                                        <p className="text-muted-foreground max-w-md mb-8">
-                                            Search any topic to get a comprehensive, AI-generated article powered by Grok.
-                                        </p>
-                                        <div className="flex flex-wrap justify-center gap-2">
-                                            {['Quantum Computing', 'Black Holes', 'Neural Networks', 'Climate Change'].map((topic) => (
-                                                <motion.button
-                                                    key={topic}
-                                                    onClick={() => {
-                                                        setQuery(topic);
-                                                        setTimeout(() => handleSearch({ key: 'Enter' }), 100);
-                                                    }}
-                                                    className={cn(
-                                                        'px-4 py-2 rounded-full text-sm font-medium',
-                                                        'bg-muted hover:bg-primary/10 hover:text-primary',
-                                                        'transition-all'
-                                                    )}
-                                                    whileHover={{ scale: 1.05, y: -2 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    {topic}
-                                                </motion.button>
-                                            ))}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </main>
+                                                {/* Title */}
+                                                <h1 className="font-serif text-5xl font-medium tracking-tight mb-8 text-foreground">
+                                                    {article.title}
+                                                </h1>
 
-                    {/* Right Sidebar - Article Info */}
-                    <motion.aside
-                        className="hidden xl:flex flex-col w-72 border-l border-border bg-muted/20 p-6"
-                        initial={{ x: 20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                    >
-                        {article && (
-                            <div className="space-y-6">
-                                <div className="p-4 rounded-xl border border-border bg-card">
-                                    <h4 className="font-semibold mb-3 text-sm">About this article</h4>
-                                    <div className="space-y-3 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Source</span>
-                                            <span className="font-medium flex items-center gap-1">
-                                                <Sparkles className="h-3 w-3 text-primary" />
-                                                Grok AI
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Sections</span>
-                                            <span className="font-medium">{toc.length}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Words</span>
-                                            <span className="font-medium">
-                                                ~{article.content ? article.content.split(/\s+/).length : 0}
-                                            </span>
-                                        </div>
+                                                {/* Content */}
+                                                <div
+                                                    className="markdown-content font-serif text-lg leading-relaxed text-foreground/90"
+                                                    dangerouslySetInnerHTML={renderMarkdown(article.content)}
+                                                />
+                                            </motion.article>
+                                        ) : null}
+                                    </AnimatePresence>
+                                </div>
+                            </main>
+                        </>
+                    ) : (
+                        /* Landing View (Empty State) */
+                        <motion.div
+                            key="landing"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex-1 flex flex-col items-center justify-center p-6 -mt-16"
+                        >
+                            <div className="w-full max-w-2xl text-center space-y-8">
+                                <motion.div
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    <h1 className="font-serif text-6xl md:text-7xl font-medium tracking-tight mb-4">Grokipedia <span className="text-2xl text-muted-foreground italic font-sans -mt-4 inline-block align-top">v0.2</span></h1>
+                                </motion.div>
+
+                                <div className="relative max-w-xl mx-auto w-full">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                    <input
+                                        type="text"
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        onKeyDown={handleSearch}
+                                        placeholder="Search Encyclopedia..."
+                                        className="w-full h-14 pl-12 pr-4 rounded-full bg-muted/40 border border-transparent hover:border-border hover:bg-muted/60 focus:bg-background focus:border-primary/20 focus:ring-4 focus:ring-primary/5 text-lg transition-all outline-none text-center placeholder:text-muted-foreground/50"
+                                        autoFocus
+                                    />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                        <kbd className="hidden sm:inline-flex h-6 items-center gap-1 rounded border bg-muted px-2 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                                            <span className="text-xs">⏎</span>
+                                        </kbd>
                                     </div>
                                 </div>
 
-                                {/* Related Topics */}
-                                <div className="p-4 rounded-xl border border-border bg-card">
-                                    <h4 className="font-semibold mb-3 text-sm">Related Topics</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {['AI', 'Technology', 'Science', 'Research'].map((tag) => (
-                                            <span
-                                                key={tag}
-                                                className="px-2 py-1 rounded-md bg-muted text-xs font-medium"
-                                            >
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
+                                <div className="pt-8">
+                                    <p className="text-sm font-medium text-muted-foreground mb-4">Articles Available</p>
+                                    <p className="font-serif text-2xl font-bold tabular-nums">1,089,057</p>
                                 </div>
                             </div>
-                        )}
-                    </motion.aside>
+                        </motion.div>
+                    )}
                 </div>
             </motion.div>
         </AnimatePresence>
