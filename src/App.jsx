@@ -27,6 +27,7 @@ const MODELS = [
     { id: 'nvidia/nemotron-nano-9b-v2:free', name: '🎤 NVIDIA: Nemotron Nano 9B V2 (Free)', provider: 'NVIDIA', free: true, voiceOptimized: true },
 
     // Free Models (Priority 1)
+    { id: 'nex-agi/deepseek-v3.1-nex-n1:free', name: 'Nex AGI: DeepSeek V3.1 Nex N1 (Free)', provider: 'Nex AGI', free: true },
     { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Meta Llama 3.3 70B Instruct (Free)', provider: 'Meta', free: true },
     { id: 'google/gemini-2.0-flash-001:free', name: 'Google: Gemini 2.0 Flash (Free)', provider: 'Google', free: true },
     { id: 'google/gemma-3-27b-it:free', name: 'Google: Gemma 3 27B IT (Free)', provider: 'Google', free: true },

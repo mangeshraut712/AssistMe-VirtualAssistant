@@ -241,7 +241,7 @@ Use Markdown formatting. Be factual and comprehensive.`
                     transition={{ delay: 0.1 }}
                 >
                     <div className="flex items-center gap-3">
-                        <h1 className="font-serif text-2xl font-medium tracking-tight">Grokipedia <span className="text-muted-foreground text-sm font-sans italic">v0.2</span></h1>
+                        <h1 className="font-serif text-2xl font-medium tracking-tight">Grokipedia</h1>
                     </div>
 
                     {/* Search Bar - visible in header only when article is present */}
@@ -371,7 +371,7 @@ Use Markdown formatting. Be factual and comprehensive.`
                                     animate={{ scale: 1, opacity: 1 }}
                                     transition={{ duration: 0.5 }}
                                 >
-                                    <h1 className="font-serif text-6xl md:text-7xl font-medium tracking-tight mb-4">Grokipedia <span className="text-2xl text-muted-foreground italic font-sans -mt-4 inline-block align-top">v0.2</span></h1>
+                                    <h1 className="font-serif text-6xl md:text-7xl font-medium tracking-tight mb-4">Grokipedia</h1>
                                 </motion.div>
 
                                 <div className="relative max-w-xl mx-auto w-full">
