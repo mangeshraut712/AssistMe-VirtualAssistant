@@ -123,7 +123,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
             });
 
             await api.streamChat({
-                model: 'x-ai/grok-3-mini-beta',
+                model: 'x-ai/grok-4.1-fast',
                 messages: [
                     {
                         role: 'system',
