@@ -102,7 +102,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
         setDownloadSpeed(0);
         setUploadSpeed(0);
         setChartData([]);
-        setStats({ ping: 0, jitter: 0, loss: 0 });
+        setStats({ ping: 0, jitter: 0, loss: 0, bufferbloat: '?' });
         if (timerRef.current) clearInterval(timerRef.current);
     };
 
@@ -118,7 +118,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
 
         setStatus('download');
         let speed = 0;
-        const targetD = 120 + Math.random() * 40;
+        const targetD = 130 + Math.random() * 60;
         await new Promise(resolve => {
             let t = 0;
             timerRef.current = setInterval(() => {
@@ -148,6 +148,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
         });
 
         setStatus('complete');
+        setStats(s => ({ ...s, loss: 0, bufferbloat: 'A' }));
     };
 
     if (!isOpen) return null;
@@ -155,30 +156,32 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
     return (
         <AnimatePresence>
             <motion.div
-                className="fixed inset-0 z-50 bg-neutral-50 dark:bg-neutral-950 overflow-y-auto font-sans"
+                className="fixed inset-0 z-50 bg-neutral-50 dark:bg-neutral-950 overflow-y-auto font-sans selection:bg-orange-500/20"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
             >
-                {/* Minimal Header */}
-                <header className="bg-white dark:bg-black border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-40">
-                    <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+                {/* Modern Header */}
+                <header className="bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-40">
+                    <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Zap className="h-5 w-5 text-orange-500" />
-                            <span className="font-bold text-lg tracking-tight">Speed Test</span>
+                            <div className="w-8 h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center">
+                                <Zap className="h-5 w-5 text-white dark:text-black fill-current" />
+                            </div>
+                            <span className="font-bold text-lg tracking-tight">Speedtest <span className="text-neutral-400 items-center text-xs ml-1 font-mono">PRO</span></span>
                         </div>
-                        <div className="flex gap-4">
-                            <button onClick={onClose} className="text-sm font-medium hover:opacity-70">Close</button>
-                        </div>
+                        <button onClick={onClose} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-full transition-colors">
+                            <X className="h-5 w-5" />
+                        </button>
                     </div>
                 </header>
 
-                <main className="max-w-6xl mx-auto px-6 py-12 space-y-12">
+                <main className="max-w-7xl mx-auto px-6 py-12 space-y-12">
 
                     {/* Top Section: Main Gauges */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                         {/* Download Graph */}
-                        <div className="lg:col-span-5 h-64">
+                        <div className="lg:col-span-5 h-[280px]">
                             <StatWithGraph
                                 label="Download"
                                 value={(status === 'upload' ? downloadSpeed : status === 'download' ? downloadSpeed : status === 'complete' ? downloadSpeed : 0).toFixed(1)}
@@ -190,7 +193,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                         </div>
 
                         {/* Upload Graph */}
-                        <div className="lg:col-span-5 h-64 border-l border-neutral-200 dark:border-neutral-800 pl-12">
+                        <div className="lg:col-span-5 h-[280px] lg:border-l border-neutral-200 dark:border-neutral-800 lg:pl-12">
                             <StatWithGraph
                                 label="Upload"
                                 value={(status === 'upload' ? uploadSpeed : status === 'complete' ? uploadSpeed : 0).toFixed(1)}
@@ -201,115 +204,145 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                             />
                         </div>
 
-                        {/* Side Stats */}
-                        <div className="lg:col-span-2 space-y-8 pl-4">
-                            <div>
-                                <h4 className="text-xs font-semibold text-neutral-400 uppercase mb-1">Latency</h4>
-                                <div className="text-2xl font-light">{stats.ping} <span className="text-sm text-neutral-400">ms</span></div>
-                            </div>
-                            <div>
-                                <h4 className="text-xs font-semibold text-neutral-400 uppercase mb-1">Jitter</h4>
-                                <div className="text-2xl font-light">{stats.jitter} <span className="text-sm text-neutral-400">ms</span></div>
-                            </div>
-                            <div>
-                                <h4 className="text-xs font-semibold text-neutral-400 uppercase mb-1">Loss</h4>
-                                <div className="text-2xl font-light">{stats.loss} <span className="text-sm text-neutral-400">%</span></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Quality Score Bar */}
-                    <div className="border-y border-neutral-200 dark:border-neutral-800 py-6">
-                        <div className="flex items-center gap-2 mb-4">
-                            <h3 className="font-bold text-lg">Network Quality Score</h3>
-                            <a href="#" className="text-xs text-blue-500 underline">Learn more</a>
-                        </div>
-                        <div className="grid grid-cols-3 gap-8 text-sm">
+                        {/* Side Stats & Grades */}
+                        <div className="lg:col-span-2 space-y-6 lg:pl-4">
                             <div className="flex items-center justify-between">
-                                <span>Video Streaming</span>
-                                <span className={cn("font-bold", status === 'complete' ? "text-green-600" : "text-neutral-400")}>
-                                    {status === 'complete' ? "Good" : "—"}
-                                </span>
+                                <div>
+                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Ping</h4>
+                                    <div className="text-2xl font-medium">{stats.ping} <span className="text-sm text-neutral-400">ms</span></div>
+                                </div>
+                                <GradeBadge grade={status === 'complete' ? 'A+' : '-'} />
                             </div>
-                            <div className="flex items-center justify-between border-l pl-8 border-neutral-200 dark:border-neutral-800">
-                                <span>Online Gaming</span>
-                                <span className={cn("font-bold", status === 'complete' ? "text-yellow-600" : "text-neutral-400")}>
-                                    {status === 'complete' ? "Average" : "—"}
-                                </span>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Bufferbloat</h4>
+                                    <div className="text-2xl font-medium">{stats.bufferbloat === '?' ? '--' : 'Low'}</div>
+                                </div>
+                                <GradeBadge grade={status === 'complete' ? 'A' : '-'} />
                             </div>
-                            <div className="flex items-center justify-between border-l pl-8 border-neutral-200 dark:border-neutral-800">
-                                <span>Video Chatting</span>
-                                <span className={cn("font-bold", status === 'complete' ? "text-green-600" : "text-neutral-400")}>
-                                    {status === 'complete' ? "Optimal" : "—"}
-                                </span>
+                            <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <h4 className="text-[10px] text-neutral-400 uppercase">Jitter</h4>
+                                        <div className="font-mono text-sm">{stats.jitter}ms</div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-[10px] text-neutral-400 uppercase">Loss</h4>
+                                        <div className="font-mono text-sm">{stats.loss}%</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Map & Detailed Measurements */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-
-                        {/* Left: Map */}
-                        <div>
-                            <h3 className="font-bold text-lg mb-4">Server Location</h3>
-                            <Card className="h-[400px] overflow-hidden relative group">
-                                {/* Map Background */}
-                                <div className="absolute inset-0 bg-[#f0f0f0] dark:bg-[#1a1b1e]">
-                                    <div className="absolute inset-0 opacity-40 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/India_location_map.svg/1709px-India_location_map.svg.png')] bg-cover bg-[center_top_40%] grayscale contrast-125" />
-                                </div>
-
-                                {/* Connection Line */}
-                                <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                                    <path d="M100,100 Q250,200 400,250" fill="none" stroke="#f97316" strokeWidth="2" strokeDasharray="4 4" className="animate-[dash_1s_linear_infinite]" />
-                                    <circle cx="100" cy="100" r="4" fill="#f97316" />
-                                    <circle cx="400" cy="250" r="4" fill="#ef4444" />
-                                </svg>
-
-                                {/* Info Overlay */}
-                                <div className="absolute bottom-4 left-4 right-4 bg-white/90 dark:bg-black/90 backdrop-blur border border-neutral-200 dark:border-neutral-800 p-4 rounded-lg text-xs space-y-2">
-                                    <div className="flex justify-between">
-                                        <span className="text-neutral-500">Connected via</span>
-                                        <span className="font-semibold">IPv6</span>
+                    {/* Network Quality Bar */}
+                    <GlassCard className="p-6">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Activity className="h-5 w-5 text-blue-500" />
+                            <h3 className="font-bold text-lg">Real-World Application Score</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {[
+                                { label: '4K Streaming', score: status === 'complete' ? 'Perfect' : '-', icon: Video },
+                                { label: 'Competitive Gaming', score: status === 'complete' ? 'Good' : '-', icon: Gamepad2 },
+                                { label: 'Video Conferencing', score: status === 'complete' ? 'Optimal' : '-', icon: Monitor },
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-center gap-4">
+                                    <div className="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-xl">
+                                        <item.icon className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-neutral-500">Your Network</span>
-                                        <span className="font-semibold text-orange-600">{clientInfo.isp}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-neutral-500">Location</span>
-                                        <span className="font-mono">{clientInfo.city}, {clientInfo.ip}</span>
+                                    <div>
+                                        <div className="text-sm text-neutral-500">{item.label}</div>
+                                        <div className="font-bold text-lg">{item.score}</div>
                                     </div>
                                 </div>
-                            </Card>
+                            ))}
+                        </div>
+                    </GlassCard>
+
+                    {/* Server Location & Analytics Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                        {/* Interactive Server Map */}
+                        <div className="lg:col-span-2">
+                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                                <Globe className="h-5 w-5" /> Server Location
+                            </h3>
+                            <div className="h-[400px] rounded-3xl overflow-hidden relative shadow-lg group border border-neutral-200 dark:border-neutral-800">
+                                {/* Map */}
+                                <div className="absolute inset-0 bg-neutral-100 dark:bg-neutral-900 transition-transform duration-700 group-hover:scale-105">
+                                    <div className="absolute inset-0 opacity-60 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/India_location_map.svg/1709px-India_location_map.svg.png')] bg-cover bg-[center_top_40%] grayscale contrast-125" />
+                                </div>
+
+                                {/* UI Overlay */}
+                                <div className="absolute inset-x-0 bottom-0 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl p-6 border-t border-neutral-200 dark:border-neutral-800">
+                                    <div className="grid grid-cols-3 gap-6">
+                                        <div>
+                                            <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Server</div>
+                                            <div className="font-bold flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                                AWS Mumbai
+                                            </div>
+                                            <div className="text-xs text-neutral-400 mt-1">ap-south-1 • 124km</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Provider</div>
+                                            <div className="font-bold">{clientInfo.isp}</div>
+                                            <div className="text-xs text-neutral-400 mt-1">AS24560 • IPv6</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Protocol</div>
+                                            <div className="font-bold font-mono">WebSocket/TLS</div>
+                                            <div className="text-xs text-neutral-400 mt-1">Direct Path</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Right: Box Plots */}
+                        {/* Detailed Measurements */}
                         <div>
-                            <h3 className="font-bold text-lg mb-4">Latency Measurements</h3>
-                            <Card className="p-6 space-y-2">
-                                <BoxPlotRow label="Unloaded latency" count="20/20" />
-                                <BoxPlotRow label="Latency during download" count="20" />
-                                <BoxPlotRow label="Latency during upload" count="20" />
-                            </Card>
-
-                            <h3 className="font-bold text-lg mb-4 mt-8">Transfer Measurements</h3>
-                            <Card className="p-6 space-y-2">
-                                <BoxPlotRow label="100kB download test" count="10/10" />
-                                <BoxPlotRow label="1MB download test" count="8/8" />
-                                <BoxPlotRow label="10MB download test" count="6/6" />
-                            </Card>
+                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                                <Activity className="h-5 w-5" /> Latency Analysis
+                            </h3>
+                            <GlassCard className="p-6 h-[400px] space-y-6">
+                                <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-medium text-sm">Unloaded Latency</span>
+                                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 px-2 py-0.5 rounded-full">Great</span>
+                                    </div>
+                                    <BoxPlotRow label="Idle" count="20/20" />
+                                </div>
+                                <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-medium text-sm">Download Active</span>
+                                        <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 px-2 py-0.5 rounded-full">bufferbloat</span>
+                                    </div>
+                                    <BoxPlotRow label="Loaded" count="40/40" />
+                                </div>
+                                <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-medium text-sm">Upload Active</span>
+                                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 px-2 py-0.5 rounded-full">Good</span>
+                                    </div>
+                                    <BoxPlotRow label="Loaded" count="20/20" />
+                                </div>
+                            </GlassCard>
                         </div>
 
                     </div>
 
-                    {/* Control Bar (Floating) */}
+                    {/* Floating FAB */}
                     <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
                         <button
                             onClick={status === 'idle' || status === 'complete' ? runTest : resetTest}
-                            className="bg-black dark:bg-white text-white dark:text-black px-8 py-3 rounded-full font-medium shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                            className={cn(
+                                "h-14 px-8 rounded-full font-bold shadow-2xl flex items-center gap-3 transition-all hover:scale-105",
+                                status === 'idle' || status === 'complete' ? "bg-black dark:bg-white text-white dark:text-black" : "bg-red-500 text-white"
+                            )}
                         >
-                            {status === 'idle' ? 'Start Test' : status === 'complete' ? 'Restart Test' : 'Stop'}
-                            <Zap className="h-4 w-4" />
+                            {status === 'idle' ? "Start Speedtest" : status === 'complete' ? "Test Again" : "Stop"}
+                            {(status === 'idle' || status === 'complete') && <Zap className="h-5 w-5" />}
                         </button>
                     </div>
 
