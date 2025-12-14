@@ -57,7 +57,6 @@
     "url": "git+https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^2.0.86",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -67,7 +66,6 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@vitejs/plugin-react": "^5.1.1",
-    "ai": "^5.0.113",
     "autoprefixer": "^10.4.22",
     "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
