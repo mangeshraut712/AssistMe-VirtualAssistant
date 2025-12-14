@@ -21,6 +21,10 @@ import { createApiClient } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
 
 // Animation variants
+const Skeleton = ({ className }) => (
+    <div className={cn("animate-pulse rounded-md bg-muted/50", className)} />
+);
+
 const panelVariants = {
     hidden: { opacity: 0, scale: 0.98 },
     visible: {
