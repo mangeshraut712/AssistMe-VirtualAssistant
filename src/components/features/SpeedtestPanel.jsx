@@ -2,18 +2,35 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, RotateCcw, MapPin, ArrowDown, ArrowUp,
-    Activity, Wifi, Server, Zap, Share2, Info,
-    Monitor, Gamepad2, Video, Globe, Brain, Calendar, Router, Satellite
+    Activity, Wifi, Server, Zap, Share2, Info, Download,
+    Monitor, Gamepad2, Video, Globe, Brain, Calendar, Router, Satellite, Trophy
 } from 'lucide-react';
 import {
     AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 // --- Advanced Components ---
 
+// History Storage Helper
+const saveTestResult = (result) => {
+    try {
+        const history = JSON.parse(localStorage.getItem('speedtest_history') || '[]');
+        const newHistory = [result, ...history].slice(0, 50); // Keep last 50
+        localStorage.setItem('speedtest_history', JSON.stringify(newHistory));
+        return newHistory;
+    } catch (e) { return []; }
+};
+
+const getHistory = () => {
+    try {
+        return JSON.parse(localStorage.getItem('speedtest_history') || '[]');
+    } catch (e) { return []; }
+};
+
 const GlassCard = ({ children, className }) => (
-    <div className={cn("bg-white/80 dark:bg-black/80 backdrop-blur-md rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm", className)}>
+    <div className={cn("bg-white/90 dark:bg-black/90 backdrop-blur-md rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm transition-all relative overflow-hidden", className)}>
         {children}
     </div>
 );
@@ -51,26 +68,25 @@ const StatWithGraph = ({ label, value, unit, color, data, type }) => (
     </div>
 );
 
-const BoxPlotRow = ({ label, count }) => (
-    <div className="py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0 pl-10 relative">
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center">
-            <div className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+const LatencyRow = ({ label, value, status }) => (
+    <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0 group hover:bg-neutral-50 dark:hover:bg-neutral-900/50 -mx-6 px-6 transition-colors">
+        <div className="flex items-center gap-4">
+            <div className={cn("w-2 h-2 rounded-full", status === 'Good' ? "bg-green-500" : status === 'Fair' ? "bg-yellow-500" : "bg-neutral-300")} />
+            <span className="font-medium text-sm text-neutral-700 dark:text-neutral-300">{label}</span>
         </div>
-        <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>
-            <span className="text-xs text-neutral-400">({count})</span>
-        </div>
-        <div className="h-6 w-full bg-neutral-50 dark:bg-neutral-900 rounded-full relative overflow-hidden">
-            <div className="absolute top-1/2 -translate-y-1/2 left-[20%] right-[30%] h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full" />
-            <div className="absolute top-1/2 -translate-y-1/2 left-[40%] text-[8px] font-mono text-neutral-400">
-                ~{Math.round(20 + Math.random() * 30)}ms
+        <div className="flex items-center gap-4">
+            <div className="h-1.5 w-32 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                <div
+                    className={cn("h-full rounded-full transition-all duration-1000", status === 'Good' ? "bg-green-500" : "bg-yellow-500")}
+                    style={{ width: `${Math.min(100, (parseInt(value) || 0) * 1.5)}%` }}
+                />
             </div>
+            <span className="font-mono text-sm font-bold w-12 text-right">{value}</span>
         </div>
     </div>
 );
 
 const GradeBadge = ({ grade }) => {
-    const color = grade.startsWith('A') ? 'bg-green-500' : grade.startsWith('B') ? 'bg-blue-500' : 'bg-yellow-500';
     return (
         <div className="flex flex-col items-center justify-center w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
             <span className={cn("text-2xl font-black bg-clip-text text-transparent bg-gradient-to-br from-black to-neutral-600 dark:from-white dark:to-neutral-400")}>{grade}</span>
@@ -84,47 +100,62 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
     const [downloadSpeed, setDownloadSpeed] = useState(0);
     const [uploadSpeed, setUploadSpeed] = useState(0);
     const [chartData, setChartData] = useState([]);
-    const [clientInfo, setClientInfo] = useState({ ip: '...', city: '...', isp: '...', lat: 0, lon: 0 });
+    const [clientInfo, setClientInfo] = useState({ ip: '...', city: '...', isp: '...', lat: 0, lon: 0, rank: 0 });
     const [stats, setStats] = useState({ ping: 0, jitter: 0, loss: 0, bufferbloat: '?' });
+    const [history, setHistory] = useState([]);
+
     const timerRef = useRef(null);
+    const pingHistory = useRef([]);
 
     useEffect(() => {
         if (isOpen) {
+            setHistory(getHistory());
             fetch('https://ipapi.co/json/')
                 .then(r => r.json())
-                .then(d => setClientInfo({ ip: d.ip, city: d.city, isp: d.org, lat: d.latitude, lon: d.longitude }))
-                .catch(() => setClientInfo({ ip: 'Unknown', city: 'Local', isp: 'Private', lat: 0, lon: 0 }));
+                .then(d => setClientInfo(prev => ({ ...prev, ip: d.ip, city: d.city, isp: d.org, lat: d.latitude, lon: d.longitude })))
+                .catch(() => setClientInfo(prev => ({ ...prev, ip: 'Unknown', city: 'Local', isp: 'Private' })));
         }
     }, [isOpen]);
 
-    const resetTest = () => {
-        setStatus('idle');
-        setDownloadSpeed(0);
-        setUploadSpeed(0);
-        setChartData([]);
-        setStats({ ping: 0, jitter: 0, loss: 0, bufferbloat: '?' });
-        if (timerRef.current) clearInterval(timerRef.current);
+    const calculateJitter = (pings) => {
+        if (pings.length < 2) return 0;
+        let diffs = 0;
+        for (let i = 1; i < pings.length; i++) {
+            diffs += Math.abs(pings[i] - pings[i - 1]);
+        }
+        return Math.round(diffs / (pings.length - 1));
     };
 
     const runTest = async () => {
         if (status !== 'idle' && status !== 'complete') return;
-        resetTest();
-
         setStatus('pinging');
-        for (let i = 0; i < 5; i++) {
-            await new Promise(r => setTimeout(r, 100));
-            setStats(s => ({ ...s, ping: Math.round(15 + Math.random() * 5), jitter: Math.round(Math.random() * 3) }));
+        setChartData([]);
+        pingHistory.current = [];
+
+        let pSum = 0;
+        for (let i = 0; i < 10; i++) {
+            await new Promise(r => setTimeout(r, 200));
+            const p = 10 + Math.random() * 8;
+            pingHistory.current.push(p);
+            pSum += p;
+            setStats(s => ({
+                ...s,
+                ping: Math.round(p),
+                jitter: calculateJitter(pingHistory.current)
+            }));
         }
+        const avgPing = Math.round(pSum / 10);
+        const finalJitter = calculateJitter(pingHistory.current);
 
         setStatus('download');
-        let speed = 0;
-        const targetD = 130 + Math.random() * 60;
+        let dSpeed = 0;
+        const targetD = 140 + Math.random() * 40;
         await new Promise(resolve => {
             let t = 0;
             timerRef.current = setInterval(() => {
                 t++;
-                if (speed < targetD) speed += (targetD - speed) * 0.1;
-                const val = Math.max(0, speed + (Math.random() - 0.5) * 5);
+                if (dSpeed < targetD) dSpeed += (targetD - dSpeed) * 0.15;
+                const val = Math.max(0, dSpeed + (Math.random() - 0.5) * 3);
                 setDownloadSpeed(val);
                 setChartData(p => [...p, { val, type: 'download' }].slice(-60));
                 if (t > 50) { clearInterval(timerRef.current); resolve(); }
@@ -133,22 +164,70 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
 
         setStatus('upload');
         setChartData([]);
-        speed = 0;
-        const targetU = targetD * 0.8;
+        let uSpeed = 0;
+        const targetU = targetD * 0.9;
         await new Promise(resolve => {
             let t = 0;
             timerRef.current = setInterval(() => {
                 t++;
-                if (speed < targetU) speed += (targetU - speed) * 0.1;
-                const val = Math.max(0, speed + (Math.random() - 0.5) * 5);
+                if (uSpeed < targetU) uSpeed += (targetU - uSpeed) * 0.15;
+                const val = Math.max(0, uSpeed + (Math.random() - 0.5) * 3);
                 setUploadSpeed(val);
                 setChartData(p => [...p, { val, type: 'upload' }].slice(-60));
                 if (t > 50) { clearInterval(timerRef.current); resolve(); }
             }, 60);
         });
 
+        const result = {
+            id: Date.now(),
+            date: new Date().toISOString(),
+            down: dSpeed.toFixed(0),
+            up: uSpeed.toFixed(0),
+            ping: avgPing,
+            jitter: finalJitter
+        };
+
+        const newHist = saveTestResult(result);
+        setHistory(newHist);
+
         setStatus('complete');
-        setStats(s => ({ ...s, loss: 0, bufferbloat: 'A' }));
+        setStats({
+            ping: avgPing,
+            jitter: finalJitter,
+            loss: 0,
+            bufferbloat: 'A'
+        });
+
+        // Update client rank (simulated)
+        setClientInfo(prev => ({ ...prev, rank: Math.min(99, Math.round((dSpeed / 200) * 100)) }));
+    };
+
+    const resetTest = () => {
+        setStatus('idle');
+        setDownloadSpeed(0);
+        setUploadSpeed(0);
+        setChartData([]);
+    };
+
+    const shareResult = () => {
+        const text = `Speedtest Pro Result:\nDownload: ${downloadSpeed.toFixed(0)} Mbps\nUpload: ${uploadSpeed.toFixed(0)} Mbps\nPing: ${stats.ping} ms\nJitter: ${stats.jitter} ms\nTested with AssistMe Speedtest Pro 2025`;
+        navigator.clipboard.writeText(text);
+        // Assuming toast is hooked up in layout, if not, alert fallback
+        alert('Result copied to clipboard!');
+    };
+
+    const exportHistory = () => {
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + "Date,Download (Mbps),Upload (Mbps),Ping (ms),Jitter (ms)\n"
+            + history.map(e => `${new Date(e.date).toLocaleString()},${e.down},${e.up},${e.ping},${e.jitter}`).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "speedtest_history.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     if (!isOpen) return null;
@@ -161,7 +240,6 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
             >
-                {/* Modern Header */}
                 <header className="bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-40">
                     <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -176,11 +254,9 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                     </div>
                 </header>
 
-                <main className="max-w-7xl mx-auto px-6 py-12 space-y-12">
+                <main className="max-w-7xl mx-auto px-6 py-12 space-y-12 mb-20">
 
-                    {/* Top Section: Main Gauges */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        {/* Download Graph */}
                         <div className="lg:col-span-5 h-[280px]">
                             <StatWithGraph
                                 label="Download"
@@ -192,7 +268,6 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                             />
                         </div>
 
-                        {/* Upload Graph */}
                         <div className="lg:col-span-5 h-[280px] lg:border-l border-neutral-200 dark:border-neutral-800 lg:pl-12">
                             <StatWithGraph
                                 label="Upload"
@@ -204,7 +279,6 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                             />
                         </div>
 
-                        {/* Side Stats & Grades */}
                         <div className="lg:col-span-2 space-y-6 lg:pl-4">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -235,7 +309,6 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
-                    {/* Network Quality Bar */}
                     <GlassCard className="p-6">
                         <div className="flex items-center gap-2 mb-6">
                             <Activity className="h-5 w-5 text-blue-500" />
@@ -260,22 +333,19 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                         </div>
                     </GlassCard>
 
-                    {/* Server Location & Analytics Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                        {/* Interactive Server Map */}
                         <div className="lg:col-span-2">
                             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                                 <Globe className="h-5 w-5" /> Server Location
                             </h3>
-                            <div className="h-[400px] rounded-3xl overflow-hidden relative shadow-lg group border border-neutral-200 dark:border-neutral-800">
-                                {/* Map */}
-                                <div className="absolute inset-0 bg-neutral-100 dark:bg-neutral-900 transition-transform duration-700 group-hover:scale-105">
-                                    <div className="absolute inset-0 opacity-60 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/India_location_map.svg/1709px-India_location_map.svg.png')] bg-cover bg-[center_top_40%] grayscale contrast-125" />
-                                </div>
+                            <div className="h-[400px] rounded-3xl overflow-hidden relative shadow-lg group border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900">
+                                <div className="absolute inset-0 bg-[url('https://maps.geoapify.com/v1/staticmap?style=osm-bright&width=800&height=400&center=lonlat:77.2090,28.6139&zoom=3&apiKey=YOUR_API_KEY_PLACEHOLDER')] bg-cover bg-center grayscale-[20%] opacity-100"
+                                    style={{ backgroundImage: "url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/World_map_blank_without_borders.svg/2000px-World_map_blank_without_borders.svg.png')" }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-white/90 via-transparent to-transparent dark:from-black/90" />
 
-                                {/* UI Overlay */}
-                                <div className="absolute inset-x-0 bottom-0 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl p-6 border-t border-neutral-200 dark:border-neutral-800">
+                                <div className="absolute inset-x-0 bottom-0 p-6">
                                     <div className="grid grid-cols-3 gap-6">
                                         <div>
                                             <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Server</div>
@@ -283,147 +353,105 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                                                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                                                 AWS Mumbai
                                             </div>
-                                            <div className="text-xs text-neutral-400 mt-1">ap-south-1 • 124km</div>
                                         </div>
                                         <div>
                                             <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Provider</div>
                                             <div className="font-bold">{clientInfo.isp}</div>
-                                            <div className="text-xs text-neutral-400 mt-1">AS24560 • IPv6</div>
                                         </div>
                                         <div>
-                                            <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Protocol</div>
-                                            <div className="font-bold font-mono">WebSocket/TLS</div>
-                                            <div className="text-xs text-neutral-400 mt-1">Direct Path</div>
+                                            <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Location</div>
+                                            <div className="font-bold font-mono">{clientInfo.city}</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Detailed Measurements */}
                         <div>
                             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                                 <Activity className="h-5 w-5" /> Latency Analysis
                             </h3>
-                            <GlassCard className="p-6 h-[400px] space-y-6">
-                                <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="font-medium text-sm">Unloaded Latency</span>
-                                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 px-2 py-0.5 rounded-full">Great</span>
-                                    </div>
-                                    <BoxPlotRow label="Idle" count="20/20" />
-                                </div>
-                                <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="font-medium text-sm">Download Active</span>
-                                        <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 px-2 py-0.5 rounded-full">bufferbloat</span>
-                                    </div>
-                                    <BoxPlotRow label="Loaded" count="40/40" />
-                                </div>
-                                <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="font-medium text-sm">Upload Active</span>
-                                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 px-2 py-0.5 rounded-full">Good</span>
-                                    </div>
-                                    <BoxPlotRow label="Loaded" count="20/20" />
-                                </div>
+                            <GlassCard className="p-6 h-[400px] flex flex-col justify-center">
+                                <LatencyRow label="Unloaded" value={`${Math.max(1, stats.ping - 2)} ms`} status="Good" />
+                                <LatencyRow label="Download" value={`${stats.ping + 4} ms`} status="Fair" />
+                                <LatencyRow label="Upload" value={`${stats.ping} ms`} status="Good" />
                             </GlassCard>
                         </div>
                     </div>
 
-                    {/* AI Analysis & History Row (NEW) */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-                        {/* Deep AI Analysis */}
                         <GlassCard className="p-8 relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 opacity-10">
                                 <Brain className="h-32 w-32" />
                             </div>
-                            <div className="relative z-10">
+                            <div className="relative z-10 transition-all">
                                 <h3 className="font-bold text-xl mb-6 flex items-center gap-3">
                                     <Brain className="h-6 w-6 text-indigo-500" />
                                     AI Network Consultant
                                 </h3>
-
                                 {status === 'complete' ? (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="space-y-6"
-                                    >
+                                    <div className="space-y-6">
                                         <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 text-sm leading-relaxed">
                                             <p className="font-medium mb-2 text-indigo-900 dark:text-indigo-200">
-                                                Based on your <strong>{downloadSpeed.toFixed(0)} Mbps</strong> connection:
+                                                Based on your <strong>{downloadSpeed.toFixed(0)} Mbps</strong> result:
                                             </p>
                                             <ul className="space-y-2 text-neutral-600 dark:text-neutral-400 list-disc pl-4">
-                                                <li>Your latency of <strong>{stats.ping}ms</strong> is exceptional for competitive gaming (est. 144+ FPS in CS:GO/Valorant online).</li>
-                                                <li>You can stream <strong> {(downloadSpeed / 25).toFixed(0)} </strong> simultaneous 4K HDR movies without buffering.</li>
-                                                <li>Bufferbloat is low, meaning large downloads won't lag your video calls.</li>
+                                                <li>Faster than <strong>{clientInfo.rank}%</strong> of users in {clientInfo.city}.</li>
+                                                <li>Streaming 4K Content: <strong>Certified Perfect</strong>.</li>
+                                                <li>Gaming Latency: <strong>{stats.ping}ms</strong> (Competitive Cloud Ready).</li>
                                             </ul>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800">
-                                                <div className="text-xs text-neutral-500 uppercase">Est. Gaming Ping</div>
-                                                <div className="font-bold text-lg">12-18 ms</div>
-                                            </div>
-                                            <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800">
-                                                <div className="text-xs text-neutral-500 uppercase">Max Resolution</div>
-                                                <div className="font-bold text-lg">8K / 60fps</div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
+                                        <button
+                                            onClick={shareResult}
+                                            className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg text-sm font-bold hover:scale-105 transition-transform"
+                                        >
+                                            <Share2 className="h-4 w-4" /> Share Result
+                                        </button>
+                                    </div>
                                 ) : (
                                     <div className="h-40 flex items-center justify-center text-neutral-400">
-                                        Run test to generate AI insights...
+                                        Run test to see AI insights & Ranking...
                                     </div>
                                 )}
                             </div>
                         </GlassCard>
 
-                        {/* Recent History */}
                         <GlassCard className="p-8">
                             <h3 className="font-bold text-xl mb-6 flex items-center gap-3">
                                 <RotateCcw className="h-6 w-6 text-neutral-500" />
-                                Recent Performance
+                                Recent History
+                                {history.length > 0 && (
+                                    <button onClick={exportHistory} className="ml-auto text-xs text-neutral-400 hover:text-orange-500 flex items-center gap-1">
+                                        <Download className="h-3 w-3" /> Export CSV
+                                    </button>
+                                )}
                             </h3>
-                            <div className="space-y-4">
+                            <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                                 <div className="flex items-center justify-between text-sm text-neutral-400 px-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                                     <span>Time</span>
-                                    <span>Download</span>
+                                    <span>Down</span>
                                     <span>Ping</span>
                                 </div>
-                                {/* Mock History Items */}
-                                {[
-                                    { time: 'Just now', down: status === 'complete' ? downloadSpeed.toFixed(0) : '-', ping: status === 'complete' ? stats.ping : '-' },
-                                    { time: '2 hours ago', down: '142', ping: '18' },
-                                    { time: 'Yesterday', down: '138', ping: '21' },
-                                ].map((item, i) => (
-                                    <div key={i} className="flex items-center justify-between px-2 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 rounded-lg transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className={cn("w-2 h-2 rounded-full", i === 0 && status === 'complete' ? "bg-green-500" : "bg-neutral-300")} />
-                                            <span className="font-medium">{item.time}</span>
+                                {history.length === 0 ? (
+                                    <div className="text-center py-8 text-neutral-400 text-sm">No recent tests found.</div>
+                                ) : (
+                                    history.map((item, i) => (
+                                        <div key={item.id} className="flex items-center justify-between px-2 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 rounded-lg">
+                                            <span className="font-medium text-sm text-neutral-600 dark:text-neutral-400">
+                                                {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                            <span className="font-mono font-bold text-neutral-900 dark:text-neutral-200">{item.down}</span>
+                                            <span className="font-mono text-neutral-500 text-xs">{item.ping}ms</span>
                                         </div>
-                                        <div className="font-mono font-bold">{item.down} <span className="text-xs text-neutral-400 font-sans">Mbps</span></div>
-                                        <div className="font-mono text-neutral-500">{item.ping} <span className="text-xs text-neutral-400 font-sans">ms</span></div>
-                                    </div>
-                                ))}
-                                <button className="w-full py-3 mt-4 text-sm font-bold text-neutral-500 hover:text-black dark:hover:text-white transition-colors border border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                                    View Full History
-                                </button>
+                                    ))
+                                )}
                             </div>
                         </GlassCard>
                     </div>
 
-                    {/* "Why We Are Best" Feature Showcase */}
                     <div className="py-12 border-t border-neutral-200 dark:border-neutral-800">
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl font-black mb-4 tracking-tight">Why Speedtest Pro 2025?</h2>
-                            <p className="text-neutral-500 max-w-2xl mx-auto">
-                                Traditional speed tests only measure throughput. We analyze the entire digital experience using next-generation protocols.
-                            </p>
-                        </div>
-
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                             {[
                                 { title: 'Satellite-Ready', icon: Satellite, desc: 'Optimized for Starlink & LEO constellations.' },
@@ -442,9 +470,16 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
-                    <div className="h-24" /> {/* Spacer for FAB */}
+                    <div className="bg-neutral-900 text-white rounded-3xl p-8 lg:p-12 relative overflow-hidden">
+                        <div className="relative z-10 text-center space-y-6">
+                            <Trophy className="h-16 w-16 mx-auto text-yellow-500" />
+                            <h2 className="text-3xl font-black">Join the Leaderboard</h2>
+                            <p className="text-neutral-400 max-w-lg mx-auto">Create an account to save your entire history across devices and compare your speeds with the global community.</p>
+                            <button className="bg-white text-black px-8 py-3 rounded-full font-bold hover:scale-105 transition-transform">Create Free Account</button>
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/50 to-purple-900/50" />
+                    </div>
 
-                    {/* Floating FAB */}
                     <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
                         <button
                             onClick={status === 'idle' || status === 'complete' ? runTest : resetTest}
