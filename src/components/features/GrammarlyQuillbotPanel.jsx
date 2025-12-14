@@ -7,7 +7,7 @@ import {
     Maximize2, Minimize2, SplitSquareHorizontal,
     Type
 } from 'lucide-react';
-import { createApiClient } from '../../lib/apiClient';
+import { createApiClient } from '@/lib/apiClient';
 
 const TOOLS = [
     { id: 'paraphrase', label: 'Paraphraser', icon: RefreshCw, description: 'Rewrite text with improved phrasing.' },

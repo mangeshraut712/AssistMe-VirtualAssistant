@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { X, Server, Activity, Zap, Brain, RotateCcw, Wifi, Clock, CheckCircle2 } from 'lucide-react';
-import { createApiClient } from '../../lib/apiClient';
+import { createApiClient } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
 
 // Animation variants

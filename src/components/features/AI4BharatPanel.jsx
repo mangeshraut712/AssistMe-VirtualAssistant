@@ -4,7 +4,7 @@ import {
     Cpu, Keyboard, Volume2, ScanText, Sparkles, Check, Copy, RotateCcw,
     BookA, MoveHorizontal
 } from 'lucide-react';
-import { createApiClient } from '../../lib/apiClient';
+import { createApiClient } from '@/lib/apiClient';
 
 const AI4BharatPanel = ({ isOpen, onClose, isEmbedded = false, backendUrl = '' }) => {
     const [activeTab, setActiveTab] = useState('overview'); // overview, translate, transliterate, script_convert, dictionary
