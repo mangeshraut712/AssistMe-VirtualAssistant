@@ -41,7 +41,7 @@ develop-eggs/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/  <-- removed to allow src/lib
 lib64/
 parts/
 sdist/
