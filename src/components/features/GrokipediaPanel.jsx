@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { createApiClient } from '../../lib/apiClient';
+import { createApiClient } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
 
 // Animation variants
