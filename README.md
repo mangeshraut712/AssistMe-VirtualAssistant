@@ -52,11 +52,12 @@
 - **Tone Adjustment**: Adapt text tone for different contexts
 - **Language Enhancement**: Improve clarity and readability
 
-### ⚡ Network Performance Testing
-- **Speed Metrics**: Comprehensive network performance analysis
-- **Latency Testing**: Real-time connection speed measurements
-- **Bandwidth Analysis**: Upload/download speed testing
-- **Geographic Routing**: Optimal server selection based on location
+### ⚡ Speedtest 2025
+- **AI Network Analysis**: Intelligent connection grading for Streaming & Gaming
+- **Visual Immersion**: Glassmorphic UI, animated gradient mesh, and 3D-style globe
+- **Detailed Metrics**: Jitter, loss, and latency breakdowns with box-plot visualization
+- **History Tracking**: Local storage of test results for performance tracking
+- **Geographic Routing**: Server location visualization functionality
 
 ### 🎨 Modern UI/UX
 - **Responsive Design**: Optimized for desktop, tablet, and mobile
@@ -357,6 +358,8 @@ Select your preferred language in Settings. The AI will respond in your chosen l
 - **Google Gemma 2 27B** (Efficient performance, 8K context)
 - **NVIDIA Nemotron Nano 9B/12B** (Optimized for efficiency)
 - **Meituan LongCat Flash** (Fast inference, competitive performance)
+- **Nex AGI DeepSeek V3.1 Nex N1** (Advanced reasoning, free tier)
+- **Amazon Nova 2 Lite** (Fast & Efficient, free tier)
 
 ### Premium Models (Advanced Mode Required)
 - **OpenAI GPT-4o** (Latest GPT-4 optimized, 128K context)
