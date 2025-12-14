@@ -19,14 +19,14 @@ class OpenRouterProvider(BaseProvider):
     DEFAULT_MODELS = [
         # Free Models (Working and Verified)
         {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct (Free)", "priority": 1},
-        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2 (Free)", "priority": 1},
+        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2 (Free)", "priority": 0, "voice_optimized": True},
         {"id": "google/gemma-3-27b-it:free", "name": "Google: Gemma 3 27B IT (Free)", "priority": 1},
         {"id": "nvidia/nemotron-nano-12b-v2-vl:free", "name": "NVIDIA: Nemotron Nano 12B V2 VL (Free)", "priority": 1},
         {"id": "meituan/longcat-flash-chat:free", "name": "Meituan: LongCat Flash Chat (Free)", "priority": 1},
         {"id": "alibaba/tongyi-deepresearch-30b-a3b:free", "name": "Alibaba: Tongyi DeepResearch 30B A3B (Free)", "priority": 1},
         
         # Premium Models (Fallback)
-        {"id": "google/gemini-2.0-flash-001:free", "name": "Google: Gemini 2.0 Flash (Free)", "priority": 0, "voice_optimized": True},
+        {"id": "google/gemini-2.0-flash-001:free", "name": "Google: Gemini 2.0 Flash (Free)", "priority": 2},
         {"id": "x-ai/grok-code-fast-1", "name": "xAI: Grok Code Fast 1", "priority": 2},
         {"id": "x-ai/grok-4.1-fast", "name": "xAI: Grok 4.1 Fast", "priority": 2},
         {"id": "perplexity/sonar", "name": "Perplexity: Sonar", "priority": 2},
@@ -89,27 +89,33 @@ class OpenRouterProvider(BaseProvider):
 
         last_error = None
 
+        url = f"{self.base_url}/chat/completions"
+        if stream:
+            payload = {
+                "model": models_to_try[0] if models_to_try else model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": True,
+            }
+            return self._stream_with_fallback(url, payload, models_to_try)
+
         for attempt_model in models_to_try:
             try:
                 logger.info(f"Trying model: {attempt_model}")
-
-                url = f"{self.base_url}/chat/completions"
                 payload = {
                     "model": attempt_model,
                     "messages": messages,
                     "temperature": temperature,
                     "max_tokens": max_tokens,
-                    "stream": stream,
+                    "stream": False,
                 }
 
-                if stream:
-                    return self._stream_response(url, payload)
-                else:
-                    result = await self._unary_response(url, payload)
-                    # If successful, record usage and return
-                    # from .services.rate_limit_service import rate_limit_service
-                    # await rate_limit_service.record_request(attempt_model, result.get("tokens", 0))
-                    return result
+                result = await self._unary_response(url, payload)
+                # If successful, record usage and return
+                # from .services.rate_limit_service import rate_limit_service
+                # await rate_limit_service.record_request(attempt_model, result.get("tokens", 0))
+                return result
 
             except Exception as e:
                 error_msg = str(e)
@@ -199,6 +205,54 @@ class OpenRouterProvider(BaseProvider):
                         except json.JSONDecodeError:
                             continue
 
+    async def _stream_with_fallback(
+        self, url: str, payload: Dict, models_to_try: List[str]
+    ) -> AsyncIterator[Dict]:
+        """Stream with model fallback.
+
+        This avoids surfacing transient transport/protocol errors (e.g. connection reset)
+        as hard failures when a different model can serve the request.
+        """
+
+        last_error = None
+
+        for attempt_model in models_to_try or [payload.get("model")]:
+            if not attempt_model:
+                continue
+
+            attempt_payload = dict(payload)
+            attempt_payload["model"] = attempt_model
+            received_content = False
+
+            try:
+                logger.info(f"Trying model (stream): {attempt_model}")
+                async for chunk in self._stream_response(url, attempt_payload):
+                    if isinstance(chunk, dict) and "content" in chunk:
+                        received_content = True
+                        yield chunk
+                        continue
+
+                    if isinstance(chunk, dict) and "error" in chunk:
+                        if received_content:
+                            yield chunk
+                            return
+                        last_error = str(chunk.get("error"))
+                        break
+
+                    yield chunk
+
+                if received_content:
+                    return
+
+            except Exception as exc:
+                if received_content:
+                    yield {"error": str(exc)}
+                    return
+                last_error = str(exc)
+                continue
+
+        yield {"error": last_error or "All models failed"}
+
     def _mock_response(
         self, messages: List[Dict], model: str, stream: bool
     ) -> Union[Dict, AsyncIterator]:
@@ -230,7 +284,7 @@ class OpenRouterProvider(BaseProvider):
             if model.get("voice_optimized", False):
                 return model["id"]
         # Fallback to Gemini 2.0 Flash if available
-        return "google/gemini-2.0-flash-001:free"
+        return "nvidia/nemotron-nano-9b-v2:free"
 
     def is_available(self) -> bool:
         """Check if OpenRouter is configured."""

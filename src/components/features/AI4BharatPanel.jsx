@@ -4,8 +4,9 @@ import {
     Cpu, Keyboard, Volume2, ScanText, Sparkles, Check, Copy, RotateCcw,
     BookA, MoveHorizontal
 } from 'lucide-react';
+import { createApiClient } from '../../lib/apiClient';
 
-const AI4BharatPanel = ({ isOpen, onClose, isEmbedded = false }) => {
+const AI4BharatPanel = ({ isOpen, onClose, isEmbedded = false, backendUrl = '' }) => {
     const [activeTab, setActiveTab] = useState('overview'); // overview, translate, transliterate, script_convert, dictionary
 
     if (!isOpen && !isEmbedded) return null;
@@ -97,10 +98,10 @@ const AI4BharatPanel = ({ isOpen, onClose, isEmbedded = false }) => {
             {/* Content */}
             <main className="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-neutral-950/50">
                 {activeTab === 'overview' && <OverviewSection onTryDemo={() => setActiveTab('translate')} />}
-                {activeTab === 'translate' && <ToolSection tool="translate" />}
-                {activeTab === 'transliterate' && <ToolSection tool="transliterate" />}
-                {activeTab === 'script_convert' && <ToolSection tool="script_convert" />}
-                {activeTab === 'dictionary' && <ToolSection tool="dictionary" />}
+                {activeTab === 'translate' && <ToolSection tool="translate" backendUrl={backendUrl} />}
+                {activeTab === 'transliterate' && <ToolSection tool="transliterate" backendUrl={backendUrl} />}
+                {activeTab === 'script_convert' && <ToolSection tool="script_convert" backendUrl={backendUrl} />}
+                {activeTab === 'dictionary' && <ToolSection tool="dictionary" backendUrl={backendUrl} />}
             </main>
         </div>
     );
@@ -215,7 +216,7 @@ const OverviewSection = ({ onTryDemo }) => {
     );
 };
 
-const ToolSection = ({ tool }) => {
+const ToolSection = ({ tool, backendUrl = '' }) => {
     const [sourceLanguage, setSourceLanguage] = useState('en');
     const [targetLanguage, setTargetLanguage] = useState('hi');
     const [inputText, setInputText] = useState('');
@@ -255,42 +256,25 @@ const ToolSection = ({ tool }) => {
         setOutputText('');
 
         try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [
-                        { role: 'system', content: getSystemPrompt() },
-                        { role: 'user', content: inputText }
-                    ],
-                    model: 'x-ai/grok-4.1-fast:free',
-                    stream: true
-                })
-            });
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
             let accumulatedContent = '';
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+            const api = createApiClient({ baseUrl: backendUrl });
 
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const data = JSON.parse(line.slice(6));
-                            if (data.content) {
-                                accumulatedContent += data.content;
-                                setOutputText(accumulatedContent);
-                            }
-                        } catch (e) { }
-                    }
+            await api.streamChat({
+                model: 'x-ai/grok-4.1-fast:free',
+                messages: [
+                    { role: 'system', content: getSystemPrompt() },
+                    { role: 'user', content: inputText }
+                ],
+                onDelta: (delta) => {
+                    accumulatedContent += delta;
+                    setOutputText(accumulatedContent);
+                },
+                onError: (err) => {
+                    const msg = typeof err === 'string' ? err : (err?.message || JSON.stringify(err));
+                    throw new Error(msg);
                 }
-            }
+            });
         } catch (error) {
             setOutputText('Error: ' + error.message);
         } finally {

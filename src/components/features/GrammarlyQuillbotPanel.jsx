@@ -7,6 +7,7 @@ import {
     Maximize2, Minimize2, SplitSquareHorizontal,
     Type
 } from 'lucide-react';
+import { createApiClient } from '../../lib/apiClient';
 
 const TOOLS = [
     { id: 'paraphrase', label: 'Paraphraser', icon: RefreshCw, description: 'Rewrite text with improved phrasing.' },
@@ -37,7 +38,7 @@ const LANGUAGES = [
     { id: 'ja', label: 'Japanese' },
 ];
 
-const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false }) => {
+const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUrl = '' }) => {
     const [activeTool, setActiveTool] = useState('paraphrase');
     const [activeMode, setActiveMode] = useState('standard');
     const [targetLang, setTargetLang] = useState('es');
@@ -82,44 +83,27 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false }) => {
         setOutputText('');
 
         try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [
-                        { role: 'system', content: 'You are an expert writing assistant. Provide high-quality, direct responses without conversational filler.' },
-                        { role: 'user', content: getPrompt() }
-                    ],
-                    model: 'x-ai/grok-4.1-fast:free',
-                    stream: true
-                })
-            });
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
             let accumulatedContent = '';
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+            const api = createApiClient({ baseUrl: backendUrl });
 
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const data = JSON.parse(line.slice(6));
-                            if (data.content) {
-                                accumulatedContent += data.content;
-                                setOutputText(accumulatedContent);
-                            }
-                        } catch (e) { }
-                    }
+            await api.streamChat({
+                model: 'x-ai/grok-4.1-fast:free',
+                messages: [
+                    { role: 'system', content: 'You are an expert writing assistant. Provide high-quality, direct responses without conversational filler.' },
+                    { role: 'user', content: getPrompt() }
+                ],
+                onDelta: (delta) => {
+                    accumulatedContent += delta;
+                    setOutputText(accumulatedContent);
+                },
+                onError: (err) => {
+                    const msg = typeof err === 'string' ? err : (err?.message || JSON.stringify(err));
+                    throw new Error(msg);
                 }
-            }
+            });
         } catch (err) {
-            setOutputText(`Error: ${err.message}`);
+            setOutputText(`Error: ${err?.message || String(err)}`);
         } finally {
             setIsProcessing(false);
         }

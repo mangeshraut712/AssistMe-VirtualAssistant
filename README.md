@@ -2,12 +2,12 @@
 
 ![AssistMe Logo](public/assets/logo.png)
 
-**Your Intelligent Companion** - A cutting-edge AI-powered virtual assistant featuring multimodal interactions, advanced RAG systems, real-time voice processing, and comprehensive multilingual support. Built with the latest technologies for unparalleled user experience.
+**Your Intelligent Companion** - A cutting-edge AI-powered virtual assistant featuring multimodal interactions, advanced RAG systems, real-time voice processing with NVIDIA Nemotron, and comprehensive multilingual support. Built with the latest technologies for unparalleled stability and user experience.
 
 ## 🚀 Key Highlights
 
 - **🤖 Multi-Provider AI Integration**: Seamlessly access OpenAI, Anthropic, xAI, Google, and Meta models
-- **🎤 Real-Time Voice Interaction**: Full-duplex voice conversations with Gemini 2.0 Flash (1.05M context window)
+- **🎤 Real-Time Voice Interaction**: Full-duplex voice conversations with NVIDIA Nemotron Nano 9B V2 (optimized for stability)
 - **🌍 Universal Language Support**: 22+ Indian languages + 17+ global languages with AI4Bharat
 - **🧠 Advanced RAG System**: Context-aware responses with FAISS vector search and knowledge base
 - **⚡ Modern Tech Stack**: React 19, FastAPI, PostgreSQL, Redis, WebSocket streaming
@@ -22,7 +22,7 @@
 - **Conversation Persistence**: Database-backed chat history with auto-titling
 - **Advanced Models**: Access to latest AI models (GPT-4o, Claude 3.5, Grok, Gemini 2.0)
 
-### 🎤 Advanced Voice Mode (Powered by Gemini 2.0 Flash)
+### 🎤 Advanced Voice Mode (Powered by NVIDIA Nemotron Nano 9B V2)
 - **Real-Time Processing**: Instant speech-to-text with Whisper AI
 - **Natural TTS**: High-quality text-to-speech synthesis
 - **Streaming Audio**: Low-latency audio streaming for fluid conversations
@@ -85,7 +85,7 @@
 
 - Node.js 18+ and npm
 - Python 3.11+
-- OpenRouter API Key
+- (Optional) OpenRouter API Key (only needed for real model calls; local dev can run with `DEV_MODE=true`)
 
 ### Installation
 
@@ -105,11 +105,21 @@ cd ..
 
 3. **Set up Environment Variables**
 
-Create a `.env` file in the `backend` directory:
-```env
-OPENROUTER_API_KEY=your_api_key_here
-DEV_MODE=false
-APP_URL=http://localhost:5173
+This project reads API keys from the **environment** (recommended for local dev, CI, and Vercel).
+
+- If you *don't* want to use an API key locally, run the backend with `DEV_MODE=true` (mock responses).
+- If you want real model responses locally, set `OPENROUTER_API_KEY` in your shell.
+
+Example (no API key):
+```bash
+export DEV_MODE=true
+```
+
+Example (real model calls):
+```bash
+export OPENROUTER_API_KEY=your_api_key_here
+export DEV_MODE=false
+export APP_URL=http://localhost:5173
 ```
 
 4. **Run the Application**
@@ -129,7 +139,7 @@ npm run dev
 Backend (in another terminal):
 ```bash
 cd backend
-python -m uvicorn app.main:app --reload --port 8001
+DEV_MODE=true python -m uvicorn app.main:app --reload --port 8001
 ```
 
 5. **Access the Application**
@@ -244,11 +254,18 @@ AssistMe-VirtualAssistant/
 │   │   │   ├── InputArea.jsx
 │   │   │   ├── MessageBubble.jsx
 │   │   │   └── Sidebar.jsx
+│   │   ├── ui/                # Reusable UI components
+│   │   │   └── index.jsx      # Button, Card, Badge, Spinner, etc.
 │   │   └── ErrorBoundary.jsx
+│   ├── lib/                   # Utility libraries
+│   │   ├── apiClient.js       # API client for backend
+│   │   ├── hooks.js           # Custom React hooks
+│   │   └── utils.js           # Helper functions
 │   ├── pages/                 # Page components
 │   │   └── BenchmarkPage.jsx  # Mission Control dashboard
 │   ├── App.jsx                # Main application
-│   └── main.jsx               # Application entry point
+│   ├── main.jsx               # Application entry point
+│   └── index.css              # Global styles & design system
 ├── public/
 │   ├── assets/
 │   │   └── logo.png
@@ -292,13 +309,23 @@ AssistMe-VirtualAssistant/
 ├── api/                       # Vercel serverless functions
 │   ├── index.py               # API entry point
 │   └── requirements.txt       # Serverless dependencies
+├── .github/
+│   └── workflows/
+│       └── nodejs-ci.yml      # CI/CD pipeline
+├── .eslintrc.json             # ESLint configuration
+├── .prettierrc                # Prettier configuration
 ├── .env.example               # Environment template
+├── CHANGELOG.md               # Version history
+├── CONTRIBUTING.md            # Contribution guidelines
+├── SECURITY.md                # Security policy
 ├── vercel.json                # Vercel deployment config
 ├── package.json               # Root package config
 ├── vite.config.js             # Vite configuration
-├── tailwind.config.js         # Tailwind CSS config
+├── tailwind.config.cjs        # Tailwind CSS config
+├── postcss.config.cjs         # PostCSS configuration
 └── README.md
 ```
+
 
 ## 🎨 Themes
 
@@ -323,7 +350,7 @@ Select your preferred language in Settings. The AI will respond in your chosen l
 ## 📊 Supported AI Models
 
 ### Free Models (Always Available)
-- **Google Gemini 2.0 Flash** ⭐ (Voice-optimized, 1.05M context window)
+- **NVIDIA Nemotron Nano 9B V2** ⭐ (Voice-optimized, stable performance)
 - **Google Gemini 1.5 Pro** (2M context window, multimodal)
 - **Meta Llama 3.3 70B** (Advanced reasoning, 128K context)
 - **Meta Llama 3.1 405B** (Highest performance, 128K context)
@@ -350,7 +377,7 @@ Select your preferred language in Settings. The AI will respond in your chosen l
 
 ## 🎤 Advanced Voice Mode
 
-Experience full voice-to-voice interaction powered by **Gemini 2.0 Flash**.
+Experience full voice-to-voice interaction powered by **NVIDIA Nemotron Nano 9B V2** for stable and reliable performance.
 
 **Features:**
 - **Real-time Interaction**: Speak naturally and get instant responses.
@@ -363,28 +390,76 @@ Experience full voice-to-voice interaction powered by **Gemini 2.0 Flash**.
 3. Start speaking! The AI will listen and respond with voice.
 
 **Technical Details:**
+- **Model**: NVIDIA Nemotron Nano 9B V2 (optimized for voice interactions)
 - **WebSocket Endpoint**: `/api/chat/voice`
 - **Audio Format**: PCM 16-bit, 24kHz (Input/Output)
+- **Stability**: Enhanced error handling and retry mechanisms for reliable performance
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct, development setup, and the process for submitting pull requests.
 
-## 📝 License
+### Developer Tools
+
+```bash
+# Lint code
+npm run lint
+
+# Auto-fix lint issues
+npm run lint:fix
+
+# Format code with Prettier
+npm run format
+
+# Check formatting
+npm run format:check
+
+# Clean build artifacts
+npm run clean
+```
+
+### Utility Libraries
+
+The project includes reusable utilities:
+
+```javascript
+// Class name merging (Tailwind-aware)
+import { cn } from './lib/utils';
+<div className={cn('base-class', isActive && 'active-class')} />
+
+// Custom hooks
+import { useLocalStorage, useDebounce, useMediaQuery } from './lib/hooks';
+const [value, setValue] = useLocalStorage('key', 'default');
+
+// Reusable UI components
+import { Button, Card, Spinner, Badge } from './components/ui';
+```
+
+## � Security
+
+For security concerns, please review our [Security Policy](SECURITY.md).
+
+## �📝 License
 
 This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
-- OpenRouter for AI model access
-- AI4Bharat for multilingual support
-- Recharts for data visualization
-- Lucide for beautiful icons
+- [OpenRouter](https://openrouter.ai/) for unified AI model access
+- [AI4Bharat](https://ai4bharat.org/) for Indian language processing
+- [Recharts](https://recharts.org/) for data visualization
+- [Lucide](https://lucide.dev/) for beautiful icons
+- [TailwindCSS](https://tailwindcss.com/) for styling
 
 ## 📧 Contact
 
 For questions or support, please open an issue on GitHub.
 
+## 📜 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes in each version.
+
 ---
 
 **Made with ❤️ by the AssistMe Team**
+

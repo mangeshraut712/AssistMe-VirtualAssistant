@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { Code, Image, MessageSquare } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 // Quick action icons removed as homepage quick actions are hidden
@@ -23,11 +24,11 @@ const MODELS = [
     { id: 'x-ai/grok-4.1-fast:free', name: 'xAI: Grok 4.1 Fast (Free)', provider: 'xAI', free: true },
 
     // Voice-Optimized (Priority 0)
-    { id: 'google/gemini-2.0-flash-001:free', name: '🎤 Google: Gemini 2.0 Flash (Free)', provider: 'Google', free: true, voiceOptimized: true },
+    { id: 'nvidia/nemotron-nano-9b-v2:free', name: '🎤 NVIDIA: Nemotron Nano 9B V2 (Free)', provider: 'NVIDIA', free: true, voiceOptimized: true },
 
     // Free Models (Priority 1)
     { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Meta Llama 3.3 70B Instruct (Free)', provider: 'Meta', free: true },
-    { id: 'nvidia/nemotron-nano-9b-v2:free', name: 'NVIDIA Nemotron Nano 9B V2 (Free)', provider: 'NVIDIA', free: true },
+    { id: 'google/gemini-2.0-flash-001:free', name: 'Google: Gemini 2.0 Flash (Free)', provider: 'Google', free: true },
     { id: 'google/gemma-3-27b-it:free', name: 'Google: Gemma 3 27B IT (Free)', provider: 'Google', free: true },
     { id: 'nvidia/nemotron-nano-12b-v2-vl:free', name: 'NVIDIA: Nemotron Nano 12B V2 VL (Free)', provider: 'NVIDIA', free: true },
     { id: 'meituan/longcat-flash-chat:free', name: 'Meituan: LongCat Flash Chat (Free)', provider: 'Meituan', free: true },
@@ -302,8 +303,9 @@ function App() {
     // Render Markdown Content
     const renderContent = (content) => {
         try {
-            const html = marked.parse(content);
-            return <div dangerouslySetInnerHTML={{ __html: html }} className="prose dark:prose-invert max-w-none" />;
+            const html = marked.parse(String(content ?? ''));
+            const safeHtml = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+            return <div dangerouslySetInnerHTML={{ __html: safeHtml }} className="prose dark:prose-invert max-w-none" />;
         } catch {
             return <div>{content}</div>;
         }
@@ -435,6 +437,7 @@ function App() {
                                     <GrokipediaPanel
                                         isOpen={true}
                                         onClose={() => navigate('/')}
+                                        backendUrl={settings.backendUrl}
                                     />
                                 </Suspense>
                             }
@@ -446,6 +449,7 @@ function App() {
                                     <UnifiedToolsPanel
                                         isOpen={true}
                                         onClose={() => navigate('/')}
+                                        backendUrl={settings.backendUrl}
                                     />
                                 </Suspense>
                             }
@@ -469,6 +473,7 @@ function App() {
                                     <SpeedtestPanel
                                         isOpen={true}
                                         onClose={() => navigate('/')}
+                                        backendUrl={settings.backendUrl}
                                     />
                                 </Suspense>
                             }

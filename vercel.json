@@ -5,16 +5,23 @@
   "functions": {
     "api/chat.js": {
       "maxDuration": 60
+    },
+    "api/health.js": {
+      "maxDuration": 10
     }
   },
   "rewrites": [
     {
-      "source": "/api/chat/(.*)",
-      "destination": "/api/chat.js"
+      "source": "/api/chat/:path*",
+      "destination": "/api/chat"
     },
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/health",
+      "destination": "/api/health"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/health"
     },
     {
       "source": "/(.*)",
@@ -22,6 +29,23 @@
     }
   ],
   "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

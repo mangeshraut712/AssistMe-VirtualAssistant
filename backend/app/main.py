@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import logging
 import os
@@ -287,33 +288,31 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
-def _resolve_origin(request: Request) -> str:
+def _resolve_origin(request: Request) -> Optional[str]:
     origin = request.headers.get("origin")
-    if origin:
-        if origin in ALLOWED_ORIGINS or VERCEL_ORIGIN_PATTERN.fullmatch(origin):
-            return origin
-    return "*"
+    if not origin:
+        return None
+    if origin in ALLOWED_ORIGINS or VERCEL_ORIGIN_PATTERN.fullmatch(origin):
+        return origin
+    return None
 
 
 def _cors_headers(request: Request, methods: Optional[str] = None) -> Dict[str, str]:
     """Build CORS headers that respect the resolved origin."""
     allow_origin = _resolve_origin(request)
-    headers = {
-        "Access-Control-Allow-Origin": allow_origin,
+    headers: Dict[str, str] = {
         "Vary": "Origin",
     }
-    if methods:
+    if allow_origin:
+        headers["Access-Control-Allow-Origin"] = allow_origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    if methods and allow_origin:
         headers["Access-Control-Allow-Methods"] = methods
         headers["Access-Control-Max-Age"] = "86400"
-        headers["Access-Control-Allow-Headers"] = request.headers.get(
-            "Access-Control-Request-Headers", "*"
+        headers["Access-Control-Allow-Headers"] = (
+            "Content-Type, Authorization, X-Requested-With"
         )
-    if allow_origin != "*":
-        headers["Access-Control-Allow-Credentials"] = "true"
     return headers
-
-
-
 
 
 def generate_conversation_title_from_messages(messages: List[ChatMessage]) -> str:
@@ -762,22 +761,31 @@ async def chat_text(
     # Rate limiting check
     rate_limit_ok, rate_limit_msg = await rate_limit_service.check_rate_limit()
     if not rate_limit_ok:
-        return {"error": f"Rate limit exceeded: {rate_limit_msg}"}
+        return JSONResponse(
+            content={"error": f"Rate limit exceeded: {rate_limit_msg}"},
+            status_code=429,
+        )
 
     # Check credits for non-free models
     model = request.model or "google/gemini-2.0-flash"  # Default to OpenRouter model
     credit_ok, credit_msg = await rate_limit_service.check_credits(model)
     if not credit_ok:
-        return {"error": f"Credit limit exceeded: {credit_msg}"}
+        return JSONResponse(
+            content={"error": f"Credit limit exceeded: {credit_msg}"},
+            status_code=402,
+        )
 
     # Only OpenRouter client is supported
     try:
         _ensure_chat_client()
         provider = get_provider()
     except HTTPException as exc:
-        return {"error": exc.detail}
+        return JSONResponse(
+            content={"error": exc.detail},
+            status_code=exc.status_code,
+        )
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
     current_conversation_id, payload_messages = _prepare_conversation_context(
         request, db
@@ -797,37 +805,30 @@ async def chat_text(
         {"role": m["role"], "content": m["content"]} for m in payload_messages
     ]
 
-    try:
-        result = await provider.chat_completion(
-            messages=provider_messages,
-            model=model,
-            temperature=request.temperature or 0.7,
-            max_tokens=request.max_tokens or 1024,
-            stream=False,
-        )
-        # Record usage for rate limiting
-        await rate_limit_service.record_request(model, result.get("tokens", 0))
-    except Exception as e:
-        logging.error(f"Chat completion error: {e}")
-        return {"error": str(e)}
-
     # Try to get from cache first
     cache_key = None
     try:
         from .services.cache_service import cache_service
 
         if cache_service.enabled:
-            # Create a simple cache key based on messages and model
-            # In production, use a more robust hashing of the message content
-            last_msg = request.messages[-1].content if request.messages else ""
-            cache_key = f"chat:{request.model}:{hash(last_msg)}"
+            cache_payload = {
+                "model": model,
+                "temperature": request.temperature or 0.7,
+                "max_tokens": request.max_tokens or 1024,
+                "messages": provider_messages,
+            }
+            cache_digest = hashlib.sha256(
+                json.dumps(
+                    cache_payload,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ).encode("utf-8")
+            ).hexdigest()
+            cache_key = f"chat:v1:{cache_digest}"
             cached_response = await cache_service.get(cache_key)
             if cached_response:
                 logging.info(f"Cache hit for key: {cache_key}")
-                # Persist the cached message to DB so history is complete
-                current_conversation_id, _ = _prepare_conversation_context(
-                    request, db
-                )
                 generated_title = generate_conversation_title_from_messages(
                     request.messages
                 )
@@ -841,7 +842,7 @@ async def chat_text(
                 return {
                     "response": cached_response.get("response"),
                     "usage": {"tokens": cached_response.get("tokens", 0)},
-                    "model": request.model,
+                    "model": model,
                     "conversation_id": current_conversation_id or 0,
                     "title": generated_title,
                     "cached": True,
@@ -849,8 +850,22 @@ async def chat_text(
     except Exception as e:
         logging.warning(f"Cache check failed: {e}")
 
+    try:
+        result = await provider.chat_completion(
+            messages=provider_messages,
+            model=model,
+            temperature=request.temperature or 0.7,
+            max_tokens=request.max_tokens or 1024,
+            stream=False,
+        )
+        # Record usage for rate limiting
+        await rate_limit_service.record_request(model, result.get("tokens", 0))
+    except Exception as e:
+        logging.error(f"Chat completion error: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=502)
+
     if "error" in result:
-        return {"error": result["error"]}
+        return JSONResponse(content={"error": result["error"]}, status_code=502)
 
     generated_title = generate_conversation_title_from_messages(request.messages)
 
@@ -1001,6 +1016,7 @@ async def chat_text_stream_options(request: Request) -> Response:
 def chat_text_info():
     """Get information about the chat text endpoint."""
     return {
+        "success": True,
         "message": "This endpoint accepts POST requests only. Use POST method to send messages.",
         "usage": {
             "method": "POST",
@@ -1024,20 +1040,23 @@ async def chat_text_options(request: Request) -> Response:
 
 @app.get("/api/models")
 async def list_models():
-    _ensure_chat_client()
     try:
+        _ensure_chat_client()
         provider = get_provider()
         models = await provider.list_models()
+        return {
+            "success": True,
+            "models": models,
+            "default": getattr(provider, "default_model", None),
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error listing models: {e}")
-        models = []
-
-    return {
-        "models": models,
-        "default": (
-            getattr(provider, "default_model", None) if "provider" in locals() else None
-        ),
-    }
+        return JSONResponse(
+            content={"success": False, "error": str(e), "models": []},
+            status_code=500,
+        )
 
 
 @app.options("/api/models")
@@ -1049,21 +1068,29 @@ async def list_models_options(request: Request) -> Response:
 @app.get("/api/provider/status")
 def provider_status():
     if not CHAT_CLIENT_AVAILABLE:
-        return {
-            "configured": False,
-            "message": "Chat client unavailable.",
-        }
+        return JSONResponse(
+            content={
+                "success": False,
+                "configured": False,
+                "message": "Chat client unavailable.",
+            },
+            status_code=503,
+        )
 
     try:
         provider = get_provider()
         return {
+            "success": True,
             "configured": True,
             "provider": provider.__class__.__name__,
             "available": provider.is_available(),
             "default_model": getattr(provider, "default_model", None),
         }
     except Exception as e:
-        return {"configured": False, "error": str(e)}
+        return JSONResponse(
+            content={"success": False, "configured": False, "error": str(e)},
+            status_code=500,
+        )
 
 
 @app.get("/api/rate-limit/status")
@@ -1072,10 +1099,12 @@ async def rate_limit_status(request: Request):
     headers = _cors_headers(request)
     try:
         status = await rate_limit_service.get_status()
-        return JSONResponse(content=status, headers=headers)
+        return JSONResponse(content={"success": True, **status}, headers=headers)
     except Exception as e:
         return JSONResponse(
-            content={"error": str(e)}, status_code=500, headers=headers
+            content={"success": False, "error": str(e)},
+            status_code=500,
+            headers=headers,
         )
 
 
@@ -1146,7 +1175,7 @@ async def conversation_detail_options(
 
 @app.websocket("/api/chat/voice")
 async def voice_chat(websocket: WebSocket):
-    """Advanced voice chat using Gemini 2.0 Flash with STT and TTS.
+    """Advanced voice chat using NVIDIA Nemotron Nano 9B V2 with STT and TTS.
     
     Protocol:
     - Client sends: {"type": "audio", "data": base64_audio, "language": "en", "stream": false}

@@ -1,5 +1,6 @@
 """Text-to-speech service using gTTS (local/dev-friendly)."""
 
+import asyncio
 import base64
 import logging
 from typing import Dict, Optional
@@ -59,7 +60,23 @@ class TTSService:
 
         from starlette.concurrency import run_in_threadpool
 
-        audio_bytes = await run_in_threadpool(_do_gtts)
+        last_exc = None
+        for attempt in range(2):
+            try:
+                audio_bytes = await asyncio.wait_for(
+                    run_in_threadpool(_do_gtts), timeout=15.0
+                )
+                last_exc = None
+                break
+            except Exception as exc:
+                last_exc = exc
+                if attempt < 1:
+                    await asyncio.sleep(0.8)
+                    continue
+                raise
+
+        if last_exc is not None:
+            raise last_exc
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
         return {

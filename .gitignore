@@ -27,6 +27,8 @@ dist-ssr
 .env
 .env.local
 .env.production
+backend/.env
+backend/.env.*
 
 # Python
 __pycache__/
@@ -81,3 +83,6 @@ Thumbs.db
 backend/data/
 backend/uploads/
 frontend/dist/
+*.log
+*.db
+backend/assistme.db

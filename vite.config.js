@@ -9,9 +9,14 @@ const __dirname = dirname(__filename)
 export default defineConfig({
   plugins: [react()],
   root: resolve(__dirname, '.'),
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+    },
+  },
   build: {
     manifest: true,
-    target: 'es2020',
+    target: 'es2022',
     minify: 'terser',
     sourcemap: false,
     outDir: 'dist',
@@ -23,7 +28,8 @@ export default defineConfig({
       },
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'marked', 'highlight.js']
+          vendor: ['react', 'react-dom', 'marked', 'highlight.js'],
+          motion: ['framer-motion'],
         },
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
@@ -62,7 +68,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'marked', 'highlight.js'],
+    include: ['react', 'react-dom', 'marked', 'highlight.js', 'framer-motion'],
     exclude: ['katex']
   },
   esbuild: {
@@ -70,3 +76,4 @@ export default defineConfig({
     legalComments: 'none'
   }
 })
+
