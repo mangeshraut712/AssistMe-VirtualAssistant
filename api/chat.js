@@ -58,7 +58,7 @@ function uniqueStrings(values) {
 }
 
 function shouldRetryStatus(status) {
-    return status === 400 || status === 404 || status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+    return status === 400 || status === 402 || status === 404 || status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
 }
 
 const ALLOWED_ORIGINS = new Set([
