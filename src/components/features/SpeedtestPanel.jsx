@@ -1,470 +1,416 @@
-/**
- * Enhanced Speedtest Panel with Framer Motion
- * Modern performance testing with stunning animations
- * 
- * Features:
- * - Animated circular gauge
- * - Real-time value updates
- * - Glass morphism design
- * - Detailed statistics
- */
-
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { X, Server, Activity, Zap, Brain, RotateCcw, Wifi, Clock, CheckCircle2 } from 'lucide-react';
-import { createApiClient } from '@/lib/apiClient';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    X, RotateCcw, MapPin, Info, ArrowDown, ArrowUp,
+    Activity, Monitor, Smartphone, Globe, Share2, Download
+} from 'lucide-react';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 import { cn } from '@/lib/utils';
 
-// Animation variants
-const panelVariants = {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: {
-        opacity: 1,
-        scale: 1,
-        transition: { type: 'spring', stiffness: 300, damping: 30 }
-    },
-    exit: { opacity: 0, scale: 0.95 }
-};
-
-const statVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i) => ({
-        opacity: 1,
-        y: 0,
-        transition: { delay: i * 0.1, type: 'spring', stiffness: 300, damping: 25 }
-    })
-};
-
-// Animated Number component
-const AnimatedNumber = ({ value, suffix = '' }) => {
-    const displayValue = useMotionValue(0);
-    const rounded = useTransform(displayValue, (v) => Math.round(v));
-    const [display, setDisplay] = useState(0);
-
-    useEffect(() => {
-        const controls = animate(displayValue, value, {
-            duration: 1,
-            ease: 'easeOut',
-        });
-        return controls.stop;
-    }, [value, displayValue]);
-
-    useEffect(() => {
-        const unsubscribe = rounded.on('change', (v) => setDisplay(v));
-        return unsubscribe;
-    }, [rounded]);
-
-    return (
-        <span className="tabular-nums">
-            {display}
-            {suffix && <span className="text-primary ml-1">{suffix}</span>}
-        </span>
-    );
-};
-
-// Stat Card component
-const StatCard = ({ icon: Icon, label, value, unit, subValue, index, color = 'primary' }) => (
-    <motion.div
-        variants={statVariants}
-        initial="hidden"
-        animate="visible"
-        custom={index}
-        className={cn(
-            'flex items-center gap-4 p-4 rounded-2xl',
-            'bg-card border border-border/50',
-            'hover:border-border transition-colors'
-        )}
-    >
-        <div className={cn(
-            'p-3 rounded-xl',
-            color === 'primary' && 'bg-primary/10 text-primary',
-            color === 'green' && 'bg-green-500/10 text-green-500',
-            color === 'purple' && 'bg-purple-500/10 text-purple-500'
-        )}>
-            <Icon className="h-5 w-5" />
-        </div>
-        <div className="flex-1">
-            <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">
-                {label}
-            </div>
-            <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold">
-                    {value !== null ? <AnimatedNumber value={value} /> : '–'}
-                </span>
-                <span className="text-sm text-muted-foreground">{unit}</span>
-                {subValue && (
-                    <span className="text-xs text-muted-foreground ml-auto">
-                        {subValue}
-                    </span>
-                )}
-            </div>
-        </div>
-    </motion.div>
-);
-
 const SpeedtestPanel = ({ isOpen, onClose, backendUrl = '' }) => {
-    const [status, setStatus] = useState('idle');
-    const [progress, setProgress] = useState(0);
-    const [displayValue, setDisplayValue] = useState(0);
-    const [results, setResults] = useState(null);
-    const [server] = useState('AssistMe Cloud (US-East)');
+    const [status, setStatus] = useState('idle'); // idle, download, upload, complete
+    const [downloadSpeed, setDownloadSpeed] = useState(0);
+    const [uploadSpeed, setUploadSpeed] = useState(0);
+    const [chartData, setChartData] = useState([]);
+    const [stats, setStats] = useState({
+        ping: 0,
+        jitter: 0,
+        loss: 0,
+        ip: 'Checking...',
+        location: 'Mumbai, IN', // Placeholder or detect
+        provider: 'Bharti Airtel Limited' // Placeholder
+    });
 
-    const requestRef = useRef();
-    const startTimeRef = useRef();
+    const [scores, setScores] = useState({
+        streaming: 'Average',
+        gaming: 'Poor',
+        chatting: 'Good'
+    });
 
+    const timerRef = useRef(null);
+    const dataPointsRef = useRef([]);
+
+    // Reset on open
     useEffect(() => {
         if (isOpen) {
-            setStatus('idle');
-            setProgress(0);
-            setDisplayValue(0);
-            setResults(null);
+            resetTest();
+            // Mock IP fetch
+            fetch('https://api.ipify.org?format=json')
+                .then(r => r.json())
+                .then(d => setStats(s => ({ ...s, ip: d.ip })))
+                .catch(() => { });
         }
     }, [isOpen]);
 
-    const animateValue = (start, end, duration) => {
-        startTimeRef.current = performance.now();
+    const resetTest = () => {
+        setStatus('idle');
+        setDownloadSpeed(0);
+        setUploadSpeed(0);
+        setChartData([]);
+        dataPointsRef.current = [];
+        if (timerRef.current) clearInterval(timerRef.current);
+    };
 
-        const animateFrame = (time) => {
-            const timeFraction = (time - startTimeRef.current) / duration;
-            const progressVal = Math.min(timeFraction, 1);
-            const ease = 1 - Math.pow(1 - progressVal, 4);
-            const currentVal = start + (end - start) * ease;
-            setDisplayValue(currentVal);
+    const generateDataPoint = (currentSpeed, type) => {
+        const time = dataPointsRef.current.length;
+        // Add some noise
+        const noise = (Math.random() - 0.5) * (currentSpeed * 0.1);
+        const value = Math.max(0, currentSpeed + noise);
 
-            if (progressVal < 1) {
-                requestRef.current = requestAnimationFrame(animateFrame);
-            }
+        const point = {
+            time,
+            download: type === 'download' ? value : null,
+            upload: type === 'upload' ? value : null
         };
 
-        requestRef.current = requestAnimationFrame(animateFrame);
-    };
+        dataPointsRef.current = [...dataPointsRef.current, point];
+        // Keep last 50 points for smooth chart
+        if (dataPointsRef.current.length > 50) dataPointsRef.current.shift();
 
-    const pingApi = async () => {
-        const start = performance.now();
-        try {
-            const base = String(backendUrl || '').replace(/\/+$/, '');
-            const url = base ? `${base}/health?ts=${Date.now()}` : `/health?ts=${Date.now()}`;
-            await fetch(url);
-            return performance.now() - start;
-        } catch (e) {
-            return 0;
-        }
-    };
-
-    const testLlm = async () => {
-        const start = performance.now();
-        try {
-            const api = createApiClient({ baseUrl: backendUrl });
-            await api.chatText({
-                messages: [{ role: 'user', content: 'ping' }],
-                model: 'meta-llama/llama-3.3-70b-instruct:free'
-            });
-            return performance.now() - start;
-        } catch (e) {
-            return 0;
-        }
+        return point;
     };
 
     const runTest = async () => {
         if (status !== 'idle' && status !== 'complete') return;
 
+        resetTest();
         setStatus('pinging');
-        setProgress(0);
-        setResults(null);
 
-        const apiSamples = [];
-        let currentAvg = 0;
-
-        // Phase 1: API Latency
-        for (let i = 0; i < 20; i++) {
-            const latency = await pingApi();
-            apiSamples.push(latency);
-            currentAvg = apiSamples.reduce((a, b) => a + b, 0) / apiSamples.length;
-            setDisplayValue(currentAvg);
-            setProgress((i + 1) / 40 * 100);
-            await new Promise(r => setTimeout(r, 50));
+        // Simulate Ping
+        let pingSum = 0;
+        for (let i = 0; i < 5; i++) {
+            await new Promise(r => setTimeout(r, 100));
+            pingSum += 20 + Math.random() * 15;
+            setStats(s => ({
+                ...s,
+                ping: Math.round(pingSum / (i + 1)),
+                jitter: Math.round(Math.random() * 5)
+            }));
         }
 
-        // Phase 2: LLM Response
-        setStatus('llm');
-        const llmLatency = await testLlm();
-        animateValue(currentAvg, llmLatency, 1000);
-        setProgress(100);
+        // Simulate Download
+        setStatus('download');
+        let speed = 0;
+        const targetDownload = 40 + Math.random() * 60; // 40-100 Mbps
 
-        setTimeout(() => {
-            setStatus('complete');
-            setResults({
-                api: {
-                    avg: Math.round(apiSamples.reduce((a, b) => a + b, 0) / apiSamples.length),
-                    min: Math.min(...apiSamples).toFixed(0),
-                    max: Math.max(...apiSamples).toFixed(0),
-                    jitter: Math.round(Math.sqrt(apiSamples.reduce((s, v) => s + Math.pow(v - currentAvg, 2), 0) / apiSamples.length))
-                },
-                llm: {
-                    latency: Math.round(llmLatency)
+        await new Promise(resolve => {
+            let ticks = 0;
+            timerRef.current = setInterval(() => {
+                ticks++;
+                // Ramp up
+                if (speed < targetDownload) {
+                    speed += (targetDownload - speed) * 0.1;
                 }
-            });
-        }, 1000);
+
+                // Add noise
+                const noisySpeed = speed + (Math.random() - 0.5) * 2;
+                setDownloadSpeed(Math.max(0, noisySpeed));
+
+                const point = generateDataPoint(noisySpeed, 'download');
+                setChartData(prev => [...prev.slice(-49), point]);
+
+                if (ticks > 50) {
+                    clearInterval(timerRef.current);
+                    resolve();
+                }
+            }, 100);
+        });
+
+        // Simulate Upload
+        setStatus('upload');
+        speed = 0;
+        dataPointsRef.current = []; // Reset chart for upload focus? Or keep? Cloudflare keeps separate.
+        // Let's clear chart for simplified view or transition
+        setChartData([]);
+        const targetUpload = 30 + Math.random() * 40; // 30-70 Mbps
+
+        await new Promise(resolve => {
+            let ticks = 0;
+            timerRef.current = setInterval(() => {
+                ticks++;
+                if (speed < targetUpload) {
+                    speed += (targetUpload - speed) * 0.15;
+                }
+
+                const noisySpeed = speed + (Math.random() - 0.5) * 2;
+                setUploadSpeed(Math.max(0, noisySpeed));
+
+                const point = generateDataPoint(noisySpeed, 'upload');
+                setChartData(prev => [...prev.slice(-49), point]);
+
+                if (ticks > 50) {
+                    clearInterval(timerRef.current);
+                    resolve();
+                }
+            }, 100);
+        });
+
+        setStatus('complete');
+        // Finalize scores
+        setScores({
+            streaming: targetDownload > 50 ? 'Excellent' : 'Average',
+            gaming: stats.ping < 40 ? 'Great' : 'Fair',
+            chatting: 'Excellent'
+        });
     };
 
     if (!isOpen) return null;
 
-    const circumference = 2 * Math.PI * 45;
-    const strokeDashoffset = circumference * (1 - progress / 100);
-
     return (
         <AnimatePresence>
             <motion.div
-                className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden"
-                variants={panelVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
+                className="fixed inset-0 bg-background z-50 flex flex-col font-sans overflow-y-auto"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
             >
-                {/* Background Pattern */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(var(--primary),0.1),transparent_50%)]" />
-
                 {/* Header */}
-                <motion.header
-                    className={cn(
-                        'flex items-center justify-between px-6 py-4 z-10',
-                        'border-b border-border bg-background/90 backdrop-blur-xl'
-                    )}
-                    initial={{ y: -20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                >
+                <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-background/95 backdrop-blur sticky top-0 z-20">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-primary/10">
-                            <Activity className="h-6 w-6 text-primary" />
+                        <div className="bg-foreground text-background p-1.5 rounded-lg">
+                            <Activity className="h-5 w-5" />
                         </div>
                         <div>
-                            <h1 className="font-bold text-xl tracking-tight">Speedtest</h1>
-                            <p className="text-xs text-muted-foreground">AI Performance Benchmark</p>
+                            <h1 className="font-bold text-lg">Speed Test</h1>
+                            <p className="text-xs text-muted-foreground">Built with AssistMe Cloud</p>
                         </div>
                     </div>
-                    <motion.button
-                        onClick={onClose}
-                        className="p-2.5 hover:bg-muted rounded-xl transition-colors"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
+                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <X className="h-5 w-5" />
-                    </motion.button>
-                </motion.header>
+                    </button>
+                </header>
 
-                {/* Main Content */}
-                <main className="flex-1 flex flex-col items-center justify-center relative px-4">
-                    {/* Gauge Container */}
-                    <motion.div
-                        className="relative w-80 h-80 md:w-96 md:h-96 flex items-center justify-center"
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.2, type: 'spring' }}
-                    >
-                        {/* Background Ring */}
-                        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                            <circle
-                                cx="50" cy="50" r="45"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1"
-                                className="text-border"
-                            />
-                            {/* Tick marks */}
-                            {Array.from({ length: 60 }).map((_, i) => (
-                                <motion.line
-                                    key={i}
-                                    x1="50" y1="6"
-                                    x2="50" y2={i % 5 === 0 ? "10" : "8"}
-                                    transform={`rotate(${i * 6} 50 50)`}
-                                    stroke="currentColor"
-                                    strokeWidth={i % 5 === 0 ? "0.6" : "0.3"}
-                                    className={i % 5 === 0 ? "text-muted-foreground" : "text-border"}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: i * 0.01 }}
-                                />
-                            ))}
-                        </svg>
+                <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-                        {/* Progress Arc */}
-                        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                            <motion.circle
-                                cx="50" cy="50" r="45"
-                                fill="none"
-                                stroke="url(#speedGradient)"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                strokeDasharray={circumference}
-                                strokeDashoffset={strokeDashoffset}
-                                className="transition-all duration-300"
-                            />
-                            <defs>
-                                <linearGradient id="speedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stopColor="hsl(var(--primary))" />
-                                    <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
-                                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.4" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
+                    {/* Main Dashboard (Left 3 cols) */}
+                    <div className="lg:col-span-3 space-y-6">
+                        {/* Speed Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Download Card */}
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm relative overflow-hidden group">
+                                <div className="flex items-center gap-2 mb-2 text-orange-500 font-medium text-sm uppercase tracking-wider">
+                                    <ArrowDown className="h-4 w-4" /> Download
+                                </div>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-6xl md:text-7xl font-bold tabular-nums tracking-tighter">
+                                        {downloadSpeed.toFixed(1)}
+                                    </span>
+                                    <span className="text-xl text-muted-foreground">Mbps</span>
+                                </div>
 
-                        {/* Glow Effect */}
-                        {(status === 'pinging' || status === 'llm') && (
-                            <motion.div
-                                className="absolute inset-0 rounded-full"
-                                style={{
-                                    boxShadow: '0 0 60px 20px rgba(var(--primary), 0.15)'
-                                }}
-                                animate={{ opacity: [0.5, 1, 0.5] }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
-                            />
-                        )}
+                                {/* Chart */}
+                                <div className="h-32 mt-4 -mx-2">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={status === 'upload' ? [] : chartData}>
+                                            <defs>
+                                                <linearGradient id="colorDown" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <Area
+                                                type="monotone"
+                                                dataKey="download"
+                                                stroke="#f97316"
+                                                strokeWidth={3}
+                                                fillOpacity={1}
+                                                fill="url(#colorDown)"
+                                                isAnimationActive={false}
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
 
-                        {/* Center Display */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <AnimatePresence mode="wait">
-                                {status === 'idle' ? (
-                                    <motion.button
-                                        key="go"
-                                        onClick={runTest}
-                                        className={cn(
-                                            'w-36 h-36 md:w-44 md:h-44 rounded-full',
-                                            'bg-card border-2 border-primary/30',
-                                            'hover:border-primary hover:bg-primary/5',
-                                            'transition-all duration-300',
-                                            'flex flex-col items-center justify-center',
-                                            'shadow-2xl shadow-primary/10',
-                                            'group'
-                                        )}
-                                        initial={{ scale: 0.9, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        exit={{ scale: 0.9, opacity: 0 }}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <motion.span
-                                            className="text-5xl md:text-6xl font-light text-primary"
-                                            animate={{ scale: [1, 1.05, 1] }}
-                                            transition={{ duration: 2, repeat: Infinity }}
-                                        >
-                                            GO
-                                        </motion.span>
-                                        <span className="text-xs text-muted-foreground mt-1">Tap to start</span>
-                                    </motion.button>
-                                ) : status === 'complete' ? (
-                                    <motion.div
-                                        key="complete"
-                                        className="flex flex-col items-center"
-                                        initial={{ scale: 0.9, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                    >
-                                        <CheckCircle2 className="h-12 w-12 text-green-500 mb-3" />
-                                        <span className="text-lg font-medium text-green-500">Complete</span>
-                                        <motion.button
-                                            onClick={runTest}
-                                            className="mt-4 flex items-center gap-2 px-4 py-2 rounded-full bg-muted hover:bg-muted/80 text-sm font-medium"
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                        >
-                                            <RotateCcw className="h-4 w-4" />
-                                            Test Again
-                                        </motion.button>
-                                    </motion.div>
-                                ) : (
-                                    <motion.div
-                                        key="running"
-                                        className="flex flex-col items-center"
-                                        initial={{ scale: 0.9, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                    >
-                                        <div className="text-6xl md:text-8xl font-bold tracking-tighter tabular-nums">
-                                            {Math.round(displayValue)}
-                                        </div>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
-                                                {status === 'pinging' ? 'API Latency' : 'AI Response'}
-                                            </span>
-                                            <span className="text-sm font-bold text-primary">ms</span>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            {/* Upload Card */}
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm relative overflow-hidden">
+                                <div className="flex items-center gap-2 mb-2 text-purple-500 font-medium text-sm uppercase tracking-wider">
+                                    <ArrowUp className="h-4 w-4" /> Upload
+                                </div>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-6xl md:text-7xl font-bold tabular-nums tracking-tighter">
+                                        {uploadSpeed.toFixed(1)}
+                                    </span>
+                                    <span className="text-xl text-muted-foreground">Mbps</span>
+                                </div>
+
+                                {/* Chart */}
+                                <div className="h-32 mt-4 -mx-2">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={status === 'upload' || status === 'complete' ? chartData : []}>
+                                            <defs>
+                                                <linearGradient id="colorUp" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <Area
+                                                type="monotone"
+                                                dataKey="upload"
+                                                stroke="#a855f7"
+                                                strokeWidth={3}
+                                                fillOpacity={1}
+                                                fill="url(#colorUp)"
+                                                isAnimationActive={false}
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
                         </div>
-                    </motion.div>
 
-                    {/* Status Text */}
-                    <div className="h-10 mt-6">
-                        <AnimatePresence mode="wait">
-                            {status === 'pinging' && (
-                                <motion.div
-                                    key="pinging"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    className="flex items-center gap-2 text-primary"
+                        {/* Controls */}
+                        <div className="flex flex-wrap items-center gap-4">
+                            {status === 'idle' || status === 'complete' ? (
+                                <button
+                                    onClick={runTest}
+                                    className="px-6 py-2.5 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-primary/20"
                                 >
-                                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                                        <Wifi className="h-4 w-4" />
-                                    </motion.div>
-                                    <span className="text-sm font-medium">Measuring API Latency...</span>
-                                </motion.div>
-                            )}
-                            {status === 'llm' && (
-                                <motion.div
-                                    key="llm"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    className="flex items-center gap-2 text-purple-500"
+                                    {status === 'complete' ? <RotateCcw className="h-4 w-4" /> : null}
+                                    {status === 'complete' ? 'Retest' : 'Start Test'}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={resetTest}
+                                    className="px-6 py-2.5 bg-muted text-foreground font-medium rounded-lg hover:bg-muted/80 transition-all active:scale-95 flex items-center gap-2"
                                 >
-                                    <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.8, repeat: Infinity }}>
-                                        <Brain className="h-4 w-4" />
-                                    </motion.div>
-                                    <span className="text-sm font-medium">Testing AI Model Response...</span>
-                                </motion.div>
+                                    <X className="h-4 w-4" /> Cancel
+                                </button>
                             )}
-                        </AnimatePresence>
+
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground ml-auto">
+                                <Info className="h-4 w-4" />
+                                <span>Tests are simulated for demo purposes</span>
+                            </div>
+                        </div>
+
+                        {/* Network Quality Score */}
+                        <div className="bg-card border border-border rounded-xl p-6">
+                            <h3 className="font-semibold mb-4 flex items-center gap-2">
+                                <Activity className="h-4 w-4" /> Network Quality Score
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                                <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                                    <span>Video Streaming</span>
+                                    <span className={cn(
+                                        "font-bold",
+                                        scores.streaming === 'Excellent' ? "text-green-500" : "text-yellow-500"
+                                    )}>{scores.streaming}</span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                                    <span>Online Gaming</span>
+                                    <span className={cn(
+                                        "font-bold",
+                                        scores.gaming === 'Great' ? "text-green-500" : "text-orange-500"
+                                    )}>{scores.gaming}</span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                                    <span>Video Chatting</span>
+                                    <span className={cn(
+                                        "font-bold",
+                                        scores.chatting === 'Excellent' ? "text-green-500" : "text-yellow-500"
+                                    )}>{scores.chatting}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Map Section */}
+                        <div className="bg-card border border-border rounded-xl overflow-hidden h-64 relative">
+                            <div className="absolute top-4 left-4 z-10 bg-background/90 backdrop-blur px-3 py-1 rounded-full text-xs font-medium border border-border shadow-sm flex items-center gap-1.5">
+                                <Globe className="h-3 w-3" /> Server Location
+                            </div>
+                            {/* Abstract Map Background */}
+                            <div className="w-full h-full bg-muted/30 flex items-center justify-center relative bg-[url('https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg')] bg-cover bg-center opacity-50 grayscale">
+                                <div className="absolute inset-0 bg-primary/5 mix-blend-overlay"></div>
+                                <div className="relative">
+                                    <div className="h-4 w-4 bg-primary rounded-full animate-ping absolute top-0 left-0"></div>
+                                    <div className="h-4 w-4 bg-primary rounded-full border-4 border-background shadow-xl"></div>
+                                    <MapPin className="h-8 w-8 text-primary absolute -top-7 -left-2 drop-shadow-lg" fill="currentColor" />
+                                </div>
+                                {/* Simple Line to Server */}
+                                <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                                    <line x1="50%" y1="50%" x2="60%" y2="40%" stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="4 4" className="opacity-50" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
+
+                    {/* Sidebar Stats (Right Col) */}
+                    <div className="space-y-6">
+                        {/* Latency Card */}
+                        <div className="bg-card border border-border rounded-xl p-5">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Activity className="h-5 w-5 text-muted-foreground" />
+                                <h3 className="font-semibold">Latency</h3>
+                            </div>
+                            <div className="flex items-baseline gap-1 mb-1">
+                                <span className="text-4xl font-bold tabular-nums">{stats.ping}</span>
+                                <span className="text-sm text-muted-foreground">ms</span>
+                            </div>
+                            <div className="space-y-3 mt-6">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Unloaded</span>
+                                    <span className="font-medium">{stats.ping} ms</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Downloading</span>
+                                    <span className="font-medium">{status === 'download' ? stats.ping + 20 : '-'} ms</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Uploading</span>
+                                    <span className="font-medium">{status === 'upload' ? stats.ping + 15 : '-'} ms</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Jitter & Loss */}
+                        <div className="bg-card border border-border rounded-xl p-5">
+                            <h3 className="font-semibold mb-4">Network Stability</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <div className="text-sm text-muted-foreground mb-1">Jitter</div>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-2xl font-bold tabular-nums">{stats.jitter}</span>
+                                        <span className="text-xs text-muted-foreground">ms</span>
+                                    </div>
+                                </div>
+                                <div className="h-px bg-border my-2"></div>
+                                <div>
+                                    <div className="text-sm text-muted-foreground mb-1">Packet Loss</div>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-2xl font-bold tabular-nums">{stats.loss}</span>
+                                        <span className="text-xs text-muted-foreground">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Client Info */}
+                        <div className="bg-card border border-border rounded-xl p-5 text-sm space-y-3">
+                            <div>
+                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5">
+                                    <Monitor className="h-3.5 w-3.5" /> Client IP
+                                </div>
+                                <div className="font-mono">{stats.ip}</div>
+                            </div>
+                            <div>
+                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5">
+                                    <MapPin className="h-3.5 w-3.5" /> Location
+                                </div>
+                                <div className="font-medium">{stats.location}</div>
+                            </div>
+                            <div>
+                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5">
+                                    <Globe className="h-3.5 w-3.5" /> Provider
+                                </div>
+                                <div className="font-medium">{stats.provider}</div>
+                            </div>
+                        </div>
+                    </div>
+
                 </main>
-
-                {/* Footer Stats */}
-                <motion.footer
-                    className="bg-card/50 backdrop-blur-xl border-t border-border p-6 md:p-8"
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                >
-                    <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <StatCard
-                            icon={Server}
-                            label="Server"
-                            value={null}
-                            unit=""
-                            index={0}
-                            color="primary"
-                        />
-                        <StatCard
-                            icon={Zap}
-                            label="API Latency"
-                            value={results?.api?.avg ?? null}
-                            unit="ms"
-                            subValue={results ? `±${results.api.jitter}` : null}
-                            index={1}
-                            color="green"
-                        />
-                        <StatCard
-                            icon={Brain}
-                            label="AI Response"
-                            value={results?.llm?.latency ?? null}
-                            unit="ms"
-                            index={2}
-                            color="purple"
-                        />
-                    </div>
-                    <div className="text-center mt-4 text-xs text-muted-foreground">
-                        Server: {server}
-                    </div>
-                </motion.footer>
             </motion.div>
         </AnimatePresence>
     );
