@@ -23,23 +23,24 @@ const MODELS = [
     // Default / Featured
     { id: 'x-ai/grok-4.1-fast:free', name: 'xAI: Grok 4.1 Fast (Free)', provider: 'xAI', free: true },
 
-    // Voice-Optimized (Priority 0)
-    { id: 'nvidia/nemotron-nano-9b-v2:free', name: '🎤 NVIDIA: Nemotron Nano 9B V2 (Free)', provider: 'NVIDIA', free: true, voiceOptimized: true },
+    // Voice-Optimized with Gemini 2.5 Native Audio (December 2025)
+    { id: 'google/gemini-2.5-flash', name: '🎤 Gemini 2.5 Flash (Native Audio)', provider: 'Google', free: false, voiceOptimized: true, nativeAudio: true },
+    { id: 'google/gemini-2.0-flash-001:free', name: '🎤 Gemini 2.0 Flash (Free)', provider: 'Google', free: true, voiceOptimized: true },
 
     // Free Models (Priority 1)
+    { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Meta Llama 3.3 70B Instruct (Free)', provider: 'Meta', free: true },
+    { id: 'nvidia/nemotron-nano-9b-v2:free', name: 'NVIDIA: Nemotron Nano 9B V2 (Free)', provider: 'NVIDIA', free: true },
     { id: 'nex-agi/deepseek-v3.1-nex-n1:free', name: 'Nex AGI: DeepSeek V3.1 Nex N1 (Free)', provider: 'Nex AGI', free: true },
     { id: 'amazon/nova-2-lite-v1:free', name: 'Amazon: Nova 2 Lite (Free)', provider: 'Amazon', free: true },
-    { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Meta Llama 3.3 70B Instruct (Free)', provider: 'Meta', free: true },
-    { id: 'google/gemini-2.0-flash-001:free', name: 'Google: Gemini 2.0 Flash (Free)', provider: 'Google', free: true },
     { id: 'google/gemma-3-27b-it:free', name: 'Google: Gemma 3 27B IT (Free)', provider: 'Google', free: true },
     { id: 'nvidia/nemotron-nano-12b-v2-vl:free', name: 'NVIDIA: Nemotron Nano 12B V2 VL (Free)', provider: 'NVIDIA', free: true },
     { id: 'meituan/longcat-flash-chat:free', name: 'Meituan: LongCat Flash Chat (Free)', provider: 'Meituan', free: true },
     { id: 'alibaba/tongyi-deepresearch-30b-a3b:free', name: 'Alibaba: Tongyi DeepResearch 30B A3B (Free)', provider: 'Alibaba', free: true },
 
     // Premium Models (Priority 2)
+    { id: 'google/gemini-2.5-pro', name: 'Google: Gemini 2.5 Pro', provider: 'Google', free: false },
     { id: 'x-ai/grok-code-fast-1', name: 'xAI: Grok Code Fast 1', provider: 'xAI', free: false },
     { id: 'perplexity/sonar', name: 'Perplexity: Sonar', provider: 'Perplexity', free: false },
-    { id: 'google/gemini-2.5-flash', name: 'Google: Gemini 2.5 Flash', provider: 'Google', free: false },
     { id: 'anthropic/claude-3-haiku', name: 'Anthropic Claude 3 Haiku', provider: 'Anthropic', free: false },
     { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini', provider: 'OpenAI', free: false },
 ];
