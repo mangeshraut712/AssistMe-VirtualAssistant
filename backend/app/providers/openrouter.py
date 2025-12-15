@@ -101,10 +101,21 @@ class OpenRouterProvider(BaseProvider):
         if model:
             models_to_try.append(model)
 
-        # Add fallback models based on priority
-        for fallback_model in available_models:
-            if fallback_model["id"] not in [m if isinstance(m, str) else m for m in models_to_try]:
-                models_to_try.append(fallback_model["id"])
+        # STRICT VOICE MODEL ISOLATION
+        # If the requested model is one of our designated VOICE_MODELS, we MUST NOT fallback
+        # to generic text models like Llama as they lack native audio/voice capabilities.
+        is_voice_request = model in self.VOICE_MODELS or model == "gemini-2.5-flash-native-audio-preview-12-2025" or model.startswith("google/gemini-2.5")
+        
+        if is_voice_request:
+            # Only add other VOICE_MODELS as fallbacks
+            for voice_model in self.VOICE_MODELS:
+                if voice_model not in models_to_try:
+                    models_to_try.append(voice_model)
+        else:
+            # Standard fallback behavior for text chat
+            for fallback_model in available_models:
+                if fallback_model["id"] not in [m if isinstance(m, str) else m for m in models_to_try]:
+                    models_to_try.append(fallback_model["id"])
 
         last_error = None
 
