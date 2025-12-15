@@ -84,14 +84,14 @@ const getGreeting = () => {
     return { text: 'Good night', emoji: '🌙' };
 };
 
-// Quick Action Card
+// Quick Action Card - Compact
 const QuickActionCard = ({ icon: Icon, title, description, onClick, index, gradient }) => (
     <motion.button
         onClick={onClick}
         className={cn(
-            'group relative flex flex-col items-start gap-3 p-4 sm:p-5 rounded-2xl text-left',
+            'group relative flex flex-col items-start gap-2 p-3 rounded-xl text-left',
             'bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/30',
-            'shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-colors duration-300 overflow-hidden'
+            'hover:shadow-md hover:shadow-primary/5 transition-all duration-200 overflow-hidden'
         )}
         variants={cardVariants}
         initial="hidden"
@@ -99,19 +99,18 @@ const QuickActionCard = ({ icon: Icon, title, description, onClick, index, gradi
         whileHover="hover"
         custom={index}
     >
-        <motion.div className={cn('absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500', gradient)} />
-        <div className="relative z-10 flex items-start justify-between w-full">
+        <motion.div className={cn('absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300', gradient)} />
+        <div className="relative z-10 flex items-center gap-2 w-full">
             <div className={cn(
-                'h-10 w-10 sm:h-11 sm:w-11 rounded-xl flex items-center justify-center',
-                'bg-primary/10 group-hover:bg-primary/20 border border-primary/20 group-hover:border-primary/30 transition-all duration-300'
+                'h-8 w-8 rounded-lg flex items-center justify-center',
+                'bg-primary/10 group-hover:bg-primary/20 transition-colors'
             )}>
-                <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                <Icon className="h-4 w-4 text-primary" />
             </div>
-            <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-        <div className="relative z-10 space-y-1">
-            <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">{title}</h3>
-            <p className="text-xs text-muted-foreground line-clamp-2">{description}</p>
+            <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-sm group-hover:text-primary transition-colors truncate">{title}</h3>
+                <p className="text-[11px] text-muted-foreground truncate">{description}</p>
+            </div>
         </div>
     </motion.button>
 );
@@ -232,61 +231,56 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
         return (
             <div className="h-full flex flex-col bg-background relative overflow-hidden">
                 <FloatingOrb />
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black_70%)]" />
 
-                {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto overscroll-contain">
-                    <motion.div
-                        className="min-h-full flex flex-col justify-center px-4 sm:px-6 md:px-8 lg:px-12 max-w-5xl mx-auto w-full py-12 sm:py-16 md:py-20 relative z-10"
-                        variants={welcomeVariants}
-                        initial="hidden"
-                        animate="visible"
-                    >
-                        <div className="space-y-8 sm:space-y-10">
-                            <motion.div variants={itemVariants}>
-                                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border/50 text-sm font-medium shadow-sm">
-                                    <span>{greeting.emoji}</span>
-                                    <span className="text-muted-foreground">{greeting.text}</span>
-                                </div>
-                            </motion.div>
+                {/* Main Content - Centered vertically */}
+                <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 max-w-3xl mx-auto w-full relative z-10">
+                    <div className="space-y-4 sm:space-y-5">
+                        {/* Greeting Badge */}
+                        <motion.div variants={itemVariants} initial="hidden" animate="visible">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-card/80 backdrop-blur-sm border border-border/50 text-xs font-medium">
+                                <span>{greeting.emoji}</span>
+                                <span className="text-muted-foreground">{greeting.text}</span>
+                            </div>
+                        </motion.div>
 
-                            <motion.div variants={itemVariants} className="space-y-4">
-                                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight leading-[1.1]">
-                                    <span className="text-foreground">What can I help with</span>
-                                    <br />
-                                    <motion.span
-                                        className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-[length:200%_auto] bg-clip-text text-transparent"
-                                        animate={{ backgroundPosition: ['0%', '200%'] }}
-                                        transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                                    >
-                                        today?
-                                    </motion.span>
-                                </h1>
-                                <p className="text-base sm:text-lg text-muted-foreground max-w-2xl">
-                                    Your AI-powered assistant for creative writing, coding, research, and more.
-                                </p>
-                            </motion.div>
+                        {/* Headline - Compact */}
+                        <motion.div variants={itemVariants} initial="hidden" animate="visible" className="space-y-2">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight leading-tight">
+                                <span className="text-foreground">What can I help with </span>
+                                <motion.span
+                                    className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-[length:200%_auto] bg-clip-text text-transparent"
+                                    animate={{ backgroundPosition: ['0%', '200%'] }}
+                                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                                >
+                                    today?
+                                </motion.span>
+                            </h1>
+                            <p className="text-sm text-muted-foreground">
+                                Your AI assistant for writing, coding, research, and more.
+                            </p>
+                        </motion.div>
 
-                            <motion.div variants={itemVariants} className="flex flex-wrap gap-2">
-                                {capabilities.map((cap, index) => (
-                                    <CapabilityPill key={cap.label} {...cap} index={index} />
+                        {/* Capability Pills - Inline */}
+                        <motion.div variants={itemVariants} initial="hidden" animate="visible" className="flex flex-wrap gap-1.5">
+                            {capabilities.map((cap, index) => (
+                                <CapabilityPill key={cap.label} {...cap} index={index} />
+                            ))}
+                        </motion.div>
+
+                        {/* Quick Action Cards - Compact Grid */}
+                        <motion.div variants={itemVariants} initial="hidden" animate="visible">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {quickActionCards.map((card, index) => (
+                                    <QuickActionCard key={card.title} {...card} index={index} onClick={() => onQuickAction(card.action)} />
                                 ))}
-                            </motion.div>
-
-                            <motion.div variants={itemVariants}>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {quickActionCards.map((card, index) => (
-                                        <QuickActionCard key={card.title} {...card} index={index} onClick={() => onQuickAction(card.action)} />
-                                    ))}
-                                </div>
-                            </motion.div>
-                        </div>
-                    </motion.div>
+                            </div>
+                        </motion.div>
+                    </div>
                 </div>
 
-                {/* Fixed Input */}
-                <div className="flex-shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-xl px-4 sm:px-6 md:px-8 py-4 safe-area-bottom">
-                    <div className="max-w-4xl mx-auto">
+                {/* Fixed Input - Compact */}
+                <div className="flex-shrink-0 border-t border-border/40 bg-background px-4 sm:px-6 py-3 safe-area-bottom">
+                    <div className="max-w-3xl mx-auto">
                         {inputProps && <InputArea {...inputProps} variant="hero" />}
                     </div>
                 </div>
