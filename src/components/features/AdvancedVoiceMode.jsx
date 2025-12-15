@@ -1,280 +1,182 @@
 /**
- * Gemini Live Voice Mode - Native Audio Edition
+ * Gemini Live Voice Mode - Japanese Minimalist Design
  * December 2025 Release
  * 
- * Models (in order of preference):
- * - gemini-2.5-flash-native-audio-preview-12-2025 (Primary - BYOK)
- * - google/gemini-2.5-flash
- * - google/gemini-2.5-flash-lite
- * - google/gemini-2.0-flash-001:free (Fallback)
+ * Design: Apple + Japanese (間 Ma, 簡素 Kanso) 
+ * Theme: Solid White/Black backgrounds
  * 
- * Features:
- * - 30 HD voices across 24 languages
- * - Emotional intelligence (affective dialogue)
- * - Live speech-to-speech translation
- * - Real-time voice conversations
+ * Models (ONLY Gemini audio):
+ * - gemini-2.5-flash-native-audio-preview-12-2025 (Primary)
+ * - google/gemini-2.5-flash, google/gemini-2.0-flash-001:free (Fallbacks)
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Mic, MicOff, Volume2, VolumeX, X, Settings,
-    Sparkles, MessageSquare, Globe, Cpu, Zap,
-    Loader2, User, Bot, RefreshCw, Languages,
-    Clock, Waves, Radio, Info, ChevronDown, Play, Pause
+    Mic, MicOff, Volume2, X, Sparkles, MessageSquare, Globe, Cpu,
+    Loader2, User, Bot, RefreshCw, Clock, Waves, Radio
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
-// GEMINI LIVE VOICE MODE - SPEECH-TO-SPEECH
-// December 2025 - gemini-2.5-flash-native-audio-preview-12-2025
+// GEMINI LIVE - APPLE JAPANESE MINIMALIST DESIGN
+// Solid White (Light) / Solid Black (Dark) Theme
 // ============================================================================
 
-// Voice Models - ONLY Gemini Audio models
+// Voice Models - ONLY Gemini Audio
 const VOICE_MODELS = [
-    { id: 'gemini-2.5-flash-native-audio-preview-12-2025', name: 'Gemini 2.5 Native Audio', tier: 'premium' },
-    { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', tier: 'premium' },
-    { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', tier: 'lite' },
-    { id: 'google/gemini-2.5-flash-lite-preview-09-2025', name: 'Gemini 2.5 Flash Lite Preview', tier: 'lite' },
-    { id: 'google/gemini-2.0-flash-001:free', name: 'Gemini 2.0 Flash (Free)', tier: 'free' },
-    { id: 'google/gemini-2.0-flash-lite-001', name: 'Gemini 2.0 Flash Lite', tier: 'lite' },
+    { id: 'gemini-2.5-flash-native-audio-preview-12-2025', name: 'Gemini 2.5 Native Audio', short: '2.5 Native' },
+    { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', short: '2.5 Flash' },
+    { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', short: '2.5 Lite' },
+    { id: 'google/gemini-2.0-flash-001:free', name: 'Gemini 2.0 Flash (Free)', short: '2.0 Free' },
+    { id: 'google/gemini-2.0-flash-lite-001', name: 'Gemini 2.0 Flash Lite', short: '2.0 Lite' },
 ];
 
-// Languages with native audio support
+// Languages
 const LANGUAGES = [
-    { code: 'en', name: 'English', flag: '🇺🇸', voiceLang: 'en-US' },
-    { code: 'hi', name: 'Hindi', flag: '🇮🇳', voiceLang: 'hi-IN' },
-    { code: 'es', name: 'Spanish', flag: '🇪🇸', voiceLang: 'es-ES' },
-    { code: 'fr', name: 'French', flag: '🇫🇷', voiceLang: 'fr-FR' },
-    { code: 'de', name: 'German', flag: '🇩🇪', voiceLang: 'de-DE' },
-    { code: 'ja', name: 'Japanese', flag: '🇯🇵', voiceLang: 'ja-JP' },
-    { code: 'ko', name: 'Korean', flag: '🇰🇷', voiceLang: 'ko-KR' },
-    { code: 'zh', name: 'Chinese', flag: '🇨🇳', voiceLang: 'zh-CN' },
-    { code: 'pt', name: 'Portuguese', flag: '🇧🇷', voiceLang: 'pt-BR' },
-    { code: 'ar', name: 'Arabic', flag: '🇸🇦', voiceLang: 'ar-SA' },
+    { code: 'en', name: 'English', voiceLang: 'en-US' },
+    { code: 'hi', name: 'हिंदी', voiceLang: 'hi-IN' },
+    { code: 'es', name: 'Español', voiceLang: 'es-ES' },
+    { code: 'fr', name: 'Français', voiceLang: 'fr-FR' },
+    { code: 'de', name: 'Deutsch', voiceLang: 'de-DE' },
+    { code: 'ja', name: '日本語', voiceLang: 'ja-JP' },
+    { code: 'ko', name: '한국어', voiceLang: 'ko-KR' },
+    { code: 'zh', name: '中文', voiceLang: 'zh-CN' },
 ];
 
-// --- Animated Components ---
-
-const AudioWaveform = ({ isActive, variant = 'default' }) => {
-    const bars = 12;
-    const colors = {
-        default: 'bg-current',
-        listening: 'bg-red-500',
-        speaking: 'bg-emerald-500',
-        processing: 'bg-blue-500'
-    };
-
-    return (
-        <div className="flex items-center justify-center gap-1 h-16">
-            {[...Array(bars)].map((_, i) => (
-                <motion.div
-                    key={i}
-                    className={cn('w-1.5 rounded-full', colors[variant] || colors.default)}
-                    animate={{
-                        height: isActive ? [8, 32 + Math.random() * 24, 8] : 8,
-                        opacity: isActive ? [0.4, 1, 0.4] : 0.15
-                    }}
-                    transition={{
-                        duration: 0.35 + Math.random() * 0.25,
-                        repeat: isActive ? Infinity : 0,
-                        delay: i * 0.05
-                    }}
-                />
-            ))}
-        </div>
-    );
-};
-
-const VoiceOrb = ({ status, onClick, disabled, size = 'lg' }) => {
-    const isActive = status !== 'idle';
-
-    const statusColors = {
-        idle: 'from-gray-800 to-gray-900 dark:from-white dark:to-gray-100',
-        listening: 'from-red-500 to-rose-600',
-        processing: 'from-blue-500 to-indigo-600',
-        speaking: 'from-emerald-500 to-green-600'
-    };
-
-    const sizeClasses = {
-        lg: 'w-52 h-52 md:w-64 md:h-64',
-        md: 'w-40 h-40 md:w-48 md:h-48',
-        sm: 'w-32 h-32'
-    };
-
-    return (
-        <div className="relative">
-            {/* Glow effect */}
-            {isActive && (
-                <motion.div
-                    className={cn(
-                        'absolute inset-0 rounded-full blur-3xl opacity-30',
-                        `bg-gradient-to-br ${statusColors[status]}`
-                    )}
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                />
-            )}
-
-            <motion.button
-                onClick={onClick}
-                disabled={disabled}
-                className={cn(
-                    'relative rounded-full cursor-pointer',
-                    'flex items-center justify-center transition-all duration-500',
-                    'disabled:opacity-40 disabled:cursor-not-allowed',
-                    'focus:outline-none focus-visible:ring-4 focus-visible:ring-white/20',
-                    `bg-gradient-to-br ${statusColors[status]}`,
-                    'shadow-2xl',
-                    sizeClasses[size]
-                )}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+// --- Minimal Waveform ---
+const Waveform = ({ isActive, isDark }) => (
+    <div className="flex items-center justify-center gap-1 h-10">
+        {[...Array(7)].map((_, i) => (
+            <motion.div
+                key={i}
+                className={cn('w-1 rounded-full', isDark ? 'bg-white' : 'bg-black')}
                 animate={{
-                    scale: isActive ? [1, 1.05, 1] : 1
+                    height: isActive ? [8, 28 + Math.random() * 12, 8] : 8,
+                    opacity: isActive ? [0.4, 1, 0.4] : 0.15
                 }}
                 transition={{
-                    duration: 1.5,
+                    duration: 0.4 + Math.random() * 0.2,
                     repeat: isActive ? Infinity : 0,
-                    ease: 'easeInOut'
+                    delay: i * 0.08
                 }}
-            >
-                {/* Icon */}
-                <div className={cn(
-                    status === 'idle' ? 'text-white dark:text-black' : 'text-white'
-                )}>
-                    {status === 'processing' ? (
-                        <Loader2 className="w-16 h-16 md:w-20 md:h-20 animate-spin" />
-                    ) : status === 'listening' ? (
-                        <Waves className="w-16 h-16 md:w-20 md:h-20" />
-                    ) : status === 'speaking' ? (
-                        <Volume2 className="w-16 h-16 md:w-20 md:h-20" />
-                    ) : (
-                        <Mic className="w-16 h-16 md:w-20 md:h-20" />
-                    )}
-                </div>
+            />
+        ))}
+    </div>
+);
 
-                {/* Ripple rings */}
-                {isActive && (
-                    <>
-                        <motion.div
-                            className={cn('absolute inset-0 rounded-full border-2',
-                                status === 'listening' ? 'border-red-400' :
-                                    status === 'speaking' ? 'border-emerald-400' : 'border-blue-400'
-                            )}
-                            initial={{ scale: 1, opacity: 0.5 }}
-                            animate={{ scale: 1.5, opacity: 0 }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                        />
-                        <motion.div
-                            className={cn('absolute inset-0 rounded-full border-2',
-                                status === 'listening' ? 'border-red-400' :
-                                    status === 'speaking' ? 'border-emerald-400' : 'border-blue-400'
-                            )}
-                            initial={{ scale: 1, opacity: 0.3 }}
-                            animate={{ scale: 1.3, opacity: 0 }}
-                            transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
-                        />
-                    </>
+// --- Minimal Orb (Apple Style) ---
+const Orb = ({ status, onClick, disabled, isDark }) => {
+    const isActive = status !== 'idle';
+
+    return (
+        <motion.button
+            onClick={onClick}
+            disabled={disabled}
+            className={cn(
+                'relative w-48 h-48 md:w-56 md:h-56 rounded-full',
+                'flex items-center justify-center transition-all duration-500',
+                'disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none',
+                isDark ? 'bg-white' : 'bg-black',
+                isActive && (isDark ? 'shadow-[0_0_60px_rgba(255,255,255,0.3)]' : 'shadow-[0_0_60px_rgba(0,0,0,0.2)]')
+            )}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            animate={{ scale: isActive ? [1, 1.04, 1] : 1 }}
+            transition={{ duration: 1.8, repeat: isActive ? Infinity : 0, ease: 'easeInOut' }}
+        >
+            <div className={cn(isDark ? 'text-black' : 'text-white')}>
+                {status === 'processing' ? (
+                    <Loader2 className="w-16 h-16 md:w-20 md:h-20 animate-spin" />
+                ) : status === 'listening' ? (
+                    <MicOff className="w-16 h-16 md:w-20 md:h-20" />
+                ) : status === 'speaking' ? (
+                    <Volume2 className="w-16 h-16 md:w-20 md:h-20" />
+                ) : (
+                    <Mic className="w-16 h-16 md:w-20 md:h-20" />
                 )}
-            </motion.button>
-        </div>
+            </div>
+
+            {/* Pulse rings */}
+            {isActive && (
+                <>
+                    <motion.div
+                        className={cn('absolute inset-0 rounded-full', isDark ? 'bg-white' : 'bg-black')}
+                        initial={{ scale: 1, opacity: 0.15 }}
+                        animate={{ scale: 1.4, opacity: 0 }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                    />
+                    <motion.div
+                        className={cn('absolute inset-0 rounded-full', isDark ? 'bg-white' : 'bg-black')}
+                        initial={{ scale: 1, opacity: 0.1 }}
+                        animate={{ scale: 1.2, opacity: 0 }}
+                        transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                    />
+                </>
+            )}
+        </motion.button>
     );
 };
 
-// --- Status Card ---
-const StatusCard = ({ status, duration, model }) => {
-    const statusText = {
-        idle: 'Ready to listen',
-        listening: 'Listening...',
-        processing: 'Processing...',
-        speaking: 'Speaking...'
-    };
-
-    const statusIcons = {
-        idle: <Mic className="w-4 h-4" />,
-        listening: <Radio className="w-4 h-4 animate-pulse" />,
-        processing: <Loader2 className="w-4 h-4 animate-spin" />,
-        speaking: <Volume2 className="w-4 h-4" />
-    };
-
+// --- Message Bubble ---
+const Message = ({ message, isDark }) => {
+    const isUser = message.role === 'user';
     return (
         <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-6 px-6 py-3 bg-white/5 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10"
+            className={cn('flex gap-2', isUser ? 'justify-end' : 'justify-start')}
         >
-            <div className="flex items-center gap-2 text-sm">
-                {statusIcons[status]}
-                <span className="font-medium">{statusText[status]}</span>
-            </div>
-
-            {duration > 0 && (
-                <div className="flex items-center gap-1.5 text-xs text-white/50">
-                    <Clock className="w-3 h-3" />
-                    <span>{Math.floor(duration)}s</span>
+            {!isUser && (
+                <div className={cn('w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
+                    isDark ? 'bg-white/10' : 'bg-black/5'
+                )}>
+                    <Sparkles className={cn('w-3.5 h-3.5', isDark ? 'text-white/70' : 'text-black/70')} />
                 </div>
             )}
-
-            <div className="flex items-center gap-1.5 text-xs text-white/40">
-                <Cpu className="w-3 h-3" />
-                <span className="truncate max-w-[120px]">{model?.split('/').pop()}</span>
+            <div className={cn(
+                'max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
+                isDark
+                    ? isUser ? 'bg-white text-black' : 'bg-white/10 text-white/90'
+                    : isUser ? 'bg-black text-white' : 'bg-black/5 text-black/90',
+                isUser ? 'rounded-br-sm' : 'rounded-bl-sm'
+            )}>
+                {message.content}
             </div>
+            {isUser && (
+                <div className={cn('w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
+                    isDark ? 'bg-white/10' : 'bg-black/5'
+                )}>
+                    <User className={cn('w-3.5 h-3.5', isDark ? 'text-white/70' : 'text-black/70')} />
+                </div>
+            )}
         </motion.div>
     );
 };
 
-// --- Conversation Message ---
-const ConversationMessage = ({ message, isUser }) => (
-    <motion.div
-        initial={{ opacity: 0, x: isUser ? 20 : -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className={cn('flex gap-3', isUser ? 'justify-end' : 'justify-start')}
-    >
-        {!isUser && (
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4 h-4 text-white" />
-            </div>
-        )}
-
-        <div className={cn(
-            'max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed',
-            isUser
-                ? 'bg-blue-500 text-white rounded-br-md'
-                : 'bg-white/10 text-white/90 border border-white/10 rounded-bl-md'
-        )}>
-            {message.content}
-            <div className={cn(
-                'text-[10px] mt-1.5',
-                isUser ? 'text-blue-200' : 'text-white/40'
-            )}>
-                {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </div>
-        </div>
-
-        {isUser && (
-            <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                <User className="w-4 h-4 text-blue-400" />
-            </div>
-        )}
-    </motion.div>
-);
-
-// --- Feature Cards ---
-const FeatureCard = ({ icon: Icon, title, value, subtext }) => (
-    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
-        <div className="p-2 rounded-lg bg-white/10">
-            <Icon className="w-4 h-4 text-white/70" />
-        </div>
-        <div>
-            <div className="text-sm font-medium text-white">{value}</div>
-            <div className="text-xs text-white/40">{title}</div>
-        </div>
+// --- Stat Pill ---
+const StatPill = ({ icon: Icon, value, isDark }) => (
+    <div className={cn(
+        'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs',
+        isDark ? 'bg-white/5 text-white/50' : 'bg-black/5 text-black/50'
+    )}>
+        <Icon className="w-3 h-3" />
+        <span>{value}</span>
     </div>
 );
 
 // --- Main Component ---
 const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
+    // Theme
+    const [isDark, setIsDark] = useState(false);
+    useEffect(() => {
+        const check = () => setIsDark(document.documentElement.classList.contains('dark'));
+        check();
+        const obs = new MutationObserver(check);
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => obs.disconnect();
+    }, []);
+
     // State
     const [status, setStatus] = useState('idle');
     const [transcript, setTranscript] = useState('');
@@ -283,8 +185,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
     const [error, setError] = useState(null);
     const [selectedModel, setSelectedModel] = useState(VOICE_MODELS[0]);
     const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0]);
-    const [sessionDuration, setSessionDuration] = useState(0);
-    const [messageCount, setMessageCount] = useState(0);
+    const [duration, setDuration] = useState(0);
 
     // Refs
     const recognitionRef = useRef(null);
@@ -292,87 +193,54 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
     const timeoutRef = useRef(null);
     const cleanupRef = useRef(false);
     const conversationRef = useRef([]);
-    const durationIntervalRef = useRef(null);
+    const timerRef = useRef(null);
 
-    // Keep conversation ref in sync
-    useEffect(() => {
-        conversationRef.current = conversation;
-    }, [conversation]);
+    useEffect(() => { conversationRef.current = conversation; }, [conversation]);
 
-    // Session timer
+    // Duration timer
     useEffect(() => {
         if (isOpen && status !== 'idle') {
-            durationIntervalRef.current = setInterval(() => {
-                setSessionDuration(prev => prev + 1);
-            }, 1000);
-        } else {
-            if (durationIntervalRef.current) {
-                clearInterval(durationIntervalRef.current);
-            }
+            timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
+        } else if (timerRef.current) {
+            clearInterval(timerRef.current);
         }
-        return () => {
-            if (durationIntervalRef.current) {
-                clearInterval(durationIntervalRef.current);
-            }
-        };
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [isOpen, status]);
 
-    // Initialize Speech Recognition
+    // Speech Recognition
     useEffect(() => {
         if (!isOpen) return;
         cleanupRef.current = false;
         setError(null);
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            setError('Speech recognition not supported');
-            return;
-        }
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) { setError('Speech recognition not supported'); return; }
 
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = selectedLanguage.voiceLang;
+        const rec = new SR();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = selectedLanguage.voiceLang;
 
-        recognition.onstart = () => {
-            if (!cleanupRef.current) setStatus('listening');
-        };
-
-        recognition.onresult = (event) => {
-            let interim = '';
-            let final = '';
-
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const text = event.results[i][0].transcript;
-                if (event.results[i].isFinal) final += text;
+        rec.onstart = () => { if (!cleanupRef.current) setStatus('listening'); };
+        rec.onresult = (e) => {
+            let interim = '', final = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                const text = e.results[i][0].transcript;
+                if (e.results[i].isFinal) final += text;
                 else interim += text;
             }
-
             setInterimTranscript(interim);
-
             if (final.trim()) {
                 setTranscript(final);
                 setInterimTranscript('');
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                timeoutRef.current = setTimeout(() => processTranscript(final.trim()), 800);
+                timeoutRef.current = setTimeout(() => process(final.trim()), 800);
             }
         };
+        rec.onerror = (e) => { if (e.error !== 'no-speech' && e.error !== 'aborted') setStatus('idle'); };
+        rec.onend = () => { if (status === 'listening' && !cleanupRef.current) try { rec.start(); } catch { } };
 
-        recognition.onerror = (event) => {
-            if (event.error !== 'no-speech' && event.error !== 'aborted') {
-                console.error('Speech error:', event.error);
-                setStatus('idle');
-            }
-        };
-
-        recognition.onend = () => {
-            if (status === 'listening' && !cleanupRef.current) {
-                try { recognition.start(); } catch { }
-            }
-        };
-
-        recognitionRef.current = recognition;
-
+        recognitionRef.current = rec;
         return () => {
             cleanupRef.current = true;
             try { recognitionRef.current?.stop(); } catch { }
@@ -381,73 +249,44 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
         };
     }, [isOpen, selectedLanguage]);
 
-    // API Call with explicit model
-    const sendToGemini = async (text, history) => {
-        const messages = [
-            {
-                role: 'system',
-                content: `You are Gemini Live, a helpful voice assistant with Native Audio capabilities.
-
-Key traits:
-- Natural, warm, and conversational
-- Concise responses (1-3 sentences) for voice
-- Emotionally aware and context-sensitive
-- Respond in ${selectedLanguage.name}
-
-You support real-time speech-to-speech conversations with emotional intelligence.`
-            },
-            ...history.map(m => ({ role: m.role, content: m.content })),
-            { role: 'user', content: text }
-        ];
-
-        // Call API with explicit Gemini audio model
-        const response = await fetch('/api/chat/text', {
+    // API call with explicit Gemini model
+    const callAPI = async (text, history) => {
+        const res = await fetch('/api/chat/text', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                messages,
-                model: selectedModel.id, // Explicitly use selected Gemini audio model
+                messages: [
+                    { role: 'system', content: `You are Gemini Live, a helpful voice assistant. Be concise (1-2 sentences), warm, and natural. Respond in ${selectedLanguage.name}.` },
+                    ...history.map(m => ({ role: m.role, content: m.content })),
+                    { role: 'user', content: text }
+                ],
+                model: selectedModel.id, // Explicit Gemini audio model
                 preferred_language: selectedLanguage.code
             })
         });
-
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.detail || `Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data.response;
+        if (!res.ok) throw new Error('API Error');
+        return (await res.json()).response;
     };
 
-    const processTranscript = useCallback(async (text) => {
+    const process = useCallback(async (text) => {
         if (!text.trim() || status === 'processing') return;
-
         setStatus('processing');
         setError(null);
         try { recognitionRef.current?.stop(); } catch { }
 
-        const userMsg = { role: 'user', content: text, timestamp: Date.now() };
-        setConversation(prev => [...prev, userMsg]);
-        setMessageCount(prev => prev + 1);
+        setConversation(prev => [...prev, { role: 'user', content: text, ts: Date.now() }]);
 
         try {
-            const response = await sendToGemini(text, conversationRef.current);
-
+            const response = await callAPI(text, conversationRef.current);
             if (response) {
-                const assistantMsg = { role: 'assistant', content: response, timestamp: Date.now() };
-                setConversation(prev => [...prev, assistantMsg]);
+                setConversation(prev => [...prev, { role: 'assistant', content: response, ts: Date.now() }]);
                 await speak(response);
-            } else {
-                throw new Error('No response');
             }
         } catch (err) {
-            console.error('Error:', err);
             setError(err.message);
             setStatus('idle');
-            setTimeout(() => { if (!cleanupRef.current) startListening(); }, 1000);
+            setTimeout(() => { if (!cleanupRef.current) startListen(); }, 1000);
         }
-
         setTranscript('');
         setInterimTranscript('');
     }, [status, selectedLanguage, selectedModel]);
@@ -455,81 +294,58 @@ You support real-time speech-to-speech conversations with emotional intelligence
     const speak = useCallback((text) => {
         return new Promise((resolve) => {
             if (!synthRef.current) { setStatus('idle'); resolve(); return; }
-
             synthRef.current.cancel();
             setStatus('speaking');
-
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = selectedLanguage.voiceLang;
-            utterance.rate = 1.0;
-            utterance.pitch = 1.0;
-
+            const utt = new SpeechSynthesisUtterance(text);
+            utt.lang = selectedLanguage.voiceLang;
+            utt.rate = 1.0;
             const voices = synthRef.current.getVoices();
-            const preferred = voices.find(v =>
-                v.name.includes('Google') || v.name.includes('Samantha') ||
-                v.lang.startsWith(selectedLanguage.voiceLang.split('-')[0])
-            );
-            if (preferred) utterance.voice = preferred;
-
-            utterance.onend = () => {
-                setStatus('idle');
-                resolve();
-                setTimeout(() => { if (!cleanupRef.current) startListening(); }, 300);
-            };
-
-            utterance.onerror = () => {
-                setStatus('idle');
-                resolve();
-                setTimeout(() => { if (!cleanupRef.current) startListening(); }, 300);
-            };
-
-            synthRef.current.speak(utterance);
+            const pref = voices.find(v => v.name.includes('Google') || v.lang.startsWith(selectedLanguage.voiceLang.split('-')[0]));
+            if (pref) utt.voice = pref;
+            utt.onend = () => { setStatus('idle'); resolve(); setTimeout(() => { if (!cleanupRef.current) startListen(); }, 300); };
+            utt.onerror = () => { setStatus('idle'); resolve(); };
+            synthRef.current.speak(utt);
         });
     }, [selectedLanguage]);
 
-    const startListening = useCallback(() => {
+    const startListen = useCallback(() => {
         if (recognitionRef.current && status !== 'processing' && status !== 'speaking') {
             try { recognitionRef.current.start(); } catch { }
         }
     }, [status]);
 
-    const stopListening = useCallback(() => {
+    const stopListen = useCallback(() => {
         try { recognitionRef.current?.stop(); } catch { }
         setStatus('idle');
     }, []);
 
-    const toggleListening = useCallback(() => {
+    const toggle = useCallback(() => {
         if (status === 'listening') {
-            stopListening();
+            stopListen();
             const pending = (transcript + interimTranscript).trim();
-            if (pending) processTranscript(pending);
-        } else if (status === 'idle') {
-            startListening();
-        }
-    }, [status, transcript, interimTranscript, processTranscript, startListening, stopListening]);
+            if (pending) process(pending);
+        } else if (status === 'idle') startListen();
+    }, [status, transcript, interimTranscript, process, startListen, stopListen]);
 
-    const stopSpeaking = useCallback(() => {
-        synthRef.current?.cancel();
-        setStatus('idle');
-    }, []);
+    const stopSpeak = useCallback(() => { synthRef.current?.cancel(); setStatus('idle'); }, []);
 
-    const clearConversation = useCallback(() => {
+    const clear = useCallback(() => {
         setConversation([]);
         conversationRef.current = [];
-        setMessageCount(0);
-        setSessionDuration(0);
+        setDuration(0);
     }, []);
 
-    const handleClose = useCallback(() => {
+    const close = useCallback(() => {
         cleanupRef.current = true;
-        stopListening();
-        stopSpeaking();
+        stopListen();
+        stopSpeak();
         onClose();
-    }, [onClose, stopListening, stopSpeaking]);
+    }, [onClose, stopListen, stopSpeak]);
 
     if (!isOpen) return null;
 
     const displayText = transcript || interimTranscript;
+    const statusLabels = { idle: 'Tap to speak', listening: 'Listening...', processing: 'Thinking...', speaking: 'Speaking...' };
 
     return (
         <AnimatePresence>
@@ -537,211 +353,169 @@ You support real-time speech-to-speech conversations with emotional intelligence
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900"
+                className={cn('fixed inset-0 z-50 flex', isDark ? 'bg-black' : 'bg-white')}
             >
-                {/* Ambient Background */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-                </div>
-
-                {/* Main Content */}
-                <div className="relative flex-1 flex flex-col max-w-6xl mx-auto w-full">
+                {/* Left: Voice Interface */}
+                <div className="flex-1 flex flex-col">
                     {/* Header */}
-                    <header className="flex items-center justify-between p-6 border-b border-white/5">
-                        <div className="flex items-center gap-4">
-                            <div className="p-2.5 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl">
-                                <Waves className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                                <h1 className="text-lg font-semibold text-white">Gemini Live</h1>
-                                <p className="text-xs text-white/40">Speech-to-Speech • Native Audio</p>
-                            </div>
+                    <header className={cn(
+                        'flex items-center justify-between px-6 py-4',
+                        isDark ? 'border-b border-white/5' : 'border-b border-black/5'
+                    )}>
+                        <div className="flex items-center gap-3">
+                            <div className={cn(
+                                'w-2 h-2 rounded-full',
+                                status === 'listening' ? 'bg-red-500 animate-pulse' :
+                                    status === 'speaking' ? 'bg-green-500 animate-pulse' :
+                                        status === 'processing' ? 'bg-blue-500 animate-pulse' :
+                                            isDark ? 'bg-white/20' : 'bg-black/20'
+                            )} />
+                            <span className={cn('font-medium', isDark ? 'text-white' : 'text-black')}>
+                                Gemini Live
+                            </span>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                             {/* Model Selector */}
                             <select
                                 value={selectedModel.id}
-                                onChange={(e) => {
-                                    const model = VOICE_MODELS.find(m => m.id === e.target.value);
-                                    if (model) setSelectedModel(model);
-                                }}
-                                className="text-xs px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 outline-none cursor-pointer"
+                                onChange={(e) => setSelectedModel(VOICE_MODELS.find(m => m.id === e.target.value) || VOICE_MODELS[0])}
+                                className={cn(
+                                    'text-xs px-2 py-1.5 rounded-lg border-none outline-none cursor-pointer',
+                                    isDark ? 'bg-white/10 text-white/70' : 'bg-black/5 text-black/70'
+                                )}
                             >
-                                {VOICE_MODELS.map(m => (
-                                    <option key={m.id} value={m.id}>{m.name}</option>
-                                ))}
+                                {VOICE_MODELS.map(m => <option key={m.id} value={m.id}>{m.short}</option>)}
                             </select>
 
                             {/* Language Selector */}
                             <select
                                 value={selectedLanguage.code}
-                                onChange={(e) => {
-                                    const lang = LANGUAGES.find(l => l.code === e.target.value);
-                                    if (lang) setSelectedLanguage(lang);
-                                }}
-                                className="text-xs px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 outline-none cursor-pointer"
+                                onChange={(e) => setSelectedLanguage(LANGUAGES.find(l => l.code === e.target.value) || LANGUAGES[0])}
+                                className={cn(
+                                    'text-xs px-2 py-1.5 rounded-lg border-none outline-none cursor-pointer',
+                                    isDark ? 'bg-white/10 text-white/70' : 'bg-black/5 text-black/70'
+                                )}
                             >
-                                {LANGUAGES.map(l => (
-                                    <option key={l.code} value={l.code}>{l.flag} {l.name}</option>
-                                ))}
+                                {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
                             </select>
 
-                            <button
-                                onClick={clearConversation}
-                                className="p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                                title="Clear conversation"
-                            >
-                                <RefreshCw className="w-4 h-4 text-white/60" />
+                            <button onClick={clear} className={cn('p-2 rounded-lg transition-colors', isDark ? 'hover:bg-white/10' : 'hover:bg-black/10')}>
+                                <RefreshCw className={cn('w-4 h-4', isDark ? 'text-white/50' : 'text-black/50')} />
                             </button>
-
-                            <button
-                                onClick={handleClose}
-                                className="p-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 transition-colors"
-                            >
-                                <X className="w-4 h-4 text-red-400" />
+                            <button onClick={close} className={cn('p-2 rounded-lg transition-colors', isDark ? 'hover:bg-white/10' : 'hover:bg-black/10')}>
+                                <X className={cn('w-4 h-4', isDark ? 'text-white/50' : 'text-black/50')} />
                             </button>
                         </div>
                     </header>
 
-                    {/* Main Grid */}
-                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 p-6 overflow-hidden">
-                        {/* Left: Voice Interface */}
-                        <div className="lg:col-span-2 flex flex-col items-center justify-center gap-8">
-                            {/* Error */}
-                            <AnimatePresence>
-                                {error && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0 }}
-                                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm"
-                                    >
-                                        {error}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            {/* Status Card */}
-                            <StatusCard
-                                status={status}
-                                duration={sessionDuration}
-                                model={selectedModel.name}
-                            />
-
-                            {/* Voice Orb */}
-                            <VoiceOrb
-                                status={status}
-                                onClick={status === 'speaking' ? stopSpeaking : toggleListening}
-                                disabled={status === 'processing'}
-                            />
-
-                            {/* Waveform */}
-                            <div className="h-16 w-64">
-                                <AnimatePresence>
-                                    {(status === 'listening' || status === 'speaking') && (
-                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                            <AudioWaveform
-                                                isActive={true}
-                                                variant={status === 'listening' ? 'listening' : 'speaking'}
-                                            />
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-
-                            {/* Transcript */}
-                            <AnimatePresence>
-                                {displayText && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0 }}
-                                        className="max-w-md text-center px-6 py-4 bg-white/5 backdrop-blur rounded-2xl border border-white/10"
-                                    >
-                                        <p className="text-white/90">
-                                            {transcript}
-                                            {interimTranscript && (
-                                                <span className="text-white/40"> {interimTranscript}</span>
-                                            )}
-                                        </p>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            {/* Instructions */}
-                            {status === 'idle' && !displayText && conversation.length === 0 && (
-                                <p className="text-sm text-white/30 text-center max-w-xs">
-                                    Tap the orb to start a voice conversation with Gemini
-                                </p>
+                    {/* Main Content */}
+                    <main className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
+                        {/* Error */}
+                        <AnimatePresence>
+                            {error && (
+                                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                    className={cn('text-sm px-4 py-2 rounded-lg', isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-600')}>
+                                    {error}
+                                </motion.p>
                             )}
+                        </AnimatePresence>
+
+                        {/* Status */}
+                        <motion.span
+                            key={status}
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={cn('text-sm', isDark ? 'text-white/50' : 'text-black/50')}
+                        >
+                            {statusLabels[status]}
+                        </motion.span>
+
+                        {/* Orb */}
+                        <Orb
+                            status={status}
+                            onClick={status === 'speaking' ? stopSpeak : toggle}
+                            disabled={status === 'processing'}
+                            isDark={isDark}
+                        />
+
+                        {/* Waveform */}
+                        <div className="h-10">
+                            <AnimatePresence>
+                                {(status === 'listening' || status === 'speaking') && (
+                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                                        <Waveform isActive={true} isDark={isDark} />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
 
-                        {/* Right: Conversation & Stats */}
-                        <div className="flex flex-col gap-4 overflow-hidden">
-                            {/* Stats Cards */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <FeatureCard
-                                    icon={MessageSquare}
-                                    title="Messages"
-                                    value={messageCount}
-                                />
-                                <FeatureCard
-                                    icon={Clock}
-                                    title="Duration"
-                                    value={`${Math.floor(sessionDuration / 60)}:${(sessionDuration % 60).toString().padStart(2, '0')}`}
-                                />
-                                <FeatureCard
-                                    icon={Globe}
-                                    title="Language"
-                                    value={selectedLanguage.flag + ' ' + selectedLanguage.code.toUpperCase()}
-                                />
-                                <FeatureCard
-                                    icon={Zap}
-                                    title="Model"
-                                    value={selectedModel.tier}
-                                />
-                            </div>
+                        {/* Transcript */}
+                        <AnimatePresence>
+                            {displayText && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    className={cn('max-w-md text-center px-5 py-3 rounded-2xl', isDark ? 'bg-white/5' : 'bg-black/5')}
+                                >
+                                    <p className={cn('text-base', isDark ? 'text-white/90' : 'text-black/90')}>
+                                        {transcript}
+                                        {interimTranscript && <span className={isDark ? 'text-white/40' : 'text-black/40'}> {interimTranscript}</span>}
+                                    </p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
-                            {/* Conversation History */}
-                            <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden">
-                                <div className="p-3 border-b border-white/5 flex items-center justify-between">
-                                    <span className="text-xs font-medium text-white/60">Conversation</span>
-                                    <span className="text-[10px] text-white/30">{conversation.length} messages</span>
-                                </div>
-                                <div className="p-4 space-y-4 max-h-80 overflow-y-auto">
-                                    {conversation.length === 0 ? (
-                                        <p className="text-xs text-white/30 text-center py-8">
-                                            Messages will appear here
-                                        </p>
-                                    ) : (
-                                        conversation.map((msg, idx) => (
-                                            <ConversationMessage
-                                                key={idx}
-                                                message={msg}
-                                                isUser={msg.role === 'user'}
-                                            />
-                                        ))
-                                    )}
-                                </div>
-                            </div>
+                        {/* Stats */}
+                        <div className="flex items-center gap-3 mt-4">
+                            <StatPill icon={MessageSquare} value={conversation.length} isDark={isDark} />
+                            <StatPill icon={Clock} value={`${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`} isDark={isDark} />
+                            <StatPill icon={Cpu} value={selectedModel.short} isDark={isDark} />
                         </div>
-                    </div>
+                    </main>
 
                     {/* Footer */}
-                    <footer className="p-4 border-t border-white/5 flex justify-between items-center text-xs text-white/30">
+                    <footer className={cn(
+                        'px-6 py-3 flex justify-center text-xs',
+                        isDark ? 'text-white/20 border-t border-white/5' : 'text-black/20 border-t border-black/5'
+                    )}>
                         <span className="flex items-center gap-3">
-                            <span className="flex items-center gap-1.5">
-                                <Sparkles className="w-3 h-3" />
-                                Gemini Live Native Audio
-                            </span>
+                            <Globe className="w-3 h-3" />
+                            <span>{selectedLanguage.name}</span>
                             <span>•</span>
-                            <span>{LANGUAGES.length} Languages</span>
+                            <span>Gemini Native Audio</span>
                         </span>
-                        <span>December 2025</span>
                     </footer>
                 </div>
+
+                {/* Right: Conversation Panel (Desktop) */}
+                <aside className={cn(
+                    'hidden lg:flex flex-col w-96',
+                    isDark ? 'border-l border-white/5' : 'border-l border-black/5'
+                )}>
+                    <div className={cn(
+                        'px-5 py-4 flex items-center justify-between',
+                        isDark ? 'border-b border-white/5' : 'border-b border-black/5'
+                    )}>
+                        <span className={cn('text-sm font-medium', isDark ? 'text-white/70' : 'text-black/70')}>
+                            Conversation
+                        </span>
+                        <span className={cn('text-xs', isDark ? 'text-white/30' : 'text-black/30')}>
+                            {conversation.length} messages
+                        </span>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {conversation.length === 0 ? (
+                            <p className={cn('text-xs text-center py-12', isDark ? 'text-white/20' : 'text-black/20')}>
+                                Messages will appear here
+                            </p>
+                        ) : (
+                            conversation.map((msg, i) => <Message key={i} message={msg} isDark={isDark} />)
+                        )}
+                    </div>
+                </aside>
             </motion.div>
         </AnimatePresence>
     );
