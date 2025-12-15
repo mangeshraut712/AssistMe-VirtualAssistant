@@ -435,31 +435,76 @@ const AdvancedVoiceMode = ({ isOpen, onClose }) => {
         setInterimTranscript('');
     }, [status, selectedLanguage, selectedModel]);
 
-    // TTS
-    const speak = useCallback((text) => {
-        return new Promise((resolve) => {
-            if (!synthRef.current) { setStatus('idle'); resolve(); return; }
-            synthRef.current.cancel();
-            setStatus('speaking');
-            triggerHaptic([10]);
+    // TTS using Gemini Native Audio (HD voices with emotions & accents)
+    const speak = useCallback(async (text) => {
+        setStatus('speaking');
+        triggerHaptic([10]);
 
-            const utt = new SpeechSynthesisUtterance(text);
-            utt.lang = selectedLanguage.voiceLang;
-            utt.rate = 1.05; // Slightly faster for natural feel
+        try {
+            // Call backend TTS service (Gemini Native Audio)
+            const response = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text,
+                    language: selectedLanguage.voiceLang,
+                    voice: null, // Let Gemini pick best voice for language
+                    speed: 1.05,
+                })
+            });
 
-            const voices = synthRef.current.getVoices();
-            const pref = voices.find(v => v.name.includes('Google') || v.lang.startsWith(selectedLanguage.voiceLang.split('-')[0]));
-            if (pref) utt.voice = pref;
+            if (!response.ok) {
+                throw new Error('TTS API failed');
+            }
 
-            utt.onend = () => {
+            const data = await response.json();
+
+            if (data.success && data.audio) {
+                // Decode base64 audio
+                const audioData = atob(data.audio);
+                const arrayBuffer = new ArrayBuffer(audioData.length);
+                const view = new Uint8Array(arrayBuffer);
+                for (let i = 0; i < audioData.length; i++) {
+                    view[i] = audioData.charCodeAt(i);
+                }
+
+                // Create blob and play
+                const audioBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+
+                audio.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                    setStatus('idle');
+                    setTimeout(() => { if (!cleanupRef.current) startListen(); }, 200);
+                };
+
+                audio.onerror = () => {
+                    URL.revokeObjectURL(audioUrl);
+                    setStatus('idle');
+                };
+
+                await audio.play();
+            } else {
+                throw new Error('No audio in response');
+            }
+        } catch (error) {
+            console.error('Gemini TTS error:', error);
+            // Fallback to browser TTS if Gemini fails
+            if (synthRef.current) {
+                synthRef.current.cancel();
+                const utt = new SpeechSynthesisUtterance(text);
+                utt.lang = selectedLanguage.voiceLang;
+                utt.rate = 1.05;
+                utt.onend = () => {
+                    setStatus('idle');
+                    setTimeout(() => { if (!cleanupRef.current) startListen(); }, 200);
+                };
+                synthRef.current.speak(utt);
+            } else {
                 setStatus('idle');
-                resolve();
-                setTimeout(() => { if (!cleanupRef.current) startListen(); }, 200);
-            };
-            utt.onerror = () => { setStatus('idle'); resolve(); };
-
-            synthRef.current.speak(utt);
-        });
+            }
+        }
     }, [selectedLanguage]);
 
     // Controls
