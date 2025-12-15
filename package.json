@@ -19,7 +19,8 @@
     "db:migrate": "cd backend && alembic upgrade head",
     "vercel:build": "npm run build",
     "typecheck": "tsc --noEmit 2>/dev/null || true",
-    "clean": "rm -rf dist node_modules/.cache"
+    "clean": "rm -rf dist node_modules/.cache",
+    "validate-paths": "node scripts/validate-paths.mjs"
   },
   "keywords": [
     "ai",
