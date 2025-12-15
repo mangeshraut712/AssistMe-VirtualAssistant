@@ -1,6 +1,11 @@
-"""Text-to-speech API endpoints with Gemini 2.5 Flash TTS."""
+"""
+TTS API endpoints using OpenRouter with Gemini models.
 
-from typing import Optional
+Routes text through OpenRouter (using BYOK Google API key)
+just like we do for chat completions.
+"""
+
+from typing import Optional, List, Dict
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -10,10 +15,18 @@ from ..services.tts_service import tts_service
 
 class TTSRequest(BaseModel):
     text: str
-    voice: Optional[str] = None
+    voice: Optional[str] = "Puck"
     language: Optional[str] = "en-US"
-    style: Optional[str] = None  # cheerful, calm, professional, etc.
+    style: Optional[str] = None
     speed: Optional[float] = 1.0
+
+
+class VoiceConversationRequest(BaseModel):
+    message: str
+    conversation_history: Optional[List[Dict[str, str]]] = None
+    model: Optional[str] = "google/gemini-2.5-flash"
+    voice: Optional[str] = "Puck"
+    language: Optional[str] = "en-US"
 
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
@@ -23,19 +36,16 @@ router = APIRouter(prefix="/api/tts", tags=["tts"])
 @router.post("/")
 @router.post("/synthesize")
 async def synthesize(req: TTSRequest):
-    """Synthesize speech using Gemini 2.5 Flash TTS.
-    
-    Features:
-    - Natural HD voices (Zephyr, Puck, Charon, etc.)
-    - Style control (cheerful, calm, professional)
-    - 24 languages supported
-    - Emotional intelligence
-    
+    """Process text for TTS via OpenRouter Gemini.
+
+    Since OpenRouter doesn't support native audio output,
+    this returns processed text optimized for Web Speech API.
+
     Returns:
-    - audio: base64 encoded audio
-    - format: audio format (mp3)
-    - provider: gemini-2.5-flash-tts or gtts-fallback
-    - voice: voice name used
+    - text: Processed text for TTS
+    - voice: Voice name
+    - language: Language code
+    - use_web_speech: True (signals frontend to use Web Speech API)
     """
     try:
         result = await tts_service.synthesize(
@@ -50,20 +60,38 @@ async def synthesize(req: TTSRequest):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+@router.post("/voice-response")
+async def voice_response(req: VoiceConversationRequest):
+    """Generate an AI response optimized for voice output.
+
+    This is the main endpoint for voice conversations.
+    Uses OpenRouter Gemini to generate responses formatted for TTS.
+
+    Returns:
+    - response: AI response text
+    - voice: Voice configuration
+    - use_web_speech: True (signals frontend to use Web Speech API)
+    """
+    try:
+        result = await tts_service.generate_voice_response(
+            user_message=req.message,
+            conversation_history=req.conversation_history,
+            model=req.model or "google/gemini-2.5-flash",
+            voice=req.voice or "Puck",
+            language=req.language or "en-US",
+        )
+        return {"success": True, **result}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @router.get("/voices")
 async def list_voices():
-    """List available Gemini TTS voices."""
+    """List available voice configurations."""
     return {
         "success": True,
-        "voices": [
-            {"id": "Zephyr", "name": "Zephyr", "style": "Bright, calm"},
-            {"id": "Puck", "name": "Puck", "style": "Lively, playful"},
-            {"id": "Charon", "name": "Charon", "style": "Deep, authoritative"},
-            {"id": "Kore", "name": "Kore", "style": "Warm, friendly"},
-            {"id": "Fenrir", "name": "Fenrir", "style": "Strong, confident"},
-            {"id": "Aoede", "name": "Aoede", "style": "Melodic, expressive"},
-        ],
-        "provider": "gemini-2.5-flash-tts"
+        "voices": tts_service.get_available_voices(),
+        "note": "Voices are configurations for Web Speech API styling",
     }
 
 

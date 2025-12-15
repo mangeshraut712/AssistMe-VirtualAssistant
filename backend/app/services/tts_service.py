@@ -1,16 +1,11 @@
 """
-Text-to-Speech Service with Gemini 2.5 Flash TTS Native Audio
+Text-to-Speech Service via OpenRouter
 
-Uses the official Gemini TTS model for natural, emotive speech.
-Model: gemini-2.5-flash-tts (for pure TTS)
-       gemini-2.5-flash-preview-tts (for conversational)
+Uses OpenRouter API with Gemini models for TTS.
+The user has added their Google API key in OpenRouter's BYOK integrations,
+so we route through OpenRouter just like we do for chat.
 
-Features:
-- 30 HD voices with emotional intelligence
-- Natural accents and prosody
-- Context-aware pacing
-- 24 languages supported
-- Style control via prompts
+Model: google/gemini-2.5-flash (with audio output)
 """
 
 import asyncio
@@ -25,202 +20,238 @@ logger = logging.getLogger(__name__)
 
 
 class TTSService:
-    """Advanced TTS with Gemini 2.5 Flash Native Audio."""
+    """TTS Service using OpenRouter with Gemini models."""
 
-    # Available Gemini TTS voices - natural HD voices
-    VOICES = [
-        "Zephyr",   # Bright, calm
-        "Puck",     # Lively, playful  
-        "Charon",   # Deep, authoritative
-        "Kore",     # Warm, friendly
-        "Fenrir",   # Strong, confident
-        "Aoede",    # Melodic, expressive
-        "Leda",     # Gentle, soothing
-        "Orus",     # Rich, resonant
-        "Pegasus",  # Enthusiastic, dynamic
+    # OpenRouter Gemini models that support audio output
+    VOICE_MODELS = [
+        "google/gemini-2.5-flash",
+        "google/gemini-2.0-flash-001:free",
+        "google/gemini-2.5-flash-lite",
     ]
-    
-    # Language support
-    LANGUAGES = [
-        "en-US", "en-GB", "en-AU", "en-IN",
-        "es-ES", "es-MX", "fr-FR", "de-DE", 
-        "it-IT", "pt-BR", "ja-JP", "ko-KR",
-        "zh-CN", "zh-TW", "hi-IN", "ar-XA",
-        "ru-RU", "pl-PL", "nl-NL", "sv-SE",
-        "da-DK", "fi-FI", "no-NO", "tr-TR"
-    ]
+
+    # Voice configurations for Gemini TTS
+    VOICES = {
+        "Puck": {"style": "Lively, playful", "gender": "neutral"},
+        "Charon": {"style": "Deep, authoritative", "gender": "male"},
+        "Kore": {"style": "Warm, friendly", "gender": "female"},
+        "Fenrir": {"style": "Strong, confident", "gender": "male"},
+        "Aoede": {"style": "Melodic, expressive", "gender": "female"},
+    }
 
     def __init__(self):
-        self.google_api_key = os.getenv("GOOGLE_API_KEY", "").strip()
-        
-        if not self.google_api_key:
-            logger.warning("GOOGLE_API_KEY not set - TTS will use fallback")
+        self.api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+        self.base_url = os.getenv(
+            "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
+        ).rstrip("/")
+        self.site_url = os.getenv(
+            "APP_URL", "https://assist-me-virtual-assistant.vercel.app"
+        )
+        self.app_name = os.getenv("APP_NAME", "AssistMe Virtual Assistant")
+
+        if not self.api_key:
+            logger.warning("OPENROUTER_API_KEY not set - TTS will fail")
+
+    def _headers(self) -> Dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": self.site_url,
+            "X-Title": self.app_name,
+        }
 
     async def synthesize(
         self,
         text: str,
         voice: Optional[str] = None,
         language: str = "en-US",
-        style: Optional[str] = None,  # e.g., "cheerful", "calm", "professional"
+        style: Optional[str] = None,
         speed: float = 1.0,
     ) -> Dict[str, str]:
-        """Generate natural speech using Gemini 2.5 Flash TTS.
-        
-        Args:
-            text: The text to speak
-            voice: Voice name (Zephyr, Puck, Charon, etc.)
-            language: Language code (en-US, es-ES, etc.)
-            style: Speaking style (cheerful, calm, professional, etc.)
-            speed: Speaking rate (0.5 to 2.0)
-            
-        Returns:
-            Dict with audio (base64), format, provider, voice
+        """Generate speech using OpenRouter Gemini models.
+
+        Since OpenRouter doesn't directly support audio output modality,
+        we use Gemini to generate a natural-sounding response script,
+        then the frontend uses Web Speech API for actual audio.
+
+        For TRUE native audio, you'd need direct Gemini API access.
+        This method returns text optimized for TTS playback.
         """
         text = (text or "").strip()
         if not text:
             raise ValueError("Text is required for TTS")
 
-        # Use Gemini TTS if API key available
-        if self.google_api_key:
-            try:
-                return await self._synthesize_gemini_tts(text, voice, language, style, speed)
-            except Exception as e:
-                logger.warning(f"Gemini TTS failed: {e}, trying fallback")
-        
-        # Fallback to gTTS
-        return await self._synthesize_gtts(text, language, speed)
+        if not self.api_key:
+            raise ValueError("OPENROUTER_API_KEY not configured")
 
-    async def _synthesize_gemini_tts(
-        self,
-        text: str,
-        voice: Optional[str],
-        language: str,
-        style: Optional[str],
-        speed: float,
-    ) -> Dict[str, str]:
-        """Use Gemini 2.5 Flash TTS for premium natural audio."""
-        
-        # Select voice
         selected_voice = voice if voice in self.VOICES else "Puck"
+        voice_config = self.VOICES[selected_voice]
+
+        # Since OpenRouter doesn't support native audio output,
+        # we'll use Gemini to process the text for better TTS
+        # and return it for frontend Web Speech API
+        try:
+            # Process text for natural speaking
+            processed_text = await self._process_for_tts(text, selected_voice, style)
+            
+            # For now, we'll return the text for frontend TTS
+            # Until OpenRouter adds audio modality support
+            return {
+                "text": processed_text,
+                "voice": selected_voice,
+                "language": language,
+                "style": style or voice_config["style"],
+                "provider": "openrouter-gemini",
+                "use_web_speech": True,  # Signal frontend to use Web Speech API
+            }
+        except Exception as e:
+            logger.error(f"TTS processing failed: {e}")
+            # Return original text if processing fails
+            return {
+                "text": text,
+                "voice": selected_voice,
+                "language": language,
+                "provider": "passthrough",
+                "use_web_speech": True,
+            }
+
+    async def _process_for_tts(
+        self, text: str, voice: str, style: Optional[str]
+    ) -> str:
+        """Use Gemini to process text for natural TTS delivery."""
         
-        # Build the prompt for style control
-        style_instruction = ""
+        voice_config = self.VOICES.get(voice, self.VOICES["Puck"])
+        
+        # Create a prompt that helps prepare text for TTS
+        system_prompt = f"""You are a text formatter for speech synthesis.
+Your task is to reformat the given text for natural, {voice_config['style'].lower()} speech delivery.
+
+Rules:
+1. Keep the content and meaning exactly the same
+2. Add natural pauses using ... where appropriate
+3. Spell out numbers and abbreviations
+4. Add emphasis markers where natural
+5. Keep it concise and conversational
+6. Return ONLY the reformatted text, nothing else"""
+
         if style:
-            style_map = {
-                "cheerful": "Speak in a cheerful, upbeat tone with enthusiasm.",
-                "calm": "Speak in a calm, soothing, relaxed manner.",
-                "professional": "Speak in a clear, professional, business-like tone.",
-                "excited": "Speak with excitement and energy!",
-                "whisper": "Speak in a soft whisper.",
-                "storytelling": "Speak as if telling an engaging story to listeners.",
-                "news": "Speak like a professional news anchor.",
-            }
-            style_instruction = style_map.get(style, f"Speak in a {style} style.")
-        
-        # Gemini TTS API endpoint
-        # Using the generateContent with audio output
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key={self.google_api_key}"
-        
+            system_prompt += f"\n7. Apply a {style} speaking style"
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text}
+        ]
+
+        url = f"{self.base_url}/chat/completions"
         payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": f"{style_instruction}\n\n{text}" if style_instruction else text
-                        }
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "responseModalities": ["AUDIO"],
-                "speechConfig": {
-                    "voiceConfig": {
-                        "prebuiltVoiceConfig": {
-                            "voiceName": selected_voice
-                        }
-                    }
-                }
-            }
+            "model": self.VOICE_MODELS[0],  # Use primary Gemini model
+            "messages": messages,
+            "temperature": 0.3,  # Low temperature for consistent output
+            "max_tokens": 500,
         }
 
-        headers = {
-            "Content-Type": "application/json",
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(url, json=payload, headers=self._headers())
+            
+            if response.status_code >= 400:
+                logger.warning(f"TTS processing API error: {response.status_code}")
+                return text  # Return original on error
+            
+            data = response.json()
+            processed = data["choices"][0]["message"]["content"].strip()
+            
+            # Clean up any quote marks or formatting artifacts
+            processed = processed.strip('"\'')
+            
+            return processed
+
+    async def generate_voice_response(
+        self,
+        user_message: str,
+        conversation_history: list = None,
+        model: str = "google/gemini-2.5-flash",
+        voice: str = "Puck",
+        language: str = "en-US",
+    ) -> Dict[str, str]:
+        """Generate an AI response optimized for voice output.
+
+        This is the main method for voice conversations.
+        Uses OpenRouter Gemini to generate a natural response,
+        formatted for TTS playback.
+        """
+        if not self.api_key:
+            raise ValueError("OPENROUTER_API_KEY not configured")
+
+        voice_config = self.VOICES.get(voice, self.VOICES["Puck"])
+        
+        system_prompt = f"""You are AssistMe, a helpful AI assistant in a voice conversation.
+
+Speaking style: {voice_config['style']}
+Language: {language}
+
+Guidelines for voice responses:
+1. Keep responses concise and conversational (2-4 sentences ideal)
+2. Use natural speech patterns with occasional pauses
+3. Avoid complex formatting, lists, or code blocks
+4. Spell out numbers, dates, and abbreviations
+5. Be warm, friendly, and engaging
+6. End with a natural conversational flow
+
+Remember: This will be spoken aloud, so make it sound natural when read."""
+
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        # Add conversation history if provided
+        if conversation_history:
+            messages.extend(conversation_history[-10:])  # Keep last 10 turns
+        
+        # Add current user message
+        messages.append({"role": "user", "content": user_message})
+
+        url = f"{self.base_url}/chat/completions"
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.7,
+            "max_tokens": 300,  # Keep responses short for voice
         }
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json=payload, headers=headers)
+            response = await client.post(url, json=payload, headers=self._headers())
             
-            if response.status_code != 200:
+            if response.status_code >= 400:
                 error_text = response.text
-                logger.error(f"Gemini TTS API error {response.status_code}: {error_text}")
-                raise Exception(f"Gemini TTS API error: {response.status_code}")
+                logger.error(f"Voice API error {response.status_code}: {error_text}")
+                raise Exception(f"OpenRouter API error: {response.status_code}")
             
             data = response.json()
+            ai_response = data["choices"][0]["message"]["content"].strip()
             
-            # Extract audio from response
-            if "candidates" in data and len(data["candidates"]) > 0:
-                candidate = data["candidates"][0]
-                if "content" in candidate and "parts" in candidate["content"]:
-                    for part in candidate["content"]["parts"]:
-                        if "inlineData" in part:
-                            audio_data = part["inlineData"]
-                            return {
-                                "audio": audio_data["data"],
-                                "format": audio_data.get("mimeType", "audio/mp3").split("/")[-1],
-                                "provider": "gemini-2.5-flash-tts",
-                                "voice": selected_voice,
-                                "language": language
-                            }
-            
-            logger.error(f"No audio in Gemini response: {data}")
-            raise Exception("No audio data in Gemini TTS response")
-
-    async def _synthesize_gtts(
-        self, text: str, language: str, speed: float
-    ) -> Dict[str, str]:
-        """Fallback TTS using gTTS (basic quality)."""
-        try:
-            from gtts import gTTS
-        except ImportError:
-            raise RuntimeError("gTTS not installed. Install: pip install gtts")
-
-        slow = speed < 1.0
-        lang_code = language.split("-")[0]  # en-US -> en
-
-        def _do_gtts():
-            tts = gTTS(text=text, lang=lang_code, slow=slow)
-            from io import BytesIO
-            buffer = BytesIO()
-            tts.write_to_fp(buffer)
-            return buffer.getvalue()
-
-        from starlette.concurrency import run_in_threadpool
-
-        try:
-            audio_bytes = await asyncio.wait_for(
-                run_in_threadpool(_do_gtts), timeout=15.0
-            )
-        except Exception as e:
-            logger.error(f"gTTS failed: {e}")
-            raise
-
-        audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-
-        return {
-            "audio": audio_b64,
-            "format": "mp3",
-            "provider": "gtts-fallback",
-            "voice": "default",
-            "language": language
-        }
+            return {
+                "response": ai_response,
+                "voice": voice,
+                "language": language,
+                "provider": "openrouter-gemini",
+                "model": data.get("model", model),
+                "tokens": data.get("usage", {}).get("total_tokens", 0),
+                "use_web_speech": True,
+            }
 
     def get_available_voices(self) -> list:
         """Return list of available voices."""
-        return self.VOICES.copy()
-    
+        return [
+            {"id": name, **config}
+            for name, config in self.VOICES.items()
+        ]
+
     def get_supported_languages(self) -> list:
-        """Return list of supported languages."""
-        return self.LANGUAGES.copy()
+        """Return list of supported languages for Web Speech API."""
+        return [
+            "en-US", "en-GB", "en-AU", "en-IN",
+            "es-ES", "es-MX", "fr-FR", "de-DE",
+            "it-IT", "pt-BR", "ja-JP", "ko-KR",
+            "zh-CN", "zh-TW", "hi-IN", "ar-XA",
+            "ru-RU", "nl-NL", "sv-SE", "pl-PL",
+        ]
 
 
 # Singleton instance
