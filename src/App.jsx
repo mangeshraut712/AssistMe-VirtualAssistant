@@ -313,8 +313,8 @@ function App() {
         }
     };
 
-    // Voice Conversation Handler
-    const handleVoiceConversation = async (text) => {
+    // Voice Conversation Handler - supports custom model for voice mode
+    const handleVoiceConversation = async (text, customModel = null) => {
         if (!text.trim()) return;
 
         const userMsg = { role: 'user', content: text };
@@ -329,7 +329,7 @@ function App() {
                 },
                 body: JSON.stringify({
                     messages: updatedMessages.map(msg => ({ role: msg.role, content: msg.content })),
-                    model: selectedModel,
+                    model: customModel || 'google/gemini-2.0-flash-001:free', // Use Gemini for voice
                     preferred_language: settings.language
                 })
             });
@@ -340,7 +340,7 @@ function App() {
                 const assistantMsg = {
                     role: 'assistant',
                     content: data.response,
-                    latency: 0 // We don't track latency for voice yet
+                    latency: 0
                 };
                 updateCurrentChatMessages([...updatedMessages, assistantMsg]);
                 return data.response;

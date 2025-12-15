@@ -19,14 +19,13 @@ class OpenRouterProvider(BaseProvider):
     DEFAULT_MODELS = [
         # Free Models (Working and Verified)
         {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct (Free)", "priority": 1},
-        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2 (Free)", "priority": 0, "voice_optimized": True},
+        {"id": "google/gemini-2.0-flash-001:free", "name": "Google: Gemini 2.0 Flash (Voice)", "priority": 0, "voice_optimized": True},
+        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2 (Free)", "priority": 1},
         {"id": "google/gemma-3-27b-it:free", "name": "Google: Gemma 3 27B IT (Free)", "priority": 1},
         {"id": "nvidia/nemotron-nano-12b-v2-vl:free", "name": "NVIDIA: Nemotron Nano 12B V2 VL (Free)", "priority": 1},
         {"id": "meituan/longcat-flash-chat:free", "name": "Meituan: LongCat Flash Chat (Free)", "priority": 1},
         {"id": "alibaba/tongyi-deepresearch-30b-a3b:free", "name": "Alibaba: Tongyi DeepResearch 30B A3B (Free)", "priority": 1},
-        
         # Premium Models (Fallback)
-        {"id": "google/gemini-2.0-flash-001:free", "name": "Google: Gemini 2.0 Flash (Free)", "priority": 2},
         {"id": "x-ai/grok-code-fast-1", "name": "xAI: Grok Code Fast 1", "priority": 2},
         {"id": "x-ai/grok-4.1-fast", "name": "xAI: Grok 4.1 Fast", "priority": 2},
         {"id": "perplexity/sonar", "name": "Perplexity: Sonar", "priority": 2},

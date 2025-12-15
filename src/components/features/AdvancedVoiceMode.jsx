@@ -1,7 +1,9 @@
 /**
  * Gemini 2.0 Flash Voice Mode
  * Apple + Japanese Minimalist Design (間 - Ma, 簡素 - Kanso)
- * Clean White/Black Theme with Subtle Animations
+ * Clean White/Black Theme with Real AI Conversations
+ * 
+ * Uses google/gemini-2.0-flash-001:free through OpenRouter for voice chat
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -9,13 +11,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Mic, MicOff, Volume2, VolumeX, X, Maximize2, Minimize2,
     Sparkles, MessageSquare, Globe, Cpu, Zap, Settings2,
-    Activity, Loader2, User, Bot
+    Activity, Loader2, User, Bot, RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
-// MINIMALIST VOICE MODE - 白 (White) / 黒 (Black) Theme
+// GEMINI 2.0 FLASH VOICE MODE - REAL AI CONVERSATIONS
 // ============================================================================
+
+// Voice Model Configuration
+const VOICE_MODEL = 'google/gemini-2.0-flash-001:free';
 
 // --- Animated Waveform ---
 const AudioWaveform = ({ isActive, isDark }) => {
@@ -123,7 +128,7 @@ const StatusLabel = ({ status, isDark }) => {
     const labels = {
         idle: 'Tap to speak',
         listening: 'Listening...',
-        processing: 'Thinking...',
+        processing: 'Gemini is thinking...',
         speaking: 'Speaking...'
     };
 
@@ -161,7 +166,7 @@ const Message = ({ message, isDark }) => {
             )}>
                 {isUser
                     ? <User className={cn('w-3.5 h-3.5', isDark ? 'text-white/70' : 'text-black/70')} />
-                    : <Bot className={cn('w-3.5 h-3.5', isDark ? 'text-white/70' : 'text-black/70')} />
+                    : <Sparkles className={cn('w-3.5 h-3.5', isDark ? 'text-white/70' : 'text-black/70')} />
                 }
             </div>
             <div className={cn(
@@ -171,7 +176,7 @@ const Message = ({ message, isDark }) => {
                     : isUser ? 'bg-black text-white' : 'bg-black/5 text-black/90',
                 isUser ? 'rounded-br-sm' : 'rounded-bl-sm'
             )}>
-                {message.content.length > 180 ? message.content.slice(0, 180) + '...' : message.content}
+                {message.content.length > 250 ? message.content.slice(0, 250) + '...' : message.content}
             </div>
         </motion.div>
     );
@@ -198,20 +203,31 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
     const [interimTranscript, setInterimTranscript] = useState('');
     const [conversation, setConversation] = useState([]);
     const [showHistory, setShowHistory] = useState(true);
+    const [error, setError] = useState(null);
 
     // Refs
     const recognitionRef = useRef(null);
     const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null);
     const timeoutRef = useRef(null);
     const cleanupRef = useRef(false);
+    const conversationRef = useRef([]);
+
+    // Keep conversation ref in sync
+    useEffect(() => {
+        conversationRef.current = conversation;
+    }, [conversation]);
 
     // Initialize Speech Recognition
     useEffect(() => {
         if (!isOpen) return;
         cleanupRef.current = false;
+        setError(null);
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) return;
+        if (!SpeechRecognition) {
+            setError('Speech recognition not supported in this browser');
+            return;
+        }
 
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
@@ -238,11 +254,13 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
                 setTranscript(final);
                 setInterimTranscript('');
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                timeoutRef.current = setTimeout(() => processTranscript(final.trim()), 1500);
+                // Process after user stops speaking
+                timeoutRef.current = setTimeout(() => processTranscript(final.trim()), 1200);
             }
         };
 
         recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
             if (event.error !== 'no-speech' && event.error !== 'aborted') {
                 setStatus('idle');
             }
@@ -260,32 +278,85 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
             cleanupRef.current = true;
             try { recognitionRef.current?.stop(); } catch { }
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            synthRef.current?.cancel();
         };
     }, [isOpen, settings?.language]);
+
+    // Send message to Gemini 2.0 Flash via OpenRouter
+    const sendToGemini = async (text, conversationHistory) => {
+        // Build messages with conversation context
+        const messages = [
+            {
+                role: 'system',
+                content: `You are a helpful voice assistant powered by Gemini 2.0 Flash. 
+Provide concise, natural, and conversational responses suitable for voice interaction. 
+Keep your answers brief (1-3 sentences) and to the point, as they will be spoken aloud.
+Be friendly, helpful, and engaging. Respond in ${settings?.language === 'hi' ? 'Hindi' : 'English'}.`
+            },
+            ...conversationHistory.map(msg => ({
+                role: msg.role,
+                content: msg.content
+            })),
+            { role: 'user', content: text }
+        ];
+
+        const response = await fetch('/api/chat/text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages,
+                model: VOICE_MODEL, // Explicitly use Gemini 2.0 Flash
+                preferred_language: settings?.language || 'en'
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.response;
+    };
 
     const processTranscript = useCallback(async (text) => {
         if (!text.trim() || status === 'processing') return;
 
         setStatus('processing');
+        setError(null);
         try { recognitionRef.current?.stop(); } catch { }
 
-        const userMsg = { role: 'user', content: text };
-        setConversation(prev => [...prev, userMsg]);
+        const userMsg = { role: 'user', content: text, timestamp: Date.now() };
+        const updatedConversation = [...conversationRef.current, userMsg];
+        setConversation(updatedConversation);
 
         try {
-            const response = await onSendMessage(text);
+            // Send to Gemini 2.0 Flash
+            const response = await sendToGemini(text, conversationRef.current);
+
             if (response) {
-                const assistantMsg = { role: 'assistant', content: response };
+                const assistantMsg = { role: 'assistant', content: response, timestamp: Date.now() };
                 setConversation(prev => [...prev, assistantMsg]);
+
+                // Speak the response
                 await speak(response);
+            } else {
+                throw new Error('No response from Gemini');
             }
-        } catch {
+        } catch (err) {
+            console.error('Voice processing error:', err);
+            setError(err.message);
             setStatus('idle');
+
+            // Restart listening after error
+            setTimeout(() => {
+                if (!cleanupRef.current) startListening();
+            }, 1000);
         }
 
         setTranscript('');
         setInterimTranscript('');
-    }, [status, onSendMessage]);
+    }, [status, settings]);
 
     const speak = useCallback((text) => {
         return new Promise((resolve) => {
@@ -296,18 +367,52 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
 
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = settings?.language === 'hi' ? 'hi-IN' : 'en-US';
-            utterance.rate = 1.05;
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
 
+            // Try to find a good voice
             const voices = synthRef.current.getVoices();
-            const preferred = voices.find(v => v.name.includes('Google') || v.name.includes('Samantha'));
-            if (preferred) utterance.voice = preferred;
+            const preferredVoices = [
+                'Google US English',
+                'Google UK English Female',
+                'Samantha',
+                'Karen',
+                'Daniel',
+                'Google हिन्दी'
+            ];
+
+            let selectedVoice = null;
+            for (const name of preferredVoices) {
+                const found = voices.find(v => v.name.includes(name));
+                if (found) {
+                    selectedVoice = found;
+                    break;
+                }
+            }
+
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v => v.lang.startsWith(utterance.lang)) || voices[0];
+            }
+
+            if (selectedVoice) utterance.voice = selectedVoice;
 
             utterance.onend = () => {
                 setStatus('idle');
                 resolve();
-                setTimeout(() => { if (!cleanupRef.current) startListening(); }, 500);
+                // Auto-restart listening after speaking
+                setTimeout(() => {
+                    if (!cleanupRef.current) startListening();
+                }, 500);
             };
-            utterance.onerror = () => { setStatus('idle'); resolve(); };
+
+            utterance.onerror = (e) => {
+                console.error('Speech error:', e);
+                setStatus('idle');
+                resolve();
+                setTimeout(() => {
+                    if (!cleanupRef.current) startListening();
+                }, 500);
+            };
 
             synthRef.current.speak(utterance);
         });
@@ -315,7 +420,11 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
 
     const startListening = useCallback(() => {
         if (recognitionRef.current && status !== 'processing' && status !== 'speaking') {
-            try { recognitionRef.current.start(); } catch { }
+            try {
+                recognitionRef.current.start();
+            } catch (e) {
+                // Already started or other error
+            }
         }
     }, [status]);
 
@@ -332,20 +441,24 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
         } else if (status === 'idle') {
             startListening();
         }
-    }, [status, transcript, interimTranscript]);
+    }, [status, transcript, interimTranscript, processTranscript, startListening, stopListening]);
 
     const stopSpeaking = useCallback(() => {
         synthRef.current?.cancel();
         setStatus('idle');
     }, []);
 
+    const clearConversation = useCallback(() => {
+        setConversation([]);
+        conversationRef.current = [];
+    }, []);
+
     const handleClose = useCallback(() => {
         cleanupRef.current = true;
         stopListening();
         stopSpeaking();
-        setConversation([]);
         onClose();
-    }, [onClose]);
+    }, [onClose, stopListening, stopSpeaking]);
 
     if (!isOpen) return null;
 
@@ -390,6 +503,18 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {conversation.length > 0 && (
+                            <button
+                                onClick={clearConversation}
+                                title="Clear conversation"
+                                className={cn(
+                                    'p-2 rounded-full transition-colors',
+                                    isDark ? 'hover:bg-white/10' : 'hover:bg-black/10'
+                                )}
+                            >
+                                <RefreshCw className={cn('w-4 h-4', isDark ? 'text-white/60' : 'text-black/60')} />
+                            </button>
+                        )}
                         <button
                             onClick={() => setShowHistory(!showHistory)}
                             className={cn(
@@ -415,6 +540,23 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
 
                 {/* Main - Centered Orb */}
                 <main className="flex-1 flex flex-col items-center justify-center gap-8 p-8">
+                    {/* Error Display */}
+                    <AnimatePresence>
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                className={cn(
+                                    'px-4 py-2 rounded-lg text-sm',
+                                    isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-600'
+                                )}
+                            >
+                                {error}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
                     {/* Status */}
                     <AnimatePresence mode="wait">
                         <StatusLabel key={status} status={status} isDark={isDark} />
@@ -464,7 +606,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
                     {/* Instructions */}
                     {status === 'idle' && !displayText && conversation.length === 0 && (
                         <p className={cn('text-sm text-center max-w-xs', isDark ? 'text-white/30' : 'text-black/30')}>
-                            Tap the circle to begin speaking
+                            Tap the circle to start a conversation with Gemini
                         </p>
                     )}
                 </main>
@@ -478,8 +620,8 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
                             exit={{ height: 0, opacity: 0 }}
                             className={cn('border-t overflow-hidden', isDark ? 'border-white/5' : 'border-black/5')}
                         >
-                            <div className="p-4 max-h-40 overflow-y-auto space-y-3">
-                                {conversation.slice(-4).map((msg, idx) => (
+                            <div className="p-4 max-h-48 overflow-y-auto space-y-3">
+                                {conversation.slice(-6).map((msg, idx) => (
                                     <Message key={idx} message={msg} isDark={isDark} />
                                 ))}
                             </div>
@@ -498,7 +640,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, onSendMessage, settings }) => {
                             {settings?.language === 'hi' ? 'हिंदी' : 'EN'}
                         </span>
                         <span>•</span>
-                        <span>Gemini Flash</span>
+                        <span>Gemini 2.0 Flash via OpenRouter</span>
                     </span>
                 </footer>
             </motion.div>
