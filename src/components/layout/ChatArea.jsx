@@ -154,7 +154,7 @@ const TypingIndicator = () => (
     </motion.div>
 );
 
-// Scroll to Bottom Button
+// Scroll to Bottom Button - Centered above input
 const ScrollToBottomButton = ({ onClick, show }) => (
     <AnimatePresence>
         {show && (
@@ -164,9 +164,9 @@ const ScrollToBottomButton = ({ onClick, show }) => (
                 exit={{ opacity: 0, scale: 0.8, y: 20 }}
                 onClick={onClick}
                 className={cn(
-                    'fixed bottom-32 right-8 z-50',
-                    'w-10 h-10 rounded-full',
-                    'bg-background border border-border shadow-lg',
+                    'absolute bottom-4 left-1/2 -translate-x-1/2 z-20',
+                    'w-8 h-8 rounded-full',
+                    'bg-background/90 backdrop-blur-sm border border-border shadow-md',
                     'flex items-center justify-center',
                     'hover:bg-muted transition-colors',
                     'focus:outline-none focus:ring-2 focus:ring-primary'
@@ -174,7 +174,7 @@ const ScrollToBottomButton = ({ onClick, show }) => (
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
             >
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </motion.button>
         )}
     </AnimatePresence>
@@ -298,55 +298,56 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
     // CHAT MESSAGES VIEW
     // ========================================
     return (
-        <div className="h-full flex flex-col bg-background relative">
-            {/* Scroll to Bottom Button */}
-            <ScrollToBottomButton onClick={scrollToBottom} show={showScrollButton} />
+        <div className="h-full flex flex-col bg-background">
+            {/* Scrollable Messages Area - relative for button positioning */}
+            <div className="flex-1 min-h-0 relative">
+                <div
+                    ref={scrollContainerRef}
+                    className="h-full overflow-y-auto overscroll-contain scroll-smooth"
+                >
+                    {/* TOP PADDING - Ensures messages don't touch header */}
+                    <div className="h-4 sm:h-6" />
 
-            {/* Scrollable Messages Area - min-h-0 is critical for flex child scrolling */}
-            <div
-                ref={scrollContainerRef}
-                className="flex-1 min-h-0 overflow-y-auto overscroll-contain scroll-smooth"
-            >
-                {/* TOP PADDING - Ensures messages don't touch header */}
-                <div className="h-6 sm:h-8 md:h-10" />
+                    {/* Messages Container */}
+                    <div className="max-w-3xl mx-auto w-full px-4 sm:px-6">
+                        {/* Messages */}
+                        <div className="space-y-4 pb-4">
+                            <AnimatePresence mode="popLayout">
+                                {messages.map((msg, idx) => (
+                                    <motion.div
+                                        key={msg.id || idx}
+                                        layout
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -20 }}
+                                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                                    >
+                                        <MessageBubble message={msg} renderContent={renderContent} />
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
 
-                {/* Messages Container */}
-                <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 md:px-8">
-                    {/* Messages */}
-                    <div className="space-y-6 pb-4">
-                        <AnimatePresence mode="popLayout">
-                            {messages.map((msg, idx) => (
-                                <motion.div
-                                    key={msg.id || idx}
-                                    layout
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                                >
-                                    <MessageBubble message={msg} renderContent={renderContent} />
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
+                            {isLoading && <TypingIndicator />}
+                        </div>
 
-                        {isLoading && <TypingIndicator />}
+                        {/* Scroll anchor */}
+                        <div ref={messagesEndRef} className="h-2" />
                     </div>
-
-                    {/* Scroll anchor */}
-                    <div ref={messagesEndRef} className="h-4" />
                 </div>
+
+                {/* Scroll to Bottom Button - Centered above input */}
+                <ScrollToBottomButton onClick={scrollToBottom} show={showScrollButton} />
             </div>
 
-            {/* FIXED INPUT AREA - Always visible at bottom */}
+            {/* FIXED INPUT AREA - Compact like ChatGPT */}
             <div className={cn(
                 'flex-shrink-0',
-                'border-t border-border/50',
-                'bg-background/95 backdrop-blur-xl',
-                'shadow-[0_-4px_20px_rgba(0,0,0,0.08)]',
-                'px-4 sm:px-6 md:px-8 py-4 sm:py-5',
+                'border-t border-border/40',
+                'bg-background',
+                'px-4 sm:px-6 py-3',
                 'safe-area-bottom'
             )}>
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-3xl mx-auto">
                     {inputProps && <InputArea {...inputProps} variant="docked" />}
                 </div>
             </div>

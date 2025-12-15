@@ -195,17 +195,17 @@ const InputArea = ({
                 )}
             </AnimatePresence>
 
-            {/* Main Input Shell - Apple/Gemini Style */}
+            {/* Main Input Shell - Compact ChatGPT Style */}
             <motion.div
                 className={cn(
-                    'relative flex flex-col rounded-3xl p-4 transition-all duration-300',
-                    'bg-card border shadow-lg',
+                    'relative flex flex-col rounded-2xl p-3 transition-all duration-300',
+                    'bg-card border',
                     isFocused
-                        ? 'border-primary/30 shadow-xl shadow-primary/5 ring-2 ring-primary/10'
+                        ? 'border-primary/30 shadow-md shadow-primary/5 ring-1 ring-primary/10'
                         : 'border-border/50 hover:border-border'
                 )}
                 animate={{
-                    scale: isFocused ? 1.01 : 1,
+                    scale: isFocused ? 1.005 : 1,
                 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             >
@@ -228,8 +228,8 @@ const InputArea = ({
                     )}
                 </AnimatePresence>
 
-                {/* Text Input */}
-                <div className="flex-1 min-h-[44px]">
+                {/* Text Input - Compact */}
+                <div className="flex-1">
                     <textarea
                         id="chat-input"
                         name="message"
@@ -247,18 +247,18 @@ const InputArea = ({
                         placeholder="Message AssistMe..."
                         className={cn(
                             'w-full bg-transparent focus:outline-none resize-none',
-                            'text-base leading-relaxed',
+                            'text-sm leading-relaxed',
                             'placeholder:text-muted-foreground/60'
                         )}
                         disabled={isLoading}
                         rows={1}
-                        style={{ minHeight: '44px', maxHeight: '200px' }}
+                        style={{ minHeight: '24px', maxHeight: '150px' }}
                         autoComplete="off"
                     />
                 </div>
 
-                {/* Bottom Row: Actions */}
-                <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/30">
+                {/* Bottom Row: Actions - Compact */}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/20">
                     {/* Left: File Upload & Model Selector */}
                     <div className="flex items-center gap-2">
                         {/* File Upload */}
@@ -380,15 +380,10 @@ const InputArea = ({
                 </div>
             </motion.div>
 
-            {/* Hint Text */}
-            <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="text-center text-xs text-muted-foreground/60 mt-3"
-            >
-                Press <kbd className="px-1.5 py-0.5 rounded bg-foreground/5 font-mono text-[10px]">Enter</kbd> to send, <kbd className="px-1.5 py-0.5 rounded bg-foreground/5 font-mono text-[10px]">Shift + Enter</kbd> for new line
-            </motion.p>
+            {/* Hint Text - Compact */}
+            <p className="text-center text-[10px] text-muted-foreground/50 mt-2">
+                Press <kbd className="px-1 py-0.5 rounded bg-foreground/5 font-mono text-[9px]">Enter</kbd> to send, <kbd className="px-1 py-0.5 rounded bg-foreground/5 font-mono text-[9px]">Shift+Enter</kbd> for new line
+            </p>
         </div>
     );
 };
