@@ -11,6 +11,13 @@
         "plugin:react/jsx-runtime",
         "plugin:react-hooks/recommended"
     ],
+    "ignorePatterns": [
+        "dist",
+        "node_modules",
+        ".vite",
+        "build",
+        "modules/*/node_modules"
+    ],
     "parserOptions": {
         "ecmaVersion": "latest",
         "sourceType": "module",
@@ -24,37 +31,37 @@
         }
     },
     "plugins": [
-        "react",
-        "react-hooks"
+        "react-refresh"
     ],
     "rules": {
+        "react/react-in-jsx-scope": "off",
         "react/prop-types": "off",
-        "react/no-unescaped-entities": "off",
+        "react-refresh/only-export-components": [
+            "warn",
+            {
+                "allowConstantExport": true
+            }
+        ],
         "no-unused-vars": [
             "warn",
             {
                 "argsIgnorePattern": "^_",
-                "varsIgnorePattern": "^_"
+                "varsIgnorePattern": "^_",
+                "caughtErrorsIgnorePattern": "^_"
             }
         ],
-        "no-console": [
-            "warn",
+        "no-empty": [
+            "error",
             {
-                "allow": [
-                    "warn",
-                    "error"
-                ]
+                "allowEmptyCatch": true
             }
         ],
-        "react-hooks/rules-of-hooks": "error",
-        "react-hooks/exhaustive-deps": "warn",
-        "prefer-const": "warn",
-        "no-var": "error"
-    },
-    "ignorePatterns": [
-        "dist",
-        "node_modules",
-        "*.min.js",
-        "backend"
-    ]
+        "no-constant-condition": [
+            "error",
+            {
+                "checkLoops": false
+            }
+        ],
+        "react-hooks/exhaustive-deps": "warn"
+    }
 }
