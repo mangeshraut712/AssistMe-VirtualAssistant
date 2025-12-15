@@ -16,27 +16,42 @@ logger = logging.getLogger(__name__)
 class OpenRouterProvider(BaseProvider):
     """OpenRouter AI provider."""
 
+    # Gemini Live Native Audio Models - ONLY these for voice mode
+    VOICE_MODELS = [
+        # Primary: Gemini 2.5 Flash Native Audio (Dec 2025 release via BYOK)
+        "gemini-2.5-flash-native-audio-preview-12-2025",
+        # Fallbacks in order of preference
+        "google/gemini-2.5-flash",
+        "google/gemini-2.5-flash-lite",
+        "google/gemini-2.5-flash-lite-preview-09-2025",
+        "google/gemini-2.0-flash-001:free",
+        "google/gemini-2.0-flash-lite-001",
+    ]
+
     DEFAULT_MODELS = [
-        # Gemini 2.5 Flash - Voice/Audio Optimized (December 2025 Release)
-        # Features: Native Audio, 30 HD voices, 24 languages, emotional intelligence
-        {"id": "google/gemini-2.5-flash", "name": "Google: Gemini 2.5 Flash (Voice Native Audio)", "priority": 0, "voice_optimized": True, "native_audio": True},
-        {"id": "google/gemini-2.0-flash-001:free", "name": "Google: Gemini 2.0 Flash (Free)", "priority": 0, "voice_optimized": True},
+        # Gemini 2.5 Flash Native Audio (December 2025 - via Google AI Studio BYOK)
+        {"id": "gemini-2.5-flash-native-audio-preview-12-2025", "name": "Gemini 2.5 Flash Native Audio (Dec 2025)", "priority": 0, "voice_optimized": True, "native_audio": True},
+        {"id": "google/gemini-2.5-flash", "name": "Google: Gemini 2.5 Flash", "priority": 0, "voice_optimized": True, "native_audio": True},
+        {"id": "google/gemini-2.5-flash-lite", "name": "Google: Gemini 2.5 Flash Lite", "priority": 0, "voice_optimized": True},
+        {"id": "google/gemini-2.5-flash-lite-preview-09-2025", "name": "Google: Gemini 2.5 Flash Lite Preview", "priority": 0, "voice_optimized": True},
+        {"id": "google/gemini-2.0-flash-001:free", "name": "Google: Gemini 2.0 Flash (Free)", "priority": 1, "voice_optimized": True},
+        {"id": "google/gemini-2.0-flash-lite-001", "name": "Google: Gemini 2.0 Flash Lite", "priority": 1, "voice_optimized": True},
         
         # Free Models (Working and Verified)
-        {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct (Free)", "priority": 1},
-        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2 (Free)", "priority": 1},
-        {"id": "google/gemma-3-27b-it:free", "name": "Google: Gemma 3 27B IT (Free)", "priority": 1},
-        {"id": "nvidia/nemotron-nano-12b-v2-vl:free", "name": "NVIDIA: Nemotron Nano 12B V2 VL (Free)", "priority": 1},
-        {"id": "meituan/longcat-flash-chat:free", "name": "Meituan: LongCat Flash Chat (Free)", "priority": 1},
-        {"id": "alibaba/tongyi-deepresearch-30b-a3b:free", "name": "Alibaba: Tongyi DeepResearch 30B A3B (Free)", "priority": 1},
+        {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct (Free)", "priority": 2},
+        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2 (Free)", "priority": 2},
+        {"id": "google/gemma-3-27b-it:free", "name": "Google: Gemma 3 27B IT (Free)", "priority": 2},
+        {"id": "nvidia/nemotron-nano-12b-v2-vl:free", "name": "NVIDIA: Nemotron Nano 12B V2 VL (Free)", "priority": 2},
+        {"id": "meituan/longcat-flash-chat:free", "name": "Meituan: LongCat Flash Chat (Free)", "priority": 2},
+        {"id": "alibaba/tongyi-deepresearch-30b-a3b:free", "name": "Alibaba: Tongyi DeepResearch 30B A3B (Free)", "priority": 2},
         
         # Premium Models (Fallback)
-        {"id": "google/gemini-2.5-pro", "name": "Google: Gemini 2.5 Pro", "priority": 2},
-        {"id": "x-ai/grok-code-fast-1", "name": "xAI: Grok Code Fast 1", "priority": 2},
-        {"id": "x-ai/grok-4.1-fast", "name": "xAI: Grok 4.1 Fast", "priority": 2},
-        {"id": "perplexity/sonar", "name": "Perplexity: Sonar", "priority": 2},
-        {"id": "anthropic/claude-3-haiku", "name": "Anthropic Claude 3 Haiku", "priority": 2},
-        {"id": "openai/gpt-4o-mini", "name": "OpenAI GPT-4o Mini", "priority": 2},
+        {"id": "google/gemini-2.5-pro", "name": "Google: Gemini 2.5 Pro", "priority": 3},
+        {"id": "x-ai/grok-code-fast-1", "name": "xAI: Grok Code Fast 1", "priority": 3},
+        {"id": "x-ai/grok-4.1-fast", "name": "xAI: Grok 4.1 Fast", "priority": 3},
+        {"id": "perplexity/sonar", "name": "Perplexity: Sonar", "priority": 3},
+        {"id": "anthropic/claude-3-haiku", "name": "Anthropic Claude 3 Haiku", "priority": 3},
+        {"id": "openai/gpt-4o-mini", "name": "OpenAI GPT-4o Mini", "priority": 3},
     ]
 
     def __init__(self):
@@ -282,36 +297,51 @@ class OpenRouterProvider(BaseProvider):
         """List OpenRouter models."""
         return self.DEFAULT_MODELS
 
-    def get_voice_optimized_model(self, prefer_free: bool = True) -> str:
-        """Get the best model for voice chat.
+    def get_voice_models_only(self) -> List[str]:
+        """Get ONLY the Gemini audio models for voice mode.
         
-        Prioritizes:
-        1. Gemini 2.5 Flash (Native Audio) - Best quality
-        2. Gemini 2.0 Flash (Free) - Good quality, free tier
+        These are the ONLY models that should be used for voice conversations:
+        - gemini-2.5-flash-native-audio-preview-12-2025 (Primary)
+        - google/gemini-2.5-flash
+        - google/gemini-2.5-flash-lite
+        - google/gemini-2.5-flash-lite-preview-09-2025
+        - google/gemini-2.0-flash-001:free
+        - google/gemini-2.0-flash-lite-001
         """
-        for model in sorted(self.DEFAULT_MODELS, key=lambda x: x.get("priority", 99)):
-            if model.get("voice_optimized", False):
-                # If prefer_free, skip paid models
-                if prefer_free and not model["id"].endswith(":free"):
-                    continue
-                return model["id"]
+        return self.VOICE_MODELS.copy()
+
+    def get_voice_optimized_model(self, prefer_free: bool = False) -> str:
+        """Get the best model for voice chat from VOICE_MODELS list.
         
-        # Fallback to Gemini 2.0 Flash free
-        return "google/gemini-2.0-flash-001:free"
+        Tries models in order:
+        1. gemini-2.5-flash-native-audio-preview-12-2025 (BYOK)
+        2. google/gemini-2.5-flash
+        3. google/gemini-2.5-flash-lite
+        4. google/gemini-2.5-flash-lite-preview-09-2025
+        5. google/gemini-2.0-flash-001:free
+        6. google/gemini-2.0-flash-lite-001
+        """
+        if prefer_free:
+            # Return first free model
+            for model in self.VOICE_MODELS:
+                if model.endswith(":free"):
+                    return model
+            return "google/gemini-2.0-flash-001:free"
+        
+        # Return first available (primary is gemini-2.5-flash-native-audio)
+        return self.VOICE_MODELS[0] if self.VOICE_MODELS else "google/gemini-2.0-flash-001:free"
 
     def get_native_audio_model(self) -> str:
-        """Get the model with native audio TTS support (Gemini 2.5 Flash).
+        """Get the model with native audio TTS support.
         
+        Primary: gemini-2.5-flash-native-audio-preview-12-2025 (Dec 2025 GA)
         Features:
         - 30 HD voices across 24 languages
         - Emotional intelligence (affective dialogue)
         - Context-aware pacing
         - Live speech translation (70+ languages)
         """
-        for model in self.DEFAULT_MODELS:
-            if model.get("native_audio", False):
-                return model["id"]
-        return "google/gemini-2.5-flash"
+        return "gemini-2.5-flash-native-audio-preview-12-2025"
 
     def is_available(self) -> bool:
         """Check if OpenRouter is configured."""
