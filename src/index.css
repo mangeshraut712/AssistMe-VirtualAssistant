@@ -261,6 +261,11 @@
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  /* Header offset - accounts for fixed header */
+  .header-offset {
+    padding-top: 0;
+  }
 }
 
 @layer utilities {

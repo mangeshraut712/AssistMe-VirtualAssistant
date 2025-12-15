@@ -152,8 +152,8 @@ const InputArea = ({
 
     return (
         <div className={cn(
-            'w-full max-w-3xl mx-auto',
-            isHero ? '' : 'px-2 pb-4'
+            'w-full max-w-4xl mx-auto',
+            isHero ? '' : ''
         )}>
             {/* Uploaded Files Preview */}
             <AnimatePresence>
