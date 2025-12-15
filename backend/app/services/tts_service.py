@@ -1,11 +1,16 @@
 """
-Text-to-Speech Service via OpenRouter
+Gemini TTS Service - Direct Google AI API
 
-Uses OpenRouter API with Gemini models for TTS.
-The user has added their Google API key in OpenRouter's BYOK integrations,
-so we route through OpenRouter just like we do for chat.
+Uses Gemini 2.5 Flash TTS for natural, expressive speech generation.
+Model: gemini-2.5-flash-preview-tts
 
-Model: google/gemini-2.5-flash (with audio output)
+Features:
+- 30 HD voices with emotional intelligence
+- 24 languages supported
+- Style control via prompts
+- WAV audio output (24kHz, 16-bit PCM)
+
+API Reference: https://ai.google.dev/gemini-api/docs/speech-generation
 """
 
 import asyncio
@@ -19,240 +24,238 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
-class TTSService:
-    """TTS Service using OpenRouter with Gemini models."""
+class GeminiTTSService:
+    """Direct Gemini 2.5 TTS API integration."""
 
-    # OpenRouter Gemini models that support audio output
-    VOICE_MODELS = [
-        "google/gemini-2.5-flash",
-        "google/gemini-2.0-flash-001:free",
-        "google/gemini-2.5-flash-lite",
+    # TTS Model
+    TTS_MODEL = "gemini-2.5-flash-preview-tts"
+    
+    # Native Audio Model (for conversational AI)
+    NATIVE_AUDIO_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
+    
+    # Available voices (30 total)
+    VOICES = [
+        "Aoede", "Charon", "Fenrir", "Kore", "Puck",
+        "Zephyr", "Helios", "Orus", "Pegasus", "Leda",
+        "Io", "Calliope", "Clio", "Echo", "Erato",
+        "Euterpe", "Melpomene", "Orpheus", "Polyhymnia", "Terpsichore",
+        "Thalia", "Urania", "Algieba", "Altair", "Ananke",
+        "Autonoe", "Callirrhoe", "Carpo", "Dione", "Gacrux"
     ]
-
-    # Voice configurations for Gemini TTS
-    VOICES = {
+    
+    # Voice styles
+    VOICE_STYLES = {
         "Puck": {"style": "Lively, playful", "gender": "neutral"},
         "Charon": {"style": "Deep, authoritative", "gender": "male"},
         "Kore": {"style": "Warm, friendly", "gender": "female"},
         "Fenrir": {"style": "Strong, confident", "gender": "male"},
         "Aoede": {"style": "Melodic, expressive", "gender": "female"},
+        "Zephyr": {"style": "Bright, calm", "gender": "neutral"},
     }
+    
+    # Supported languages
+    LANGUAGES = [
+        "ar-EG", "de-DE", "en-US", "es-US", "fr-FR", "hi-IN",
+        "id-ID", "it-IT", "ja-JP", "ko-KR", "pt-BR", "ru-RU",
+        "nl-NL", "pl-PL", "th-TH", "tr-TR", "vi-VN", "ro-RO",
+        "uk-UA", "bn-BD", "en-IN", "mr-IN", "ta-IN", "te-IN"
+    ]
 
     def __init__(self):
-        self.api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-        self.base_url = os.getenv(
-            "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
-        ).rstrip("/")
-        self.site_url = os.getenv(
-            "APP_URL", "https://assist-me-virtual-assistant.vercel.app"
-        )
-        self.app_name = os.getenv("APP_NAME", "AssistMe Virtual Assistant")
-
+        self.api_key = os.getenv("GOOGLE_API_KEY", "").strip()
+        self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+        
         if not self.api_key:
-            logger.warning("OPENROUTER_API_KEY not set - TTS will fail")
+            logger.warning("GOOGLE_API_KEY not set - Gemini TTS will not work")
 
-    def _headers(self) -> Dict[str, str]:
-        return {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": self.site_url,
-            "X-Title": self.app_name,
-        }
-
-    async def synthesize(
+    async def text_to_speech(
         self,
         text: str,
-        voice: Optional[str] = None,
-        language: str = "en-US",
+        voice: str = "Puck",
         style: Optional[str] = None,
-        speed: float = 1.0,
-    ) -> Dict[str, str]:
-        """Generate speech using OpenRouter Gemini models.
-
-        Since OpenRouter doesn't directly support audio output modality,
-        we use Gemini to generate a natural-sounding response script,
-        then the frontend uses Web Speech API for actual audio.
-
-        For TRUE native audio, you'd need direct Gemini API access.
-        This method returns text optimized for TTS playback.
+    ) -> Dict:
+        """Convert text to speech audio.
+        
+        Args:
+            text: Text to convert to speech
+            voice: Voice name (Puck, Kore, Charon, etc.)
+            style: Speaking style hint (cheerful, calm, etc.)
+            
+        Returns:
+            Dict with base64 audio data
         """
+        if not self.api_key:
+            raise ValueError("GOOGLE_API_KEY not configured")
+        
         text = (text or "").strip()
         if not text:
-            raise ValueError("Text is required for TTS")
-
-        if not self.api_key:
-            raise ValueError("OPENROUTER_API_KEY not configured")
-
+            raise ValueError("Text is required")
+        
+        # Validate voice
         selected_voice = voice if voice in self.VOICES else "Puck"
-        voice_config = self.VOICES[selected_voice]
-
-        # Since OpenRouter doesn't support native audio output,
-        # we'll use Gemini to process the text for better TTS
-        # and return it for frontend Web Speech API
-        try:
-            # Process text for natural speaking
-            processed_text = await self._process_for_tts(text, selected_voice, style)
-            
-            # For now, we'll return the text for frontend TTS
-            # Until OpenRouter adds audio modality support
-            return {
-                "text": processed_text,
-                "voice": selected_voice,
-                "language": language,
-                "style": style or voice_config["style"],
-                "provider": "openrouter-gemini",
-                "use_web_speech": True,  # Signal frontend to use Web Speech API
-            }
-        except Exception as e:
-            logger.error(f"TTS processing failed: {e}")
-            # Return original text if processing fails
-            return {
-                "text": text,
-                "voice": selected_voice,
-                "language": language,
-                "provider": "passthrough",
-                "use_web_speech": True,
-            }
-
-    async def _process_for_tts(
-        self, text: str, voice: str, style: Optional[str]
-    ) -> str:
-        """Use Gemini to process text for natural TTS delivery."""
         
-        voice_config = self.VOICES.get(voice, self.VOICES["Puck"])
-        
-        # Create a prompt that helps prepare text for TTS
-        system_prompt = f"""You are a text formatter for speech synthesis.
-Your task is to reformat the given text for natural, {voice_config['style'].lower()} speech delivery.
-
-Rules:
-1. Keep the content and meaning exactly the same
-2. Add natural pauses using ... where appropriate
-3. Spell out numbers and abbreviations
-4. Add emphasis markers where natural
-5. Keep it concise and conversational
-6. Return ONLY the reformatted text, nothing else"""
-
+        # Add style prefix if specified
         if style:
-            system_prompt += f"\n7. Apply a {style} speaking style"
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": text}
-        ]
-
-        url = f"{self.base_url}/chat/completions"
+            prompt_text = f"Say {style}: {text}"
+        else:
+            prompt_text = text
+        
+        url = f"{self.base_url}/models/{self.TTS_MODEL}:generateContent?key={self.api_key}"
+        
         payload = {
-            "model": self.VOICE_MODELS[0],  # Use primary Gemini model
-            "messages": messages,
-            "temperature": 0.3,  # Low temperature for consistent output
-            "max_tokens": 500,
+            "contents": [{
+                "parts": [{"text": prompt_text}]
+            }],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {
+                    "voiceConfig": {
+                        "prebuiltVoiceConfig": {
+                            "voiceName": selected_voice
+                        }
+                    }
+                }
+            }
         }
-
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.post(url, json=payload, headers=self._headers())
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, json=payload)
             
-            if response.status_code >= 400:
-                logger.warning(f"TTS processing API error: {response.status_code}")
-                return text  # Return original on error
+            if response.status_code != 200:
+                error = response.text
+                logger.error(f"Gemini TTS error {response.status_code}: {error}")
+                raise Exception(f"TTS API error: {response.status_code}")
             
             data = response.json()
-            processed = data["choices"][0]["message"]["content"].strip()
             
-            # Clean up any quote marks or formatting artifacts
-            processed = processed.strip('"\'')
+            # Extract audio
+            if "candidates" in data and data["candidates"]:
+                candidate = data["candidates"][0]
+                if "content" in candidate and "parts" in candidate["content"]:
+                    for part in candidate["content"]["parts"]:
+                        if "inlineData" in part:
+                            return {
+                                "audio": part["inlineData"]["data"],
+                                "mimeType": part["inlineData"].get("mimeType", "audio/L16;rate=24000"),
+                                "voice": selected_voice,
+                                "provider": "gemini-2.5-flash-tts"
+                            }
             
-            return processed
+            raise Exception("No audio in response")
 
-    async def generate_voice_response(
+    async def generate_conversation_response(
         self,
         user_message: str,
         conversation_history: list = None,
-        model: str = "google/gemini-2.5-flash",
         voice: str = "Puck",
         language: str = "en-US",
-    ) -> Dict[str, str]:
-        """Generate an AI response optimized for voice output.
-
-        This is the main method for voice conversations.
-        Uses OpenRouter Gemini to generate a natural response,
-        formatted for TTS playback.
+    ) -> Dict:
+        """Generate AI response and convert to speech.
+        
+        This combines chat generation with TTS for voice conversations.
+        
+        Args:
+            user_message: User's spoken message
+            conversation_history: Previous turns
+            voice: Voice to use
+            language: Language code
+            
+        Returns:
+            Dict with text response and audio
         """
         if not self.api_key:
-            raise ValueError("OPENROUTER_API_KEY not configured")
+            raise ValueError("GOOGLE_API_KEY not configured")
+        
+        # Step 1: Generate text response using Gemini
+        text_response = await self._generate_text_response(
+            user_message, conversation_history, language
+        )
+        
+        # Step 2: Convert response to speech
+        tts_result = await self.text_to_speech(
+            text_response,
+            voice=voice,
+            style="naturally and warmly"
+        )
+        
+        return {
+            "response": text_response,
+            "audio": tts_result["audio"],
+            "mimeType": tts_result["mimeType"],
+            "voice": voice,
+            "language": language,
+            "provider": "gemini-native"
+        }
 
-        voice_config = self.VOICES.get(voice, self.VOICES["Puck"])
+    async def _generate_text_response(
+        self,
+        user_message: str,
+        conversation_history: list = None,
+        language: str = "en-US",
+    ) -> str:
+        """Generate a voice-optimized text response."""
         
         system_prompt = f"""You are AssistMe, a helpful AI assistant in a voice conversation.
 
-Speaking style: {voice_config['style']}
 Language: {language}
 
-Guidelines for voice responses:
-1. Keep responses concise and conversational (2-4 sentences ideal)
-2. Use natural speech patterns with occasional pauses
-3. Avoid complex formatting, lists, or code blocks
-4. Spell out numbers, dates, and abbreviations
-5. Be warm, friendly, and engaging
-6. End with a natural conversational flow
+Guidelines:
+1. Keep responses concise (2-3 sentences ideal for voice)
+2. Be warm, friendly, and conversational
+3. Avoid markdown, lists, or code blocks
+4. Spell out numbers and abbreviations
+5. Use natural speech patterns
 
-Remember: This will be spoken aloud, so make it sound natural when read."""
+Remember: Your response will be spoken aloud."""
 
-        messages = [{"role": "system", "content": system_prompt}]
+        messages = [{"role": "user", "parts": [{"text": system_prompt}]}]
         
-        # Add conversation history if provided
+        # Add conversation history
         if conversation_history:
-            messages.extend(conversation_history[-10:])  # Keep last 10 turns
+            for msg in conversation_history[-6:]:
+                role = "user" if msg.get("role") == "user" else "model"
+                messages.append({
+                    "role": role,
+                    "parts": [{"text": msg.get("content", "")}]
+                })
         
-        # Add current user message
-        messages.append({"role": "user", "content": user_message})
-
-        url = f"{self.base_url}/chat/completions"
+        # Add current message
+        messages.append({"role": "user", "parts": [{"text": user_message}]})
+        
+        url = f"{self.base_url}/models/gemini-2.5-flash:generateContent?key={self.api_key}"
+        
         payload = {
-            "model": model,
-            "messages": messages,
-            "temperature": 0.7,
-            "max_tokens": 300,  # Keep responses short for voice
+            "contents": messages,
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 200,  # Keep short for voice
+            }
         }
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json=payload, headers=self._headers())
+        
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.post(url, json=payload)
             
-            if response.status_code >= 400:
-                error_text = response.text
-                logger.error(f"Voice API error {response.status_code}: {error_text}")
-                raise Exception(f"OpenRouter API error: {response.status_code}")
+            if response.status_code != 200:
+                raise Exception(f"Chat API error: {response.status_code}")
             
             data = response.json()
-            ai_response = data["choices"][0]["message"]["content"].strip()
             
-            return {
-                "response": ai_response,
-                "voice": voice,
-                "language": language,
-                "provider": "openrouter-gemini",
-                "model": data.get("model", model),
-                "tokens": data.get("usage", {}).get("total_tokens", 0),
-                "use_web_speech": True,
-            }
+            if "candidates" in data and data["candidates"]:
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+            
+            raise Exception("No response generated")
 
-    def get_available_voices(self) -> list:
-        """Return list of available voices."""
+    def get_voices(self) -> list:
+        """Get available voices with styles."""
         return [
-            {"id": name, **config}
-            for name, config in self.VOICES.items()
+            {"name": name, **style}
+            for name, style in self.VOICE_STYLES.items()
         ]
 
-    def get_supported_languages(self) -> list:
-        """Return list of supported languages for Web Speech API."""
-        return [
-            "en-US", "en-GB", "en-AU", "en-IN",
-            "es-ES", "es-MX", "fr-FR", "de-DE",
-            "it-IT", "pt-BR", "ja-JP", "ko-KR",
-            "zh-CN", "zh-TW", "hi-IN", "ar-XA",
-            "ru-RU", "nl-NL", "sv-SE", "pl-PL",
-        ]
+    def get_languages(self) -> list:
+        """Get supported languages."""
+        return self.LANGUAGES.copy()
 
 
-# Singleton instance
-tts_service = TTSService()
+# Singleton
+tts_service = GeminiTTSService()

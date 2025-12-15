@@ -1,8 +1,8 @@
 """
-TTS API endpoints using OpenRouter with Gemini models.
+Gemini TTS API Routes
 
-Routes text through OpenRouter (using BYOK Google API key)
-just like we do for chat completions.
+Direct integration with Gemini 2.5 Flash TTS.
+Requires GOOGLE_API_KEY environment variable.
 """
 
 from typing import Optional, List, Dict
@@ -14,17 +14,16 @@ from ..services.tts_service import tts_service
 
 
 class TTSRequest(BaseModel):
+    """Text-to-speech request."""
     text: str
     voice: Optional[str] = "Puck"
-    language: Optional[str] = "en-US"
     style: Optional[str] = None
-    speed: Optional[float] = 1.0
 
 
 class VoiceConversationRequest(BaseModel):
+    """Voice conversation request."""
     message: str
     conversation_history: Optional[List[Dict[str, str]]] = None
-    model: Optional[str] = "google/gemini-2.5-flash"
     voice: Optional[str] = "Puck"
     language: Optional[str] = "en-US"
 
@@ -36,62 +35,53 @@ router = APIRouter(prefix="/api/tts", tags=["tts"])
 @router.post("/")
 @router.post("/synthesize")
 async def synthesize(req: TTSRequest):
-    """Process text for TTS via OpenRouter Gemini.
-
-    Since OpenRouter doesn't support native audio output,
-    this returns processed text optimized for Web Speech API.
-
-    Returns:
-    - text: Processed text for TTS
-    - voice: Voice name
-    - language: Language code
-    - use_web_speech: True (signals frontend to use Web Speech API)
+    """Convert text to speech using Gemini 2.5 Flash TTS.
+    
+    Returns WAV audio as base64.
+    
+    Voices: Puck, Kore, Charon, Fenrir, Aoede, Zephyr, etc.
     """
     try:
-        result = await tts_service.synthesize(
+        result = await tts_service.text_to_speech(
             text=req.text,
-            voice=req.voice,
-            language=req.language or "en-US",
+            voice=req.voice or "Puck",
             style=req.style,
-            speed=req.speed or 1.0,
         )
         return {"success": True, **result}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/voice-response")
 async def voice_response(req: VoiceConversationRequest):
-    """Generate an AI response optimized for voice output.
-
-    This is the main endpoint for voice conversations.
-    Uses OpenRouter Gemini to generate responses formatted for TTS.
-
-    Returns:
-    - response: AI response text
-    - voice: Voice configuration
-    - use_web_speech: True (signals frontend to use Web Speech API)
+    """Generate AI response and convert to speech.
+    
+    For voice conversations - generates concise,
+    natural responses optimized for speech.
     """
     try:
-        result = await tts_service.generate_voice_response(
+        result = await tts_service.generate_conversation_response(
             user_message=req.message,
             conversation_history=req.conversation_history,
-            model=req.model or "google/gemini-2.5-flash",
             voice=req.voice or "Puck",
             language=req.language or "en-US",
         )
         return {"success": True, **result}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/voices")
 async def list_voices():
-    """List available voice configurations."""
+    """List available Gemini TTS voices."""
     return {
         "success": True,
-        "voices": tts_service.get_available_voices(),
-        "note": "Voices are configurations for Web Speech API styling",
+        "voices": tts_service.get_voices(),
+        "total": len(tts_service.VOICES),
     }
 
 
@@ -100,5 +90,5 @@ async def list_languages():
     """List supported languages."""
     return {
         "success": True,
-        "languages": tts_service.get_supported_languages(),
+        "languages": tts_service.get_languages(),
     }

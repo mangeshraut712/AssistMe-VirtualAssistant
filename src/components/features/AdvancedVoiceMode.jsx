@@ -372,7 +372,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose }) => {
         };
     }, [isOpen, selectedLanguage]);
 
-    // Process logic - Uses dedicated voice-response endpoint for natural responses
+    // Process voice input - Uses Gemini for response + TTS
     const process = useCallback(async (text) => {
         if (!text.trim() || status === 'processing') return;
         setStatus('processing');
@@ -392,17 +392,16 @@ const AdvancedVoiceMode = ({ isOpen, onClose }) => {
         try {
             requestStartRef.current = Date.now();
 
-            // Use voice-response endpoint for natural, voice-optimized responses
+            // Call Gemini voice-response endpoint (returns text + audio)
             const res = await fetch('/api/tts/voice-response', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: text,
-                    conversation_history: conversationRef.current.slice(-10).map(m => ({
+                    conversation_history: conversationRef.current.slice(-6).map(m => ({
                         role: m.role,
                         content: m.content
                     })),
-                    model: selectedModel.id,
                     voice: 'Puck',
                     language: selectedLanguage.voiceLang
                 })
@@ -413,7 +412,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose }) => {
             if (!res.ok) throw new Error('Network error');
             const data = await res.json();
 
-            if (data.response) {
+            if (data.success && data.response) {
                 const botWords = data.response.trim().split(/\s+/).length;
                 setTotalWords(prev => prev + botWords);
                 setMessageCount(prev => prev + 1);
@@ -421,10 +420,41 @@ const AdvancedVoiceMode = ({ isOpen, onClose }) => {
 
                 setConversation(prev => [...prev, {
                     role: 'assistant', content: data.response, timestamp: Date.now(),
-                    metadata: { words: botWords, latency, model: data.model }
+                    metadata: { words: botWords, latency }
                 }]);
 
-                await speak(data.response);
+                // Play Gemini TTS audio if available
+                if (data.audio) {
+                    setStatus('speaking');
+                    const audioData = atob(data.audio);
+                    const arrayBuffer = new ArrayBuffer(audioData.length);
+                    const view = new Uint8Array(arrayBuffer);
+                    for (let i = 0; i < audioData.length; i++) {
+                        view[i] = audioData.charCodeAt(i);
+                    }
+
+                    const mimeType = data.mimeType || 'audio/wav';
+                    const audioBlob = new Blob([arrayBuffer], { type: mimeType });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+
+                    audio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        setStatus('idle');
+                        setTimeout(() => { if (!cleanupRef.current) startListen(); }, 300);
+                    };
+
+                    audio.onerror = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        // Fallback to speak function
+                        speak(data.response);
+                    };
+
+                    await audio.play();
+                } else {
+                    // No audio, use speak function
+                    await speak(data.response);
+                }
             }
         } catch (err) {
             console.error('Voice processing error:', err);
@@ -435,70 +465,66 @@ const AdvancedVoiceMode = ({ isOpen, onClose }) => {
         }
         setTranscript('');
         setInterimTranscript('');
-    }, [status, selectedLanguage, selectedModel]);
+    }, [status, selectedLanguage, selectedModel, speak]);
 
-    // TTS using OpenRouter Gemini + Web Speech API
-    // Backend processes text for natural delivery, frontend speaks it
+    // TTS using Gemini 2.5 Flash TTS - Native HD Audio
     const speak = useCallback(async (text) => {
         setStatus('speaking');
         triggerHaptic([10]);
 
         try {
-            // Call backend to process text for natural TTS
+            // Call Gemini TTS API for native audio
             const response = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     text,
-                    language: selectedLanguage.voiceLang,
-                    voice: 'Puck', // Voice style configuration
-                    style: 'conversational',
+                    voice: 'Puck',  // Gemini voice
+                    style: 'naturally and warmly',
                 })
             });
 
-            if (response.ok) {
-                const data = await response.json();
-
-                // Use processed text or original
-                const textToSpeak = data.text || text;
-
-                // Use Web Speech API for actual audio
-                if (synthRef.current) {
-                    synthRef.current.cancel();
-                    const utt = new SpeechSynthesisUtterance(textToSpeak);
-                    utt.lang = selectedLanguage.voiceLang;
-                    utt.rate = 1.0;  // Natural speed
-                    utt.pitch = 1.0; // Natural pitch
-                    utt.volume = 1.0;
-
-                    // Try to select a good voice
-                    const voices = synthRef.current.getVoices();
-                    const preferredVoice = voices.find(v =>
-                        v.lang.startsWith(selectedLanguage.code) &&
-                        (v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Alex'))
-                    ) || voices.find(v => v.lang.startsWith(selectedLanguage.code));
-
-                    if (preferredVoice) {
-                        utt.voice = preferredVoice;
-                    }
-
-                    utt.onend = () => {
-                        setStatus('idle');
-                        setTimeout(() => { if (!cleanupRef.current) startListen(); }, 300);
-                    };
-
-                    utt.onerror = () => {
-                        setStatus('idle');
-                    };
-
-                    synthRef.current.speak(utt);
-                }
-            } else {
+            if (!response.ok) {
                 throw new Error('TTS API failed');
             }
+
+            const data = await response.json();
+
+            if (data.success && data.audio) {
+                // Decode base64 audio from Gemini TTS
+                const audioData = atob(data.audio);
+                const arrayBuffer = new ArrayBuffer(audioData.length);
+                const view = new Uint8Array(arrayBuffer);
+                for (let i = 0; i < audioData.length; i++) {
+                    view[i] = audioData.charCodeAt(i);
+                }
+
+                // Gemini TTS returns WAV (24kHz, 16-bit PCM)
+                const mimeType = data.mimeType || 'audio/wav';
+                const audioBlob = new Blob([arrayBuffer], { type: mimeType });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+
+                audio.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                    setStatus('idle');
+                    // Auto-resume listening after speaking
+                    setTimeout(() => { if (!cleanupRef.current) startListen(); }, 300);
+                };
+
+                audio.onerror = (e) => {
+                    console.error('Audio playback error:', e);
+                    URL.revokeObjectURL(audioUrl);
+                    setStatus('idle');
+                };
+
+                await audio.play();
+            } else {
+                throw new Error('No audio in response');
+            }
         } catch (error) {
-            console.error('TTS error:', error);
-            // Fallback: Use Web Speech directly
+            console.error('Gemini TTS error:', error);
+            // Fallback: Use browser Web Speech API
             if (synthRef.current) {
                 synthRef.current.cancel();
                 const utt = new SpeechSynthesisUtterance(text);
