@@ -384,28 +384,25 @@ function App() {
                         <Route
                             path="/"
                             element={
-                                <div className="h-full overflow-y-auto scroll-smooth">
-                                    <ChatArea
-                                        messages={messages}
-                                        isLoading={isLoading}
-                                        renderContent={renderContent}
-                                        showWelcome={messages.length === 0}
-                                        quickActions={QUICK_ACTIONS}
-                                        onQuickAction={handleQuickAction}
-                                        inputProps={{
-                                            input,
-                                            setInput,
-                                            isLoading,
-                                            sendMessage,
-                                            onFileUpload: () => navigate(featureRoutes.fileUpload),
-                                            onVoiceTranscription: (text) => setInput(text),
-                                            onOpenVoiceMode: () => navigate(featureRoutes.voiceMode),
-                                            models: MODELS,
-                                            selectedModel,
-                                            onModelChange: (e) => setSelectedModel(e.target.value)
-                                        }}
-                                    />
-                                </div>
+                                <ChatArea
+                                    messages={messages}
+                                    isLoading={isLoading}
+                                    renderContent={renderContent}
+                                    showWelcome={messages.length === 0}
+                                    onQuickAction={handleQuickAction}
+                                    inputProps={{
+                                        input,
+                                        setInput,
+                                        isLoading,
+                                        sendMessage,
+                                        onFileUpload: () => navigate(featureRoutes.fileUpload),
+                                        onVoiceTranscription: (text) => setInput(text),
+                                        onOpenVoiceMode: () => navigate(featureRoutes.voiceMode),
+                                        models: MODELS,
+                                        selectedModel,
+                                        onModelChange: (e) => setSelectedModel(e.target.value)
+                                    }}
+                                />
                             }
                         />
                         <Route
