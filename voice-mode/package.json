@@ -1,0 +1,47 @@
+{
+    "name": "@assistme/voice-mode",
+    "version": "1.0.0",
+    "description": "Premium voice AI powered by Gemini 2.5 Flash Native Audio - Standalone module",
+    "type": "module",
+    "main": "frontend/components/VoiceMode.jsx",
+    "exports": {
+        ".": "./frontend/components/VoiceMode.jsx",
+        "./config": "./config/voice.config.js",
+        "./utils": "./frontend/utils/audio-helpers.js",
+        "./visualizer": "./frontend/components/AudioVisualizer.jsx"
+    },
+    "keywords": [
+        "voice",
+        "gemini",
+        "tts",
+        "speech",
+        "ai",
+        "native-audio",
+        "react",
+        "standalone"
+    ],
+    "peerDependencies": {
+        "react": ">=18.0.0",
+        "framer-motion": ">=10.0.0",
+        "lucide-react": ">=0.263.0"
+    },
+    "author": "AssistMe Team",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mangeshraut712/AssistMe-VirtualAssistant"
+    },
+    "bugs": {
+        "url": "https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues"
+    },
+    "files": [
+        "frontend/",
+        "backend/",
+        "config/",
+        "docs/",
+        "README.md"
+    ],
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
