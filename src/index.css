@@ -104,6 +104,17 @@
   html {
     font-size: 16px;
     scroll-behavior: smooth;
+    height: 100%;
+  }
+
+  body {
+    height: 100%;
+    min-height: 100%;
+  }
+
+  #root {
+    height: 100%;
+    min-height: 100%;
   }
 
   @media (min-width: 768px) {

@@ -356,8 +356,8 @@ function App() {
 
     return (
         <div
-            className="flex min-h-screen bg-background text-foreground overflow-auto md:overflow-hidden selection:bg-primary/20"
-            style={{ minHeight: 'var(--app-height)' }}
+            className="flex h-screen bg-background text-foreground overflow-hidden selection:bg-primary/20"
+            style={{ height: 'var(--app-height, 100vh)' }}
         >
             <Sidebar
                 show={showSidebar}
@@ -379,7 +379,8 @@ function App() {
                 }`}>
                 <Header onOpenSidebar={() => setShowSidebar(true)} showSidebar={showSidebar} />
 
-                <div className="flex-1 overflow-hidden header-offset">
+                {/* Main content area - below fixed header */}
+                <div className="flex-1 flex flex-col pt-14 overflow-hidden">
                     <Routes>
                         <Route
                             path="/"

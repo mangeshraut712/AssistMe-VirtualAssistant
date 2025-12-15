@@ -302,10 +302,10 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
             {/* Scroll to Bottom Button */}
             <ScrollToBottomButton onClick={scrollToBottom} show={showScrollButton} />
 
-            {/* Scrollable Messages Area */}
+            {/* Scrollable Messages Area - min-h-0 is critical for flex child scrolling */}
             <div
                 ref={scrollContainerRef}
-                className="flex-1 overflow-y-auto overscroll-contain scroll-smooth"
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain scroll-smooth"
             >
                 {/* TOP PADDING - Ensures messages don't touch header */}
                 <div className="h-6 sm:h-8 md:h-10" />
