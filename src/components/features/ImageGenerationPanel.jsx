@@ -27,23 +27,14 @@ import { cn } from '@/lib/utils';
 // CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Standard Models (via OpenRouter - Free)
-const STANDARD_MODELS = [
-    { id: 'gemini-flash', name: 'Gemini Flash', description: 'Fast & Free via OpenRouter', icon: Zap, free: true },
-    { id: 'gemini-flash-preview', name: 'Gemini Flash Preview', description: 'Preview version', icon: Sparkles, free: true },
+// Available Models (via Pollinations.ai - ALL FREE! No API key needed)
+const MODELS = [
+    { id: 'flux', name: 'Flux', description: 'High quality, fast', icon: Zap, free: true },
+    { id: 'flux-realism', name: 'Flux Realism', description: 'Photorealistic', icon: Sparkles, free: true },
+    { id: 'flux-anime', name: 'Flux Anime', description: 'Anime style', icon: Wand2, free: true },
+    { id: 'flux-3d', name: 'Flux 3D', description: '3D rendered', icon: Crown, free: true },
+    { id: 'turbo', name: 'Turbo', description: 'Ultra fast', icon: Zap, free: true },
 ];
-
-// Premium Models (via Google API - Higher limits)
-const PREMIUM_MODELS = [
-    { id: 'gemini-3-pro', name: 'Gemini 3 Pro', description: 'Highest Quality', icon: Crown, free: false },
-    { id: 'imagen-4', name: 'Imagen 4', description: 'Google\'s Best', icon: Crown, free: false },
-];
-
-// Image Quality Modes
-const IMAGE_MODES = {
-    standard: { name: 'Standard', description: 'Free via OpenRouter', icon: Zap },
-    premium: { name: 'Premium', description: 'Google Gemini API', icon: Crown },
-};
 
 // Style Presets
 const STYLE_PRESETS = [
@@ -218,17 +209,13 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
     // State
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
-    const [imageMode, setImageMode] = useState('standard'); // 'standard' or 'premium'
-    const [selectedModel, setSelectedModel] = useState('gemini-flash');
+    const [selectedModel, setSelectedModel] = useState('flux');
     const [aspectRatio, setAspectRatio] = useState('1:1');
     const [style, setStyle] = useState('none');
     const [showSettings, setShowSettings] = useState(false);
     const [copiedId, setCopiedId] = useState(null);
     const [error, setError] = useState(null);
     const [gallery, setGallery] = useState([]);
-
-    // Get current models based on mode
-    const currentModels = imageMode === 'premium' ? PREMIUM_MODELS : STANDARD_MODELS;
 
     // Get aspect class
     const getAspectClass = (ratio) => {
@@ -252,7 +239,6 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                 body: JSON.stringify({
                     prompt,
                     model: selectedModel,
-                    mode: imageMode, // 'standard' or 'premium'
                     size: aspectConfig?.size || '1024x1024',
                     style: style !== 'none' ? style : null
                 })
@@ -265,15 +251,14 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
             }
 
             if (data.data && data.data.length > 0) {
-                const modelName = currentModels.find(m => m.id === selectedModel)?.name ||
-                    (data.provider === 'google' ? 'Gemini Pro' : 'Gemini Flash');
+                const modelName = MODELS.find(m => m.id === selectedModel)?.name || 'Flux';
                 const newImages = data.data.map((img, i) => ({
                     id: Date.now() + i,
                     url: img.url,
                     aspect: getAspectClass(aspectRatio),
                     prompt: prompt,
                     model: modelName,
-                    provider: data.provider,
+                    provider: 'Pollinations.ai',
                     isNew: true
                 }));
                 setGallery(prev => [...newImages, ...prev]);
@@ -355,7 +340,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                         </motion.div>
                         <div>
                             <h1 className="font-bold text-lg">Imagine</h1>
-                            <p className="text-xs text-muted-foreground">AI Image Studio • Gemini</p>
+                            <p className="text-xs text-muted-foreground">AI Image Studio • Free & Unlimited</p>
                         </div>
                     </div>
 
@@ -532,40 +517,20 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                                 className="absolute bottom-full left-0 mb-2 w-80 bg-card border border-border rounded-2xl p-5 shadow-xl"
                                             >
-                                                {/* Mode Selector */}
-                                                <div className="mb-4">
-                                                    <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Quality Mode</h4>
-                                                    <div className="flex gap-2">
-                                                        {Object.entries(IMAGE_MODES).map(([key, mode]) => (
-                                                            <button
-                                                                key={key}
-                                                                onClick={() => {
-                                                                    setImageMode(key);
-                                                                    // Reset model when switching modes
-                                                                    setSelectedModel(key === 'premium' ? 'gemini-3-pro' : 'gemini-flash');
-                                                                }}
-                                                                className={cn(
-                                                                    'flex-1 flex flex-col items-center gap-1 p-3 rounded-xl border transition-all',
-                                                                    imageMode === key
-                                                                        ? key === 'premium'
-                                                                            ? 'bg-yellow-500/10 border-yellow-500 text-yellow-600'
-                                                                            : 'bg-green-500/10 border-green-500 text-green-600'
-                                                                        : 'border-border/50 hover:bg-muted'
-                                                                )}
-                                                            >
-                                                                <mode.icon className="h-4 w-4" />
-                                                                <span className="text-sm font-semibold">{mode.name}</span>
-                                                                <span className="text-[10px] opacity-70">{mode.description}</span>
-                                                            </button>
-                                                        ))}
+                                                {/* Free Badge */}
+                                                <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
+                                                    <div className="flex items-center gap-2 text-green-600">
+                                                        <Sparkles className="h-4 w-4" />
+                                                        <span className="text-sm font-semibold">100% Free • No API Key</span>
                                                     </div>
+                                                    <p className="text-xs text-green-600/70 mt-1">Powered by Pollinations.ai</p>
                                                 </div>
 
                                                 {/* Model */}
                                                 <div className="mb-4">
                                                     <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Model</h4>
                                                     <div className="space-y-2">
-                                                        {currentModels.map(m => (
+                                                        {MODELS.map(m => (
                                                             <button
                                                                 key={m.id}
                                                                 onClick={() => setSelectedModel(m.id)}
@@ -576,14 +541,12 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                                                         : 'border-border/50 hover:bg-muted'
                                                                 )}
                                                             >
-                                                                <m.icon className={cn('h-4 w-4', m.free ? 'text-green-500' : 'text-yellow-500')} />
+                                                                <m.icon className="h-4 w-4 text-green-500" />
                                                                 <div className="flex-1">
                                                                     <div className="text-sm font-medium">{m.name}</div>
                                                                     <div className="text-xs text-muted-foreground">{m.description}</div>
                                                                 </div>
-                                                                {!m.free && (
-                                                                    <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-600 rounded">PRO</span>
-                                                                )}
+                                                                <span className="text-[10px] px-1.5 py-0.5 bg-green-500/20 text-green-600 rounded">FREE</span>
                                                             </button>
                                                         ))}
                                                     </div>
@@ -618,13 +581,10 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                             {/* Model Badge */}
                             <div className="text-xs text-muted-foreground font-medium flex items-center gap-2">
                                 <Sparkles className="h-3 w-3" />
-                                <span className={cn(
-                                    'px-1.5 py-0.5 rounded text-[10px]',
-                                    imageMode === 'premium' ? 'bg-yellow-500/20 text-yellow-600' : 'bg-green-500/20 text-green-600'
-                                )}>
-                                    {imageMode === 'premium' ? 'PRO' : 'FREE'}
+                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-500/20 text-green-600">
+                                    FREE
                                 </span>
-                                {currentModels.find(m => m.id === selectedModel)?.name || 'Gemini'}
+                                {MODELS.find(m => m.id === selectedModel)?.name || 'Flux'}
                             </div>
                         </div>
                     </div>

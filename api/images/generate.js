@@ -1,17 +1,12 @@
 /**
  * Image Generation API Edge Function
  * 
- * Dual Provider System:
- * - Standard Mode: OpenRouter (uses OPENROUTER_API_KEY - already configured)
- * - Premium Mode: Google Gemini API (uses GOOGLE_API_KEY)
- * 
- * Available Models via OpenRouter:
- * - google/gemini-2.5-flash-image (Free tier available)
- * - google/gemini-3-pro-image-preview (Premium)
+ * FREE Image Generation using Pollinations.ai
+ * No API key required! Completely free unlimited usage.
  * 
  * Endpoint: POST /api/images/generate
  * 
- * @version 3.0.0
+ * @version 4.0.0
  * @date December 2025
  */
 
@@ -26,139 +21,48 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// Standard Models (via OpenRouter - Free tier available)
-const STANDARD_MODELS = {
-    'gemini-flash': {
-        id: 'google/gemini-2.5-flash-image',
-        name: 'Gemini 2.5 Flash',
-        description: 'Fast, free via OpenRouter',
-        provider: 'openrouter'
+// Available Models (via Pollinations.ai - ALL FREE!)
+const MODELS = {
+    'flux': {
+        id: 'flux',
+        name: 'Flux',
+        description: 'High quality, fast (default)',
+        free: true
     },
-    'gemini-flash-preview': {
-        id: 'google/gemini-2.5-flash-image-preview',
-        name: 'Gemini Flash Preview',
-        description: 'Preview version',
-        provider: 'openrouter'
+    'flux-realism': {
+        id: 'flux-realism',
+        name: 'Flux Realism',
+        description: 'Photorealistic images',
+        free: true
+    },
+    'flux-anime': {
+        id: 'flux-anime',
+        name: 'Flux Anime',
+        description: 'Anime style images',
+        free: true
+    },
+    'flux-3d': {
+        id: 'flux-3d',
+        name: 'Flux 3D',
+        description: '3D rendered images',
+        free: true
+    },
+    'turbo': {
+        id: 'turbo',
+        name: 'Turbo',
+        description: 'Ultra fast generation',
+        free: true
     }
 };
 
-// Premium Models (via Google API directly - higher limits)
-const PREMIUM_MODELS = {
-    'gemini-3-pro': {
-        id: 'gemini-3-pro-image-preview',
-        name: 'Gemini 3 Pro',
-        description: 'Highest quality (Premium)',
-        provider: 'google'
-    },
-    'imagen-4': {
-        id: 'imagen-4.0-generate-001',
-        name: 'Imagen 4',
-        description: 'Google\'s best (Premium)',
-        provider: 'google'
-    }
+// Size mappings
+const SIZE_MAP = {
+    '1024x1024': { width: 1024, height: 1024 },
+    '1792x1024': { width: 1792, height: 1024 },
+    '1024x1792': { width: 1024, height: 1792 },
+    '1536x1152': { width: 1536, height: 1152 },
+    '512x512': { width: 512, height: 512 }
 };
-
-const ALL_MODELS = { ...STANDARD_MODELS, ...PREMIUM_MODELS };
-
-// Generate via OpenRouter (Standard)
-async function generateViaOpenRouter(prompt, modelId, apiKey) {
-    console.log('[Image] OpenRouter request with model:', modelId);
-
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': 'https://assist-me-virtual-assistant.vercel.app',
-            'X-Title': 'AssistMe Imagine'
-        },
-        body: JSON.stringify({
-            model: modelId,
-            messages: [{
-                role: 'user',
-                content: `Generate an image: ${prompt}`
-            }],
-            modalities: ['text', 'image'],
-            max_tokens: 4096
-        })
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Image] OpenRouter error:', response.status, errorText);
-        throw new Error(`OpenRouter error: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // Extract image from response
-    const content = data?.choices?.[0]?.message?.content;
-    const images = [];
-
-    if (Array.isArray(content)) {
-        for (const part of content) {
-            if (part.type === 'image_url' && part.image_url?.url) {
-                images.push({
-                    url: part.image_url.url,
-                    b64_json: null
-                });
-            }
-        }
-    }
-
-    // Also check for inline data
-    if (data?.choices?.[0]?.message?.image) {
-        images.push({
-            url: data.choices[0].message.image,
-            b64_json: null
-        });
-    }
-
-    return images;
-}
-
-// Generate via Google API (Premium)
-async function generateViaGoogle(prompt, modelId, apiKey) {
-    console.log('[Image] Google API request with model:', modelId);
-
-    const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: `Generate an image: ${prompt}` }]
-                }],
-                generationConfig: {
-                    responseModalities: ['IMAGE', 'TEXT']
-                }
-            })
-        }
-    );
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Image] Google API error:', response.status, errorText);
-        throw new Error(`Google API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const parts = data?.candidates?.[0]?.content?.parts || [];
-    const images = [];
-
-    for (const part of parts) {
-        if (part.inlineData?.data) {
-            images.push({
-                b64_json: part.inlineData.data,
-                mimeType: part.inlineData.mimeType || 'image/png',
-                url: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`
-            });
-        }
-    }
-
-    return images;
-}
 
 export default async function handler(req) {
     // Handle CORS preflight
@@ -168,15 +72,11 @@ export default async function handler(req) {
 
     // GET - Return available models
     if (req.method === 'GET') {
-        const hasGoogleKey = !!process.env.GOOGLE_API_KEY;
-
         return new Response(JSON.stringify({
             success: true,
-            standard: Object.entries(STANDARD_MODELS).map(([key, m]) => ({ id: key, ...m })),
-            premium: hasGoogleKey
-                ? Object.entries(PREMIUM_MODELS).map(([key, m]) => ({ id: key, ...m }))
-                : [],
-            premiumAvailable: hasGoogleKey
+            provider: 'pollinations.ai',
+            note: 'Completely FREE - No API key required!',
+            models: Object.entries(MODELS).map(([key, m]) => ({ id: key, ...m }))
         }), {
             status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -190,27 +90,13 @@ export default async function handler(req) {
         });
     }
 
-    // Get API keys
-    const openrouterKey = process.env.OPENROUTER_API_KEY;
-    const googleKey = process.env.GOOGLE_API_KEY;
-
-    if (!openrouterKey) {
-        return new Response(JSON.stringify({
-            success: false,
-            error: 'OPENROUTER_API_KEY not configured'
-        }), {
-            status: 503,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-    }
-
     try {
         const body = await req.json();
         const {
             prompt,
-            model = 'gemini-flash',
-            style = null,
-            mode = 'standard' // 'standard' or 'premium'
+            model = 'flux',
+            size = '1024x1024',
+            style = null
         } = body;
 
         if (!prompt || prompt.trim().length === 0) {
@@ -223,70 +109,70 @@ export default async function handler(req) {
             });
         }
 
-        // Enhance prompt with style
+        // Get dimensions
+        const dimensions = SIZE_MAP[size] || SIZE_MAP['1024x1024'];
+
+        // Build enhanced prompt with style
         let enhancedPrompt = prompt;
         if (style && style !== 'none') {
-            enhancedPrompt = `${style} style: ${prompt}`;
+            const styleMap = {
+                'photorealistic': 'photorealistic, highly detailed, 8k',
+                'digital-art': 'digital art, vibrant colors, detailed',
+                'anime': 'anime style, japanese animation, colorful',
+                'oil-painting': 'oil painting, classical art, brushstrokes',
+                '3d-render': '3D render, octane render, volumetric lighting',
+                'watercolor': 'watercolor painting, soft colors, artistic',
+                'minimalist': 'minimalist, clean, simple, modern design'
+            };
+            const stylePrompt = styleMap[style] || style;
+            enhancedPrompt = `${prompt}, ${stylePrompt}`;
         }
 
-        let images = [];
-        let usedModel = model;
-        let usedProvider = 'openrouter';
-
-        // Check if premium mode requested and Google key available
-        if (mode === 'premium' && googleKey && PREMIUM_MODELS[model]) {
-            try {
-                const modelConfig = PREMIUM_MODELS[model];
-                images = await generateViaGoogle(enhancedPrompt, modelConfig.id, googleKey);
-                usedProvider = 'google';
-                console.log('[Image] Premium generation successful');
-            } catch (e) {
-                console.log('[Image] Premium failed, falling back to standard:', e.message);
-                // Fall back to standard
-            }
+        // Use model-specific enhancements
+        const modelConfig = MODELS[model] || MODELS['flux'];
+        let modelParam = '';
+        if (model === 'flux-realism') {
+            modelParam = '&model=flux-realism';
+        } else if (model === 'flux-anime') {
+            modelParam = '&model=flux-anime';
+            enhancedPrompt = `${enhancedPrompt}, anime style`;
+        } else if (model === 'flux-3d') {
+            modelParam = '&model=flux-3d';
+            enhancedPrompt = `${enhancedPrompt}, 3D render`;
+        } else if (model === 'turbo') {
+            modelParam = '&model=turbo';
         }
 
-        // Standard mode or fallback
-        if (images.length === 0) {
-            const modelConfig = STANDARD_MODELS[model] || STANDARD_MODELS['gemini-flash'];
-            usedModel = model;
+        // Encode prompt for URL
+        const encodedPrompt = encodeURIComponent(enhancedPrompt);
 
-            try {
-                images = await generateViaOpenRouter(enhancedPrompt, modelConfig.id, openrouterKey);
-                usedProvider = 'openrouter';
-            } catch (e) {
-                // Try fallback model
-                if (model !== 'gemini-flash') {
-                    console.log('[Image] Trying fallback to gemini-flash...');
-                    images = await generateViaOpenRouter(
-                        enhancedPrompt,
-                        STANDARD_MODELS['gemini-flash'].id,
-                        openrouterKey
-                    );
-                    usedModel = 'gemini-flash';
-                } else {
-                    throw e;
-                }
-            }
+        // Generate unique seed for variety
+        const seed = Math.floor(Math.random() * 1000000);
+
+        // Build Pollinations URL
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${dimensions.width}&height=${dimensions.height}&seed=${seed}&nologo=true${modelParam}`;
+
+        console.log(`[Image] Pollinations URL: ${imageUrl.substring(0, 100)}...`);
+
+        // Verify the image URL works by making a HEAD request
+        const checkResponse = await fetch(imageUrl, { method: 'HEAD' });
+
+        if (!checkResponse.ok) {
+            console.error('[Image] Pollinations check failed:', checkResponse.status);
+            throw new Error('Image generation failed');
         }
 
-        if (images.length === 0) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'No images generated. Try a different prompt.'
-            }), {
-                status: 500,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-        }
-
-        console.log(`[Image] Success! Generated ${images.length} image(s) via ${usedProvider}`);
+        console.log(`[Image] Success! Generated with ${modelConfig.name}`);
 
         return new Response(JSON.stringify({
             success: true,
-            data: images,
-            model: usedModel,
-            provider: usedProvider,
+            data: [{
+                url: imageUrl,
+                width: dimensions.width,
+                height: dimensions.height
+            }],
+            model: modelConfig.name,
+            provider: 'pollinations.ai',
             prompt: prompt
         }), {
             status: 200,
