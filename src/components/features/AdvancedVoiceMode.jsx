@@ -28,25 +28,35 @@ import { cn } from '@/lib/utils';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const CONFIG = {
-    // Faster silence detection
+    // Speech Recognition
     SILENCE_TIMEOUT: 1500,
     MIN_TRANSCRIPT_LENGTH: 3,
-
-    // No artificial delays!
     RESTART_DELAY: 300,
 
-    // Use fast Gemini model (FREE!)
+    // AI Model (via OpenRouter)
     CHAT_MODEL: 'google/gemini-2.0-flash-exp:free',
+
+    // TTS Backend endpoint
+    TTS_ENDPOINT: '/api/tts',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LANGUAGE SUPPORT
+// LANGUAGE SUPPORT (24+ languages via Gemini TTS)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const LANGUAGES = {
-    'en-US': { name: 'English', nativeName: 'English', flag: '🇺🇸' },
-    'hi-IN': { name: 'Hindi', nativeName: 'हिंदी', flag: '🇮🇳' },
-    'mr-IN': { name: 'Marathi', nativeName: 'मराठी', flag: '🇮🇳' },
+    'en-US': { name: 'English', nativeName: 'English', flag: '🇺🇸', geminiCode: 'en-US' },
+    'hi-IN': { name: 'Hindi', nativeName: 'हिंदी', flag: '🇮🇳', geminiCode: 'hi-IN' },
+    'mr-IN': { name: 'Marathi', nativeName: 'मराठी', flag: '🇮🇳', geminiCode: 'mr-IN' },
+    'ta-IN': { name: 'Tamil', nativeName: 'தமிழ்', flag: '🇮🇳', geminiCode: 'ta-IN' },
+    'te-IN': { name: 'Telugu', nativeName: 'తెలుగు', flag: '🇮🇳', geminiCode: 'te-IN' },
+    'bn-BD': { name: 'Bengali', nativeName: 'বাংলা', flag: '🇧🇩', geminiCode: 'bn-BD' },
+};
+
+// TTS Modes
+const TTS_MODES = {
+    standard: { name: 'Standard', description: 'Browser TTS (fast, offline)' },
+    premium: { name: 'Premium', description: 'Gemini TTS (natural, 24 languages)' },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -112,6 +122,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     const [status, setStatus] = useState('idle'); // idle, listening, processing, speaking, error
     const [persona, setPersona] = useState('default');
     const [language, setLanguage] = useState('en-US'); // Speech recognition language
+    const [ttsMode, setTtsMode] = useState('standard'); // 'standard' = browser, 'premium' = Gemini
     const [showSettings, setShowSettings] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
 
@@ -269,7 +280,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         synthRef.current.speak(utterance);
     }, [persona, language]);
 
-    // Main speak function - hybrid approach
+    // Main speak function - respects TTS mode setting
     const speak = useCallback(async (text, onEnd) => {
         if (!text || isMuted) {
             console.log('[TTS] Skipping - muted or no text');
@@ -277,21 +288,33 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             return;
         }
 
-        // For Indian languages, try backend TTS first
+        // Premium Mode: Always try backend Gemini TTS (supports 24+ languages)
+        if (ttsMode === 'premium') {
+            console.log('[TTS] Premium mode - using Gemini TTS');
+            const success = await speakWithBackend(text, language, onEnd);
+            if (success) return;
+
+            // Fallback to browser if backend unavailable
+            console.log('[TTS] Backend unavailable, falling back to browser TTS');
+            speakWithBrowser(text, onEnd);
+            return;
+        }
+
+        // Standard Mode: Browser TTS for English, Backend for Indian languages
         if (isIndicLanguage(language)) {
             const success = await speakWithBackend(text, language, onEnd);
             if (success) return;
 
             // If backend fails, show text (browser can't speak Indic well)
-            console.log('[TTS] Backend unavailable, showing text only');
+            console.log('[TTS] Backend unavailable for Indic language');
             setStatus('idle');
             if (onEnd) onEnd();
             return;
         }
 
-        // For English, use browser TTS
+        // Standard English: use browser TTS
         speakWithBrowser(text, onEnd);
-    }, [isMuted, language, speakWithBackend, speakWithBrowser]);
+    }, [isMuted, language, ttsMode, speakWithBackend, speakWithBrowser]);
 
     const stopSpeaking = useCallback(() => {
         synthRef.current?.cancel();
@@ -757,6 +780,28 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                             className="px-4 sm:px-6 pb-4 overflow-hidden"
                         >
                             <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 space-y-4">
+                                {/* TTS Mode */}
+                                <div>
+                                    <h3 className="text-sm font-semibold mb-2">Voice Quality</h3>
+                                    <div className="flex gap-2">
+                                        {Object.entries(TTS_MODES).map(([key, mode]) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => setTtsMode(key)}
+                                                className={cn(
+                                                    "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border text-left",
+                                                    ttsMode === key
+                                                        ? "bg-purple-500/20 border-purple-500 text-purple-600 dark:text-purple-400"
+                                                        : "border-border/50 hover:bg-muted"
+                                                )}
+                                            >
+                                                <div className="font-semibold">{mode.name}</div>
+                                                <div className="text-xs opacity-70">{mode.description}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 {/* Language */}
                                 <div>
                                     <h3 className="text-sm font-semibold mb-2">Language</h3>
