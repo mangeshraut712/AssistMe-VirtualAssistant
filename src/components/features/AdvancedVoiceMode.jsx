@@ -1,34 +1,58 @@
 /**
- * Simple Voice Mode - OpenRouter AI + Gemini TTS
+ * Enhanced Voice Mode - Dual Engine Support
+ * 
+ * Mode 1: OpenRouter (Standard) - Works with any OpenRouter model
+ * Mode 2: Gemini Live API (Premium) - Real-time audio streaming
  * 
  * Features:
  * - Web Speech API for STT (browser)
- * - OpenRouter for AI conversation
- * - Gemini TTS for voice synthesis
+ * - OpenRouter AI for standard conversation
+ * - Gemini Live API for premium real-time audio (requires Google API key)
  * - Browser TTS as fallback
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mic, MicOff, Volume2, Settings, Sparkles } from 'lucide-react';
+import { X, Mic, MicOff, Volume2, Settings, Sparkles, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Voice mode options
+const VOICE_MODES = [
+    {
+        id: 'openrouter',
+        name: 'Standard (OpenRouter)',
+        description: 'Uses Gemini 2.0 Flash via OpenRouter',
+        badge: 'Free'
+    },
+    {
+        id: 'gemini-live',
+        name: 'Gemini Live API',
+        description: 'Real-time native audio (requires API key)',
+        badge: 'Premium'
+    }
+];
 
 const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [response, setResponse] = useState('');
-    const [useGeminiTTS, setUseGeminiTTS] = useState(false); // Default to browser TTS
+    const [voiceMode, setVoiceMode] = useState('openrouter'); // 'openrouter' | 'gemini-live'
     const [showSettings, setShowSettings] = useState(false);
     const [conversationHistory, setConversationHistory] = useState([]);
+    const [isConnected, setIsConnected] = useState(false);
+    const [error, setError] = useState('');
 
     const recognitionRef = useRef(null);
     const audioRef = useRef(null);
+    const wsRef = useRef(null); // WebSocket for Gemini Live
 
-    // Get AI response using OpenRouter (same as chat)
-    const getAIResponse = useCallback(async (userMessage) => {
+    // ==========================================
+    // MODE 1: OpenRouter (Standard)
+    // ==========================================
+
+    const getOpenRouterResponse = useCallback(async (userMessage) => {
         try {
-            // Build messages array with conversation history
             const messages = [
                 ...conversationHistory.slice(-6).map(msg => ({
                     role: msg.role,
@@ -55,80 +79,109 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
             const data = await response.json();
             return data.response || data.message || "I didn't understand that.";
         } catch (error) {
-            console.error('AI Response Error:', error);
+            console.error('OpenRouter Error:', error);
             throw error;
         }
     }, [backendUrl, conversationHistory]);
 
-    // Get Gemini TTS audio
-    const getGeminiTTS = useCallback(async (text) => {
+    // ==========================================
+    // MODE 2: Gemini Live API (Premium)
+    // ==========================================
+
+    const connectGeminiLive = useCallback(async () => {
         try {
-            const response = await fetch(`${backendUrl}/api/tts/synthesize`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    text: text,
-                    voice: 'Puck',
-                    auto_emotion: true
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('TTS failed');
+            // Get API key from backend
+            const keyResponse = await fetch(`${backendUrl}/api/gemini/key`);
+            if (!keyResponse.ok) {
+                throw new Error('Gemini API key not configured');
             }
+            const { apiKey } = await keyResponse.json();
 
-            const data = await response.json();
+            // Connect to Gemini Live WebSocket
+            const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
 
-            // Convert base64 to blob
-            const audioData = data.audio;
-            const byteCharacters = atob(audioData);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: 'audio/wav' });
+            const ws = new WebSocket(wsUrl);
 
-            return URL.createObjectURL(blob);
+            ws.onopen = () => {
+                setIsConnected(true);
+                setError('');
+
+                // Send setup message
+                ws.send(JSON.stringify({
+                    setup: {
+                        model: "models/gemini-2.0-flash-exp",
+                        generationConfig: {
+                            responseModalities: ["TEXT"]
+                        }
+                    }
+                }));
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.serverContent?.modelTurn?.parts) {
+                    const text = data.serverContent.modelTurn.parts
+                        .filter(p => p.text)
+                        .map(p => p.text)
+                        .join('');
+                    if (text) {
+                        setResponse(text);
+                        speakWithBrowser(text);
+                    }
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                setError('Connection failed. Try Standard mode.');
+                setIsConnected(false);
+            };
+
+            ws.onclose = () => {
+                setIsConnected(false);
+            };
+
+            wsRef.current = ws;
         } catch (error) {
-            console.error('Gemini TTS Error:', error);
-            throw error;
+            console.error('Gemini Live connection error:', error);
+            setError(error.message);
         }
     }, [backendUrl]);
 
-    // Speak using Gemini TTS
-    const speakWithGemini = useCallback(async (text) => {
-        try {
-            setIsSpeaking(true);
-            const audioUrl = await getGeminiTTS(text);
-
-            const audio = new Audio(audioUrl);
-            audioRef.current = audio;
-
-            audio.onended = () => {
-                setIsSpeaking(false);
-                URL.revokeObjectURL(audioUrl);
-            };
-
-            audio.onerror = () => {
-                setIsSpeaking(false);
-                URL.revokeObjectURL(audioUrl);
-                // Fallback to browser TTS
-                speakWithBrowser(text);
-            };
-
-            await audio.play();
-        } catch (error) {
-            console.error('Gemini TTS playback error:', error);
-            setIsSpeaking(false);
-            // Fallback to browser TTS
-            speakWithBrowser(text);
+    const sendToGeminiLive = useCallback((text) => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({
+                clientContent: {
+                    turns: [{ role: "user", parts: [{ text }] }],
+                    turnComplete: true
+                }
+            }));
         }
-    }, [getGeminiTTS]);
+    }, []);
 
-    // Speak using browser TTS
+    // Cleanup WebSocket on unmount
+    useEffect(() => {
+        return () => {
+            if (wsRef.current) {
+                wsRef.current.close();
+            }
+        };
+    }, []);
+
+    // Connect to Gemini Live when mode changes
+    useEffect(() => {
+        if (voiceMode === 'gemini-live' && !isConnected) {
+            connectGeminiLive();
+        } else if (voiceMode === 'openrouter' && wsRef.current) {
+            wsRef.current.close();
+            setIsConnected(false);
+        }
+    }, [voiceMode, isConnected, connectGeminiLive]);
+
+    // ==========================================
+    // Browser TTS (Fallback)
+    // ==========================================
+
     const speakWithBrowser = useCallback((text) => {
         if (!('speechSynthesis' in window)) {
             console.error('Speech synthesis not supported');
@@ -150,7 +203,10 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
         window.speechSynthesis.speak(utterance);
     }, []);
 
+    // ==========================================
     // Speech Recognition (STT)
+    // ==========================================
+
     const startListening = useCallback(() => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
             alert('Speech recognition not supported in this browser');
@@ -167,6 +223,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
         recognition.onstart = () => {
             setIsListening(true);
             setTranscript('Listening...');
+            setError('');
         };
 
         recognition.onresult = async (event) => {
@@ -174,27 +231,31 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
             setTranscript(text);
             setIsListening(false);
 
-            // Get AI response
             try {
-                const aiResponse = await getAIResponse(text);
-                setResponse(aiResponse);
+                let aiResponse;
 
-                // Update conversation history
-                setConversationHistory(prev => [
-                    ...prev,
-                    { role: 'user', content: text },
-                    { role: 'assistant', content: aiResponse }
-                ]);
-
-                // Speak response
-                if (useGeminiTTS && backendUrl) {
-                    await speakWithGemini(aiResponse);
+                if (voiceMode === 'gemini-live' && isConnected) {
+                    // Use Gemini Live API
+                    sendToGeminiLive(text);
+                    // Response will come via WebSocket
                 } else {
+                    // Use OpenRouter
+                    aiResponse = await getOpenRouterResponse(text);
+                    setResponse(aiResponse);
+
+                    // Update conversation history
+                    setConversationHistory(prev => [
+                        ...prev,
+                        { role: 'user', content: text },
+                        { role: 'assistant', content: aiResponse }
+                    ]);
+
+                    // Speak response
                     speakWithBrowser(aiResponse);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                const fallbackResponse = "I'm having trouble connecting. Please check your internet connection.";
+                const fallbackResponse = "I'm having trouble connecting. Please try again.";
                 setResponse(fallbackResponse);
                 speakWithBrowser(fallbackResponse);
             }
@@ -212,7 +273,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
 
         recognitionRef.current = recognition;
         recognition.start();
-    }, [getAIResponse, useGeminiTTS, backendUrl, speakWithGemini, speakWithBrowser]);
+    }, [voiceMode, isConnected, getOpenRouterResponse, sendToGeminiLive, speakWithBrowser]);
 
     const stopListening = useCallback(() => {
         if (recognitionRef.current) {
@@ -245,8 +306,15 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
                         <Sparkles className="w-6 h-6 text-primary" />
                         <div>
                             <h1 className="text-xl font-semibold">Voice Mode</h1>
-                            <p className="text-xs text-muted-foreground">
-                                {useGeminiTTS ? 'Gemini TTS' : 'Browser TTS'} • en-US
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                {voiceMode === 'gemini-live' ? (
+                                    <>
+                                        <Zap className="w-3 h-3" />
+                                        Gemini Live {isConnected ? '(Connected)' : '(Connecting...)'}
+                                    </>
+                                ) : (
+                                    'OpenRouter • Gemini 2.0 Flash'
+                                )}
                             </p>
                         </div>
                     </div>
@@ -276,35 +344,43 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
                     >
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="text-sm font-medium mb-2 block">TTS Engine</label>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setUseGeminiTTS(true)}
-                                        className={cn(
-                                            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                                            useGeminiTTS
-                                                ? "bg-primary text-primary-foreground"
-                                                : "bg-background hover:bg-muted"
-                                        )}
-                                    >
-                                        Gemini TTS
-                                    </button>
-                                    <button
-                                        onClick={() => setUseGeminiTTS(false)}
-                                        className={cn(
-                                            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                                            !useGeminiTTS
-                                                ? "bg-primary text-primary-foreground"
-                                                : "bg-background hover:bg-muted"
-                                        )}
-                                    >
-                                        Browser TTS (Recommended)
-                                    </button>
+                                <label className="text-sm font-medium mb-3 block">Voice Engine</label>
+                                <div className="space-y-2">
+                                    {VOICE_MODES.map(mode => (
+                                        <button
+                                            key={mode.id}
+                                            onClick={() => setVoiceMode(mode.id)}
+                                            className={cn(
+                                                "w-full p-4 rounded-lg text-left transition-all border",
+                                                voiceMode === mode.id
+                                                    ? "bg-primary/10 border-primary"
+                                                    : "bg-background border-border hover:bg-muted"
+                                            )}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium">{mode.name}</span>
+                                                <span className={cn(
+                                                    "text-xs px-2 py-1 rounded-full",
+                                                    mode.badge === 'Free'
+                                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                                        : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                                )}>
+                                                    {mode.badge}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {mode.description}
+                                            </p>
+                                        </button>
+                                    ))}
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Browser TTS works offline and is more reliable
-                                </p>
                             </div>
+
+                            {error && (
+                                <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg text-sm">
+                                    {error}
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 )}
@@ -318,7 +394,9 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
                             "w-32 h-32 rounded-full flex items-center justify-center mb-8 transition-all shadow-lg",
                             isListening
                                 ? "bg-red-500 hover:bg-red-600 shadow-red-500/50"
-                                : "bg-primary hover:bg-primary/90 shadow-primary/50"
+                                : voiceMode === 'gemini-live'
+                                    ? "bg-purple-500 hover:bg-purple-600 shadow-purple-500/50"
+                                    : "bg-primary hover:bg-primary/90 shadow-primary/50"
                         )}
                         whileTap={{ scale: 0.95 }}
                         animate={isListening ? { scale: [1, 1.05, 1] } : {}}
@@ -372,7 +450,9 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
                 {/* Footer */}
                 <footer className="h-16 border-t border-border flex items-center justify-center px-6">
                     <p className="text-sm text-muted-foreground">
-                        OpenRouter AI • {useGeminiTTS ? 'Gemini TTS' : 'Web Speech API'}
+                        {voiceMode === 'gemini-live'
+                            ? 'Gemini Live API • Real-time Audio'
+                            : 'OpenRouter • Gemini 2.0 Flash'}
                     </p>
                 </footer>
             </motion.div>

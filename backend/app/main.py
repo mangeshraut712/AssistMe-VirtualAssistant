@@ -172,6 +172,13 @@ try:
 except Exception as e:
     logging.warning(f"Failed to register Multimodal router: {e}")
 
+try:
+    from .routes import gemini
+    app.include_router(gemini.router)
+    logging.info("✓ Gemini Live API router registered")
+except Exception as e:
+    logging.warning(f"Failed to register Gemini router: {e}")
+
 
 # Startup validation
 @app.on_event("startup")
