@@ -1,463 +1,440 @@
 /**
- * Enhanced Voice Mode - Dual Engine Support
+ * Advanced Voice Mode 2.0 (2025 Edition)
  * 
- * Mode 1: OpenRouter (Standard) - Works with any OpenRouter model
- * Mode 2: Gemini Live API (Premium) - Real-time audio streaming
- * 
- * Features:
- * - Web Speech API for STT (browser)
- * - OpenRouter AI for standard conversation
- * - Gemini Live API for premium real-time audio (requires Google API key)
- * - Browser TTS as fallback
+ * A completely reimagined voice experience focusing on:
+ * 1. Continuous Conversation (Hands-free loop)
+ * 2. Visual Intelligence (Dynamic Orb Animations)
+ * 3. Real-time Responsiveness (Optimized TTS & State Management)
+ * 4. Adaptive UI (Clean, overlay-based settings)
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mic, MicOff, Volume2, Settings, Sparkles, Zap } from 'lucide-react';
+import { X, Mic, MicOff, Settings, Sparkles, Zap, Globe, MessageSquare, Volume2, StopCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Voice mode options
-const VOICE_MODES = [
-    {
-        id: 'openrouter',
-        name: 'Standard (OpenRouter)',
-        description: 'Uses Gemini 2.0 Flash via OpenRouter',
-        badge: 'Free'
-    },
-    {
-        id: 'gemini-live',
-        name: 'Gemini Live API',
-        description: 'Real-time native audio (requires API key)',
-        badge: 'Premium'
-    }
-];
+// Configuration
+const SILENCE_TIMEOUT = 1500; // ms to wait after speech before processing
+const RECONNECT_DELAY = 1000;
 
-const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
-    const [isListening, setIsListening] = useState(false);
-    const [isSpeaking, setIsSpeaking] = useState(false);
+export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) {
+    // State Machine: 'idle' | 'listening' | 'processing' | 'speaking' | 'error'
+    const [status, setStatus] = useState('idle');
+    const [mode, setMode] = useState('standard'); // 'standard' (OpenRouter) | 'gemini-live' (WebSocket)
     const [transcript, setTranscript] = useState('');
-    const [response, setResponse] = useState('');
-    const [voiceMode, setVoiceMode] = useState('openrouter'); // 'openrouter' | 'gemini-live'
+    const [aiText, setAiText] = useState('');
     const [showSettings, setShowSettings] = useState(false);
-    const [conversationHistory, setConversationHistory] = useState([]);
-    const [isConnected, setIsConnected] = useState(false);
-    const [error, setError] = useState('');
+    const [conversation, setConversation] = useState([]); // [{role, content}]
 
+    // Refs for extensive control
     const recognitionRef = useRef(null);
-    const audioRef = useRef(null);
-    const wsRef = useRef(null); // WebSocket for Gemini Live
+    const silenceTimerRef = useRef(null);
+    const synthRef = useRef(window.speechSynthesis);
+    const wsRef = useRef(null);
+    const messagesEndRef = useRef(null);
 
-    // ==========================================
-    // MODE 1: OpenRouter (Standard)
-    // ==========================================
+    // =========================================================================
+    // 🔊 Audio Engine (TTS & STT)
+    // =========================================================================
 
-    const getOpenRouterResponse = useCallback(async (userMessage) => {
+    // Clean text for better TTS
+    const cleanTextForTTS = (text) => {
+        return text.replace(/[*#`]/g, '') // Remove markdown
+            .replace(/https?:\/\/\S+/g, 'a link'); // Remove URLs
+    };
+
+    const speak = useCallback((text, onEnd) => {
+        if (!synthRef.current) return;
+
+        // Cancel any current speech
+        synthRef.current.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(cleanTextForTTS(text));
+
+        // Get available voices and try to pick a better one
+        const voices = synthRef.current.getVoices();
+        const preferredVoice = voices.find(v => v.name.includes('Google US English')) ||
+            voices.find(v => v.name.includes('Samantha')) ||
+            voices[0];
+
+        if (preferredVoice) utterance.voice = preferredVoice;
+        utterance.rate = 1.1; // Slightly faster for natural feel
+        utterance.pitch = 1.0;
+
+        utterance.onstart = () => setStatus('speaking');
+        utterance.onend = () => {
+            if (onEnd) onEnd();
+        };
+        utterance.onerror = () => {
+            // If error, just resume listening
+            if (onEnd) onEnd();
+        };
+
+        synthRef.current.speak(utterance);
+    }, []);
+
+    const stopSpeaking = useCallback(() => {
+        if (synthRef.current) {
+            synthRef.current.cancel();
+        }
+        if (status === 'speaking') {
+            setStatus('idle');
+        }
+    }, [status]);
+
+    // =========================================================================
+    // 🧠 Standard Mode (OpenRouter REST)
+    // =========================================================================
+
+    const handleStandardResponse = async (userText) => {
+        if (!userText.trim()) return;
+
+        setStatus('processing');
+
+        // Optimistic update
+        const newHistory = [...conversation, { role: 'user', content: userText }];
+        setConversation(newHistory);
+        setTranscript(userText); // Show final result
+
         try {
-            const messages = [
-                ...conversationHistory.slice(-6).map(msg => ({
-                    role: msg.role,
-                    content: msg.content
-                })),
-                { role: 'user', content: userMessage }
-            ];
+            // Prepare messages for API
+            const apiMessages = [
+                ...newHistory.slice(-6).map(m => ({ role: m.role, content: m.content })),
+                { role: 'user', content: userText }
+            ]; // Ensure last message is included if not in history yet? Wait, newHistory has it.
+
+            // Actually, conversation state update is async, so use local var
+            // But simplify: standard fetch
 
             const response = await fetch(`${backendUrl}/api/chat/text`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: messages,
+                    messages: newHistory.slice(-8), // Send enough context
                     model: 'google/gemini-2.0-flash-001:free'
                 })
             });
 
-            if (!response.ok) {
-                throw new Error(`API error: ${response.status}`);
-            }
+            if (!response.ok) throw new Error('API Error');
 
             const data = await response.json();
-            return data.response || data.message || "I didn't understand that.";
-        } catch (error) {
-            console.error('OpenRouter Error:', error);
-            throw error;
+            const aiReply = data.response || "I didn't quite catch that.";
+
+            setAiText(aiReply);
+            setConversation([...newHistory, { role: 'assistant', content: aiReply }]);
+
+            // Auto-speak and then Auto-listen
+            speak(aiReply, () => {
+                // When done speaking, resume listening automatically (Hands-free)
+                setStatus('idle'); // Will trigger useEffect to start listening
+            });
+
+        } catch (err) {
+            console.error(err);
+            setAiText("Available quota exceeded or network error.");
+            setStatus('idle');
         }
-    }, [backendUrl, conversationHistory]);
+    };
 
-    // ==========================================
-    // MODE 2: Gemini Live API (Premium)
-    // ==========================================
+    // =========================================================================
+    // ⚡ Gemini Live Mode (WebSocket)
+    // =========================================================================
+    // (Kept from previous implementation but optimized)
 
-    const connectGeminiLive = useCallback(async () => {
+    const connectLive = useCallback(async () => {
         try {
-            // Get API key from backend
-            const keyResponse = await fetch(`${backendUrl}/api/gemini/key`);
-            if (!keyResponse.ok) {
-                throw new Error('Gemini API key not configured');
-            }
-            const { apiKey } = await keyResponse.json();
+            const res = await fetch(`${backendUrl}/api/gemini/key`);
+            if (!res.ok) throw new Error('No Key');
+            const { apiKey } = await res.json();
 
-            // Connect to Gemini Live WebSocket
-            const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
-
-            const ws = new WebSocket(wsUrl);
+            const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`);
 
             ws.onopen = () => {
-                setIsConnected(true);
-                setError('');
-
-                // Send setup message
                 ws.send(JSON.stringify({
-                    setup: {
-                        model: "models/gemini-2.0-flash-exp",
-                        generationConfig: {
-                            responseModalities: ["TEXT"]
-                        }
-                    }
+                    setup: { model: "models/gemini-2.0-flash-exp", generationConfig: { responseModalities: ["TEXT"] } }
                 }));
             };
 
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.serverContent?.modelTurn?.parts) {
-                    const text = data.serverContent.modelTurn.parts
-                        .filter(p => p.text)
-                        .map(p => p.text)
-                        .join('');
-                    if (text) {
-                        setResponse(text);
-                        speakWithBrowser(text);
-                    }
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                const text = data.serverContent?.modelTurn?.parts?.[0]?.text;
+                if (text) {
+                    setAiText(text);
+                    speak(text, () => setStatus('idle'));
                 }
-            };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                setError('Connection failed. Try Standard mode.');
-                setIsConnected(false);
-            };
-
-            ws.onclose = () => {
-                setIsConnected(false);
             };
 
             wsRef.current = ws;
-        } catch (error) {
-            console.error('Gemini Live connection error:', error);
-            setError(error.message);
+        } catch (e) {
+            console.error(e);
+            setMode('standard'); // Fallback
         }
-    }, [backendUrl]);
+    }, [backendUrl, speak]);
 
-    const sendToGeminiLive = useCallback((text) => {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-                clientContent: {
-                    turns: [{ role: "user", parts: [{ text }] }],
-                    turnComplete: true
-                }
-            }));
-        }
-    }, []);
+    // =========================================================================
+    // 👂 Speech Recognition Logic (The Core Loop)
+    // =========================================================================
 
-    // Cleanup WebSocket on unmount
-    useEffect(() => {
-        return () => {
-            if (wsRef.current) {
-                wsRef.current.close();
-            }
-        };
-    }, []);
+    const startRecognition = useCallback(() => {
+        if (status === 'speaking' || status === 'processing') return;
 
-    // Connect to Gemini Live when mode changes
-    useEffect(() => {
-        if (voiceMode === 'gemini-live' && !isConnected) {
-            connectGeminiLive();
-        } else if (voiceMode === 'openrouter' && wsRef.current) {
-            wsRef.current.close();
-            setIsConnected(false);
-        }
-    }, [voiceMode, isConnected, connectGeminiLive]);
+        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!Speech) return;
 
-    // ==========================================
-    // Browser TTS (Fallback)
-    // ==========================================
+        // Cleanup old instance
+        if (recognitionRef.current) recognitionRef.current.stop();
 
-    const speakWithBrowser = useCallback((text) => {
-        if (!('speechSynthesis' in window)) {
-            console.error('Speech synthesis not supported');
-            return;
-        }
-
-        window.speechSynthesis.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-        utterance.lang = 'en-US';
-
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
-
-        window.speechSynthesis.speak(utterance);
-    }, []);
-
-    // ==========================================
-    // Speech Recognition (STT)
-    // ==========================================
-
-    const startListening = useCallback(() => {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert('Speech recognition not supported in this browser');
-            return;
-        }
-
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-
-        recognition.continuous = false;
-        recognition.interimResults = false;
+        const recognition = new Speech();
+        recognition.continuous = false; // We want to capture sentences, process, then restart
+        recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        recognition.onstart = () => {
-            setIsListening(true);
-            setTranscript('Listening...');
-            setError('');
-        };
+        recognition.onstart = () => setStatus('listening');
 
-        recognition.onresult = async (event) => {
-            const text = event.results[0][0].transcript;
-            setTranscript(text);
-            setIsListening(false);
+        recognition.onresult = (e) => {
+            const current = e.results[0][0].transcript;
+            setTranscript(current);
 
-            try {
-                let aiResponse;
-
-                if (voiceMode === 'gemini-live' && isConnected) {
-                    // Use Gemini Live API
-                    sendToGeminiLive(text);
-                    // Response will come via WebSocket
-                } else {
-                    // Use OpenRouter
-                    aiResponse = await getOpenRouterResponse(text);
-                    setResponse(aiResponse);
-
-                    // Update conversation history
-                    setConversationHistory(prev => [
-                        ...prev,
-                        { role: 'user', content: text },
-                        { role: 'assistant', content: aiResponse }
-                    ]);
-
-                    // Speak response
-                    speakWithBrowser(aiResponse);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                const fallbackResponse = "I'm having trouble connecting. Please try again.";
-                setResponse(fallbackResponse);
-                speakWithBrowser(fallbackResponse);
-            }
-        };
-
-        recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-            setIsListening(false);
-            setTranscript('Error: ' + event.error);
+            // Debounce silence to detect end of speech
+            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = setTimeout(() => {
+                recognition.stop(); // Stop manually to trigger processing
+            }, SILENCE_TIMEOUT);
         };
 
         recognition.onend = () => {
-            setIsListening(false);
+            // Native onend - check if we possess a valid transcript to process
+            // If we stopped due to silence timer, we likely have a transcript
+            // If purely empty, restart listening
         };
+
+        // We handle the "stopped" logic manually to differentiate "silence processing" vs "error"
+        // But the simplest way for React:
+        // rely on the result handler to trigger the transition
 
         recognitionRef.current = recognition;
         recognition.start();
-    }, [voiceMode, isConnected, getOpenRouterResponse, sendToGeminiLive, speakWithBrowser]);
 
-    const stopListening = useCallback(() => {
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-            setIsListening(false);
-        }
-    }, []);
+    }, [status]);
 
-    const toggleListening = () => {
-        if (isListening) {
-            stopListening();
-        } else {
-            startListening();
+    // Handle "Final Result" processing when recognition stops
+    // We attach this to the silence timer mostly
+    useEffect(() => {
+        // When microphone stops (and we have text), process it
+        const recognition = recognitionRef.current;
+        if (!recognition) return;
+
+        recognition.onend = () => {
+            // If we have a transcript and status was listening, assume user finished
+            if (status === 'listening' && transcript.trim().length > 1) {
+                if (mode === 'standard') {
+                    handleStandardResponse(transcript);
+                } else if (wsRef.current?.readyState === WebSocket.OPEN) {
+                    setStatus('processing');
+                    wsRef.current.send(JSON.stringify({
+                        clientContent: { turns: [{ role: "user", parts: [{ text: transcript }] }], turnComplete: true }
+                    }));
+                }
+            } else if (status === 'listening') {
+                // Nothing heard, restart immediately (Continuous loop)
+                // Short delay to prevent CPU spinning
+                setTimeout(() => {
+                    recognition.start();
+                }, 200);
+            }
+        };
+    }, [status, transcript, mode]);
+
+    // Auto-Effect: When 'idle', start listening (Loop)
+    useEffect(() => {
+        if (isOpen && status === 'idle') {
+            startRecognition();
         }
-    };
+    }, [isOpen, status, startRecognition]);
+
+    // Initial Mount
+    useEffect(() => {
+        if (isOpen) {
+            setStatus('idle'); // Triggers loop
+            if (mode === 'gemini-live') connectLive();
+        }
+        return () => {
+            if (recognitionRef.current) recognitionRef.current.stop();
+            if (synthRef.current) synthRef.current.cancel();
+            if (wsRef.current) wsRef.current.close();
+        };
+    }, [isOpen, mode, connectLive]);
+
+    // Auto-scroll to bottom of conversation
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [conversation, aiText, transcript]);
+
 
     if (!isOpen) return null;
 
     return (
         <AnimatePresence>
             <motion.div
-                className="fixed inset-0 bg-background z-50 flex flex-col"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex flex-col items-center justify-between overflow-hidden"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
             >
-                {/* Header */}
-                <header className="h-16 border-b border-border flex items-center justify-between px-6">
-                    <div className="flex items-center gap-3">
-                        <Sparkles className="w-6 h-6 text-primary" />
-                        <div>
-                            <h1 className="text-xl font-semibold">Voice Mode</h1>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                {voiceMode === 'gemini-live' ? (
-                                    <>
-                                        <Zap className="w-3 h-3" />
-                                        Gemini Live {isConnected ? '(Connected)' : '(Connecting...)'}
-                                    </>
-                                ) : (
-                                    'OpenRouter • Gemini 2.0 Flash'
-                                )}
-                            </p>
-                        </div>
+                {/* 1. Header & Settings */}
+                <div className="w-full p-6 flex items-center justify-between z-10 relative">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full backdrop-blur-md">
+                        {mode === 'standard' ? <Globe className="w-4 h-4" /> : <Zap className="w-4 h-4 text-purple-500" />}
+                        {mode === 'standard' ? 'OpenRouter Standard' : 'Gemini Live'}
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button
+
+                    <div className="flex gap-2">
+                        <motion.button
+                            whileTap={{ scale: 0.9 }}
                             onClick={() => setShowSettings(!showSettings)}
-                            className="p-2 hover:bg-muted rounded-full transition-colors"
+                            className={cn("p-3 rounded-full bg-muted/50 hover:bg-muted transition-colors", showSettings && "bg-primary text-primary-foreground")}
                         >
                             <Settings className="w-5 h-5" />
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
+                            whileTap={{ scale: 0.9 }}
                             onClick={onClose}
-                            className="p-2 hover:bg-muted rounded-full transition-colors"
+                            className="p-3 rounded-full bg-muted/50 hover:bg-red-500 hover:text-white transition-colors"
                         >
                             <X className="w-5 h-5" />
-                        </button>
+                        </motion.button>
                     </div>
-                </header>
 
-                {/* Settings Panel */}
-                {showSettings && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="border-b border-border bg-muted/50 overflow-hidden"
-                    >
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="text-sm font-medium mb-3 block">Voice Engine</label>
-                                <div className="space-y-2">
-                                    {VOICE_MODES.map(mode => (
-                                        <button
-                                            key={mode.id}
-                                            onClick={() => setVoiceMode(mode.id)}
-                                            className={cn(
-                                                "w-full p-4 rounded-lg text-left transition-all border",
-                                                voiceMode === mode.id
-                                                    ? "bg-primary/10 border-primary"
-                                                    : "bg-background border-border hover:bg-muted"
-                                            )}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-medium">{mode.name}</span>
-                                                <span className={cn(
-                                                    "text-xs px-2 py-1 rounded-full",
-                                                    mode.badge === 'Free'
-                                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                                        : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                                )}>
-                                                    {mode.badge}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                {mode.description}
-                                            </p>
-                                        </button>
-                                    ))}
-                                </div>
+                    {/* Settings Overlay - Positioned Absolute to avoid layout shift */}
+                    {showSettings && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="absolute top-20 right-6 w-72 bg-card border border-border shadow-2xl rounded-2xl p-4 z-50"
+                        >
+                            <h3 className="font-semibold mb-3 px-1">Voice Engine</h3>
+                            <div className="space-y-2">
+                                <button
+                                    onClick={() => { setMode('standard'); setShowSettings(false); }}
+                                    className={cn("w-full flex items-center justify-between p-3 rounded-xl transition-all", mode === 'standard' ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
+                                >
+                                    <span className="text-sm">Standard (Free)</span>
+                                    {mode === 'standard' && <CheckIcon />}
+                                </button>
+                                <button
+                                    onClick={() => { setMode('gemini-live'); setShowSettings(false); }}
+                                    className={cn("w-full flex items-center justify-between p-3 rounded-xl transition-all", mode === 'gemini-live' ? "bg-purple-600 text-white" : "hover:bg-muted")}
+                                >
+                                    <span className="text-sm">Gemini Live (Key)</span>
+                                    {mode === 'gemini-live' && <CheckIcon />}
+                                </button>
                             </div>
+                        </motion.div>
+                    )}
+                </div>
 
-                            {error && (
-                                <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg text-sm">
-                                    {error}
-                                </div>
+                {/* 2. Main Visualizer (The Orb) */}
+                <div className="flex-1 w-full flex flex-col items-center justify-center relative">
+
+                    {/* Dynamic Orb Animation */}
+                    <div className="relative cursor-pointer" onClick={() => status === 'speaking' ? stopSpeaking() : setStatus(status === 'idle' ? 'listening' : 'idle')}>
+                        {/* Outer Glow */}
+                        <motion.div
+                            animate={{
+                                scale: status === 'listening' ? [1, 1.2, 1] : status === 'processing' ? [1, 0.9, 1] : 1,
+                                opacity: status === 'listening' ? 0.3 : 0.1
+                            }}
+                            transition={{ repeat: Infinity, duration: 2 }}
+                            className={cn(
+                                "absolute inset-0 rounded-full blur-3xl",
+                                status === 'error' ? "bg-red-500" :
+                                    mode === 'gemini-live' ? "bg-purple-500" : "bg-blue-500"
                             )}
-                        </div>
-                    </motion.div>
-                )}
+                        />
 
-                {/* Main Content */}
-                <main className="flex-1 flex flex-col items-center justify-center p-6">
-                    {/* Microphone Button */}
-                    <motion.button
-                        onClick={toggleListening}
-                        className={cn(
-                            "w-32 h-32 rounded-full flex items-center justify-center mb-8 transition-all shadow-lg",
-                            isListening
-                                ? "bg-red-500 hover:bg-red-600 shadow-red-500/50"
-                                : voiceMode === 'gemini-live'
-                                    ? "bg-purple-500 hover:bg-purple-600 shadow-purple-500/50"
-                                    : "bg-primary hover:bg-primary/90 shadow-primary/50"
-                        )}
-                        whileTap={{ scale: 0.95 }}
-                        animate={isListening ? { scale: [1, 1.05, 1] } : {}}
-                        transition={{ repeat: isListening ? Infinity : 0, duration: 1.5 }}
-                    >
-                        {isListening ? (
-                            <MicOff className="w-16 h-16 text-white" />
-                        ) : (
-                            <Mic className="w-16 h-16 text-white" />
-                        )}
-                    </motion.button>
-
-                    {/* Status */}
-                    <div className="text-center mb-8">
-                        <p className="text-lg font-medium mb-2">
-                            {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : 'Tap to speak'}
-                        </p>
-                        {isSpeaking && (
-                            <div className="flex items-center justify-center gap-2 text-primary">
-                                <Volume2 className="w-5 h-5 animate-pulse" />
-                                <span className="text-sm">Playing response</span>
-                            </div>
-                        )}
+                        {/* Core Orb */}
+                        <motion.div
+                            animate={{
+                                scale: status === 'speaking' ? [1, 1.1, 0.95, 1.05, 1] : 1,
+                            }}
+                            transition={{ repeat: Infinity, duration: 0.5 }} // Voice vibration effect
+                            className={cn(
+                                "w-40 h-40 rounded-full flex items-center justify-center shadow-2xl transition-colors duration-500 relative z-10",
+                                status === 'listening' ? "bg-white dark:bg-slate-900 border-4 border-blue-500" :
+                                    status === 'processing' ? "bg-blue-100 dark:bg-slate-800 border-4 border-t-transparent border-blue-500 animate-spin" :
+                                        status === 'speaking' ? "bg-blue-500 border-4 border-white" :
+                                            "bg-muted border-4 border-border"
+                            )}
+                        >
+                            {status === 'listening' && <Mic className="w-12 h-12 text-blue-500" />}
+                            {status === 'processing' && <Sparkles className="w-12 h-12 text-blue-500 animate-pulse" />}
+                            {status === 'speaking' && <Volume2 className="w-12 h-12 text-white" />}
+                            {status === 'idle' && <div className="w-4 h-4 rounded-full bg-slate-400" />}
+                        </motion.div>
                     </div>
 
-                    {/* Transcript */}
-                    {transcript && transcript !== 'Listening...' && (
+                    {/* Status Label */}
+                    <motion.div
+                        key={status} // Animates on change
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-10 text-center space-y-2"
+                    >
+                        <h2 className="text-2xl font-light tracking-tight">
+                            {status === 'listening' && "Listening..."}
+                            {status === 'processing' && "Thinking..."}
+                            {status === 'speaking' && "Speaking..."}
+                            {status === 'idle' && "Tap orb or wait..."}
+                            {status === 'error' && "Connection Issue"}
+                        </h2>
+                        <p className="text-sm text-muted-foreground max-w-md px-4 truncate">
+                            {status === 'listening' ? transcript || "Say something..." : ""}
+                        </p>
+                    </motion.div>
+                </div>
+
+                {/* 3. Conversation History (Scrollable Panel) */}
+                <div className="w-full h-1/3 bg-background/50 border-t border-border backdrop-blur-lg overflow-y-auto p-6 space-y-4">
+                    {conversation.length === 0 && (
+                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
+                            <MessageSquare className="w-8 h-8 mb-2" />
+                            <p>Conversation empty</p>
+                        </div>
+                    )}
+
+                    {conversation.map((msg, i) => (
                         <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="max-w-2xl w-full bg-muted/50 rounded-lg p-6 mb-4"
+                            key={i}
+                            initial={{ opacity: 0, x: msg.role === 'user' ? 20 : -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className={cn(
+                                "max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed",
+                                msg.role === 'user'
+                                    ? "ml-auto bg-primary text-primary-foreground rounded-br-sm"
+                                    : "mr-auto bg-muted rounded-bl-sm"
+                            )}
                         >
-                            <p className="text-sm text-muted-foreground mb-1">You said:</p>
-                            <p className="text-lg">{transcript}</p>
+                            {msg.content}
+                        </motion.div>
+                    ))}
+
+                    {/* Real-time Streaming Content Placeholder */}
+                    {(status === 'processing' || status === 'speaking') && aiText && conversation[conversation.length - 1]?.role !== 'assistant' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mr-auto max-w-[80%] p-4 rounded-2xl bg-muted rounded-bl-sm text-sm">
+                            {aiText}
                         </motion.div>
                     )}
 
-                    {/* Response */}
-                    {response && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="max-w-2xl w-full bg-primary/10 rounded-lg p-6"
-                        >
-                            <p className="text-sm text-muted-foreground mb-1">Response:</p>
-                            <p className="text-lg">{response}</p>
-                        </motion.div>
-                    )}
-                </main>
-
-                {/* Footer */}
-                <footer className="h-16 border-t border-border flex items-center justify-center px-6">
-                    <p className="text-sm text-muted-foreground">
-                        {voiceMode === 'gemini-live'
-                            ? 'Gemini Live API • Real-time Audio'
-                            : 'OpenRouter • Gemini 2.0 Flash'}
-                    </p>
-                </footer>
+                    <div ref={messagesEndRef} />
+                </div>
             </motion.div>
         </AnimatePresence>
     );
-};
+}
 
-export default AdvancedVoiceMode;
+const CheckIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    </svg>
+);
