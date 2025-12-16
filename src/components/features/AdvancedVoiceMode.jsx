@@ -242,6 +242,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
         setStatus('processing');
 
+        // Map visual style to Gemini Voice ID
+        const VOICE_MAP = {
+            friendly: "Kore",     // Warm
+            professional: "Charon", // Authoritative
+            empathetic: "Erato",  // Emotional
+            energetic: "Io"       // Playful
+        };
+
         // Optimistic update
         const newHistory = [...conversation, { role: 'user', content: userText }];
         setConversation(newHistory);
@@ -258,7 +266,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                         role: m.role || "user",
                         content: m.content || ""
                     })),
-                    voice: "Puck", // Default Voice
+                    voice: VOICE_MAP[voiceStyle] || "Puck", // Dynamic Voice Selection
                     language: "en-US",
                     stt_confidence: 1.0
                 })
