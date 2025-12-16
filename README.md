@@ -1,262 +1,157 @@
-# 🤖 AssistMe - Modular AI Assistant Platform
+# 🤖 AssistMe - Next-Gen Modular AI Platform
 
-**A production-ready, modular AI assistant with standalone feature packages**
+**A production-ready, futuristic AI assistant featuring Voice Mode 4.0, Deep Research, and Native Multilingual Support.**
 
-[![React](https://img.shields.io/badge/React-18.x-blue)](https://react.dev)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green)](https://fastapi.tiangolo.com)
-[![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-orange)](https://ai.google.dev)
+[![React](https://img.shields.io/badge/React-19.0-blue?logo=react&logoColor=white)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-7.0-purple?logo=vite&logoColor=white)](https://vitejs.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Gemini](https://img.shields.io/badge/Powered%20by-Gemini%202.0%20Flash-orange?logo=google&logoColor=white)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+
+## 🚀 Overview
+
+AssistMe is a state-of-the-art virtual assistant platform built with the latest web technologies (**React 19**, **Tailwind CSS 4**-ready, **FastAPI**). It features a modular architecture allowing independent use of its core components.
+
+### key Functionalities:
+- **Voice Mode 4.0**: Bi-directional, interruptible voice chat with emotional intelligence (like Gemini Live).
+- **Grokipedia 2.0**: RAG-powered knowledge engine with "Deep Research" capabilities and table of contents.
+- **AI4Bharat**: Specialized toolset for **22+ Indian languages** (Translation, Transliteration, Script Conversion).
+- **Imagine Engine**: Unlimited free image generation using Pollinations, Flux Pro, and DALL-E 3.
+- **Writing Studio**: Advanced grammar and paraphrasing tools (Grammarly/Quillbot alternatives).
+- **Network Suite**: Professional-grade speedtest and network diagnostics.
+
+---
 
 ## 🏗️ Project Structure
 
-```
+```bash
 AssistMe-VirtualAssistant/
-├── modules/                    # Standalone feature modules
-│   ├── voice-mode/            # 🎤 Gemini Native Audio (30 voices, 24 languages)
-│   ├── chat/                  # 💬 Text chat with streaming
-│   ├── grokipedia/            # 📚 Knowledge base RAG
-│   ├── imagine/               # 🎨 AI image generation
-│   ├── speedtest/             # ⚡ Network diagnostics
-│   └── ai-studio/             # 🛠️ Model playground
-├── src/                       # Main application
-│   ├── components/
-│   ├── pages/
-│   └── App.jsx
-├── backend/                   # FastAPI backend
-│   ├── app/
-│   ├── providers/
-│   └── services/
-└── archive/                   # Legacy/backup files
+├── modules/                    # 📦 Standalone Packages
+│   ├── voice-mode/             # Native Audio (Gemini 2.5 Flash / Browser Hybrid)
+│   ├── grokipedia/             # Knowledge Base & Deep Research
+│   ├── ai4bharat/              # Indic Language Stack
+│   ├── writing-tools/          # Grammar & Paraphrasing
+│   ├── imagine/                # Multi-provider Image Gen
+│   └── speedtest/              # Network Analysis
+├── src/                        # ⚛️ React 19 Application
+│   ├── components/             # UI Components (Shadcn extended)
+│   ├── hooks/                  # Custom Hooks (useLocalStorage, useVoice)
+│   └── lib/                    # Utilities & API Clients
+├── backend/                    # 🐍 Python/FastAPI Backend
+│   ├── app/                    # Application Logic
+│   └── services/               # Microservices (TTS, STT, Omni)
+└── api/                        # ⚡ Vercel Edge Functions
 ```
 
-## ✨ Features
+---
 
-### 🎤 Voice Mode
-- **30 HD Voices** with emotional intelligence (Aoede, Charon, Fenrir, Kore, Puck)
-- **24 Languages** with native accents
-- Real-time audio visualization
-- Haptic feedback (mobile)
-- Session analytics & export
-- **No browser TTS** - Pure Gemini Native Audio
+## ✨ Cutting-Edge Features
 
-[📖 Voice Mode Docs](./modules/voice-mode/README.md)
+### 🎤 Voice Mode 4.0 (Gemini Live)
+- **Hybrid Architecture**: Seamlessly switches between Server-side Gemini 2.5 Flash Audio and Browser-side WebSpeech API.
+- **Smart Interruptions**: Speak over the AI to instantly change context.
+- **Visual Intelligence**: Real-time audio spectrum visualization.
+- **Multi-Persona**: 5 distinct personalities (Aoede, Puck, Charon, etc.).
 
-### 💬 Chat
-- Real-time streaming responses
-- Multi-model support (Gemini, Claude, GPT, Llama)
-- Conversation history
-- Multi-language support
-- RAG integration
+### 📚 Grokipedia 2.0
+- **Deep Research**: Aggregates data from multiple sources to write comprehensive articles.
+- **Model Selector**: Switch between **Gemini 2.0 Flash**, **Qwen 2.5**, **DeepSeek V3**, and **Perplexity**.
+- **Live Markdown**: Auto-generating Table of Contents and "Quick Facts" sidebars.
+- **Persisted Context**: Remembers your selected model and research history.
 
-### 📚 Grokipedia
-- Semantic search knowledge base
-- Vector embeddings
-- Context injection
-- Custom data ingestion
+### 🇮🇳 AI4Bharat Suite
+- **Linguistic Powerhouse**: Native support for Hindi, Marathi, Tamil, Telugu, and 18+ others.
+- **Script Converter**: Instant transliteration between scripts (e.g., Latin to Devanagari).
+- **Reference**: Built-in dictionary and translation memory.
 
-### 🎨 Imagine
-- AI image generation
-- Multiple providers (DALL-E, Flux, Stable Diffusion)
-- Style presets
-- HD upscaling
+### 🎨 Imagine Studio
+- **Pollinations Integration**: **Free, unlimited** high-quality generation.
+- **Pro Models**: Access to Flux Pro and DALL-E 3 for premium results.
+- **Gallery Mode**: Auto-saving history with prompt metadata.
 
-### ⚡ Speedtest
-- Network latency checker
-- API performance monitoring
-- Real-time metrics
+---
 
-### 🛠️ AI Studio
-- Model playground
-- Parameter tuning
-- Prompt engineering
-- Response comparison
+## 🛠️ Technology Stack
 
-## 🚀 Quick Start
+### Frontend (Modern Web)
+- **Framework**: React 19 + React Router 7
+- **Build Tool**: Vite 7 (Beta/Nightly)
+- **Styling**: Tailwind CSS + Shadcn UI + Lucide Icons
+- **Animation**: Framer Motion 12 (Layout animations, shared element transitions)
+- **State Management**: React Hooks + Context API + LocalStorage
+
+### Backend (Performance)
+- **Core**: FastAPI 0.115+ (Async first)
+- **Validation**: Pydantic v2 (Rust-powered speed)
+- **Database**: PostgreSQL + SQLAlchemy 2.0 (Async)
+- **Caching**: Redis (for session continuity)
+- **ML/AI**:
+    - `sentence-transformers` (Local Embeddings)
+    - `faiss-cpu` (Vector Search)
+    - `openai-whisper` (Speech-to-Text Fallback)
+
+---
+
+## ⚡ Quick Start
 
 ### Prerequisites
+- Node.js 20+
+- Python 3.10+
+- Google Gemini API Key
 
-- Node.js >= 18.x
-- Python >= 3.9
-- Google API Key (for Gemini)
-
-### Installation
-
-**1. Clone & Install**
+### 1. Installation
 ```bash
 git clone https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git
 cd AssistMe-VirtualAssistant
 
-# Frontend
+# Install Frontend Dependencies
 npm install
 
-# Backend
+# Setup Backend
 cd backend
+python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
 pip install -r requirements.txt
 ```
 
-**2. Environment Setup**
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
+### 2. Environment Configuration
+Create a `.env` file in the root:
 ```env
-# Required
-GOOGLE_API_KEY=your_gemini_api_key
-OPENROUTER_API_KEY=your_openrouter_key
-
-# Optional
-DATABASE_URL=your_database_url
-REDIS_URL=your_redis_url
+VITE_BACKEND_URL=http://localhost:8001
+GOOGLE_API_KEY=your_gemini_key_here
+OPENROUTER_API_KEY=your_openrouter_key_here
 ```
 
-**3. Run Development**
+### 3. Launch
 ```bash
-# Frontend (Terminal 1)
+# Terminal 1: Frontend
 npm run dev
 
-# Backend (Terminal 2)
+# Terminal 2: Backend
 cd backend
+source venv/bin/activate
 python -m app.main
 ```
-
-Visit: http://localhost:5173
-
-## 📦 Standalone Modules
-
-Each module can be used independently in other projects:
-
-### Install Voice Mode
-```bash
-cp -r modules/voice-mode /path/to/your-project/
-```
-
-See module-specific docs:
-- [Voice Mode Integration](./modules/voice-mode/docs/INTEGRATION.md)
-- [Chat Integration](./modules/chat/README.md)
-- [Grokipedia Integration](./modules/grokipedia/README.md)
-- [Imagine Integration](./modules/imagine/README.md)
-
-## 🏛️ Architecture
-
-### Frontend (React + Vite)
-- **UI Framework**: React 18 + Tailwind CSS
-- **Animations**: Framer Motion
-- **Icons**: Lucide React
-- **State**: React hooks + Context
-- **Routing**: React Router
-
-### Backend (FastAPI)
-- **Framework**: FastAPI + Uvicorn
-- **AI Providers**: OpenRouter, Google AI
-- **Database**: PostgreSQL (optional)
-- **Cache**: Redis (optional)
-- **Authentication**: JWT
-
-### AI Models
-- **Primary**: Gemini 2.5 Flash (Native Audio)
-- **Fallbacks**: Gemini 2.0, Claude, GPT-4, Llama
-- **Image**: DALL-E 3, Flux, Stable Diffusion
-
-## 🔧 Configuration
-
-### Frontend Config
-```javascript
-// src/config/app.config.js
-export const APP_CONFIG = {
-  backendUrl: import.meta.env.VITE_BACKEND_URL || 'http://localhost:8001',
-  enableVoice: true,
-  enableChat: true,
-  enableGrokipedia: true,
-  enableImagine: true,
-};
-```
-
-### Backend Config
-```python
-# backend/app/config.py
-class Settings:
-    GOOGLE_API_KEY: str
-    OPENROUTER_API_KEY: str
-    DATABASE_URL: Optional[str]
-    REDIS_URL: Optional[str]
-```
-
-## 🚢 Deployment
-
-### Vercel (Frontend)
-```bash
-vercel deploy
-```
-
-### Railway/Render (Backend)
-```bash
-# Set environment variables in dashboard
-railway up
-```
-
-### Docker
-```bash
-docker-compose up -d
-```
-
-## 📊 Performance
-
-| Metric | Value |
-|--------|-------|
-| Voice Latency | ~800ms (Gemini API) |
-| Chat Response | ~1.2s (streaming) |
-| Image Generation | ~5s (DALL-E) |
-| Memory Usage | < 200MB |
-| Bundle Size | ~500KB (gzipped) |
-
-## 🔒 Security
-
-- ✅ HTTPS required in production
-- ✅ API keys in environment variables
-- ✅ CORS configured
-- ✅ Rate limiting
-- ✅ Input validation
-- ✅ XSS protection
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing`)
-5. Open Pull Request
-
-## 📄 License
-
-MIT License - See [LICENSE](LICENSE) file
-
-## 🙏 Credits
-
-- **Gemini 2.5 Flash** by Google DeepMind
-- **OpenRouter** for multi-model access
-- **Shadcn UI** for component inspiration
-- **Framer Motion** for animations
-
-## 🆘 Support
-
-- 📧 Email: support@assistme.dev
-- 🐛 Issues: [GitHub Issues](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues)
-- 💬 Discord: [Join Community](https://discord.gg/assistme)
-- 📖 Docs: [Full Documentation](https://docs.assistme.dev)
-
-## 🗺️ Roadmap
-
-- [ ] Real-time collaboration
-- [ ] Plugin system
-- [ ] Mobile apps (iOS/Android)
-- [x] Voice mode with Gemini Native Audio
-- [x] Modular architecture
-- [ ] Self-hosted option
-- [ ] API marketplace
+Visit **http://localhost:5173** to experience the future.
 
 ---
 
-**Made with ❤️ by the AssistMe Team**
+## 🤝 Contributing
+We welcome contributions! Please follow these steps:
+1. Fork the repo.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
 
-[⭐ Star on GitHub](https://github.com/mangeshraut712/AssistMe-VirtualAssistant) · [🚀 Live Demo](https://assistme.vercel.app) · [📚 Docs](https://docs.assistme.dev)
+## 📄 License
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+<p align="center">
+  <strong>Built with ❤️ for the AI Community</strong><br>
+  <a href="https://github.com/mangeshraut712/AssistMe-VirtualAssistant">GitHub</a> • 
+  <a href="#">Live Demo</a> • 
+  <a href="#">Documentation</a>
+</p>
