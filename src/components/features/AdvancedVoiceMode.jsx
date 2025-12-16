@@ -65,14 +65,24 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     // 1. Audio Stream (Mic Input)
     const startAudioStream = useCallback(async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    channelCount: 1,
+                    sampleRate: 16000,
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
+            });
             const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-            const source = audioContext.createMediaStreamSource(stream);
-            const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
             if (audioContext.state === 'suspended') {
                 await audioContext.resume();
             }
+
+            const source = audioContext.createMediaStreamSource(stream);
+            // Reduced buffer size to 2048 for lower latency (~128ms)
+            const processor = audioContext.createScriptProcessor(2048, 1, 1);
 
             source.connect(processor);
             processor.connect(audioContext.destination);
@@ -104,7 +114,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         } catch (e) {
             console.error("Mic Error", e);
             setStatus('error');
-            setAiText("Microphone access denied. Please allow permissions.");
+            setAiText("Microphone access prohibited. Please check browser settings.");
         }
     }, [mode]);
 
