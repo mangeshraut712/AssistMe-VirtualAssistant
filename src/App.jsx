@@ -10,11 +10,13 @@ import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import ChatArea from './components/layout/ChatArea';
 
+// Direct import for VoiceMode (lazy import was causing issues)
+import AdvancedVoiceMode from './components/features/AdvancedVoiceMode';
+
 // Feature Modals (Lazy Loaded)
 const SettingsModal = lazy(() => import('./components/features/SettingsModal'));
 const UnifiedToolsPanel = lazy(() => import('./components/features/UnifiedToolsPanel'));
 const GrokipediaPanel = lazy(() => import('./components/features/GrokipediaPanel'));
-const AdvancedVoiceMode = lazy(() => import('./components/features/AdvancedVoiceMode'));
 const FileUploadPanel = lazy(() => import('./components/features/FileUploadPanel'));
 const ImageGenerationPanel = lazy(() => import('./components/features/ImageGenerationPanel'));
 const SpeedtestPanel = lazy(() => import('./components/features/SpeedtestPanel'));

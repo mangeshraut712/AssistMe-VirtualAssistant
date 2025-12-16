@@ -2,16 +2,15 @@
  * Gemini 2.5 Flash Native Audio - Voice Mode
  * 
  * December 2025 Update Features:
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * ✓ Sharper function calling (71.5% on ComplexFuncBench Audio)
- * ✓ Robust instruction following (90% adherence rate)
- * ✓ Smoother multi-turn conversations
- * ✓ Emotion-tagged speech (Chatterbox-inspired)
- * ✓ Auto language detection (70+ languages)
- * ✓ Style transfer (preserves intonation, pacing, pitch)
- * ✓ 30 HD voices, 24 languages
+ * - Sharper function calling (71.5% on ComplexFuncBench Audio)
+ * - Robust instruction following (90% adherence rate)
+ * - Smoother multi-turn conversations
+ * - Emotion-tagged speech (Chatterbox-inspired)
+ * - Auto language detection (70+ languages)
+ * - Style transfer (preserves intonation, pacing, pitch)
+ * - 30 HD voices, 24 languages
  * 
- * Design: Apple + Japanese Minimalism (間 Ma, 簡素 Kanso)
+ * Design: Apple + Japanese Minimalism
  * 
  * Reference: https://blog.google/products/gemini/gemini-audio-model-updates/
  */
@@ -30,7 +29,7 @@ import { cn } from '@/lib/utils';
 // ============================================================================
 
 const VOICE_MODELS = [
-    { id: 'gemini-2.5-flash-native-audio-preview-12-2025', name: 'Gemini 2.5 Native Audio', short: '2.5 Native', badge: '✨ NEW' },
+    { id: 'gemini-2.5-flash-native-audio-preview-12-2025', name: 'Gemini 2.5 Native Audio', short: '2.5 Native', badge: 'NEW' },
     { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', short: '2.5 Flash' },
     { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', short: '2.5 Lite' },
     { id: 'google/gemini-2.0-flash-001:free', name: 'Gemini 2.0 Flash (Free)', short: '2.0 Free' },
@@ -38,24 +37,24 @@ const VOICE_MODELS = [
 
 const LANGUAGES = [
     // Indian Languages (6 supported by Gemini TTS)
-    { code: 'en-IN', name: 'English (India)', voiceLang: 'en-IN', native: 'English', region: '🇮🇳' },
-    { code: 'hi', name: 'Hindi', voiceLang: 'hi-IN', native: 'हिंदी', region: '🇮🇳' },
-    { code: 'bn', name: 'Bengali', voiceLang: 'bn-BD', native: 'বাংলা', region: '🇮🇳' },
-    { code: 'mr', name: 'Marathi', voiceLang: 'mr-IN', native: 'मराठी', region: '🇮🇳' },
-    { code: 'ta', name: 'Tamil', voiceLang: 'ta-IN', native: 'தமிழ்', region: '🇮🇳' },
-    { code: 'te', name: 'Telugu', voiceLang: 'te-IN', native: 'తెలుగు', region: '🇮🇳' },
+    { code: 'en-IN', name: 'English (India)', voiceLang: 'en-IN', native: 'English', region: 'IN' },
+    { code: 'hi', name: 'Hindi', voiceLang: 'hi-IN', native: 'Hindi', region: 'IN' },
+    { code: 'bn', name: 'Bengali', voiceLang: 'bn-BD', native: 'Bengali', region: 'IN' },
+    { code: 'mr', name: 'Marathi', voiceLang: 'mr-IN', native: 'Marathi', region: 'IN' },
+    { code: 'ta', name: 'Tamil', voiceLang: 'ta-IN', native: 'Tamil', region: 'IN' },
+    { code: 'te', name: 'Telugu', voiceLang: 'te-IN', native: 'Telugu', region: 'IN' },
 
     // International Languages
-    { code: 'en', name: 'English (US)', voiceLang: 'en-US', native: 'English', region: '🇺🇸' },
-    { code: 'es', name: 'Spanish', voiceLang: 'es-US', native: 'Español', region: '🇪🇸' },
-    { code: 'fr', name: 'French', voiceLang: 'fr-FR', native: 'Français', region: '🇫🇷' },
-    { code: 'de', name: 'German', voiceLang: 'de-DE', native: 'Deutsch', region: '🇩🇪' },
-    { code: 'ja', name: 'Japanese', voiceLang: 'ja-JP', native: '日本語', region: '🇯🇵' },
-    { code: 'ko', name: 'Korean', voiceLang: 'ko-KR', native: '한국어', region: '🇰🇷' },
-    { code: 'zh', name: 'Chinese', voiceLang: 'zh-CN', native: '中文', region: '🇨🇳' },
-    { code: 'pt', name: 'Portuguese', voiceLang: 'pt-BR', native: 'Português', region: '🇧🇷' },
-    { code: 'ar', name: 'Arabic', voiceLang: 'ar-EG', native: 'العربية', region: '🇪🇬' },
-    { code: 'ru', name: 'Russian', voiceLang: 'ru-RU', native: 'Русский', region: '🇷🇺' },
+    { code: 'en', name: 'English (US)', voiceLang: 'en-US', native: 'English', region: 'US' },
+    { code: 'es', name: 'Spanish', voiceLang: 'es-US', native: 'Spanish', region: 'ES' },
+    { code: 'fr', name: 'French', voiceLang: 'fr-FR', native: 'French', region: 'FR' },
+    { code: 'de', name: 'German', voiceLang: 'de-DE', native: 'German', region: 'DE' },
+    { code: 'ja', name: 'Japanese', voiceLang: 'ja-JP', native: 'Japanese', region: 'JP' },
+    { code: 'ko', name: 'Korean', voiceLang: 'ko-KR', native: 'Korean', region: 'KR' },
+    { code: 'zh', name: 'Chinese', voiceLang: 'zh-CN', native: 'Chinese', region: 'CN' },
+    { code: 'pt', name: 'Portuguese', voiceLang: 'pt-BR', native: 'Portuguese', region: 'BR' },
+    { code: 'ar', name: 'Arabic', voiceLang: 'ar-EG', native: 'Arabic', region: 'EG' },
+    { code: 'ru', name: 'Russian', voiceLang: 'ru-RU', native: 'Russian', region: 'RU' },
 ];
 
 // Utility: Haptic Feedback
