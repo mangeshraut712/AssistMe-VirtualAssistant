@@ -35,7 +35,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
                 },
                 body: JSON.stringify({
                     message: userMessage,
-                    model: 'google/gemini-2.0-flash-exp:free',
+                    model: 'google/gemini-2.0-flash-001',
                     conversation_history: conversationHistory.slice(-6) // Last 3 exchanges
                 })
             });
