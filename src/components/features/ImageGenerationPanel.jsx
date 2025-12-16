@@ -14,7 +14,7 @@
  * @date December 2025
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Sparkles, Download, Image as ImageIcon,
@@ -93,95 +93,132 @@ const ImageSkeleton = ({ aspect = 'aspect-square' }) => (
     </div>
 );
 
-// Gallery Item
-const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete, copiedId }) => (
-    <motion.div
-        layout
-        variants={imageVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        custom={index}
-        className={cn(
-            'relative group rounded-xl overflow-hidden',
-            'bg-card border border-border shadow-lg',
-            'break-inside-avoid cursor-pointer',
-            item.aspect
-        )}
-        whileHover={{ y: -4 }}
-    >
-        <motion.img
-            src={item.url}
-            alt="Generated image"
-            className="w-full h-full object-cover"
-            loading="lazy"
-            initial={{ scale: 1.1 }}
-            animate={{ scale: 1 }}
-            whileHover={{ scale: 1.05 }}
-            transition={{ duration: 0.6 }}
-        />
+// Gallery Item with loading state
+const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete, copiedId }) => {
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [hasError, setHasError] = React.useState(false);
 
-        {/* Hover Overlay */}
+    return (
         <motion.div
-            className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity"
+            layout
+            variants={imageVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            custom={index}
+            className={cn(
+                'relative group rounded-xl overflow-hidden',
+                'bg-card border border-border shadow-lg',
+                'break-inside-avoid cursor-pointer',
+                item.aspect
+            )}
+            whileHover={{ y: -4 }}
         >
-            {/* Prompt */}
-            {item.prompt && (
-                <p className="text-white/80 text-xs mb-3 line-clamp-2">{item.prompt}</p>
+            {/* Loading State */}
+            {isLoading && !hasError && (
+                <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                    <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                        animate={{ x: ['-100%', '100%'] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                    />
+                    <div className="relative flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 text-purple-500 animate-spin" />
+                        <span className="text-xs text-muted-foreground">Generating...</span>
+                    </div>
+                </div>
             )}
 
-            {/* Actions */}
-            <div className="flex items-center justify-between">
-                <span className="text-white/60 text-xs">{item.model || 'Gemini'}</span>
-                <div className="flex items-center gap-2">
-                    <motion.button
-                        onClick={(e) => { e.stopPropagation(); onViewFull(item.url); }}
-                        className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                    >
-                        <ExternalLink className="h-4 w-4" />
-                    </motion.button>
-                    <motion.button
-                        onClick={(e) => { e.stopPropagation(); onCopyLink(item.url, item.id); }}
-                        className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                    >
-                        {copiedId === item.id ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
-                    </motion.button>
-                    <motion.button
-                        onClick={(e) => { e.stopPropagation(); onDownload(item.url, item.id); }}
-                        className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                    >
-                        <Download className="h-4 w-4" />
-                    </motion.button>
-                    <motion.button
-                        onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-                        className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/40 backdrop-blur-md border border-red-500/20 text-red-400"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </motion.button>
+            {/* Error State */}
+            {hasError && (
+                <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                    <div className="text-center p-4">
+                        <p className="text-sm text-muted-foreground">Failed to load</p>
+                        <button
+                            onClick={() => { setHasError(false); setIsLoading(true); }}
+                            className="text-xs text-purple-500 hover:underline mt-2"
+                        >
+                            Retry
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </motion.div>
+            )}
 
-        {/* New Badge */}
-        {item.isNew && (
-            <motion.span
-                initial={{ scale: 0 }}
+            {/* Image */}
+            <motion.img
+                src={item.url}
+                alt={item.prompt || "Generated image"}
+                className={cn("w-full h-full object-cover", isLoading && "opacity-0")}
+                onLoad={() => setIsLoading(false)}
+                onError={() => { setIsLoading(false); setHasError(true); }}
+                initial={{ scale: 1.1 }}
                 animate={{ scale: 1 }}
-                className="absolute top-3 right-3 px-2.5 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-xs font-bold rounded-full text-white shadow-lg"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.6 }}
+            />
+
+            {/* Hover Overlay */}
+            <motion.div
+                className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity"
             >
-                NEW
-            </motion.span>
-        )}
-    </motion.div>
-);
+                {/* Prompt */}
+                {item.prompt && (
+                    <p className="text-white/80 text-xs mb-3 line-clamp-2">{item.prompt}</p>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center justify-between">
+                    <span className="text-white/60 text-xs">{item.model || 'Gemini'}</span>
+                    <div className="flex items-center gap-2">
+                        <motion.button
+                            onClick={(e) => { e.stopPropagation(); onViewFull(item.url); }}
+                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                        >
+                            <ExternalLink className="h-4 w-4" />
+                        </motion.button>
+                        <motion.button
+                            onClick={(e) => { e.stopPropagation(); onCopyLink(item.url, item.id); }}
+                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                        >
+                            {copiedId === item.id ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                        </motion.button>
+                        <motion.button
+                            onClick={(e) => { e.stopPropagation(); onDownload(item.url, item.id); }}
+                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                        >
+                            <Download className="h-4 w-4" />
+                        </motion.button>
+                        <motion.button
+                            onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+                            className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/40 backdrop-blur-md border border-red-500/20 text-red-400"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </motion.button>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* New Badge */}
+            {item.isNew && (
+                <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-3 right-3 px-2.5 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-xs font-bold rounded-full text-white shadow-lg"
+                >
+                    NEW
+                </motion.span>
+            )}
+        </motion.div>
+    );
+};
 
 // Style Preset Button
 const StyleButton = ({ style, selected, onClick }) => (
