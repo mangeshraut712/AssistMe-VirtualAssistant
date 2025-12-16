@@ -70,6 +70,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             const source = audioContext.createMediaStreamSource(stream);
             const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+            }
+
             source.connect(processor);
             processor.connect(audioContext.destination);
 
@@ -100,7 +104,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         } catch (e) {
             console.error("Mic Error", e);
             setStatus('error');
-            setAiText("Microphone access denied.");
+            setAiText("Microphone access denied. Please allow permissions.");
         }
     }, [mode]);
 
@@ -252,7 +256,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         try {
             setStatus('processing');
             const res = await fetch(`${backendUrl}/api/gemini/key`);
-            if (!res.ok) throw new Error('Failed to fetch Gemini API Key');
+            if (!res.ok) {
+                if (res.status === 404) throw new Error('Backend not found (404). Check Backend URL.');
+                throw new Error('Failed to fetch Gemini API Key');
+            }
             const { apiKey } = await res.json();
             if (!apiKey) throw new Error('API Key is empty.');
 
@@ -319,7 +326,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         recognition.onresult = (e) => {
             setTranscript(e.results[0][0].transcript);
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-            silenceTimerRef.current = setTimeout(() => recognition.stop(), 1000);
+            silenceTimerRef.current = setTimeout(() => recognition.stop(), SILENCE_TIMEOUT);
         };
         recognition.onend = () => {
             const final = transcriptRef.current;
