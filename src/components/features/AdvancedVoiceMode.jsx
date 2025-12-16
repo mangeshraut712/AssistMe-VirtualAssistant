@@ -33,14 +33,25 @@ const VOICE_MODELS = [
 ];
 
 const LANGUAGES = [
-    { code: 'en', name: 'English', voiceLang: 'en-US' },
-    { code: 'hi', name: 'हिंदी', voiceLang: 'hi-IN' },
-    { code: 'es', name: 'Español', voiceLang: 'es-ES' },
-    { code: 'fr', name: 'Français', voiceLang: 'fr-FR' },
-    { code: 'de', name: 'Deutsch', voiceLang: 'de-DE' },
-    { code: 'ja', name: '日本語', voiceLang: 'ja-JP' },
-    { code: 'ko', name: '한국어', voiceLang: 'ko-KR' },
-    { code: 'zh', name: '中文', voiceLang: 'zh-CN' },
+    // Indian Languages (6 supported by Gemini TTS)
+    { code: 'en-IN', name: 'English (India)', voiceLang: 'en-IN', native: 'English', region: '🇮🇳' },
+    { code: 'hi', name: 'Hindi', voiceLang: 'hi-IN', native: 'हिंदी', region: '🇮🇳' },
+    { code: 'bn', name: 'Bengali', voiceLang: 'bn-BD', native: 'বাংলা', region: '🇮🇳' },
+    { code: 'mr', name: 'Marathi', voiceLang: 'mr-IN', native: 'मराठी', region: '🇮🇳' },
+    { code: 'ta', name: 'Tamil', voiceLang: 'ta-IN', native: 'தமிழ்', region: '🇮🇳' },
+    { code: 'te', name: 'Telugu', voiceLang: 'te-IN', native: 'తెలుగు', region: '🇮🇳' },
+
+    // International Languages
+    { code: 'en', name: 'English (US)', voiceLang: 'en-US', native: 'English', region: '🇺🇸' },
+    { code: 'es', name: 'Spanish', voiceLang: 'es-US', native: 'Español', region: '🇪🇸' },
+    { code: 'fr', name: 'French', voiceLang: 'fr-FR', native: 'Français', region: '🇫🇷' },
+    { code: 'de', name: 'German', voiceLang: 'de-DE', native: 'Deutsch', region: '🇩🇪' },
+    { code: 'ja', name: 'Japanese', voiceLang: 'ja-JP', native: '日本語', region: '🇯🇵' },
+    { code: 'ko', name: 'Korean', voiceLang: 'ko-KR', native: '한국어', region: '🇰🇷' },
+    { code: 'zh', name: 'Chinese', voiceLang: 'zh-CN', native: '中文', region: '🇨🇳' },
+    { code: 'pt', name: 'Portuguese', voiceLang: 'pt-BR', native: 'Português', region: '🇧🇷' },
+    { code: 'ar', name: 'Arabic', voiceLang: 'ar-EG', native: 'العربية', region: '🇪🇬' },
+    { code: 'ru', name: 'Russian', voiceLang: 'ru-RU', native: 'Русский', region: '🇷🇺' },
 ];
 
 // Utility: Haptic Feedback

@@ -109,11 +109,31 @@ async def list_voices():
 
 @router.get("/languages")
 async def list_languages():
-    """List supported languages (24 total)."""
+    """List supported languages (24 total including 6 Indian languages)."""
+    lang_data = tts_service.get_languages()
     return {
         "success": True,
-        "languages": tts_service.get_languages(),
-        "count": len(tts_service.get_languages()),
+        **lang_data,
+    }
+
+
+@router.get("/languages/indian")
+async def list_indian_languages():
+    """List Indian languages supported by Gemini TTS.
+    
+    Supported:
+    - Hindi (hi-IN) - हिंदी
+    - Bengali (bn-BD) - বাংলা
+    - Marathi (mr-IN) - मराठी
+    - Tamil (ta-IN) - தமிழ்
+    - Telugu (te-IN) - తెలుగు
+    - English India (en-IN)
+    """
+    return {
+        "success": True,
+        "languages": tts_service.get_indian_languages(),
+        "count": len(tts_service.INDIAN_LANGUAGES),
+        "note": "Gemini TTS supports 6 Indian languages with native pronunciation"
     }
 
 
@@ -126,4 +146,7 @@ async def health_check():
         "configured": has_key,
         "model": tts_service.TTS_MODEL,
         "llm_model": tts_service.LLM_MODEL,
+        "voices": len(tts_service.ALL_VOICES),
+        "languages": len(tts_service.LANGUAGES),
+        "indian_languages": len(tts_service.INDIAN_LANGUAGES),
     }

@@ -138,13 +138,45 @@ class GeminiVoiceService:
         "Altair", "Ananke", "Autonoe", "Callirrhoe", "Carpo", "Dione", "Gacrux"
     ]
     
-    # Supported languages
-    LANGUAGES = [
-        "ar-EG", "de-DE", "en-US", "es-US", "fr-FR", "hi-IN",
-        "id-ID", "it-IT", "ja-JP", "ko-KR", "pt-BR", "ru-RU",
-        "nl-NL", "pl-PL", "th-TH", "tr-TR", "vi-VN", "ro-RO",
-        "uk-UA", "bn-BD", "en-IN", "mr-IN", "ta-IN", "te-IN"
-    ]
+    # Supported languages with full metadata
+    # Gemini TTS supports 24 languages including 6 Indian languages
+    LANGUAGES = {
+        # Indian Languages (6 supported)
+        "hi-IN": {"name": "Hindi", "native": "हिंदी", "region": "India"},
+        "bn-BD": {"name": "Bengali", "native": "বাংলা", "region": "Bangladesh/India"},
+        "mr-IN": {"name": "Marathi", "native": "मराठी", "region": "India"},
+        "ta-IN": {"name": "Tamil", "native": "தமிழ்", "region": "India"},
+        "te-IN": {"name": "Telugu", "native": "తెలుగు", "region": "India"},
+        "en-IN": {"name": "English (India)", "native": "English", "region": "India"},
+        
+        # Major World Languages
+        "en-US": {"name": "English (US)", "native": "English", "region": "USA"},
+        "es-US": {"name": "Spanish", "native": "Español", "region": "Americas"},
+        "fr-FR": {"name": "French", "native": "Français", "region": "France"},
+        "de-DE": {"name": "German", "native": "Deutsch", "region": "Germany"},
+        "it-IT": {"name": "Italian", "native": "Italiano", "region": "Italy"},
+        "pt-BR": {"name": "Portuguese", "native": "Português", "region": "Brazil"},
+        "ru-RU": {"name": "Russian", "native": "Русский", "region": "Russia"},
+        "ja-JP": {"name": "Japanese", "native": "日本語", "region": "Japan"},
+        "ko-KR": {"name": "Korean", "native": "한국어", "region": "South Korea"},
+        "zh-CN": {"name": "Chinese", "native": "中文", "region": "China"},
+        "ar-EG": {"name": "Arabic", "native": "العربية", "region": "Egypt"},
+        
+        # European Languages
+        "nl-NL": {"name": "Dutch", "native": "Nederlands", "region": "Netherlands"},
+        "pl-PL": {"name": "Polish", "native": "Polski", "region": "Poland"},
+        "ro-RO": {"name": "Romanian", "native": "Română", "region": "Romania"},
+        "uk-UA": {"name": "Ukrainian", "native": "Українська", "region": "Ukraine"},
+        
+        # Asian Languages
+        "th-TH": {"name": "Thai", "native": "ไทย", "region": "Thailand"},
+        "vi-VN": {"name": "Vietnamese", "native": "Tiếng Việt", "region": "Vietnam"},
+        "id-ID": {"name": "Indonesian", "native": "Bahasa Indonesia", "region": "Indonesia"},
+        "tr-TR": {"name": "Turkish", "native": "Türkçe", "region": "Turkey"},
+    }
+    
+    # Indian languages list for quick access
+    INDIAN_LANGUAGES = ["hi-IN", "bn-BD", "mr-IN", "ta-IN", "te-IN", "en-IN"]
 
     def __init__(self):
         self.api_key = os.getenv("GOOGLE_API_KEY", "").strip()
@@ -422,10 +454,30 @@ Your response will be converted to speech, so make it sound natural when spoken 
             "count": len(self.ALL_VOICES)
         }
 
-    def get_languages(self) -> List[str]:
-        """Get supported languages."""
-        return self.LANGUAGES.copy()
+    def get_languages(self) -> Dict:
+        """Get supported languages with full metadata."""
+        return {
+            "languages": self.LANGUAGES,
+            "indian": {
+                code: self.LANGUAGES[code] 
+                for code in self.INDIAN_LANGUAGES
+            },
+            "codes": list(self.LANGUAGES.keys()),
+            "count": len(self.LANGUAGES)
+        }
+    
+    def get_indian_languages(self) -> Dict:
+        """Get Indian languages specifically supported by Gemini TTS."""
+        return {
+            code: self.LANGUAGES[code] 
+            for code in self.INDIAN_LANGUAGES
+        }
+    
+    def is_indian_language(self, lang_code: str) -> bool:
+        """Check if a language code is an Indian language."""
+        return lang_code in self.INDIAN_LANGUAGES
 
 
 # Singleton
 tts_service = GeminiVoiceService()
+
