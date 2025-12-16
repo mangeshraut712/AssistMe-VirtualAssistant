@@ -1,125 +1,221 @@
 /**
- * useAdvancedVoiceDetection Hook
+ * useAdvancedVoiceDetection Hook 4.0
  * 
- * Features:
- * 1. Smart pause detection - won't cut off mid-sentence
- * 2. Voice Activity Detection (VAD)
- * 3. Confidence-based filtering
- * 4. Auto-mute during AI speech
+ * Custom React hook for advanced speech recognition with:
+ * 1. Voice Activity Detection (VAD) - RMS-based speech detection
+ * 2. Adaptive Pause Detection - Context-aware silence thresholds
+ * 3. Confidence Filtering - Only accept high-confidence results
+ * 4. Auto-Mute Control - Mute during AI speech
+ * 5. Audio Level Monitoring - For visualizations
+ * 
+ * Usage:
+ * const {
+ *   isListening,
+ *   isMuted,
+ *   transcript,
+ *   interimText,
+ *   audioLevel,
+ *   isSpeechDetected,
+ *   start,
+ *   stop,
+ *   toggleMute,
+ * } = useAdvancedVoiceDetection({
+ *   language: 'en-US',
+ *   onFinalTranscript: (text) => handleUserInput(text),
+ *   isSpeaking: status === 'speaking',
+ * });
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { VOICE_DETECTION_CONFIG } from '@/config/voice-detection.config';
+import {
+    VOICE_CONFIG,
+    getAdaptiveSilenceTimeout,
+    calculateRMS
+} from '@/config/voice-detection.config';
 
 export const useAdvancedVoiceDetection = ({
-    language = 'en-US',
+    language = VOICE_CONFIG.recognition.defaultLanguage,
     onFinalTranscript,
     onInterimTranscript,
+    onAudioLevel,
     onError,
-    isSpeaking = false, // Is AI currently speaking?
-    muteMode = 'auto',
+    isSpeaking = false,
+    muteMode = 'manual',
 }) => {
+    // ─────────────────────────────────────────────────────────────────────────
+    // STATE
+    // ─────────────────────────────────────────────────────────────────────────
     const [isListening, setIsListening] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [interimText, setInterimText] = useState('');
+    const [audioLevel, setAudioLevel] = useState(0);
+    const [isSpeechDetected, setIsSpeechDetected] = useState(false);
+    const [confidence, setConfidence] = useState(1.0);
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // REFS
+    // ─────────────────────────────────────────────────────────────────────────
     const recognitionRef = useRef(null);
     const pauseTimerRef = useRef(null);
-    const speechStartTimeRef = useRef(null);
-    const interimCountRef = useRef(0);
-    const lastEnergyRef = useRef(0);
-    const consecutiveSilenceRef = useRef(0);
+    const transcriptRef = useRef('');
+    const streamRef = useRef(null);
+    const audioCtxRef = useRef(null);
+    const analyserRef = useRef(null);
+    const animationFrameRef = useRef(null);
+    const smoothedLevelRef = useRef(0);
 
-    // Auto-mute when AI is speaking
+    // ─────────────────────────────────────────────────────────────────────────
+    // AUTO-MUTE WHEN AI IS SPEAKING
+    // ─────────────────────────────────────────────────────────────────────────
     useEffect(() => {
-        if (muteMode === 'auto' && VOICE_DETECTION_CONFIG.pushToTalk.muteWhileSpeaking) {
+        if (muteMode === 'auto' && VOICE_CONFIG.pushToTalk.muteWhileSpeaking) {
             setIsMuted(isSpeaking);
         }
     }, [isSpeaking, muteMode]);
 
-    // Initialize Speech Recognition
-    useEffect(() => {
+    // ─────────────────────────────────────────────────────────────────────────
+    // AUDIO LEVEL MONITORING
+    // ─────────────────────────────────────────────────────────────────────────
+    const startAudioMonitoring = useCallback((stream) => {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 256;
+
+            const source = ctx.createMediaStreamSource(stream);
+            source.connect(analyser);
+
+            audioCtxRef.current = ctx;
+            analyserRef.current = analyser;
+
+            const dataArray = new Float32Array(analyser.fftSize);
+
+            const updateLevel = () => {
+                if (!analyserRef.current) return;
+
+                analyser.getFloatTimeDomainData(dataArray);
+                const rms = calculateRMS(dataArray);
+
+                // Smooth the level
+                smoothedLevelRef.current =
+                    smoothedLevelRef.current * VOICE_CONFIG.vad.smoothingFactor +
+                    rms * (1 - VOICE_CONFIG.vad.smoothingFactor);
+
+                const level = Math.min(1, smoothedLevelRef.current * 10);
+                const speaking = smoothedLevelRef.current > VOICE_CONFIG.vad.energyThreshold;
+
+                setAudioLevel(level);
+                setIsSpeechDetected(speaking);
+                onAudioLevel?.(level, speaking);
+
+                animationFrameRef.current = requestAnimationFrame(updateLevel);
+            };
+
+            updateLevel();
+        } catch (e) {
+            console.error('Audio monitoring error:', e);
+        }
+    }, [onAudioLevel]);
+
+    const stopAudioMonitoring = useCallback(() => {
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
+        if (audioCtxRef.current) {
+            audioCtxRef.current.close().catch(() => { });
+            audioCtxRef.current = null;
+        }
+        analyserRef.current = null;
+        setAudioLevel(0);
+        setIsSpeechDetected(false);
+    }, []);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SPEECH RECOGNITION
+    // ─────────────────────────────────────────────────────────────────────────
+    const initRecognition = useCallback(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            onError?.('Speech recognition not supported');
-            return;
+            onError?.('Speech recognition not supported in this browser.');
+            return null;
         }
 
         const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
+        recognition.continuous = VOICE_CONFIG.recognition.continuous;
+        recognition.interimResults = VOICE_CONFIG.recognition.interimResults;
         recognition.lang = language;
-        recognition.maxAlternatives = 3; // Get multiple alternatives
+        recognition.maxAlternatives = 3;
 
         recognition.onstart = () => {
             setIsListening(true);
-            speechStartTimeRef.current = null;
-            interimCountRef.current = 0;
-            consecutiveSilenceRef.current = 0;
+            transcriptRef.current = '';
         };
 
         recognition.onresult = (event) => {
-            if (isMuted) return; // Ignore results when muted
+            if (isMuted) return;
 
             let interim = '';
             let final = '';
-            let hasHighConfidence = false;
+            let lastConfidence = 1.0;
 
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const result = event.results[i];
                 const alternative = result[0];
                 const text = alternative.transcript;
-                const confidence = alternative.confidence || 0;
+                lastConfidence = alternative.confidence || 1.0;
 
                 if (result.isFinal) {
-                    // Only accept final results with sufficient confidence
-                    if (confidence >= VOICE_DETECTION_CONFIG.recognition.minConfidence) {
-                        final += text;
-                        hasHighConfidence = true;
+                    if (lastConfidence >= VOICE_CONFIG.recognition.minConfidence) {
+                        final += text + ' ';
+                        transcriptRef.current += text + ' ';
                     }
                 } else {
-                    // Track interim results
-                    if (confidence >= VOICE_DETECTION_CONFIG.recognition.interimConfidence) {
+                    if (lastConfidence >= VOICE_CONFIG.recognition.interimConfidence) {
                         interim += text;
-                        interimCountRef.current++;
                     }
                 }
             }
 
-            // Update interim transcript
+            setConfidence(lastConfidence);
+
             if (interim) {
                 setInterimText(interim);
                 onInterimTranscript?.(interim);
-
-                // Mark speech start
-                if (!speechStartTimeRef.current) {
-                    speechStartTimeRef.current = Date.now();
-                }
-
-                // Clear previous pause timer
-                if (pauseTimerRef.current) {
-                    clearTimeout(pauseTimerRef.current);
-                }
-
-                // Set new pause timer with adaptive threshold
-                const pauseThreshold = getPauseThreshold(interim.length, interimCountRef.current);
-
-                pauseTimerRef.current = setTimeout(() => {
-                    processTranscript(interim);
-                }, pauseThreshold);
             }
 
-            // Handle final results
-            if (final && hasHighConfidence) {
-                const speechDuration = speechStartTimeRef.current
-                    ? Date.now() - speechStartTimeRef.current
-                    : 0;
+            if (final) {
+                setTranscript(transcriptRef.current.trim());
+            }
 
-                // Only process if speech was long enough
-                if (speechDuration >= VOICE_DETECTION_CONFIG.pauseDetection.minimumSpeechDuration) {
-                    processTranscript(final);
+            // Clear existing pause timer
+            if (pauseTimerRef.current) {
+                clearTimeout(pauseTimerRef.current);
+            }
+
+            // Set adaptive pause timer
+            const timeout = getAdaptiveSilenceTimeout(transcriptRef.current.length);
+            pauseTimerRef.current = setTimeout(() => {
+                const finalText = transcriptRef.current.trim();
+                if (finalText.length > 2) {
+                    recognition.stop();
                 }
+            }, timeout);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+
+            const finalText = transcriptRef.current.trim();
+            if (finalText.length > 2) {
+                onFinalTranscript?.(finalText, confidence);
+            }
+
+            // Clear timer
+            if (pauseTimerRef.current) {
+                clearTimeout(pauseTimerRef.current);
+                pauseTimerRef.current = null;
             }
         };
 
@@ -128,71 +224,49 @@ export const useAdvancedVoiceDetection = ({
                 console.error('Speech recognition error:', event.error);
                 onError?.(event.error);
             }
-        };
 
-        recognition.onend = () => {
-            setIsListening(false);
-            if (pauseTimerRef.current) {
-                clearTimeout(pauseTimerRef.current);
+            // Auto-restart on no-speech
+            if (event.error === 'no-speech' && VOICE_CONFIG.recovery.autoRestart) {
+                setTimeout(() => {
+                    if (!isMuted && recognitionRef.current) {
+                        try {
+                            recognitionRef.current.start();
+                        } catch (e) { }
+                    }
+                }, VOICE_CONFIG.recovery.autoRestartDelay);
             }
         };
 
-        recognitionRef.current = recognition;
+        return recognition;
+    }, [language, isMuted, onError, onFinalTranscript, onInterimTranscript, confidence]);
 
-        return () => {
-            if (recognitionRef.current) {
-                try {
-                    recognitionRef.current.stop();
-                } catch { }
+    // ─────────────────────────────────────────────────────────────────────────
+    // CONTROL FUNCTIONS
+    // ─────────────────────────────────────────────────────────────────────────
+    const start = useCallback(async () => {
+        if (isListening || isMuted) return;
+
+        try {
+            // Get microphone access
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: VOICE_CONFIG.audio.constraints,
+            });
+            streamRef.current = stream;
+
+            // Start audio monitoring for visualization
+            startAudioMonitoring(stream);
+
+            // Initialize and start recognition
+            const recognition = initRecognition();
+            if (recognition) {
+                recognitionRef.current = recognition;
+                recognition.start();
             }
-            if (pauseTimerRef.current) {
-                clearTimeout(pauseTimerRef.current);
-            }
-        };
-    }, [language, isMuted, onError, onFinalTranscript, onInterimTranscript]);
-
-    // Smart pause threshold based on context
-    const getPauseThreshold = (textLength, interimCount) => {
-        const config = VOICE_DETECTION_CONFIG.pauseDetection;
-
-        // Short text with few interim results = quick response
-        if (textLength < 10 && interimCount < config.interimResultsRequired) {
-            return config.shortPauseThreshold;
+        } catch (e) {
+            console.error('Failed to start voice detection:', e);
+            onError?.('Microphone access denied.');
         }
-
-        // Medium text = normal pause
-        if (textLength < 50) {
-            return config.mediumPauseThreshold;
-        }
-
-        // Long text = wait for complete thought
-        return config.longPauseThreshold;
-    };
-
-    // Process final transcript
-    const processTranscript = useCallback((text) => {
-        const trimmed = text.trim();
-        if (!trimmed) return;
-
-        setTranscript(trimmed);
-        setInterimText('');
-        onFinalTranscript?.(trimmed);
-
-        // Reset counters
-        interimCountRef.current = 0;
-        speechStartTimeRef.current = null;
-    }, [onFinalTranscript]);
-
-    // Control functions
-    const start = useCallback(() => {
-        if (recognitionRef.current && !isListening && !isMuted) {
-            try {
-                recognitionRef.current.start();
-            } catch (error) {
-                console.error('Failed to start recognition:', error);
-            }
-        }
-    }, [isListening, isMuted]);
+    }, [isListening, isMuted, initRecognition, startAudioMonitoring, onError]);
 
     const stop = useCallback(() => {
         if (recognitionRef.current && isListening) {
@@ -200,7 +274,20 @@ export const useAdvancedVoiceDetection = ({
                 recognitionRef.current.stop();
             } catch { }
         }
-    }, [isListening]);
+
+        if (pauseTimerRef.current) {
+            clearTimeout(pauseTimerRef.current);
+            pauseTimerRef.current = null;
+        }
+
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+
+        stopAudioMonitoring();
+        setIsListening(false);
+    }, [isListening, stopAudioMonitoring]);
 
     const toggleMute = useCallback(() => {
         setIsMuted(prev => !prev);
@@ -210,19 +297,40 @@ export const useAdvancedVoiceDetection = ({
         setIsMuted(muted);
     }, []);
 
+    const clearTranscript = useCallback(() => {
+        setTranscript('');
+        setInterimText('');
+        transcriptRef.current = '';
+    }, []);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CLEANUP
+    // ─────────────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        return () => {
+            stop();
+        };
+    }, [stop]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RETURN
+    // ─────────────────────────────────────────────────────────────────────────
     return {
+        // State
         isListening,
         isMuted,
         transcript,
         interimText,
+        audioLevel,
+        isSpeechDetected,
+        confidence,
+
+        // Controls
         start,
         stop,
         toggleMute,
         forceMute,
-        clearTranscript: () => {
-            setTranscript('');
-            setInterimText('');
-        }
+        clearTranscript,
     };
 };
 
