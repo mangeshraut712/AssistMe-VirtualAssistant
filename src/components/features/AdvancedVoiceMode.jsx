@@ -25,36 +25,44 @@ const DIRECTOR_PROMPTS = {
     energetic: "Act as a high-energy, enthusiastic motivator! Speak excitedly and use dynamic phrasing to show passion."
 };
 
+// Map visual style to Gemini Voice ID
+const VOICE_MAP = {
+    friendly: "Kore",     // Warm
+    professional: "Charon", // Authoritative
+    empathetic: "Erato",  // Emotional
+    energetic: "Io"       // Playful/Energetic
+};
+
 export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) {
-    // State Machine: 'idle' | 'listening' | 'processing' | 'speaking' | 'error'
+    // State Machine
     const [status, setStatus] = useState('idle');
-    const [mode, setMode] = useState('standard'); // 'standard' (OpenRouter) | 'gemini-live' (WebSocket)
-    const [voiceStyle, setVoiceStyle] = useState('friendly'); // 'friendly' | 'professional' | 'empathetic' | 'energetic'
+    const [mode, setMode] = useState('standard');
+    const [voiceStyle, setVoiceStyle] = useState('friendly');
     const [transcript, setTranscript] = useState('');
     const [aiText, setAiText] = useState('');
     const [showSettings, setShowSettings] = useState(false);
-    const [conversation, setConversation] = useState([]); // [{role, content}]
+    const [conversation, setConversation] = useState([]);
 
-    // Refs for extensive control
+    // Refs
     const recognitionRef = useRef(null);
     const silenceTimerRef = useRef(null);
     const synthRef = useRef(window.speechSynthesis);
     const wsRef = useRef(null);
     const messagesEndRef = useRef(null);
-    const statusRef = useRef(status); // Keep status in sync
-    const recorderRef = useRef(null); // For Native Audio Input
-    const transcriptRef = useRef(""); // Latest transcript for callbacks
+    const statusRef = useRef(status);
+    const recorderRef = useRef(null);
+    const transcriptRef = useRef("");
 
-    // Sync status & transcript
+    // Audio Context
+    const audioCtxRef = useRef(null);
+    const nextAudioTimeRef = useRef(0);
+    const currentAudioRef = useRef(null);
+
+    // Sync Refs
     useEffect(() => { statusRef.current = status; }, [status]);
     useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
 
-    // Audio Context for Native Streaming
-    const audioCtxRef = useRef(null);
-    const nextAudioTimeRef = useRef(0);
-    const currentAudioRef = useRef(null); // For Standard Mode HTMLAudioElement
-
-    // Audio Recorder (48kHz -> 16kHz PCM)
+    // 1. Audio Stream (Mic Input)
     const startAudioStream = useCallback(async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
@@ -66,31 +74,28 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             processor.connect(audioContext.destination);
 
             processor.onaudioprocess = (e) => {
-                if (statusRef.current !== 'listening' || mode !== 'gemini-live') return;
+                // In Live Mode, we stream even while 'speaking' to allow barge-in (interruption)
+                if (mode === 'gemini-live') {
+                    if (statusRef.current === 'idle' || statusRef.current === 'error') return;
+                } else if (statusRef.current !== 'listening') {
+                    return;
+                }
 
                 const inputData = e.inputBuffer.getChannelData(0);
-                // Convert Float32 to Int16
                 const buffer = new ArrayBuffer(inputData.length * 2);
                 const view = new DataView(buffer);
                 for (let i = 0; i < inputData.length; i++) {
                     const s = Math.max(-1, Math.min(1, inputData[i]));
-                    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true); // Little Endian
+                    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
                 }
-
                 const base64Audio = btoa(String.fromCharCode(...new Uint8Array(buffer)));
 
                 if (wsRef.current?.readyState === WebSocket.OPEN) {
                     wsRef.current.send(JSON.stringify({
-                        realtimeInput: {
-                            mediaChunks: [{
-                                mimeType: "audio/pcm",
-                                data: base64Audio
-                            }]
-                        }
+                        realtimeInput: { mediaChunks: [{ mimeType: "audio/pcm", data: base64Audio }] }
                     }));
                 }
             };
-
             recorderRef.current = { stream, audioContext, processor };
         } catch (e) {
             console.error("Mic Error", e);
@@ -109,28 +114,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         }
     }, []);
 
-    // =========================================================================
-    // 🔊 Audio Engine (TTS & STT)
-    // =========================================================================
-
-    // Clean text for better TTS
-    const cleanTextForTTS = (text) => {
-        return text.replace(/[*#`]/g, '') // Remove markdown
-            .replace(/https?:\/\/\S+/g, 'a link'); // Remove URLs
-    };
-
-
-
-    // Synthesize simple UI sounds (Earcons)
+    // 2. Playback Helpers
     const playSound = useCallback((type) => {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-
             osc.connect(gain);
             gain.connect(ctx.destination);
-
             const now = ctx.currentTime;
 
             if (type === 'start') {
@@ -138,404 +129,220 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                 osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
                 gain.gain.setValueAtTime(0.1, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.start(now);
-                osc.stop(now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
             } else if (type === 'listening') {
                 osc.frequency.setValueAtTime(300, now);
                 osc.frequency.linearRampToValueAtTime(500, now + 0.1);
                 gain.gain.setValueAtTime(0.05, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
-                osc.start(now);
-                osc.stop(now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
             }
-        } catch (e) {
-            // Ignore auto-play strictness errors
-        }
+        } catch (e) { }
     }, []);
 
-    const speak = useCallback((text, onEnd) => {
-        if (!synthRef.current) return;
-
-        synthRef.current.cancel();
-
-        // Split into sentences for better interruptibility
-        const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
-
-        let currentIndex = 0;
-
-        const speakNext = () => {
-            if (currentIndex >= sentences.length) {
-                if (onEnd) onEnd();
-                return;
-            }
-
-            const sentence = cleanTextForTTS(sentences[currentIndex]);
-            if (!sentence.trim()) {
-                currentIndex++;
-                speakNext();
-                return;
-            }
-
-            const utterance = new SpeechSynthesisUtterance(sentence);
-            const voices = synthRef.current.getVoices();
-            const preferredVoice = voices.find(v => v.name.includes('Google US English')) ||
-                voices.find(v => v.name.includes('Samantha')) ||
-                voices[0];
-
-            if (preferredVoice) utterance.voice = preferredVoice;
-            utterance.rate = 1.1;
-            utterance.pitch = 1.0;
-
-            utterance.onstart = () => setStatus('speaking');
-            utterance.onend = () => {
-                currentIndex++;
-                speakNext();
-            };
-            utterance.onerror = () => {
-                currentIndex++;
-                speakNext();
-            };
-
-            synthRef.current.speak(utterance);
-        };
-
-        speakNext();
-    }, []);
-
-    const stopSpeaking = useCallback(() => {
-        if (synthRef.current) {
-            synthRef.current.cancel();
-        }
-        if (currentAudioRef.current) {
-            currentAudioRef.current.pause();
-            currentAudioRef.current = null;
-        }
-        if (status === 'speaking') {
-            setStatus('idle');
-        }
-        // Stop Native Audio
-        if (audioCtxRef.current) {
-            audioCtxRef.current.close().then(() => {
-                // Re-init on next connect
-                audioCtxRef.current = null;
-            });
-        }
-    }, [status]);
-
-    // Play WAV/MP3 Base64 (Standard Mode)
-    const playAudio = useCallback((base64Audio) => {
-        if (currentAudioRef.current) currentAudioRef.current.pause();
-
-        const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
-        currentAudioRef.current = audio;
-
-        audio.onplay = () => setStatus('speaking');
-        audio.onended = () => {
-            setStatus('idle');
-            currentAudioRef.current = null;
-        };
-        audio.onerror = () => {
-            setStatus('idle');
-            currentAudioRef.current = null;
-        };
-
-        audio.play().catch(e => console.error("Audio Playback Error:", e));
-    }, []);
-
-    // Native PCM Player (16-bit, 24kHz usually)
     const playPCMChunk = useCallback((base64Data) => {
         try {
-            if (!audioCtxRef.current) return;
-
-            // 1. Decode Base64 to binary string
+            if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+                // Auto-recover audio context if missing in Live Mode
+                if (mode === 'gemini-live') {
+                    audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                    nextAudioTimeRef.current = audioCtxRef.current.currentTime;
+                } else {
+                    return;
+                }
+            }
             const binaryString = window.atob(base64Data);
             const len = binaryString.length;
             const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-
-            // 2. Convert Int16 -> Float32
+            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
             const int16Data = new Int16Array(bytes.buffer);
             const float32Data = new Float32Array(int16Data.length);
-            for (let i = 0; i < int16Data.length; i++) {
-                float32Data[i] = int16Data[i] / 32768.0; // Normalize to [-1, 1]
-            }
+            for (let i = 0; i < int16Data.length; i++) float32Data[i] = int16Data[i] / 32768.0;
 
-            // 3. Create Audio Buffer
-            const buffer = audioCtxRef.current.createBuffer(1, float32Data.length, 24000); // 24kHz is Gemini default
+            const buffer = audioCtxRef.current.createBuffer(1, float32Data.length, 24000);
             buffer.copyToChannel(float32Data, 0);
-
-            // 4. Schedule Playback
             const source = audioCtxRef.current.createBufferSource();
             source.buffer = buffer;
             source.connect(audioCtxRef.current.destination);
 
             const currentTime = audioCtxRef.current.currentTime;
-            // Ensure we schedule in future to prevent overlap/gaps
-            if (nextAudioTimeRef.current < currentTime) {
-                nextAudioTimeRef.current = currentTime;
-            }
-
+            if (nextAudioTimeRef.current < currentTime) nextAudioTimeRef.current = currentTime;
             source.start(nextAudioTimeRef.current);
             nextAudioTimeRef.current += buffer.duration;
-
-            // UI Status
             setStatus('speaking');
-
-            source.onended = () => {
-                // If this was the last chunk... (hard to know in stream, but we can set idle if silence follows)
-                // Simple logic: if queue empty, set idle? 
-                // For now, rely on VAD or user interrupt. 
-                // Or we can set a debounce to idle.
-            };
-
-        } catch (e) {
-            console.error("Audio Decode Error", e);
-        }
+        } catch (e) { console.error("Audio Decode Error", e); }
     }, []);
 
-    // =========================================================================
-    // 🧠 Standard Mode (OpenRouter REST)
-    // =========================================================================
+    const playAudio = useCallback((base64Audio) => {
+        if (currentAudioRef.current) currentAudioRef.current.pause();
+        const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
+        currentAudioRef.current = audio;
+        audio.onplay = () => setStatus('speaking');
+        audio.onended = () => { setStatus('idle'); currentAudioRef.current = null; };
+        audio.onerror = () => { setStatus('idle'); currentAudioRef.current = null; };
+        audio.play().catch(e => console.error(e));
+    }, []);
 
+    const speak = useCallback((text, onEnd) => {
+        if (!synthRef.current) return;
+        synthRef.current.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.onstart = () => setStatus('speaking');
+        utterance.onend = () => { if (onEnd) onEnd(); };
+        synthRef.current.speak(utterance);
+    }, []);
+
+    const stopSpeaking = useCallback(() => {
+        if (synthRef.current) synthRef.current.cancel();
+        if (currentAudioRef.current) { currentAudioRef.current.pause(); currentAudioRef.current = null; }
+
+        // If in Standard Mode, go to Idle. In Live Mode, speaking state is transient handled by audio queue.
+        if (status === 'speaking') setStatus('idle');
+
+        // For Live Mode, we want to clear the queue but keep the context alive or quickly recreate it.
+        if (audioCtxRef.current) {
+            audioCtxRef.current.close().then(() => {
+                audioCtxRef.current = null;
+                // If staying in live mode, we might need a new context immediately for next turn, 
+                // but usually playPCMChunk will handle it or we wait for next input.
+            });
+        }
+    }, [status]);
+
+    // 3. Logic - Standard Mode
     const handleStandardResponse = async (userText) => {
         if (!userText.trim()) return;
-
         setStatus('processing');
-        // Clear transcript for next turn
         setTranscript('');
 
-        // Map visual style to Gemini Voice ID
-        const VOICE_MAP = {
-            friendly: "Kore",
-            professional: "Charon",
-            empathetic: "Erato",
-            energetic: "Io"
-        };
-
-        // Optimistic update
         const newHistory = [...conversation, { role: 'user', content: userText }];
         setConversation(newHistory);
 
         try {
-            // Updated Endpoint: Uses Backend Pipeline (LLM + Premium TTS)
             const response = await fetch(`${backendUrl}/api/tts/voice-response`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: userText,
-                    conversation_history: newHistory.slice(-6).map(m => ({
-                        role: m.role || "user",
-                        content: m.content || ""
-                    })),
-                    voice: VOICE_MAP[voiceStyle] || "Puck", // Dynamic Voice Selection
+                    conversation_history: newHistory.slice(-6).map(m => ({ role: m.role || "user", content: m.content || "" })),
+                    voice: VOICE_MAP[voiceStyle] || "Puck",
                     language: "en-US",
                     stt_confidence: 1.0
                 })
             });
 
             if (!response.ok) throw new Error('API Error');
-
             const data = await response.json();
-            const aiReply = data.response || "I didn't quite catch that.";
-            const audioBase64 = data.audio;
-
+            const aiReply = data.response || "No response";
             setAiText(aiReply);
             setConversation([...newHistory, { role: 'assistant', content: aiReply }]);
 
-            if (audioBase64) {
-                playAudio(audioBase64);
-            } else {
-                // Fallback if no audio returned
-                speak(aiReply, () => setStatus('idle'));
-            }
+            if (data.audio) playAudio(data.audio);
+            else speak(aiReply, () => setStatus('idle'));
 
         } catch (err) {
             console.error(err);
-            setAiText("Network error or quota exceeded.");
+            setAiText("Network error.");
             setStatus('idle');
         }
     };
 
-    // =========================================================================
-    // ⚡ Gemini Live Mode (WebSocket)
-    // =========================================================================
-
+    // 4. Logic - Live Mode
     const connectLive = useCallback(async () => {
         try {
             setStatus('processing');
-
-            // 1. Fetch Key
             const res = await fetch(`${backendUrl}/api/gemini/key`);
             if (!res.ok) throw new Error('Failed to fetch Gemini API Key');
             const { apiKey } = await res.json();
-
             if (!apiKey) throw new Error('API Key is empty.');
 
-            // 2. Connect WebSocket (v1alpha for Live API)
             const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
-
-            stopAudioStream(); // Ensure clean slate
+            stopAudioStream();
 
             const ws = new WebSocket(wsUrl);
-
             ws.onopen = () => {
-                setStatus('listening'); // Start "Listening" immediately for streaming
-
-                // Initialize Audio Context for 24kHz PCM Output
+                setStatus('listening');
                 audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
                 nextAudioTimeRef.current = audioCtxRef.current.currentTime;
 
-                // Send Setup Message
                 ws.send(JSON.stringify({
                     setup: {
-                        model: "models/gemini-2.0-flash-exp", // As of Dec 2025, this is the stable public endpoint for Live
+                        model: "models/gemini-2.0-flash-exp",
                         generationConfig: {
                             responseModalities: ["AUDIO", "TEXT"],
-                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE_MAP[voiceStyle] || "Puck" } } }
                         },
-                        systemInstruction: {
-                            parts: [{ text: `You are AssistMe. ${DIRECTOR_PROMPTS[voiceStyle]} Keep responses concise.` }]
-                        }
+                        systemInstruction: { parts: [{ text: `You are AssistMe. ${DIRECTOR_PROMPTS[voiceStyle]} Keep responses concise.` }] }
                     }
                 }));
-
-                // Start capturing Microphone (Native Input)
                 startAudioStream();
             };
-
-            ws.onmessage = async (e) => {
+            ws.onmessage = (e) => {
                 const data = JSON.parse(e.data);
 
-                // 1. Handle Text (for UI)
-                const text = data.serverContent?.modelTurn?.parts?.[0]?.text;
-                if (text) {
-                    setAiText(prev => prev + text); // Append streaming text
+                // Handle Interruption (Barge-in)
+                if (data.serverContent?.interrupted) {
+                    console.log("User interrupted AI");
+                    // Stop current audio immediately
+                    if (audioCtxRef.current) {
+                        try { audioCtxRef.current.close(); } catch (e) { }
+                        audioCtxRef.current = null;
+                    }
+                    setAiText(prev => prev + " (Interrupted)");
+                    setStatus('listening'); // Back to listening
+                    return;
                 }
 
-                // 2. Handle Audio (Native PCM)
+                if (data.serverContent?.modelTurn?.parts?.[0]?.text) setAiText(prev => prev + data.serverContent.modelTurn.parts[0].text);
                 const audioData = data.serverContent?.modelTurn?.parts?.[0]?.inlineData;
                 if (audioData) playPCMChunk(audioData.data);
-
-                // 3. Handle Interruption (Barge-in)
-                if (data.serverContent?.interrupted) {
-                    // console.log("Interrupted");
-                }
-
-                // 4. Handle Turn Completion
-                if (data.serverContent?.turnComplete) {
-                    // Unlike before, we don't "resume listening" because we NEVER STOPPED listening (streaming).
-                    // However, we might want to update UI state if we were 'speaking'
-                    // Actually, with full duplex, 'listening' is constant effectively.
-                    // But for UI, let's keep 'speaking' while audio is queued.
-                }
             };
-
-            ws.onerror = (e) => {
-                console.error('WS Error', e);
-                setStatus('error');
-                setAiText("Connection Failed.");
-                stopAudioStream();
-            };
-
-            ws.onclose = () => {
-                stopAudioStream();
-            };
-
+            ws.onerror = (e) => { setStatus('error'); setAiText("Connection Failed"); stopAudioStream(); };
+            ws.onclose = () => stopAudioStream();
             wsRef.current = ws;
-        } catch (e) {
-            console.error(e);
-            setStatus('error');
-            setAiText(e.message);
-        }
+        } catch (e) { setStatus('error'); setAiText(e.message); }
     }, [backendUrl, mode, voiceStyle, startAudioStream, stopAudioStream, playPCMChunk]);
 
-    // =========================================================================
-    // 👂 Speech Recognition Logic (The Core Loop)
-    // =========================================================================
-
+    // 5. Logic - Recognition Loop
     const startRecognition = useCallback(() => {
-        if (mode !== 'standard') return;
-        if (statusRef.current === 'processing' || statusRef.current === 'speaking') return;
-
+        if (mode !== 'standard' || statusRef.current === 'processing' || statusRef.current === 'speaking') return;
         const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!Speech) return;
-
-        // Cleanup old instance
         if (recognitionRef.current) recognitionRef.current.stop();
 
         const recognition = new Speech();
-        recognition.continuous = false; // We want to capture sentences, process, then restart
+        recognition.continuous = false;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        recognition.onstart = () => {
-            // Only update if not already
-            if (statusRef.current === 'idle') setStatus('listening');
-        };
-
+        recognition.onstart = () => { if (statusRef.current === 'idle') setStatus('listening'); };
         recognition.onresult = (e) => {
-            const current = e.results[0][0].transcript;
-            setTranscript(current);
-
-            // Debounce silence to detect end of speech
+            setTranscript(e.results[0][0].transcript);
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-            silenceTimerRef.current = setTimeout(() => {
-                recognition.stop(); // Stop manually to trigger processing
-            }, 1000); // 1s silence = done
+            silenceTimerRef.current = setTimeout(() => recognition.stop(), 1000);
         };
-
         recognition.onend = () => {
-            // Check LATEST transcript via Ref
-            const finalTranscript = transcriptRef.current;
-
-            if (statusRef.current === 'listening' && finalTranscript.trim().length > 1) {
-                handleStandardResponse(finalTranscript);
-            } else if (statusRef.current === 'listening') {
-                // Restart
-                setTimeout(() => {
-                    if (statusRef.current === 'listening') recognition.start();
-                }, 100);
-            }
+            const final = transcriptRef.current;
+            if (statusRef.current === 'listening' && final.trim().length > 1) handleStandardResponse(final);
+            else if (statusRef.current === 'listening') setTimeout(() => { if (statusRef.current === 'listening') recognition.start(); }, 100);
         };
 
         recognitionRef.current = recognition;
-        try { recognition.start(); } catch (e) { /* Ignore start error if already started */ }
-
+        try { recognition.start(); } catch (e) { }
     }, [mode]);
 
-    // Auto-Effect: When 'idle' and Standard Mode, start listening
+    useEffect(() => { if (isOpen && status === 'idle' && mode === 'standard') startRecognition(); }, [isOpen, status, mode, startRecognition]);
     useEffect(() => {
-        if (isOpen && status === 'idle' && mode === 'standard') {
-            startRecognition();
-        }
-    }, [isOpen, status, mode, startRecognition]);
-
-    // Initial Mount & Browser Check
-    useEffect(() => {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            setStatus('error');
-            setAiText("Browser not supported. Please use Chrome, Edge, or Safari.");
-            return;
-        }
-
-        if (isOpen) {
-            setStatus('idle'); // Triggers loop
-            if (mode === 'gemini-live') connectLive();
-        }
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { setStatus('error'); setAiText("Browser not supported."); return; }
+        if (isOpen) { setStatus('idle'); if (mode === 'gemini-live') connectLive(); }
         return () => {
             if (recognitionRef.current) recognitionRef.current.stop();
             if (synthRef.current) synthRef.current.cancel();
             if (wsRef.current) wsRef.current.close();
+            stopAudioStream();
         };
-    }, [isOpen, mode, connectLive]);
-
-    // Auto-scroll to bottom of conversation
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [conversation, aiText, transcript]);
-
+    }, [isOpen, mode, connectLive, stopAudioStream]);
+    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [conversation, aiText, transcript]);
 
     if (!isOpen) return null;
 
