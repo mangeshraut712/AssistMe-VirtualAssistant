@@ -42,6 +42,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     const wsRef = useRef(null);
     const messagesEndRef = useRef(null);
 
+    // Audio Context for Native Streaming
+    const audioCtxRef = useRef(null);
+    const nextAudioTimeRef = useRef(0);
+
     // =========================================================================
     // 🔊 Audio Engine (TTS & STT)
     // =========================================================================
@@ -142,7 +146,67 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         if (status === 'speaking') {
             setStatus('idle');
         }
+        // Stop Native Audio
+        if (audioCtxRef.current) {
+            audioCtxRef.current.close().then(() => {
+                // Re-init on next connect
+                audioCtxRef.current = null;
+            });
+        }
     }, [status]);
+
+    // Native PCM Player (16-bit, 24kHz usually)
+    const playPCMChunk = useCallback((base64Data) => {
+        try {
+            if (!audioCtxRef.current) return;
+
+            // 1. Decode Base64 to binary string
+            const binaryString = window.atob(base64Data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            // 2. Convert Int16 -> Float32
+            const int16Data = new Int16Array(bytes.buffer);
+            const float32Data = new Float32Array(int16Data.length);
+            for (let i = 0; i < int16Data.length; i++) {
+                float32Data[i] = int16Data[i] / 32768.0; // Normalize to [-1, 1]
+            }
+
+            // 3. Create Audio Buffer
+            const buffer = audioCtxRef.current.createBuffer(1, float32Data.length, 24000); // 24kHz is Gemini default
+            buffer.copyToChannel(float32Data, 0);
+
+            // 4. Schedule Playback
+            const source = audioCtxRef.current.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtxRef.current.destination);
+
+            const currentTime = audioCtxRef.current.currentTime;
+            // Ensure we schedule in future to prevent overlap/gaps
+            if (nextAudioTimeRef.current < currentTime) {
+                nextAudioTimeRef.current = currentTime;
+            }
+
+            source.start(nextAudioTimeRef.current);
+            nextAudioTimeRef.current += buffer.duration;
+
+            // UI Status
+            setStatus('speaking');
+
+            source.onended = () => {
+                // If this was the last chunk... (hard to know in stream, but we can set idle if silence follows)
+                // Simple logic: if queue empty, set idle? 
+                // For now, rely on VAD or user interrupt. 
+                // Or we can set a debounce to idle.
+            };
+
+        } catch (e) {
+            console.error("Audio Decode Error", e);
+        }
+    }, []);
 
     // =========================================================================
     // 🧠 Standard Mode (OpenRouter REST)
@@ -230,10 +294,15 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             ws.onopen = () => {
                 console.log('Gemini Live Connected');
                 setStatus('idle'); // Ready!
+
+                // Initialize Audio Context for 24kHz PCM
+                audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                nextAudioTimeRef.current = audioCtxRef.current.currentTime;
+
                 ws.send(JSON.stringify({
                     setup: {
                         model: "models/gemini-2.0-flash-exp",
-                        generationConfig: { responseModalities: ["TEXT"] },
+                        generationConfig: { responseModalities: ["AUDIO", "TEXT"] },
                         systemInstruction: {
                             parts: [{ text: `You are a voice assistant. ${DIRECTOR_PROMPTS[voiceStyle]} Keep responses under 3 sentences.` }]
                         }
@@ -241,16 +310,28 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                 }));
             };
 
-            ws.onmessage = (e) => {
+            ws.onmessage = async (e) => {
                 const data = JSON.parse(e.data);
+
+                // 1. Handle Text (for UI)
                 const text = data.serverContent?.modelTurn?.parts?.[0]?.text;
                 if (text) {
-                    setAiText(text);
-                    speak(text, () => {
-                        // After speaking, if in Live mode, we might just stay idle or listen?
-                        // For now, let's auto-listen to keep the flow
+                    setAiText(prev => prev + text); // Append streaming text
+                }
+
+                // 2. Handle Audio (Native PCM)
+                const audioData = data.serverContent?.modelTurn?.parts?.[0]?.inlineData;
+                if (audioData && audioData.mimeType.startsWith('audio/pcm')) {
+                    playPCMChunk(audioData.data);
+                }
+
+                // 3. Handle Turn Completion (Resume Listening)
+                if (data.serverContent?.turnComplete) {
+                    // Calculate when audio finishes playing
+                    const remaining = Math.max(0, nextAudioTimeRef.current - audioCtxRef.current.currentTime);
+                    setTimeout(() => {
                         setStatus('idle');
-                    });
+                    }, remaining * 1000 + 200);
                 }
             };
 
