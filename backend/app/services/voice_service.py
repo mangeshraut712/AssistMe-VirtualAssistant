@@ -1,4 +1,24 @@
-"""Advanced voice chat service integrating STT, LLM, and TTS."""
+"""Advanced voice chat service integrating STT, LLM, and TTS.
+
+Voice Mode 4.0 Service Layer
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Architecture:
+┌─────────────────────────────────────────────────────────────┐
+│  Audio → Whisper (STT) → Gemini 2.5 Flash → TTS (Neural)   │
+└─────────────────────────────────────────────────────────────┘
+
+Features:
+- Multi-language transcription (Whisper)
+- Voice-optimized LLM responses (Gemini 2.5 Flash)
+- Neural TTS synthesis (30 voices, 24 languages)
+- Streaming support for low latency
+
+Models:
+- STT: Whisper (OpenAI)
+- LLM: google/gemini-2.0-flash-001:free
+- TTS: gemini-2.5-flash-preview-tts
+"""
 
 import base64
 import logging
@@ -67,11 +87,11 @@ class VoiceService:
             # Step 3: Get response from Gemini 2.0 Flash
             logger.info("Generating response with Gemini 2.0 Flash...")
             
-            # Get voice-optimized model
+            # Get voice-optimized model (Gemini 2.5 Flash)
             if hasattr(self.provider, 'get_voice_optimized_model'):
                 model = self.provider.get_voice_optimized_model()
             else:
-                model = "google/gemini-2.0-flash-001:free"
+                model = "google/gemini-2.0-flash-001:free"  # Dec 2025 recommended
 
             llm_result = await self.provider.chat_completion(
                 messages=messages,
