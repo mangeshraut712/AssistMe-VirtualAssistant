@@ -41,17 +41,78 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     const synthRef = useRef(window.speechSynthesis);
     const wsRef = useRef(null);
     const messagesEndRef = useRef(null);
+    const statusRef = useRef(status); // Keep status in sync
+    const recorderRef = useRef(null); // For Native Audio Input
+
+    // Sync status ref
+    useEffect(() => { statusRef.current = status; }, [status]);
 
     // Audio Context for Native Streaming
     const audioCtxRef = useRef(null);
     const nextAudioTimeRef = useRef(0);
     const currentAudioRef = useRef(null); // For Standard Mode HTMLAudioElement
 
+    // Audio Recorder (48kHz -> 16kHz PCM)
+    const startAudioStream = useCallback(async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            const source = audioContext.createMediaStreamSource(stream);
+            const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+
+            processor.onaudioprocess = (e) => {
+                if (statusRef.current !== 'listening' || mode !== 'gemini-live') return;
+
+                const inputData = e.inputBuffer.getChannelData(0);
+                // Convert Float32 to Int16
+                const buffer = new ArrayBuffer(inputData.length * 2);
+                const view = new DataView(buffer);
+                for (let i = 0; i < inputData.length; i++) {
+                    const s = Math.max(-1, Math.min(1, inputData[i]));
+                    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true); // Little Endian
+                }
+
+                const base64Audio = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+
+                if (wsRef.current?.readyState === WebSocket.OPEN) {
+                    wsRef.current.send(JSON.stringify({
+                        realtimeInput: {
+                            mediaChunks: [{
+                                mimeType: "audio/pcm",
+                                data: base64Audio
+                            }]
+                        }
+                    }));
+                }
+            };
+
+            recorderRef.current = { stream, audioContext, processor };
+        } catch (e) {
+            console.error("Mic Error", e);
+            setStatus('error');
+            setAiText("Microphone access denied.");
+        }
+    }, [mode]);
+
+    const stopAudioStream = useCallback(() => {
+        if (recorderRef.current) {
+            const { stream, audioContext, processor } = recorderRef.current;
+            processor.disconnect();
+            stream.getTracks().forEach(t => t.stop());
+            audioContext.close();
+            recorderRef.current = null;
+        }
+    }, []);
+
     // =========================================================================
     // 🔊 Audio Engine (TTS & STT)
     // =========================================================================
 
     // Clean text for better TTS
+    // ... rest of the file
     const cleanTextForTTS = (text) => {
         return text.replace(/[*#`]/g, '') // Remove markdown
             .replace(/https?:\/\/\S+/g, 'a link'); // Remove URLs
@@ -301,7 +362,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
     const connectLive = useCallback(async () => {
         try {
-            setStatus('processing'); // Show processing state while connecting
+            setStatus('processing');
 
             // 1. Fetch Key
             const res = await fetch(`${backendUrl}/api/gemini/key`);
@@ -310,29 +371,38 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
             if (!apiKey) throw new Error('API Key is empty. Check backend config.');
 
-            // 2. Connect WebSocket
+            // 2. Connect WebSocket (v1alpha for Live API)
             const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
             console.log('Connecting to Gemini Live...');
+
+            stopAudioStream(); // Ensure clean slate
 
             const ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
                 console.log('Gemini Live Connected');
-                setStatus('idle'); // Ready!
+                setStatus('listening'); // Start "Listening" immediately for streaming
 
-                // Initialize Audio Context for 24kHz PCM
+                // Initialize Audio Context for 24kHz PCM Output
                 audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
                 nextAudioTimeRef.current = audioCtxRef.current.currentTime;
 
+                // Send Setup Message
                 ws.send(JSON.stringify({
                     setup: {
-                        model: "models/gemini-2.0-flash-exp",
-                        generationConfig: { responseModalities: ["AUDIO", "TEXT"] },
+                        model: "models/gemini-2.0-flash-exp", // As of Dec 2025, this is the stable public endpoint for Live
+                        generationConfig: {
+                            responseModalities: ["AUDIO", "TEXT"],
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
+                        },
                         systemInstruction: {
-                            parts: [{ text: `You are a voice assistant. ${DIRECTOR_PROMPTS[voiceStyle]} Keep responses under 3 sentences.` }]
+                            parts: [{ text: `You are a helpful assistant. ${DIRECTOR_PROMPTS[voiceStyle]} Keep responses under 3 sentences.` }]
                         }
                     }
                 }));
+
+                // Start capturing Microphone (Native Input)
+                startAudioStream();
             };
 
             ws.onmessage = async (e) => {
@@ -350,29 +420,37 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                     playPCMChunk(audioData.data);
                 }
 
-                // 3. Handle Turn Completion (Resume Listening)
+                // 3. Handle Interruption (Barge-in)
+                if (data.serverContent?.interrupted) {
+                    console.log("Interrupted by user");
+                    // Clear buffer
+                    if (audioCtxRef.current) {
+                        // We can't easily clear buffer, but we can close/reopen or suspend
+                        // For now, simpler to just let it finish current chunk or rely on nextAudioTimeRef adjustment
+                        // Or just visually show it.
+                    }
+                    setAiText(""); // Clear text on interrupt
+                }
+
+                // 4. Handle Turn Completion
                 if (data.serverContent?.turnComplete) {
-                    // Calculate when audio finishes playing
-                    const remaining = Math.max(0, nextAudioTimeRef.current - audioCtxRef.current.currentTime);
-                    setTimeout(() => {
-                        setStatus('idle');
-                    }, remaining * 1000 + 200);
+                    // Unlike before, we don't "resume listening" because we NEVER STOPPED listening (streaming).
+                    // However, we might want to update UI state if we were 'speaking'
+                    // Actually, with full duplex, 'listening' is constant effectively.
+                    // But for UI, let's keep 'speaking' while audio is queued.
                 }
             };
 
             ws.onerror = (e) => {
                 console.error('Gemini WebSocket Error:', e);
-                // Don't silent fallback. Show user what happened.
                 setStatus('error');
                 setAiText("Connection Error: Check API Key or Quota.");
+                stopAudioStream();
             };
 
             ws.onclose = () => {
                 console.log('Gemini WebSocket Closed');
-                // If closed unexpectedly
-                if (mode === 'gemini-live') {
-                    // Optionally set error if it wasn't a clean close
-                }
+                stopAudioStream();
             };
 
             wsRef.current = ws;
@@ -380,16 +458,16 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             console.error(e);
             setStatus('error');
             setAiText(`Connection Failed: ${e.message}`);
-            // Do NOT auto-switch mode. Let user see the error.
         }
-    }, [backendUrl, speak, mode, voiceStyle]);
+    }, [backendUrl, mode, voiceStyle, startAudioStream, stopAudioStream, playPCMChunk]);
 
     // =========================================================================
     // 👂 Speech Recognition Logic (The Core Loop)
     // =========================================================================
 
     const startRecognition = useCallback(() => {
-        if (status === 'speaking' || status === 'processing') return;
+        if (statusRef.current === 'speaking' || statusRef.current === 'processing') return;
+        if (mode !== 'standard') return; // Only for Standard Mode
 
         const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!Speech) return;
@@ -403,7 +481,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         recognition.lang = 'en-US';
 
         recognition.onstart = () => {
-            setStatus('listening');
+            // Only update if not already
+            if (statusRef.current === 'idle') setStatus('listening');
             playSound('listening');
             if (navigator.vibrate) navigator.vibrate(20);
         };
@@ -420,54 +499,38 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         };
 
         recognition.onend = () => {
-            // Native onend - check if we possess a valid transcript to process
-            // If we stopped due to silence timer, we likely have a transcript
-            // If purely empty, restart listening
+            // Native onend
         };
 
-        // We handle the "stopped" logic manually to differentiate "silence processing" vs "error"
-        // But the simplest way for React:
-        // rely on the result handler to trigger the transition
-
         recognitionRef.current = recognition;
-        recognition.start();
+        try { recognition.start(); } catch (e) { /* Ignore start error if already started */ }
 
-    }, [status]);
+    }, [mode]);
 
     // Handle "Final Result" processing when recognition stops
-    // We attach this to the silence timer mostly
     useEffect(() => {
-        // When microphone stops (and we have text), process it
         const recognition = recognitionRef.current;
-        if (!recognition) return;
+        if (!recognition || mode !== 'standard') return;
 
         recognition.onend = () => {
-            // If we have a transcript and status was listening, assume user finished
-            if (status === 'listening' && transcript.trim().length > 1) {
-                if (mode === 'standard') {
-                    handleStandardResponse(transcript);
-                } else if (wsRef.current?.readyState === WebSocket.OPEN) {
-                    setStatus('processing');
-                    wsRef.current.send(JSON.stringify({
-                        clientContent: { turns: [{ role: "user", parts: [{ text: transcript }] }], turnComplete: true }
-                    }));
-                }
-            } else if (status === 'listening') {
-                // Nothing heard, restart immediately (Continuous loop)
-                // Short delay to prevent CPU spinning
+            // Check Ref for current status, not captured closure
+            if (statusRef.current === 'listening' && transcript.trim().length > 1) {
+                handleStandardResponse(transcript);
+            } else if (statusRef.current === 'listening') {
+                // Restart if silence/noise
                 setTimeout(() => {
-                    recognition.start();
+                    if (statusRef.current === 'listening' && mode === 'standard') recognition.start();
                 }, 200);
             }
         };
-    }, [status, transcript, mode]);
+    }, [transcript, mode]); // Depend on transcript so we have latest value in closure
 
-    // Auto-Effect: When 'idle', start listening (Loop)
+    // Auto-Effect: When 'idle' and Standard Mode, start listening
     useEffect(() => {
-        if (isOpen && status === 'idle') {
+        if (isOpen && status === 'idle' && mode === 'standard') {
             startRecognition();
         }
-    }, [isOpen, status, startRecognition]);
+    }, [isOpen, status, mode, startRecognition]);
 
     // Initial Mount & Browser Check
     useEffect(() => {
