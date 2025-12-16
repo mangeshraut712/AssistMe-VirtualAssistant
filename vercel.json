@@ -20,6 +20,10 @@
       "destination": "/api/health.js"
     },
     {
+      "source": "/api/gemini/key",
+      "destination": "/api/gemini/key.js"
+    },
+    {
       "source": "/((?!api/|_next/|assets/|favicon.ico|manifest.json|robots.txt).*)",
       "destination": "/index.html"
     }
