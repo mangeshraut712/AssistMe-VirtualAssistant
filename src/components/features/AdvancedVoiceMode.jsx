@@ -35,8 +35,18 @@ const CONFIG = {
     // No artificial delays!
     RESTART_DELAY: 300,
 
-    // Use fast Gemini model
+    // Use fast Gemini model (FREE!)
     CHAT_MODEL: 'google/gemini-2.0-flash-exp:free',
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LANGUAGE SUPPORT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const LANGUAGES = {
+    'en-US': { name: 'English', nativeName: 'English', flag: '🇺🇸' },
+    'hi-IN': { name: 'Hindi', nativeName: 'हिंदी', flag: '🇮🇳' },
+    'mr-IN': { name: 'Marathi', nativeName: 'मराठी', flag: '🇮🇳' },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -49,21 +59,34 @@ const PERSONAS = {
         emoji: '🎙️',
         rate: 0.95,
         pitch: 1.0,
-        systemPrompt: `You are AssistMe, a friendly voice assistant. Keep responses SHORT (1-2 sentences max). Sound natural and conversational. No markdown, no lists, no formatting. This is spoken dialogue.`,
+        systemPrompt: `You are AssistMe, a friendly multilingual voice assistant.
+
+RULES:
+- Keep responses SHORT (1-2 sentences max)
+- Sound natural and conversational
+- No markdown, no lists, no formatting - this is spoken dialogue
+- Respond in the SAME LANGUAGE the user speaks to you
+- If user speaks Marathi, respond in Marathi
+- If user speaks Hindi, respond in Hindi
+- If user speaks English, respond in English`,
     },
     friendly: {
         name: 'Buddy',
         emoji: '😊',
         rate: 1.0,
         pitch: 1.05,
-        systemPrompt: `You are Buddy, a super friendly assistant! Keep it SHORT (1-2 sentences). Be casual and warm. No formatting.`,
+        systemPrompt: `You are Buddy, a super friendly multilingual assistant!
+Keep it SHORT (1-2 sentences). Be casual and warm. No formatting.
+Respond in the same language the user speaks.`,
     },
     professional: {
         name: 'Expert',
         emoji: '💼',
         rate: 0.9,
         pitch: 0.95,
-        systemPrompt: `You are Expert, a professional advisor. Be direct and brief (1-2 sentences max). No formatting.`,
+        systemPrompt: `You are Expert, a professional multilingual advisor.
+Be direct and brief (1-2 sentences max). No formatting.
+Respond in the same language the user speaks.`,
     },
 };
 
@@ -88,6 +111,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     // State
     const [status, setStatus] = useState('idle'); // idle, listening, processing, speaking, error
     const [persona, setPersona] = useState('default');
+    const [language, setLanguage] = useState('en-US'); // Speech recognition language
     const [showSettings, setShowSettings] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
 
@@ -372,7 +396,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        recognition.lang = language;
         recognition.maxAlternatives = 1;
 
         let currentTranscript = '';
@@ -604,6 +628,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                             <span>Voice Mode</span>
                         </div>
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-muted/30 border border-border/30">
+                            <span>{LANGUAGES[language]?.flag}</span>
+                            <span className="hidden sm:inline">{LANGUAGES[language]?.nativeName}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-muted/30 border border-border/30">
                             <span>{PERSONAS[persona]?.emoji}</span>
                             <span className="hidden sm:inline">{PERSONAS[persona]?.name}</span>
                         </div>
@@ -649,24 +677,49 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                             exit={{ opacity: 0, height: 0 }}
                             className="px-4 sm:px-6 pb-4 overflow-hidden"
                         >
-                            <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4">
-                                <h3 className="text-sm font-semibold mb-3">Voice Persona</h3>
-                                <div className="flex gap-2 flex-wrap">
-                                    {Object.entries(PERSONAS).map(([key, p]) => (
-                                        <button
-                                            key={key}
-                                            onClick={() => setPersona(key)}
-                                            className={cn(
-                                                "px-4 py-2 rounded-xl text-sm font-medium transition-all border",
-                                                persona === key
-                                                    ? "bg-blue-500/20 border-blue-500 text-blue-600 dark:text-blue-400"
-                                                    : "border-border/50 hover:bg-muted"
-                                            )}
-                                        >
-                                            <span className="mr-1">{p.emoji}</span>
-                                            {p.name}
-                                        </button>
-                                    ))}
+                            <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 space-y-4">
+                                {/* Language */}
+                                <div>
+                                    <h3 className="text-sm font-semibold mb-2">Language</h3>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {Object.entries(LANGUAGES).map(([code, lang]) => (
+                                            <button
+                                                key={code}
+                                                onClick={() => setLanguage(code)}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-lg text-sm font-medium transition-all border",
+                                                    language === code
+                                                        ? "bg-green-500/20 border-green-500 text-green-600 dark:text-green-400"
+                                                        : "border-border/50 hover:bg-muted"
+                                                )}
+                                            >
+                                                <span className="mr-1">{lang.flag}</span>
+                                                {lang.nativeName}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Persona */}
+                                <div>
+                                    <h3 className="text-sm font-semibold mb-2">Voice Persona</h3>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {Object.entries(PERSONAS).map(([key, p]) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => setPersona(key)}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-lg text-sm font-medium transition-all border",
+                                                    persona === key
+                                                        ? "bg-blue-500/20 border-blue-500 text-blue-600 dark:text-blue-400"
+                                                        : "border-border/50 hover:bg-muted"
+                                                )}
+                                            >
+                                                <span className="mr-1">{p.emoji}</span>
+                                                {p.name}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
