@@ -139,17 +139,27 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     // =========================================================================
     // ⚡ Gemini Live Mode (WebSocket)
     // =========================================================================
-    // (Kept from previous implementation but optimized)
 
     const connectLive = useCallback(async () => {
         try {
+            setStatus('processing'); // Show processing state while connecting
+
+            // 1. Fetch Key
             const res = await fetch(`${backendUrl}/api/gemini/key`);
-            if (!res.ok) throw new Error('No Key');
+            if (!res.ok) throw new Error('Failed to fetch Gemini API Key from backend');
             const { apiKey } = await res.json();
 
-            const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`);
+            if (!apiKey) throw new Error('API Key is empty. Check backend config.');
+
+            // 2. Connect WebSocket
+            const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
+            console.log('Connecting to Gemini Live...');
+
+            const ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
+                console.log('Gemini Live Connected');
+                setStatus('idle'); // Ready!
                 ws.send(JSON.stringify({
                     setup: { model: "models/gemini-2.0-flash-exp", generationConfig: { responseModalities: ["TEXT"] } }
                 }));
@@ -160,16 +170,37 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                 const text = data.serverContent?.modelTurn?.parts?.[0]?.text;
                 if (text) {
                     setAiText(text);
-                    speak(text, () => setStatus('idle'));
+                    speak(text, () => {
+                        // After speaking, if in Live mode, we might just stay idle or listen?
+                        // For now, let's auto-listen to keep the flow
+                        setStatus('idle');
+                    });
+                }
+            };
+
+            ws.onerror = (e) => {
+                console.error('Gemini WebSocket Error:', e);
+                // Don't silent fallback. Show user what happened.
+                setStatus('error');
+                setAiText("Connection Error: Check API Key or Quota.");
+            };
+
+            ws.onclose = () => {
+                console.log('Gemini WebSocket Closed');
+                // If closed unexpectedly
+                if (mode === 'gemini-live') {
+                    // Optionally set error if it wasn't a clean close
                 }
             };
 
             wsRef.current = ws;
         } catch (e) {
             console.error(e);
-            setMode('standard'); // Fallback
+            setStatus('error');
+            setAiText(`Connection Failed: ${e.message}`);
+            // Do NOT auto-switch mode. Let user see the error.
         }
-    }, [backendUrl, speak]);
+    }, [backendUrl, speak, mode]);
 
     // =========================================================================
     // 👂 Speech Recognition Logic (The Core Loop)
@@ -338,7 +369,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                 <div className="flex-1 w-full flex flex-col items-center justify-center relative">
 
                     {/* Dynamic Orb Animation */}
-                    <div className="relative cursor-pointer" onClick={() => status === 'speaking' ? stopSpeaking() : setStatus(status === 'idle' ? 'listening' : 'idle')}>
+                    <div className="relative cursor-pointer" onClick={() => {
+                        if (status === 'speaking') stopSpeaking();
+                        else if (status === 'error') {
+                            setStatus('idle');
+                            if (mode === 'gemini-live') connectLive();
+                        }
+                        else setStatus(status === 'idle' ? 'listening' : 'idle');
+                    }}>
                         {/* Outer Glow */}
                         <motion.div
                             animate={{
