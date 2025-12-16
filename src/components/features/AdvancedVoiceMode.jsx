@@ -1,89 +1,146 @@
 /**
- * Enhanced Voice Mode with Backend Integration
+ * Simple Voice Mode - OpenRouter AI + Gemini TTS
  * 
  * Features:
- * - Web Speech API (browser-based STT/TTS)
- * - Backend Gemini TTS integration
- * - Multiple voice options and languages
- * - Real-time transcription
+ * - Web Speech API for STT (browser)
+ * - OpenRouter for AI conversation
+ * - Gemini TTS for voice synthesis
+ * - Browser TTS as fallback
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mic, MicOff, Volume2, Settings, Globe, Sparkles } from 'lucide-react';
+import { X, Mic, MicOff, Volume2, Settings, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { createApiClient } from '@/lib/apiClient';
-
-// Voice configuration
-const VOICES = [
-    { id: 'Puck', name: 'Puck (Neutral)', category: 'neutral' },
-    { id: 'Charon', name: 'Charon (Warm)', category: 'warm' },
-    { id: 'Kore', name: 'Kore (Calm)', category: 'calm' },
-    { id: 'Fenrir', name: 'Fenrir (Energetic)', category: 'energetic' },
-    { id: 'Aoede', name: 'Aoede (Professional)', category: 'professional' },
-];
-
-const LANGUAGES = [
-    { code: 'en-US', name: 'English (US)', native: 'English' },
-    { code: 'en-IN', name: 'English (India)', native: 'English' },
-    { code: 'hi-IN', name: 'Hindi', native: 'हिंदी' },
-    { code: 'es-US', name: 'Spanish', native: 'Español' },
-    { code: 'fr-FR', name: 'French', native: 'Français' },
-    { code: 'de-DE', name: 'German', native: 'Deutsch' },
-    { code: 'ja-JP', name: 'Japanese', native: '日本語' },
-    { code: 'ko-KR', name: 'Korean', native: '한국어' },
-    { code: 'zh-CN', name: 'Chinese', native: '中文' },
-    { code: 'pt-BR', name: 'Portuguese', native: 'Português' },
-];
 
 const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [response, setResponse] = useState('');
-    const [useBackendTTS, setUseBackendTTS] = useState(true);
-    const [selectedVoice, setSelectedVoice] = useState('Puck');
-    const [selectedLanguage, setSelectedLanguage] = useState('en-US');
+    const [useGeminiTTS, setUseGeminiTTS] = useState(false); // Default to browser TTS
     const [showSettings, setShowSettings] = useState(false);
+    const [conversationHistory, setConversationHistory] = useState([]);
 
     const recognitionRef = useRef(null);
     const audioRef = useRef(null);
-    const apiClient = useRef(null);
 
-    useEffect(() => {
-        if (backendUrl) {
-            apiClient.current = createApiClient(backendUrl);
-        }
-    }, [backendUrl]);
-
-    // Generate AI Response using backend
-    const generateAIResponse = useCallback(async (userMessage) => {
+    // Get AI response using OpenRouter (same as chat)
+    const getAIResponse = useCallback(async (userMessage) => {
         try {
-            const response = await fetch(`${backendUrl}/api/tts/voice-response`, {
+            const response = await fetch(`${backendUrl}/api/chat/text`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     message: userMessage,
-                    voice: selectedVoice,
-                    language: selectedLanguage,
-                    conversation_history: [],
-                    stt_confidence: 1.0
+                    model: 'google/gemini-2.0-flash-exp:free',
+                    conversation_history: conversationHistory.slice(-6) // Last 3 exchanges
                 })
             });
 
             if (!response.ok) {
-                throw new Error('Failed to get AI response');
+                throw new Error(`API error: ${response.status}`);
             }
 
             const data = await response.json();
-            return data.response || data.text || "I didn't quite catch that.";
+            return data.response || data.message || "I didn't understand that.";
         } catch (error) {
             console.error('AI Response Error:', error);
             throw error;
         }
-    }, [backendUrl, selectedVoice, selectedLanguage]);
+    }, [backendUrl, conversationHistory]);
+
+    // Get Gemini TTS audio
+    const getGeminiTTS = useCallback(async (text) => {
+        try {
+            const response = await fetch(`${backendUrl}/api/tts/synthesize`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text,
+                    voice: 'Puck',
+                    auto_emotion: true
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('TTS failed');
+            }
+
+            const data = await response.json();
+
+            // Convert base64 to blob
+            const audioData = data.audio;
+            const byteCharacters = atob(audioData);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'audio/wav' });
+
+            return URL.createObjectURL(blob);
+        } catch (error) {
+            console.error('Gemini TTS Error:', error);
+            throw error;
+        }
+    }, [backendUrl]);
+
+    // Speak using Gemini TTS
+    const speakWithGemini = useCallback(async (text) => {
+        try {
+            setIsSpeaking(true);
+            const audioUrl = await getGeminiTTS(text);
+
+            const audio = new Audio(audioUrl);
+            audioRef.current = audio;
+
+            audio.onended = () => {
+                setIsSpeaking(false);
+                URL.revokeObjectURL(audioUrl);
+            };
+
+            audio.onerror = () => {
+                setIsSpeaking(false);
+                URL.revokeObjectURL(audioUrl);
+                // Fallback to browser TTS
+                speakWithBrowser(text);
+            };
+
+            await audio.play();
+        } catch (error) {
+            console.error('Gemini TTS playback error:', error);
+            setIsSpeaking(false);
+            // Fallback to browser TTS
+            speakWithBrowser(text);
+        }
+    }, [getGeminiTTS]);
+
+    // Speak using browser TTS
+    const speakWithBrowser = useCallback((text) => {
+        if (!('speechSynthesis' in window)) {
+            console.error('Speech synthesis not supported');
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        utterance.lang = 'en-US';
+
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+
+        window.speechSynthesis.speak(utterance);
+    }, []);
 
     // Speech Recognition (STT)
     const startListening = useCallback(() => {
@@ -97,7 +154,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
 
         recognition.continuous = false;
         recognition.interimResults = false;
-        recognition.lang = selectedLanguage;
+        recognition.lang = 'en-US';
 
         recognition.onstart = () => {
             setIsListening(true);
@@ -109,20 +166,27 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
             setTranscript(text);
             setIsListening(false);
 
-            // Generate AI response using backend
+            // Get AI response
             try {
-                const aiResponse = await generateAIResponse(text);
+                const aiResponse = await getAIResponse(text);
                 setResponse(aiResponse);
 
+                // Update conversation history
+                setConversationHistory(prev => [
+                    ...prev,
+                    { role: 'user', content: text },
+                    { role: 'assistant', content: aiResponse }
+                ]);
+
                 // Speak response
-                if (useBackendTTS && backendUrl) {
-                    await speakWithBackend(aiResponse);
+                if (useGeminiTTS && backendUrl) {
+                    await speakWithGemini(aiResponse);
                 } else {
                     speakWithBrowser(aiResponse);
                 }
             } catch (error) {
-                console.error('AI response error:', error);
-                const fallbackResponse = "I'm sorry, I couldn't process that. Please try again.";
+                console.error('Error:', error);
+                const fallbackResponse = "I'm having trouble connecting. Please check your internet connection.";
                 setResponse(fallbackResponse);
                 speakWithBrowser(fallbackResponse);
             }
@@ -131,7 +195,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
             setIsListening(false);
-            setTranscript('Error occurred');
+            setTranscript('Error: ' + event.error);
         };
 
         recognition.onend = () => {
@@ -140,7 +204,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
 
         recognitionRef.current = recognition;
         recognition.start();
-    }, [selectedLanguage, useBackendTTS, backendUrl, generateAIResponse]);
+    }, [getAIResponse, useGeminiTTS, backendUrl, speakWithGemini, speakWithBrowser]);
 
     const stopListening = useCallback(() => {
         if (recognitionRef.current) {
@@ -148,77 +212,6 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
             setIsListening(false);
         }
     }, []);
-
-    // Backend TTS using Gemini
-    const speakWithBackend = useCallback(async (text) => {
-        if (!apiClient.current) {
-            console.error('Backend API not available');
-            speakWithBrowser(text);
-            return;
-        }
-
-        try {
-            setIsSpeaking(true);
-
-            const response = await fetch(`${backendUrl}/api/tts/synthesize`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text,
-                    voice: selectedVoice,
-                    language: selectedLanguage,
-                    auto_emotion: true
-                })
-            });
-
-            if (!response.ok) throw new Error('TTS failed');
-
-            const blob = await response.blob();
-            const audioUrl = URL.createObjectURL(blob);
-
-            const audio = new Audio(audioUrl);
-            audioRef.current = audio;
-
-            audio.onplay = () => setIsSpeaking(true);
-            audio.onended = () => {
-                setIsSpeaking(false);
-                URL.revokeObjectURL(audioUrl);
-            };
-            audio.onerror = () => {
-                setIsSpeaking(false);
-                console.error('Audio playback failed');
-            };
-
-            await audio.play();
-        } catch (error) {
-            console.error('Backend TTS error:', error);
-            setIsSpeaking(false);
-            // Fallback to browser TTS
-            speakWithBrowser(text);
-        }
-    }, [backendUrl, selectedVoice, selectedLanguage]);
-
-    // Browser TTS (fallback)
-    const speakWithBrowser = useCallback((text) => {
-        if (!('speechSynthesis' in window)) {
-            console.error('Speech synthesis not supported');
-            return;
-        }
-
-        window.speechSynthesis.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-        utterance.lang = selectedLanguage;
-
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
-
-        window.speechSynthesis.speak(utterance);
-    }, [selectedLanguage]);
 
     const toggleListening = () => {
         if (isListening) {
@@ -245,7 +238,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
                         <div>
                             <h1 className="text-xl font-semibold">Voice Mode</h1>
                             <p className="text-xs text-muted-foreground">
-                                {useBackendTTS ? 'Gemini TTS' : 'Browser TTS'} • {selectedLanguage}
+                                {useGeminiTTS ? 'Gemini TTS' : 'Browser TTS'} • en-US
                             </p>
                         </div>
                     </div>
@@ -274,70 +267,35 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
                         className="border-b border-border bg-muted/50 overflow-hidden"
                     >
                         <div className="p-6 space-y-4">
-                            {/* TTS Mode */}
                             <div>
                                 <label className="text-sm font-medium mb-2 block">TTS Engine</label>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setUseBackendTTS(true)}
+                                        onClick={() => setUseGeminiTTS(true)}
                                         className={cn(
                                             "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                                            useBackendTTS
+                                            useGeminiTTS
                                                 ? "bg-primary text-primary-foreground"
                                                 : "bg-background hover:bg-muted"
                                         )}
                                     >
-                                        Gemini TTS (Backend)
+                                        Gemini TTS
                                     </button>
                                     <button
-                                        onClick={() => setUseBackendTTS(false)}
+                                        onClick={() => setUseGeminiTTS(false)}
                                         className={cn(
                                             "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                                            !useBackendTTS
+                                            !useGeminiTTS
                                                 ? "bg-primary text-primary-foreground"
                                                 : "bg-background hover:bg-muted"
                                         )}
                                     >
-                                        Browser TTS
+                                        Browser TTS (Recommended)
                                     </button>
                                 </div>
-                            </div>
-
-                            {/* Voice Selection (for backend TTS) */}
-                            {useBackendTTS && (
-                                <div>
-                                    <label className="text-sm font-medium mb-2 block">Voice</label>
-                                    <select
-                                        value={selectedVoice}
-                                        onChange={(e) => setSelectedVoice(e.target.value)}
-                                        className="w-full px-4 py-2 rounded-lg bg-background border border-border"
-                                    >
-                                        {VOICES.map(voice => (
-                                            <option key={voice.id} value={voice.id}>
-                                                {voice.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-
-                            {/* Language Selection */}
-                            <div>
-                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
-                                    <Globe className="w-4 h-4" />
-                                    Language
-                                </label>
-                                <select
-                                    value={selectedLanguage}
-                                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                                    className="w-full px-4 py-2 rounded-lg bg-background border border-border"
-                                >
-                                    {LANGUAGES.map(lang => (
-                                        <option key={lang.code} value={lang.code}>
-                                            {lang.name} ({lang.native})
-                                        </option>
-                                    ))}
-                                </select>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    Browser TTS works offline and is more reliable
+                                </p>
                             </div>
                         </div>
                     </motion.div>
@@ -379,7 +337,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
                     </div>
 
                     {/* Transcript */}
-                    {transcript && (
+                    {transcript && transcript !== 'Listening...' && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -406,7 +364,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
                 {/* Footer */}
                 <footer className="h-16 border-t border-border flex items-center justify-center px-6">
                     <p className="text-sm text-muted-foreground">
-                        {useBackendTTS ? `Gemini TTS • ${selectedVoice} voice` : 'Web Speech API'} • {LANGUAGES.find(l => l.code === selectedLanguage)?.name}
+                        OpenRouter AI • {useGeminiTTS ? 'Gemini TTS' : 'Web Speech API'}
                     </p>
                 </footer>
             </motion.div>
