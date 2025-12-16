@@ -2,9 +2,13 @@
  * TTS API Edge Function - Gemini Text-to-Speech
  * 
  * Uses Google's Gemini 2.5 Flash TTS for natural voice synthesis
+ * Latest model: gemini-2.5-flash-preview-tts
  * Supports 24+ languages including Indian languages
  * 
  * Endpoint: POST /api/tts
+ * 
+ * @version 2.0.0
+ * @date December 2025
  */
 
 export const config = {
@@ -18,14 +22,44 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// Available voices
-const VOICES = {
-    'Puck': 'Puck',      // Upbeat, energetic
-    'Charon': 'Charon',  // Deep, calm
-    'Kore': 'Kore',      // Clear, friendly
-    'Fenrir': 'Fenrir',  // Strong, confident
-    'Aoede': 'Aoede',    // Warm, expressive
+// Latest Gemini TTS Models (December 2025)
+const TTS_MODELS = {
+    // Gemini 2.5 Flash TTS - Fast, high quality
+    flash: 'gemini-2.5-flash-preview-tts',
+    // Gemini 2.5 Pro TTS - Highest quality
+    pro: 'gemini-2.5-pro-preview-tts',
+    // Gemini 2.5 Flash Native Audio - Real-time, conversational
+    native: 'gemini-2.5-flash-native-audio-preview-12-2025',
 };
+
+// Available voices (30+ options)
+const VOICES = {
+    // Upbeat & Energetic
+    'Puck': 'Puck',
+    'Charon': 'Charon',
+
+    // Clear & Friendly
+    'Kore': 'Kore',
+    'Fenrir': 'Fenrir',
+
+    // Warm & Expressive
+    'Aoede': 'Aoede',
+    'Leda': 'Leda',
+
+    // Professional
+    'Orus': 'Orus',
+    'Zephyr': 'Zephyr',
+};
+
+// Supported languages
+const SUPPORTED_LANGUAGES = [
+    'en-US', 'en-GB', 'en-AU', 'en-IN',
+    'hi-IN', 'mr-IN', 'ta-IN', 'te-IN', 'bn-BD', 'bn-IN',
+    'gu-IN', 'kn-IN', 'ml-IN', 'pa-IN', 'ur-PK',
+    'es-ES', 'es-MX', 'fr-FR', 'de-DE', 'it-IT', 'pt-BR', 'pt-PT',
+    'ja-JP', 'ko-KR', 'zh-CN', 'zh-TW',
+    'ar-SA', 'ru-RU', 'pl-PL', 'nl-NL', 'sv-SE',
+];
 
 export default async function handler(req) {
     // Handle CORS preflight
@@ -52,7 +86,8 @@ export default async function handler(req) {
         return new Response(JSON.stringify({
             success: false,
             error: 'GOOGLE_API_KEY not configured',
-            message: 'Premium TTS requires GOOGLE_API_KEY in Vercel environment variables'
+            message: 'Premium TTS requires GOOGLE_API_KEY in Vercel environment variables',
+            fallback: true
         }), {
             status: 503,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -61,7 +96,14 @@ export default async function handler(req) {
 
     try {
         const body = await req.json();
-        const { text, voice = 'Puck', language } = body;
+        const {
+            text,
+            voice = 'Puck',
+            language = 'en-US',
+            model = 'flash',
+            style = null,
+            speed = 1.0
+        } = body;
 
         if (!text || text.trim().length === 0) {
             return new Response(JSON.stringify({
@@ -73,22 +115,34 @@ export default async function handler(req) {
             });
         }
 
-        // Use Gemini TTS API
+        // Select TTS model
+        const selectedModel = TTS_MODELS[model] || TTS_MODELS.flash;
+        const selectedVoice = VOICES[voice] || 'Puck';
+
+        console.log(`[TTS] Model: ${selectedModel}, Voice: ${selectedVoice}, Language: ${language}`);
+
+        // Build the prompt with style instructions if provided
+        let prompt = text;
+        if (style) {
+            prompt = `[Speaking style: ${style}] ${text}`;
+        }
+
+        // Use Gemini TTS API with latest model
         const ttsResponse = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     contents: [{
-                        parts: [{ text: `Speak the following text naturally: "${text}"` }]
+                        parts: [{ text: prompt }]
                     }],
                     generationConfig: {
                         responseModalities: ["AUDIO"],
                         speechConfig: {
                             voiceConfig: {
                                 prebuiltVoiceConfig: {
-                                    voiceName: VOICES[voice] || 'Puck'
+                                    voiceName: selectedVoice
                                 }
                             }
                         }
@@ -99,12 +153,24 @@ export default async function handler(req) {
 
         if (!ttsResponse.ok) {
             const errorText = await ttsResponse.text();
-            console.error('[TTS] Gemini API error:', errorText);
+            console.error('[TTS] Gemini API error:', ttsResponse.status, errorText);
 
-            // If Gemini TTS fails, return a message that browser TTS should be used
+            // Try fallback to flash model if pro fails
+            if (model === 'pro') {
+                console.log('[TTS] Trying fallback to flash model...');
+                // Recursively try with flash model
+                const fallbackBody = { ...body, model: 'flash' };
+                const fallbackReq = new Request(req.url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fallbackBody)
+                });
+                return handler(fallbackReq);
+            }
+
             return new Response(JSON.stringify({
                 success: false,
-                error: 'Gemini TTS unavailable',
+                error: `Gemini TTS error: ${ttsResponse.status}`,
                 fallback: true
             }), {
                 status: 503,
@@ -114,11 +180,12 @@ export default async function handler(req) {
 
         const data = await ttsResponse.json();
 
-        // Check if we got audio data
+        // Extract audio data
         const audioData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        const mimeType = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType || 'audio/wav';
 
         if (!audioData) {
-            // No audio generated, fallback to text response
+            console.error('[TTS] No audio in response:', JSON.stringify(data).substring(0, 200));
             return new Response(JSON.stringify({
                 success: false,
                 error: 'No audio generated',
@@ -129,11 +196,15 @@ export default async function handler(req) {
             });
         }
 
+        console.log(`[TTS] Success! Audio generated with ${selectedModel}`);
+
         return new Response(JSON.stringify({
             success: true,
             audio: audioData,
-            format: 'wav',
-            voice: voice
+            format: mimeType.replace('audio/', ''),
+            voice: selectedVoice,
+            model: selectedModel,
+            language: language
         }), {
             status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

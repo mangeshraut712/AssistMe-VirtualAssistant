@@ -53,10 +53,18 @@ const LANGUAGES = {
     'bn-BD': { name: 'Bengali', nativeName: 'বাংলা', flag: '🇧🇩', geminiCode: 'bn-BD' },
 };
 
-// TTS Modes
+// TTS Modes - Premium uses Gemini 2.5 Flash TTS
 const TTS_MODES = {
-    standard: { name: 'Standard', description: 'Browser TTS (fast, offline)' },
-    premium: { name: 'Premium', description: 'Gemini TTS (natural, 24 languages)' },
+    standard: {
+        name: 'Standard',
+        description: 'Browser TTS (fast, offline)',
+        model: null
+    },
+    premium: {
+        name: 'Premium',
+        description: 'Gemini 2.5 TTS (natural, 24+ languages)',
+        model: 'flash'
+    },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -178,7 +186,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     // Try backend TTS (Gemini 2.5 Flash TTS - supports Indian languages)
     const speakWithBackend = useCallback(async (text, langCode, onEnd) => {
         try {
-            console.log('[TTS] Trying backend TTS for:', langCode);
+            console.log('[TTS] Trying Gemini 2.5 TTS for:', langCode);
 
             const response = await fetch('/api/tts', {
                 method: 'POST',
@@ -186,7 +194,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                 body: JSON.stringify({
                     text: text,
                     voice: 'Puck',
-                    auto_emotion: true,
+                    language: langCode,
+                    model: 'flash', // Gemini 2.5 Flash TTS
                 })
             });
 
