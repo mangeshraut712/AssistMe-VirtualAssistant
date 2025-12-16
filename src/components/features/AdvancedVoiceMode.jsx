@@ -45,6 +45,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     // Audio Context for Native Streaming
     const audioCtxRef = useRef(null);
     const nextAudioTimeRef = useRef(0);
+    const currentAudioRef = useRef(null); // For Standard Mode HTMLAudioElement
 
     // =========================================================================
     // 🔊 Audio Engine (TTS & STT)
@@ -143,6 +144,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         if (synthRef.current) {
             synthRef.current.cancel();
         }
+        if (currentAudioRef.current) {
+            currentAudioRef.current.pause();
+            currentAudioRef.current = null;
+        }
         if (status === 'speaking') {
             setStatus('idle');
         }
@@ -154,6 +159,26 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             });
         }
     }, [status]);
+
+    // Play WAV/MP3 Base64 (Standard Mode)
+    const playAudio = useCallback((base64Audio) => {
+        if (currentAudioRef.current) currentAudioRef.current.pause();
+
+        const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
+        currentAudioRef.current = audio;
+
+        audio.onplay = () => setStatus('speaking');
+        audio.onended = () => {
+            setStatus('idle');
+            currentAudioRef.current = null;
+        };
+        audio.onerror = () => {
+            setStatus('idle');
+            currentAudioRef.current = null;
+        };
+
+        audio.play().catch(e => console.error("Audio Playback Error:", e));
+    }, []);
 
     // Native PCM Player (16-bit, 24kHz usually)
     const playPCMChunk = useCallback((base64Data) => {
@@ -220,33 +245,22 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         // Optimistic update
         const newHistory = [...conversation, { role: 'user', content: userText }];
         setConversation(newHistory);
-        setTranscript(userText); // Show final result
+        setTranscript(userText);
 
         try {
-            // Prepare messages for API with Voice System Instruction
-            const systemInstruction = {
-                role: 'system',
-                content: `You are AssistMe's Voice Mode. 
-                CRITICAL INSTRUCTIONS:
-                1. ${DIRECTOR_PROMPTS[voiceStyle]}
-                2. Keep responses BRIEF and CONVERSATIONAL (1-3 sentences max).
-                3. Do NOT use markdown (no bold, no lists, no code blocks). 
-                4. Speak naturally, using common contractions (I'm, It's).
-                5. Avoid long monologues. Ask follow-up questions if needed.`
-            };
-
-            const apiMessages = [
-                systemInstruction,
-                ...newHistory.slice(-6).map(m => ({ role: m.role, content: m.content })),
-                { role: 'user', content: userText }
-            ];
-
-            const response = await fetch(`${backendUrl}/api/chat/text`, {
+            // Updated Endpoint: Uses Backend Pipeline (LLM + Premium TTS)
+            const response = await fetch(`${backendUrl}/api/tts/voice-response`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: apiMessages,
-                    model: 'google/gemini-2.0-flash-001:free'
+                    message: userText,
+                    conversation_history: newHistory.slice(-6).map(m => ({
+                        role: m.role || "user",
+                        content: m.content || ""
+                    })),
+                    voice: "Puck", // Default Voice
+                    language: "en-US",
+                    stt_confidence: 1.0
                 })
             });
 
@@ -254,14 +268,17 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
             const data = await response.json();
             const aiReply = data.response || "I didn't quite catch that.";
+            const audioBase64 = data.audio;
 
             setAiText(aiReply);
             setConversation([...newHistory, { role: 'assistant', content: aiReply }]);
 
-            // Auto-speak with interruptible chunks
-            speak(aiReply, () => {
-                setStatus('idle'); // Resume listening logic
-            });
+            if (audioBase64) {
+                playAudio(audioBase64);
+            } else {
+                // Fallback if no audio returned
+                speak(aiReply, () => setStatus('idle'));
+            }
 
         } catch (err) {
             console.error(err);
