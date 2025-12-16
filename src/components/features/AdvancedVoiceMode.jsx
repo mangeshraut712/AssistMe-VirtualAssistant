@@ -56,6 +56,35 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
         }
     }, [backendUrl]);
 
+    // Generate AI Response using backend
+    const generateAIResponse = useCallback(async (userMessage) => {
+        try {
+            const response = await fetch(`${backendUrl}/api/tts/voice-response`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: userMessage,
+                    voice: selectedVoice,
+                    language: selectedLanguage,
+                    conversation_history: [],
+                    stt_confidence: 1.0
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to get AI response');
+            }
+
+            const data = await response.json();
+            return data.response || data.text || "I didn't quite catch that.";
+        } catch (error) {
+            console.error('AI Response Error:', error);
+            throw error;
+        }
+    }, [backendUrl, selectedVoice, selectedLanguage]);
+
     // Speech Recognition (STT)
     const startListening = useCallback(() => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -80,15 +109,22 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
             setTranscript(text);
             setIsListening(false);
 
-            // Generate response
-            const aiResponse = `You said: ${text}. This is a demo response.`;
-            setResponse(aiResponse);
+            // Generate AI response using backend
+            try {
+                const aiResponse = await generateAIResponse(text);
+                setResponse(aiResponse);
 
-            // Speak response
-            if (useBackendTTS && apiClient.current) {
-                await speakWithBackend(aiResponse);
-            } else {
-                speakWithBrowser(aiResponse);
+                // Speak response
+                if (useBackendTTS && backendUrl) {
+                    await speakWithBackend(aiResponse);
+                } else {
+                    speakWithBrowser(aiResponse);
+                }
+            } catch (error) {
+                console.error('AI response error:', error);
+                const fallbackResponse = "I'm sorry, I couldn't process that. Please try again.";
+                setResponse(fallbackResponse);
+                speakWithBrowser(fallbackResponse);
             }
         };
 
@@ -104,7 +140,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
 
         recognitionRef.current = recognition;
         recognition.start();
-    }, [selectedLanguage, useBackendTTS]);
+    }, [selectedLanguage, useBackendTTS, backendUrl, generateAIResponse]);
 
     const stopListening = useCallback(() => {
         if (recognitionRef.current) {
