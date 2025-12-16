@@ -158,26 +158,81 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     }, [conversation, aiResponse]);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // TEXT TO SPEECH
+    // TEXT TO SPEECH - Hybrid: Backend for Indian languages, Browser for English
     // ─────────────────────────────────────────────────────────────────────────
 
-    const speak = useCallback((text, onEnd) => {
-        if (!synthRef.current || !text || isMuted) {
-            console.log('[TTS] Skipping - muted or no text');
+    // Check if language is Indian (needs backend TTS)
+    const isIndicLanguage = (lang) => ['hi-IN', 'mr-IN', 'ta-IN', 'te-IN', 'bn-BD'].includes(lang);
+
+    // Try backend TTS (Gemini 2.5 Flash TTS - supports Indian languages)
+    const speakWithBackend = useCallback(async (text, langCode, onEnd) => {
+        try {
+            console.log('[TTS] Trying backend TTS for:', langCode);
+
+            const response = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: text,
+                    voice: 'Puck',
+                    auto_emotion: true,
+                })
+            });
+
+            if (!response.ok) {
+                console.log('[TTS] Backend failed, status:', response.status);
+                return false;
+            }
+
+            const data = await response.json();
+            if (!data.success || !data.audio) {
+                console.log('[TTS] No audio in response');
+                return false;
+            }
+
+            // Play the audio
+            console.log('[TTS] Playing backend audio');
+            setStatus('speaking');
+
+            const audioData = `data:audio/wav;base64,${data.audio}`;
+            const audio = new Audio(audioData);
+
+            audio.onended = () => {
+                console.log('[TTS] Backend audio ended');
+                setStatus('idle');
+                if (onEnd) onEnd();
+            };
+
+            audio.onerror = (e) => {
+                console.error('[TTS] Audio playback error:', e);
+                setStatus('idle');
+                if (onEnd) onEnd();
+            };
+
+            await audio.play();
+            return true;
+
+        } catch (e) {
+            console.error('[TTS] Backend error:', e);
+            return false;
+        }
+    }, []);
+
+    // Browser TTS (for English)
+    const speakWithBrowser = useCallback((text, onEnd) => {
+        if (!synthRef.current) {
             if (onEnd) onEnd();
             return;
         }
 
-        // Cancel any ongoing speech
         synthRef.current.cancel();
-
         const cleanText = normalizeForSpeech(text);
         if (!cleanText) {
             if (onEnd) onEnd();
             return;
         }
 
-        console.log('[TTS] Speaking:', cleanText.substring(0, 50) + '...');
+        console.log('[TTS] Browser TTS:', cleanText.substring(0, 50) + '...');
 
         const utterance = new SpeechSynthesisUtterance(cleanText);
         const personaConfig = PERSONAS[persona] || PERSONAS.default;
@@ -186,33 +241,57 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         utterance.pitch = personaConfig.pitch;
         utterance.volume = 1.0;
 
-        // Try to get a good English voice
+        // Find best voice for the language
         const voices = synthRef.current.getVoices();
-        const englishVoice = voices.find(v =>
-            v.lang.startsWith('en') && (v.name.includes('Samantha') || v.name.includes('Google') || v.name.includes('Microsoft'))
-        ) || voices.find(v => v.lang.startsWith('en'));
+        const langPrefix = language.split('-')[0];
 
-        if (englishVoice) utterance.voice = englishVoice;
+        let voice = voices.find(v => v.lang.startsWith(langPrefix));
+        if (!voice && language !== 'en-US') {
+            // Fallback to English if no voice for selected language
+            voice = voices.find(v => v.lang.startsWith('en'));
+        }
+        if (voice) utterance.voice = voice;
 
         utterance.onstart = () => {
-            console.log('[TTS] Started speaking');
             setStatus('speaking');
         };
 
         utterance.onend = () => {
-            console.log('[TTS] Finished speaking');
             setStatus('idle');
             if (onEnd) onEnd();
         };
 
-        utterance.onerror = (e) => {
-            console.error('[TTS] Error:', e);
+        utterance.onerror = () => {
             setStatus('idle');
             if (onEnd) onEnd();
         };
 
         synthRef.current.speak(utterance);
-    }, [isMuted, persona]);
+    }, [persona, language]);
+
+    // Main speak function - hybrid approach
+    const speak = useCallback(async (text, onEnd) => {
+        if (!text || isMuted) {
+            console.log('[TTS] Skipping - muted or no text');
+            if (onEnd) onEnd();
+            return;
+        }
+
+        // For Indian languages, try backend TTS first
+        if (isIndicLanguage(language)) {
+            const success = await speakWithBackend(text, language, onEnd);
+            if (success) return;
+
+            // If backend fails, show text (browser can't speak Indic well)
+            console.log('[TTS] Backend unavailable, showing text only');
+            setStatus('idle');
+            if (onEnd) onEnd();
+            return;
+        }
+
+        // For English, use browser TTS
+        speakWithBrowser(text, onEnd);
+    }, [isMuted, language, speakWithBackend, speakWithBrowser]);
 
     const stopSpeaking = useCallback(() => {
         synthRef.current?.cancel();
