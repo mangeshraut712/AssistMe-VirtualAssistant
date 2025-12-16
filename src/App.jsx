@@ -424,9 +424,7 @@ function App() {
                                     <AdvancedVoiceMode
                                         isOpen={true}
                                         onClose={() => navigate('/')}
-                                        onSendMessage={handleVoiceConversation}
-                                        settings={settings}
-                                        selectedModel={selectedModel}
+                                        backendUrl={settings.backendUrl}
                                     />
                                 </Suspense>
                             }
