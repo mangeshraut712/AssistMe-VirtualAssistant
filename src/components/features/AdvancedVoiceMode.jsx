@@ -28,15 +28,23 @@ const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
     // Get AI response using OpenRouter (same as chat)
     const getAIResponse = useCallback(async (userMessage) => {
         try {
+            // Build messages array with conversation history
+            const messages = [
+                ...conversationHistory.slice(-6).map(msg => ({
+                    role: msg.role,
+                    content: msg.content
+                })),
+                { role: 'user', content: userMessage }
+            ];
+
             const response = await fetch(`${backendUrl}/api/chat/text`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    message: userMessage,
-                    model: 'google/gemini-2.0-flash-001',
-                    conversation_history: conversationHistory.slice(-6) // Last 3 exchanges
+                    messages: messages,
+                    model: 'google/gemini-2.0-flash-001:free'
                 })
             });
 
