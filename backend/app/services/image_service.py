@@ -5,6 +5,8 @@ import logging
 import os
 import httpx
 import re
+import random
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -21,47 +23,126 @@ class ImageService:
     async def generate_image(
         self, 
         prompt: str, 
-        model: str = "dall-e-3", 
+        model: str = "flux", 
         size: str = "1024x1024",
-        quality: str = "standard"
+        quality: str = "standard",
+        style: Optional[str] = None
     ) -> str:
         """
         Generate an image based on the prompt.
         
         Args:
             prompt: Text description of the image
-            model: Model to use ("dall-e-3", "google/gemini-2.0-flash-001", etc.)
-            size: Image size ("1024x1024", "1024x1792", or "1792x1024")
-            quality: Image quality ("standard" or "hd")
+            model: Model to use ("flux", "dall-e-3", etc.)
+            size: Image size ("1024x1024", "1024x1792", etc.)
+            quality: Image quality for DALL-E
+            style: Optional artistic style
             
         Returns:
             URL of the generated image
         """
-        logger.info(f"Generating image with {model} for prompt: {prompt}")
+        # Enhance prompt using Gemini if possible
+        enhanced_prompt = await self._enhance_prompt(prompt)
+        logger.info(f"Generating image with {model}. Original: '{prompt}' -> Enhanced: '{enhanced_prompt[:50]}...'")
         
+        # Pollinations (Free Models)
+        if model in ["flux", "flux-realism", "flux-anime", "flux-3d", "turbo"]:
+            return await self._generate_pollinations(enhanced_prompt, model, size, style)
+            
+        # DALL-E
         if model.startswith("dall-e") and self.use_dalle:
             try:
-                return await self._generate_dalle(prompt, model, size, quality)
+                return await self._generate_dalle(enhanced_prompt, model, size, quality)
             except Exception as e:
                 logger.error(f"DALL-E generation failed: {e}")
                 return self._placeholder_image(prompt)
+                
+        # OpenRouter
         elif self.use_openrouter:
             try:
-                return await self._generate_openrouter(prompt, model, size)
+                return await self._generate_openrouter(enhanced_prompt, model, size)
             except Exception as e:
                 logger.error(f"OpenRouter generation failed with {model}: {e}")
-                # Fallback to a reliable model if the specific model fails
-                if model != "stabilityai/stable-diffusion-xl":
-                    logger.info("Retrying with stabilityai/stable-diffusion-xl...")
-                    try:
-                        return await self._generate_openrouter(prompt, "stabilityai/stable-diffusion-xl", size)
-                    except Exception as retry_e:
-                        logger.error(f"Fallback generation failed: {retry_e}")
-                
                 return self._placeholder_image(prompt)
         else:
             logger.warning("No API key configured, using placeholder")
             return self._placeholder_image(prompt)
+
+    async def _enhance_prompt(self, prompt: str) -> str:
+        """Enhance prompt using Gemini 2.0 Flash via OpenRouter."""
+        if not self.use_openrouter:
+            return prompt
+            
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.openrouter_api_key}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://assistme.app"
+                    },
+                    json={
+                        "model": "google/gemini-2.0-flash-exp:free",
+                        "messages": [{
+                            "role": "user",
+                            "content": f"Refine this image prompt to be more descriptive and artistic for an AI image generator. concise, high quality. Prompt: '{prompt}'. Output ONLY the improved prompt text."
+                        }]
+                    }
+                )
+                if response.status_code == 200:
+                    content = response.json()["choices"][0]["message"]["content"]
+                    return content.strip('" ')
+        except Exception as e:
+            logger.warning(f"Prompt enhancement failed: {e}")
+            
+        return prompt
+
+    async def _generate_pollinations(self, prompt: str, model: str, size: str, style: Optional[str]) -> str:
+        """Generate image using Pollinations.ai (Free)."""
+        # Parse size
+        width, height = 1024, 1024
+        try:
+            w, h = size.split('x')
+            width, height = int(w), int(h)
+        except:
+            pass
+            
+        # Apply style
+        final_prompt = prompt
+        if style and style != 'none':
+            style_map = {
+                'photorealistic': 'photorealistic, highly detailed, 8k',
+                'digital-art': 'digital art, vibrant colors, detailed',
+                'anime': 'anime style, japanese animation, colorful',
+                'oil-painting': 'oil painting, classical art, brushstrokes',
+                '3d-render': '3D render, octane render, volumetric lighting',
+                'watercolor': 'watercolor painting, soft colors, artistic',
+                'minimalist': 'minimalist, clean, simple, modern design'
+            }
+            if style in style_map:
+                final_prompt = f"{prompt}, {style_map[style]}"
+        
+        # Model specific params
+        url_suffix = ""
+        if model == "flux-realism":
+            url_suffix = "&model=flux-realism"
+        elif model == "flux-anime":
+            url_suffix = "&model=flux-anime"
+            final_prompt += ", anime style"
+        elif model == "flux-3d":
+            url_suffix = "&model=flux-3d"
+            final_prompt += ", 3D render"
+        elif model == "turbo":
+            url_suffix = "&model=turbo"
+
+        encoded = quote(final_prompt)
+        seed = random.randint(0, 1000000)
+        
+        image_url = f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&seed={seed}&nologo=true{url_suffix}"
+        
+        logger.info(f"Generated Pollinations URL: {image_url}")
+        return image_url
     
     async def _generate_dalle(
         self, 

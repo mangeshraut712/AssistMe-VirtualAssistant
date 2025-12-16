@@ -8,8 +8,9 @@ router = APIRouter(prefix="/api/images", tags=["images"])
 
 class ImageGenRequest(BaseModel):
     prompt: str
-    model: Optional[str] = "dall-e-3"
+    model: Optional[str] = "flux"
     size: Optional[str] = "1024x1024"
+    style: Optional[str] = None
 
 @router.post("/generate")
 async def generate_image(request: ImageGenRequest):
@@ -18,7 +19,8 @@ async def generate_image(request: ImageGenRequest):
         image_url = await image_service.generate_image(
             prompt=request.prompt,
             model=request.model,
-            size=request.size
+            size=request.size,
+            style=request.style
         )
         return {
             "success": True, 
