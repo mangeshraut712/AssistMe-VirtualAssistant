@@ -224,6 +224,37 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     }, [status]);
 
     // 3. Logic - Standard Mode
+    // Fallback: Use standard Chat API + Browser TTS (Works on Vercel without Python backend)
+    const fallbackStandardResponse = async (userText, newHistory) => {
+        try {
+            console.log("Switching to Client-Side Fallback...");
+            const response = await fetch('/api/chat/text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: "system", content: `You are AssistMe (Voice Mode). ${DIRECTOR_PROMPTS[voiceStyle] || ""} Keep responses concise (max 2 sentences). Do not use markdown.` },
+                        ...newHistory.map(m => ({ role: m.role || "user", content: m.content || "" }))
+                    ],
+                    model: "meta-llama/llama-3.3-70b-instruct:free" // Fast, free model for voice
+                })
+            });
+
+            if (!response.ok) throw new Error('Chat API Failed');
+            const data = await response.json();
+            const aiReply = data.response || "I am listening.";
+
+            setAiText(aiReply);
+            setConversation([...newHistory, { role: 'assistant', content: aiReply }]);
+            speak(aiReply, () => setStatus('idle'));
+
+        } catch (e) {
+            console.error("Fallback failed", e);
+            setAiText("I'm having trouble connecting. Please check your network.");
+            setStatus('idle');
+        }
+    };
+
     const handleStandardResponse = async (userText) => {
         if (!userText.trim()) return;
         setStatus('processing');
@@ -233,6 +264,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         setConversation(newHistory);
 
         try {
+            // Try Dedicated Python Voice Backend First (High Quality)
             const response = await fetch(`${backendUrl}/api/tts/voice-response`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -245,12 +277,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                 })
             });
 
-            if (response.status === 404) {
-                console.warn("Backend TTS not found (404). Falling back to browser TTS.");
-                const fallbackText = "I cannot reach the voice backend, so I am using my backup voice. Please check your Backend URL settings.";
-                setAiText(fallbackText);
-                setConversation([...newHistory, { role: 'assistant', content: fallbackText }]);
-                speak(fallbackText, () => setStatus('idle'));
+            // If Backend missing (Vercel), use Smart Fallback
+            if (response.status === 404 || response.status === 503) {
+                console.warn("Voice Backend unreachable. Using Smart Fallback.");
+                await fallbackStandardResponse(userText, newHistory);
                 return;
             }
 
@@ -264,10 +294,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             else speak(aiReply, () => setStatus('idle'));
 
         } catch (err) {
-            console.error(err);
-            const errorMsg = "Network error. Switching to basic voice.";
-            setAiText(errorMsg);
-            speak(errorMsg, () => setStatus('idle'));
+            console.error("Primary Voice API failed, trying fallback...", err);
+            await fallbackStandardResponse(userText, newHistory);
         }
     };
 
