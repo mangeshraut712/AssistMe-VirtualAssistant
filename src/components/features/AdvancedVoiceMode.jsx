@@ -43,9 +43,11 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     const messagesEndRef = useRef(null);
     const statusRef = useRef(status); // Keep status in sync
     const recorderRef = useRef(null); // For Native Audio Input
+    const transcriptRef = useRef(""); // Latest transcript for callbacks
 
-    // Sync status ref
+    // Sync status & transcript
     useEffect(() => { statusRef.current = status; }, [status]);
+    useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
 
     // Audio Context for Native Streaming
     const audioCtxRef = useRef(null);
@@ -112,7 +114,6 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     // =========================================================================
 
     // Clean text for better TTS
-    // ... rest of the file
     const cleanTextForTTS = (text) => {
         return text.replace(/[*#`]/g, '') // Remove markdown
             .replace(/https?:\/\/\S+/g, 'a link'); // Remove URLs
@@ -302,19 +303,20 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         if (!userText.trim()) return;
 
         setStatus('processing');
+        // Clear transcript for next turn
+        setTranscript('');
 
         // Map visual style to Gemini Voice ID
         const VOICE_MAP = {
-            friendly: "Kore",     // Warm
-            professional: "Charon", // Authoritative
-            empathetic: "Erato",  // Emotional
-            energetic: "Io"       // Playful
+            friendly: "Kore",
+            professional: "Charon",
+            empathetic: "Erato",
+            energetic: "Io"
         };
 
         // Optimistic update
         const newHistory = [...conversation, { role: 'user', content: userText }];
         setConversation(newHistory);
-        setTranscript(userText);
 
         try {
             // Updated Endpoint: Uses Backend Pipeline (LLM + Premium TTS)
@@ -351,7 +353,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
         } catch (err) {
             console.error(err);
-            setAiText("Available quota exceeded or network error.");
+            setAiText("Network error or quota exceeded.");
             setStatus('idle');
         }
     };
@@ -366,21 +368,19 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
             // 1. Fetch Key
             const res = await fetch(`${backendUrl}/api/gemini/key`);
-            if (!res.ok) throw new Error('Failed to fetch Gemini API Key from backend');
+            if (!res.ok) throw new Error('Failed to fetch Gemini API Key');
             const { apiKey } = await res.json();
 
-            if (!apiKey) throw new Error('API Key is empty. Check backend config.');
+            if (!apiKey) throw new Error('API Key is empty.');
 
             // 2. Connect WebSocket (v1alpha for Live API)
             const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
-            console.log('Connecting to Gemini Live...');
 
             stopAudioStream(); // Ensure clean slate
 
             const ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
-                console.log('Gemini Live Connected');
                 setStatus('listening'); // Start "Listening" immediately for streaming
 
                 // Initialize Audio Context for 24kHz PCM Output
@@ -396,7 +396,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
                         },
                         systemInstruction: {
-                            parts: [{ text: `You are a helpful assistant. ${DIRECTOR_PROMPTS[voiceStyle]} Keep responses under 3 sentences.` }]
+                            parts: [{ text: `You are AssistMe. ${DIRECTOR_PROMPTS[voiceStyle]} Keep responses concise.` }]
                         }
                     }
                 }));
@@ -416,20 +416,11 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
                 // 2. Handle Audio (Native PCM)
                 const audioData = data.serverContent?.modelTurn?.parts?.[0]?.inlineData;
-                if (audioData && audioData.mimeType.startsWith('audio/pcm')) {
-                    playPCMChunk(audioData.data);
-                }
+                if (audioData) playPCMChunk(audioData.data);
 
                 // 3. Handle Interruption (Barge-in)
                 if (data.serverContent?.interrupted) {
-                    console.log("Interrupted by user");
-                    // Clear buffer
-                    if (audioCtxRef.current) {
-                        // We can't easily clear buffer, but we can close/reopen or suspend
-                        // For now, simpler to just let it finish current chunk or rely on nextAudioTimeRef adjustment
-                        // Or just visually show it.
-                    }
-                    setAiText(""); // Clear text on interrupt
+                    // console.log("Interrupted");
                 }
 
                 // 4. Handle Turn Completion
@@ -442,14 +433,13 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             };
 
             ws.onerror = (e) => {
-                console.error('Gemini WebSocket Error:', e);
+                console.error('WS Error', e);
                 setStatus('error');
-                setAiText("Connection Error: Check API Key or Quota.");
+                setAiText("Connection Failed.");
                 stopAudioStream();
             };
 
             ws.onclose = () => {
-                console.log('Gemini WebSocket Closed');
                 stopAudioStream();
             };
 
@@ -457,7 +447,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         } catch (e) {
             console.error(e);
             setStatus('error');
-            setAiText(`Connection Failed: ${e.message}`);
+            setAiText(e.message);
         }
     }, [backendUrl, mode, voiceStyle, startAudioStream, stopAudioStream, playPCMChunk]);
 
@@ -466,8 +456,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     // =========================================================================
 
     const startRecognition = useCallback(() => {
-        if (statusRef.current === 'speaking' || statusRef.current === 'processing') return;
-        if (mode !== 'standard') return; // Only for Standard Mode
+        if (mode !== 'standard') return;
+        if (statusRef.current === 'processing' || statusRef.current === 'speaking') return;
 
         const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!Speech) return;
@@ -483,8 +473,6 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         recognition.onstart = () => {
             // Only update if not already
             if (statusRef.current === 'idle') setStatus('listening');
-            playSound('listening');
-            if (navigator.vibrate) navigator.vibrate(20);
         };
 
         recognition.onresult = (e) => {
@@ -495,35 +483,27 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = setTimeout(() => {
                 recognition.stop(); // Stop manually to trigger processing
-            }, SILENCE_TIMEOUT);
+            }, 1000); // 1s silence = done
         };
 
         recognition.onend = () => {
-            // Native onend
+            // Check LATEST transcript via Ref
+            const finalTranscript = transcriptRef.current;
+
+            if (statusRef.current === 'listening' && finalTranscript.trim().length > 1) {
+                handleStandardResponse(finalTranscript);
+            } else if (statusRef.current === 'listening') {
+                // Restart
+                setTimeout(() => {
+                    if (statusRef.current === 'listening') recognition.start();
+                }, 100);
+            }
         };
 
         recognitionRef.current = recognition;
         try { recognition.start(); } catch (e) { /* Ignore start error if already started */ }
 
     }, [mode]);
-
-    // Handle "Final Result" processing when recognition stops
-    useEffect(() => {
-        const recognition = recognitionRef.current;
-        if (!recognition || mode !== 'standard') return;
-
-        recognition.onend = () => {
-            // Check Ref for current status, not captured closure
-            if (statusRef.current === 'listening' && transcript.trim().length > 1) {
-                handleStandardResponse(transcript);
-            } else if (statusRef.current === 'listening') {
-                // Restart if silence/noise
-                setTimeout(() => {
-                    if (statusRef.current === 'listening' && mode === 'standard') recognition.start();
-                }, 200);
-            }
-        };
-    }, [transcript, mode]); // Depend on transcript so we have latest value in closure
 
     // Auto-Effect: When 'idle' and Standard Mode, start listening
     useEffect(() => {
