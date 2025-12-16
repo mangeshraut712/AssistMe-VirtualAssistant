@@ -487,7 +487,8 @@ class GeminiVoiceService:
                 "response": text_response,
                 "audio": None,
                 "voice": voice,
-                "tts_error": True
+                "tts_error": True,
+                "error_details": str(e)
             }
         
         logger.info(f"[Complete] Voice pipeline success")
@@ -576,7 +577,7 @@ Remember: Your response will be spoken aloud by Gemini TTS."""
             "contents": messages,
             "generationConfig": {
                 "temperature": 0.7,
-                "maxOutputTokens": 100,  # Reduced for stricter length control
+                "maxOutputTokens": 256,  # Increased for better thought completion
                 "topP": 0.9,
                 "topK": 40,
             }
