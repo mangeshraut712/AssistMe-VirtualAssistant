@@ -1,37 +1,88 @@
 /**
- * Grokipedia - AI-Powered Encyclopedia
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * GROKIPEDIA - AI-Powered Encyclopedia
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * Features:
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * ✓ Real-time streaming with Grok AI
- * ✓ Wikipedia-style article structure
- * ✓ Interactive Table of Contents
- * ✓ Related topics suggestions
- * ✓ Copy & Share functionality
- * ✓ Reading time estimation
- * ✓ Source citations
- * ✓ Quick facts sidebar
- * ✓ Image suggestions
+ * - Real-time streaming with multiple AI models
+ * - Model selection (Free & Premium)
+ * - Wikipedia-style articles with TOC
+ * - Related topics & Quick facts
+ * - Search history
  * 
- * Design: Minimalist Wikipedia + Modern Glass UI
+ * @version 2.0.0
+ * @date December 2025
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Search, Clock, BookOpen, ChevronRight,
-    Sparkles, Copy, Check, Bookmark,
-    BookmarkCheck, ArrowUp, Info, Link2,
-    FileText, History, TrendingUp
+    X, Search, BookOpen, Clock, ChevronUp, ChevronDown, ChevronRight,
+    ListOrdered, Tags, Zap, Copy, Check, Share2,
+    Sparkles, TrendingUp, History, Crown, Brain
 } from 'lucide-react';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import { createApiClient } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
+import { useLocalStorage } from '@/lib/hooks';
 
-// ============================================================================
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Available Models for Grokipedia
+const MODELS = {
+    // Free Models (via OpenRouter)
+    'gemini-free': {
+        id: 'google/gemini-2.0-flash-exp:free',
+        name: 'Gemini 2.0 Flash',
+        description: 'Fast, 1M context',
+        icon: Zap,
+        free: true
+    },
+    'qwen-free': {
+        id: 'qwen/qwen3-235b-a22b:free',
+        name: 'Qwen 3 235B',
+        description: 'Large, research-focused',
+        icon: Brain,
+        free: true
+    },
+    'deepseek-free': {
+        id: 'nex-agi/deepseek-v3.1-nex-n1:free',
+        name: 'DeepSeek V3.1',
+        description: 'Reasoning model',
+        icon: Sparkles,
+        free: true
+    },
+    'deepresearch-free': {
+        id: 'alibaba/tongyi-deepresearch-30b-a3b:free',
+        name: 'Deep Research',
+        description: 'Research optimized',
+        icon: BookOpen,
+        free: true
+    },
+    // Premium Models
+    'grok-fast': {
+        id: 'x-ai/grok-4.1-fast',
+        name: 'Grok 4.1 Fast',
+        description: '2M context (Premium)',
+        icon: Crown,
+        free: false
+    },
+    'grok-4': {
+        id: 'x-ai/grok-4',
+        name: 'Grok 4',
+        description: 'Most capable (Premium)',
+        icon: Crown,
+        free: false
+    }
+};
+
+// Default model
+const DEFAULT_MODEL = 'gemini-free';
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ANIMATION VARIANTS
-// ============================================================================
+// ═══════════════════════════════════════════════════════════════════════════════
 
 const panelVariants = {
     hidden: { opacity: 0, scale: 0.98 },
@@ -61,69 +112,126 @@ const tocItemVariants = {
     visible: (i) => ({
         opacity: 1,
         x: 0,
-        transition: { delay: i * 0.03 }
+        transition: { delay: i * 0.05, type: 'spring', stiffness: 300, damping: 25 }
     })
 };
 
-// ============================================================================
+// ═══════════════════════════════════════════════════════════════════════════════
 // SUB-COMPONENTS
-// ============================================================================
+// ═══════════════════════════════════════════════════════════════════════════════
 
 const Skeleton = ({ className }) => (
-    <motion.div
-        className={cn('bg-muted/50 rounded animate-pulse', className)}
-        initial={{ opacity: 0.5 }}
-        animate={{ opacity: [0.5, 0.8, 0.5] }}
-        transition={{ duration: 1.5, repeat: Infinity }}
-    />
+    <div className={cn('animate-pulse bg-muted rounded', className)} />
 );
 
-const TocItem = ({ item, index, isActive, onClick, isExpanded }) => (
-    <motion.a
-        href={`#${item.id}`}
-        onClick={(e) => {
-            e.preventDefault();
-            onClick(item.id);
-        }}
-        className={cn(
-            'block px-3 py-1.5 text-sm rounded-lg transition-all border-l-2',
-            item.level === 3 ? 'pl-6 text-xs' : '',
-            isActive
-                ? 'bg-primary/10 text-primary font-medium border-primary'
-                : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5 border-transparent'
-        )}
+const TocItem = ({ item, isActive, onClick }) => (
+    <motion.button
         variants={tocItemVariants}
         initial="hidden"
         animate="visible"
-        custom={index}
-        whileHover={{ x: 4 }}
+        onClick={onClick}
+        className={cn(
+            'w-full text-left px-3 py-2 rounded-lg text-sm transition-all',
+            'flex items-center gap-2',
+            isActive
+                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+        )}
     >
-        {item.text}
-    </motion.a>
+        <ChevronRight className={cn('h-3 w-3 transition-transform', isActive && 'rotate-90 text-purple-500')} />
+        <span className="truncate">{item.title}</span>
+    </motion.button>
 );
 
-// Quick fact item
 const QuickFact = ({ label, value, icon: Icon }) => (
-    <div className="flex items-start gap-2 py-2 border-b border-border/30 last:border-0">
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />}
-        <div className="min-w-0">
-            <div className="text-xs text-muted-foreground">{label}</div>
-            <div className="text-sm font-medium truncate">{value}</div>
-        </div>
+    <div className="flex items-center gap-2 text-sm">
+        <Icon className="h-4 w-4 text-purple-500 shrink-0" />
+        <span className="text-muted-foreground">{label}:</span>
+        <span className="font-medium">{value}</span>
     </div>
 );
 
-// Related topic chip
 const RelatedTopic = ({ topic, onClick }) => (
     <motion.button
         onClick={() => onClick(topic)}
-        className="px-3 py-1.5 text-sm bg-muted/50 hover:bg-muted rounded-full transition-colors flex items-center gap-1"
+        className="px-3 py-1.5 text-sm bg-muted hover:bg-purple-500/10 rounded-full transition-colors text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
     >
-        <ChevronRight className="h-3 w-3" />
         {topic}
     </motion.button>
+);
+
+// Model Selector
+const ModelSelector = ({ selectedModel, onSelect, isOpen, onToggle }) => (
+    <div className="relative">
+        <motion.button
+            onClick={onToggle}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors text-sm"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+        >
+            {(() => {
+                const ModelIcon = MODELS[selectedModel]?.icon || Zap;
+                return <ModelIcon className={cn('h-4 w-4', MODELS[selectedModel]?.free ? 'text-green-500' : 'text-yellow-500')} />;
+            })()}
+            <span className="font-medium">{MODELS[selectedModel]?.name || 'Select Model'}</span>
+            <ChevronDown className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')} />
+        </motion.button>
+
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    className="absolute top-full mt-2 right-0 w-72 bg-card border border-border rounded-xl shadow-xl p-2 z-50"
+                >
+                    <div className="text-xs text-muted-foreground font-semibold uppercase px-2 py-1 mb-1">Free Models</div>
+                    {Object.entries(MODELS).filter(([_, m]) => m.free).map(([key, model]) => (
+                        <button
+                            key={key}
+                            onClick={() => { onSelect(key); onToggle(); }}
+                            className={cn(
+                                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors',
+                                selectedModel === key
+                                    ? 'bg-purple-500/10 text-purple-600'
+                                    : 'hover:bg-muted'
+                            )}
+                        >
+                            <model.icon className="h-4 w-4 text-green-500" />
+                            <div className="flex-1">
+                                <div className="font-medium text-sm">{model.name}</div>
+                                <div className="text-xs text-muted-foreground">{model.description}</div>
+                            </div>
+                            <span className="text-[10px] px-1.5 py-0.5 bg-green-500/20 text-green-600 rounded">FREE</span>
+                        </button>
+                    ))}
+
+                    <div className="text-xs text-muted-foreground font-semibold uppercase px-2 py-1 mt-2 mb-1">Premium Models</div>
+                    {Object.entries(MODELS).filter(([_, m]) => !m.free).map(([key, model]) => (
+                        <button
+                            key={key}
+                            onClick={() => { onSelect(key); onToggle(); }}
+                            className={cn(
+                                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors',
+                                selectedModel === key
+                                    ? 'bg-purple-500/10 text-purple-600'
+                                    : 'hover:bg-muted'
+                            )}
+                        >
+                            <model.icon className="h-4 w-4 text-yellow-500" />
+                            <div className="flex-1">
+                                <div className="font-medium text-sm">{model.name}</div>
+                                <div className="text-xs text-muted-foreground">{model.description}</div>
+                            </div>
+                            <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-600 rounded">PRO</span>
+                        </button>
+                    ))}
+                </motion.div>
+            )}
+        </AnimatePresence>
+    </div>
 );
 
 // Trending topics
@@ -138,65 +246,67 @@ const TRENDING_TOPICS = [
     "Biotechnology"
 ];
 
-// ============================================================================
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
-// ============================================================================
+// ═══════════════════════════════════════════════════════════════════════════════
 
 const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
-    const [query, setQuery] = useState('');
-    const [article, setArticle] = useState(null);
+    // State
+    const [searchTerm, setSearchTerm] = useState('');
     const [isSearching, setIsSearching] = useState(false);
+    const [article, setArticle] = useState(null);
     const [toc, setToc] = useState([]);
-    const [activeSection, setActiveSection] = useState('');
-    const [copied, setCopied] = useState(false);
-    const [bookmarked, setBookmarked] = useState(false);
-    const [showScrollTop, setShowScrollTop] = useState(false);
+    const [activeSection, setActiveSection] = useState(null);
+    const [isTocExpanded, setIsTocExpanded] = useState(true);
     const [relatedTopics, setRelatedTopics] = useState([]);
     const [quickFacts, setQuickFacts] = useState(null);
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    const [copied, setCopied] = useState(false);
     const [searchHistory, setSearchHistory] = useState([]);
-    const contentRef = useRef(null);
+    const [showHistory, setShowHistory] = useState(false);
+    const [selectedModel, setSelectedModel] = useLocalStorage('grokipedia_model', DEFAULT_MODEL);
+    const [showModelSelector, setShowModelSelector] = useState(false);
 
-    // Load search history from localStorage
+    const contentRef = useRef(null);
+    const searchInputRef = useRef(null);
+
+    // Load search history
     useEffect(() => {
         const saved = localStorage.getItem('grokipedia-history');
-        if (saved) {
-            setSearchHistory(JSON.parse(saved).slice(0, 5));
-        }
+        if (saved) setSearchHistory(JSON.parse(saved));
     }, []);
 
     // Save search to history
-    const saveToHistory = (term) => {
+    const saveToHistory = useCallback((term) => {
         const updated = [term, ...searchHistory.filter(t => t !== term)].slice(0, 10);
         setSearchHistory(updated);
         localStorage.setItem('grokipedia-history', JSON.stringify(updated));
-    };
+    }, [searchHistory]);
 
-    // Scroll detection for "back to top" button
+    // Scroll handler
     useEffect(() => {
-        const container = contentRef.current;
-        if (!container) return;
-
         const handleScroll = () => {
-            setShowScrollTop(container.scrollTop > 400);
+            if (contentRef.current) {
+                setShowScrollTop(contentRef.current.scrollTop > 300);
+            }
         };
-
-        container.addEventListener('scroll', handleScroll);
-        return () => container.removeEventListener('scroll', handleScroll);
-    }, [article]);
+        const ref = contentRef.current;
+        ref?.addEventListener('scroll', handleScroll);
+        return () => ref?.removeEventListener('scroll', handleScroll);
+    }, []);
 
     // Calculate reading time
     const getReadingTime = (content) => {
         if (!content) return 0;
         const words = content.split(/\s+/).length;
-        return Math.ceil(words / 200); // 200 words per minute
+        return Math.ceil(words / 200);
     };
 
     // Enhanced search with better prompts
-    const handleSearch = async (searchQuery) => {
-        const term = typeof searchQuery === 'string' ? searchQuery : query;
-        if (!term.trim()) return;
+    const handleSearch = async (searchQuery = searchTerm) => {
+        const term = searchQuery.trim();
+        if (!term) return;
 
-        setQuery(term);
         setIsSearching(true);
         setArticle(null);
         setToc([]);
@@ -207,6 +317,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
         try {
             let accumulatedContent = '';
             const api = createApiClient({ baseUrl: backendUrl });
+            const modelConfig = MODELS[selectedModel] || MODELS[DEFAULT_MODEL];
 
             setArticle({
                 title: term,
@@ -216,11 +327,12 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                     month: 'long',
                     day: 'numeric'
                 }),
-                sources: []
+                sources: [],
+                model: modelConfig.name
             });
 
             await api.streamChat({
-                model: 'x-ai/grok-4.1-fast',
+                model: modelConfig.id,
                 messages: [
                     {
                         role: 'system',
@@ -270,7 +382,8 @@ WRITING GUIDELINES:
                         title: term,
                         content: accumulatedContent,
                         lastUpdated: new Date().toLocaleDateString(),
-                        sources: []
+                        sources: [],
+                        model: modelConfig.name
                     }));
                 },
                 onError: (err) => {
@@ -298,58 +411,52 @@ WRITING GUIDELINES:
 
     // Handle keyboard search
     const handleKeySearch = (e) => {
-        if (e.key === 'Enter') {
-            handleSearch(query);
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSearch();
         }
     };
 
     // Parse table of contents from markdown
     const parseToc = (markdown) => {
-        const lines = markdown.split('\n');
-        const headers = [];
-        lines.forEach((line, index) => {
-            if (line.startsWith('## ')) {
-                const text = line.replace('## ', '').trim();
-                if (text !== 'Related Topics') {
-                    headers.push({ id: `section-${index}`, text, level: 2 });
-                }
-            } else if (line.startsWith('### ')) {
-                headers.push({ id: `section-${index}`, text: line.replace('### ', '').trim(), level: 3 });
-            }
+        const headings = markdown.match(/^##\s+(.+)$/gm) || [];
+        return headings.map((heading) => {
+            const title = heading.replace(/^##\s+/, '');
+            const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            return { id, title, level: 2 };
         });
-        return headers;
     };
 
     // Parse related topics from article
     const parseRelatedTopics = (markdown) => {
-        const relatedMatch = markdown.match(/## Related Topics\n([\s\S]*?)(?=\n## |$)/);
-        if (relatedMatch) {
-            const lines = relatedMatch[1].split('\n').filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'));
-            return lines.map(l => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean).slice(0, 8);
-        }
-        return [];
+        const match = markdown.match(/##\s*Related Topics[\s\S]*?(?=##|$)/i);
+        if (!match) return [];
+        const items = match[0].match(/[-•]\s*(.+)/g) || [];
+        return items.slice(0, 8).map(item =>
+            item.replace(/^[-•]\s*/, '').replace(/\*\*/g, '').trim()
+        );
     };
 
-    // Extract quick facts (simulated - would be enhanced with more parsing)
+    // Extract quick facts
     const extractQuickFacts = (topic, content) => {
-        const wordCount = content.split(/\s+/).length;
-        const sectionCount = (content.match(/^## /gm) || []).length;
-
+        const readTime = getReadingTime(content);
+        const sectionCount = (content.match(/^##\s+/gm) || []).length;
         setQuickFacts({
-            topic,
-            wordCount,
+            readTime: `${readTime} min read`,
             sections: sectionCount,
-            readingTime: Math.ceil(wordCount / 200),
-            lastUpdated: new Date().toLocaleDateString()
+            topic: topic
         });
     };
 
     // Scroll to section
     const scrollToSection = (id) => {
+        setActiveSection(id);
         const element = document.getElementById(id);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            setActiveSection(id);
+        if (element && contentRef.current) {
+            contentRef.current.scrollTo({
+                top: element.offsetTop - 100,
+                behavior: 'smooth'
+            });
         }
     };
 
@@ -360,45 +467,42 @@ WRITING GUIDELINES:
 
     // Render markdown safely
     const renderMarkdown = (content) => {
-        if (!content) return { __html: '' };
+        if (!content) return '';
 
-        let processedContent = content;
-        toc.forEach(item => {
-            const regex = new RegExp(
-                `(${item.level === 2 ? '##' : '###'} ${item.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
-                'g'
-            );
-            processedContent = processedContent.replace(
-                regex,
-                `<span id="${item.id}" class="scroll-mt-24"></span>$1`
-            );
-        });
-
-        const html = marked.parse(String(processedContent ?? ''));
-        const safeHtml = DOMPurify.sanitize(html, {
-            USE_PROFILES: { html: true },
-            ADD_ATTR: ['id', 'class'],
-        });
-        return { __html: safeHtml };
+        return content
+            .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-6 mb-3 text-foreground">$1</h3>')
+            .replace(/^## (.+)$/gm, (match, p1) => {
+                const id = p1.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                return `<h2 id="${id}" class="text-xl font-bold mt-8 mb-4 text-foreground border-b border-border pb-2">${p1}</h2>`;
+            })
+            .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/^[-•]\s+(.+)$/gm, '<li class="ml-4 mb-1">$1</li>')
+            .replace(/(<li.*<\/li>\n?)+/g, '<ul class="list-disc mb-4">$&</ul>')
+            .replace(/\n\n/g, '</p><p class="mb-4 text-muted-foreground leading-relaxed">')
+            .replace(/^(?!<)(.+)$/gm, '<p class="mb-4 text-muted-foreground leading-relaxed">$1</p>')
+            .replace(/<p><\/p>/g, '')
+            .replace(/> (.+)/g, '<blockquote class="border-l-4 border-purple-500 pl-4 my-4 italic text-muted-foreground">$1</blockquote>');
     };
 
     // Copy article content
-    const handleCopy = () => {
-        if (article?.content) {
-            navigator.clipboard.writeText(article.content);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
+    const handleCopy = async () => {
+        if (!article?.content) return;
+        await navigator.clipboard.writeText(article.content);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
 
     // Share article
     const handleShare = async () => {
-        if (navigator.share && article) {
+        if (!article) return;
+        try {
             await navigator.share({
                 title: `Grokipedia: ${article.title}`,
-                text: article.content.substring(0, 200) + '...',
-                url: window.location.href
+                text: article.content.substring(0, 200) + '...'
             });
+        } catch {
+            handleCopy();
         }
     };
 
@@ -407,342 +511,323 @@ WRITING GUIDELINES:
     return (
         <AnimatePresence>
             <motion.div
-                className="fixed inset-0 bg-background z-50 flex flex-col font-sans"
+                className="fixed inset-0 bg-background z-50 flex flex-col"
                 variants={panelVariants}
                 initial="hidden"
                 animate="visible"
                 exit="exit"
             >
                 {/* Header */}
-                <motion.header
-                    className={cn(
-                        'h-14 border-b border-border/40 flex items-center justify-between px-4 lg:px-6',
-                        'bg-background/95 backdrop-blur-sm sticky top-0 z-10'
-                    )}
-                    initial={{ y: -20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                >
+                <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-background/80 backdrop-blur-xl border-b border-border sticky top-0 z-10">
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <BookOpen className="h-5 w-5 text-primary" />
-                            <h1 className="font-serif text-xl font-semibold tracking-tight">Grokipedia</h1>
+                        <motion.div
+                            className="p-2 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20"
+                            animate={{ rotate: [0, 5, -5, 0] }}
+                            transition={{ duration: 4, repeat: Infinity }}
+                        >
+                            <BookOpen className="h-5 w-5 text-purple-500" />
+                        </motion.div>
+                        <div>
+                            <h1 className="font-bold text-lg">Grokipedia</h1>
+                            <p className="text-xs text-muted-foreground">AI-Powered Encyclopedia</p>
                         </div>
-                        <span className="hidden sm:inline-flex px-2 py-0.5 text-[10px] font-medium bg-primary/10 text-primary rounded-full">
-                            Powered by Grok
-                        </span>
                     </div>
 
-                    {/* Header Search (when article visible) */}
-                    {article && (
-                        <div className="flex-1 max-w-md mx-4 hidden md:block">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <input
-                                    type="text"
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    onKeyDown={handleKeySearch}
-                                    placeholder="Search another topic..."
-                                    className="w-full h-9 pl-9 pr-4 rounded-lg bg-muted/30 border border-transparent focus:border-primary/20 focus:ring-2 focus:ring-primary/10 text-sm transition-all outline-none"
-                                />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Header Actions */}
                     <div className="flex items-center gap-2">
-                        {article && (
-                            <>
-                                <motion.button
-                                    onClick={handleCopy}
-                                    className="p-2 hover:bg-muted rounded-lg transition-colors hidden sm:flex"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    title="Copy article"
-                                >
-                                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                </motion.button>
-                                <motion.button
-                                    onClick={() => setBookmarked(!bookmarked)}
-                                    className="p-2 hover:bg-muted rounded-lg transition-colors hidden sm:flex"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    title="Bookmark"
-                                >
-                                    {bookmarked ? (
-                                        <BookmarkCheck className="h-4 w-4 text-primary" />
-                                    ) : (
-                                        <Bookmark className="h-4 w-4" />
-                                    )}
-                                </motion.button>
-                            </>
-                        )}
+                        {/* Model Selector */}
+                        <ModelSelector
+                            selectedModel={selectedModel}
+                            onSelect={setSelectedModel}
+                            isOpen={showModelSelector}
+                            onToggle={() => setShowModelSelector(!showModelSelector)}
+                        />
+
                         <motion.button
                             onClick={onClose}
-                            className="p-2 hover:bg-muted rounded-lg transition-colors"
+                            className="p-2.5 hover:bg-muted rounded-xl transition-colors"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
                             <X className="h-5 w-5" />
                         </motion.button>
                     </div>
-                </motion.header>
+                </header>
 
                 {/* Main Content */}
                 <div className="flex-1 flex overflow-hidden">
-                    {article || isSearching ? (
-                        <>
-                            {/* TOC Sidebar */}
-                            <motion.aside
-                                className="hidden lg:flex flex-col w-64 border-r border-border/40 bg-background/50"
-                                initial={{ x: -20, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                transition={{ delay: 0.2 }}
-                            >
-                                <div className="p-4 border-b border-border/30">
-                                    <h3 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                        <FileText className="h-3.5 w-3.5" />
-                                        Contents
-                                    </h3>
+                    {/* Table of Contents - Desktop */}
+                    {article && toc.length > 0 && (
+                        <motion.aside
+                            initial={{ x: -100, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            className="hidden lg:block w-64 border-r border-border p-4 overflow-y-auto"
+                        >
+                            <div className="sticky top-0">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2 text-sm font-semibold">
+                                        <ListOrdered className="h-4 w-4 text-purple-500" />
+                                        <span>Contents</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsTocExpanded(!isTocExpanded)}
+                                        className="p-1 hover:bg-muted rounded"
+                                    >
+                                        {isTocExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                    </button>
                                 </div>
-                                <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-                                    {article ? (
-                                        toc.map((item, index) => (
-                                            <TocItem
-                                                key={item.id}
-                                                item={item}
-                                                index={index}
-                                                isActive={activeSection === item.id}
-                                                onClick={scrollToSection}
-                                            />
-                                        ))
-                                    ) : (
-                                        <div className="space-y-2 px-2">
-                                            {[1, 2, 3, 4, 5].map(i => (
-                                                <Skeleton key={i} className="h-6 w-full" />
+
+                                <AnimatePresence>
+                                    {isTocExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="space-y-1"
+                                        >
+                                            {toc.map((item, index) => (
+                                                <TocItem
+                                                    key={item.id}
+                                                    item={item}
+                                                    index={index}
+                                                    isActive={activeSection === item.id}
+                                                    onClick={() => scrollToSection(item.id)}
+                                                    isExpanded={isTocExpanded}
+                                                />
                                             ))}
-                                        </div>
+                                        </motion.div>
                                     )}
-                                </nav>
+                                </AnimatePresence>
 
                                 {/* Quick Facts */}
                                 {quickFacts && (
-                                    <div className="p-4 border-t border-border/30 bg-muted/20">
-                                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-                                            <Info className="h-3.5 w-3.5" />
+                                    <div className="mt-6 pt-4 border-t border-border space-y-3">
+                                        <h3 className="text-sm font-semibold flex items-center gap-2">
+                                            <Zap className="h-4 w-4 text-purple-500" />
                                             Quick Facts
-                                        </h4>
-                                        <div className="space-y-0">
-                                            <QuickFact
-                                                label="Reading Time"
-                                                value={`${quickFacts.readingTime} min`}
-                                                icon={Clock}
-                                            />
-                                            <QuickFact
-                                                label="Word Count"
-                                                value={quickFacts.wordCount.toLocaleString()}
-                                                icon={FileText}
-                                            />
-                                            <QuickFact
-                                                label="Sections"
-                                                value={quickFacts.sections}
-                                                icon={BookOpen}
-                                            />
-                                        </div>
+                                        </h3>
+                                        <QuickFact label="Reading time" value={quickFacts.readTime} icon={Clock} />
+                                        <QuickFact label="Sections" value={quickFacts.sections} icon={ListOrdered} />
                                     </div>
                                 )}
-                            </motion.aside>
+                            </div>
+                        </motion.aside>
+                    )}
 
-                            {/* Article Area */}
-                            <main className="flex-1 overflow-y-auto scroll-smooth" ref={contentRef}>
-                                <div className="max-w-3xl mx-auto px-6 py-10 md:px-10">
-                                    <AnimatePresence mode="wait">
-                                        {isSearching && !article?.content ? (
-                                            <motion.div
-                                                key="loading"
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                className="space-y-6"
-                                            >
-                                                <Skeleton className="h-12 w-3/4 mb-4" />
-                                                <Skeleton className="h-4 w-1/4 mb-8" />
-                                                {[1, 2, 3].map(i => (
-                                                    <div key={i} className="space-y-3">
-                                                        <Skeleton className="h-4 w-full" />
-                                                        <Skeleton className="h-4 w-full" />
-                                                        <Skeleton className="h-4 w-4/5" />
-                                                    </div>
-                                                ))}
-                                            </motion.div>
-                                        ) : article ? (
-                                            <motion.article
-                                                key="article"
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                className="prose dark:prose-invert prose-lg max-w-none"
-                                            >
-                                                {/* Meta Info */}
-                                                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mb-4">
-                                                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                                                        <Sparkles className="h-3.5 w-3.5" />
-                                                        <span>AI Generated</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Clock className="h-3.5 w-3.5" />
-                                                        <span>{getReadingTime(article.content)} min read</span>
-                                                    </div>
-                                                    <span className="text-muted-foreground/40">•</span>
-                                                    <span>{article.lastUpdated}</span>
-                                                </div>
+                    {/* Article Content */}
+                    <main ref={contentRef} className="flex-1 overflow-y-auto">
+                        <div className="max-w-4xl mx-auto p-4 md:p-8">
 
-                                                {/* Title */}
-                                                <h1 className="font-serif text-4xl md:text-5xl font-semibold tracking-tight mb-6 text-foreground leading-tight">
-                                                    {article.title}
-                                                </h1>
-
-                                                {/* Content */}
-                                                <div
-                                                    className="prose-headings:font-serif prose-headings:font-semibold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-xl prose-p:leading-relaxed prose-p:text-foreground/85 prose-strong:text-foreground prose-li:text-foreground/85"
-                                                    dangerouslySetInnerHTML={renderMarkdown(article.content)}
-                                                />
-
-                                                {/* Related Topics */}
-                                                {relatedTopics.length > 0 && (
-                                                    <motion.div
-                                                        className="mt-12 pt-8 border-t border-border/50"
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        transition={{ delay: 0.5 }}
-                                                    >
-                                                        <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                                                            <Link2 className="h-4 w-4" />
-                                                            Explore Related Topics
-                                                        </h3>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {relatedTopics.map((topic, i) => (
-                                                                <RelatedTopic
-                                                                    key={i}
-                                                                    topic={topic}
-                                                                    onClick={handleSearch}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </motion.article>
-                                        ) : null}
-                                    </AnimatePresence>
-                                </div>
-
-                                {/* Scroll to Top */}
-                                <AnimatePresence>
-                                    {showScrollTop && (
-                                        <motion.button
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: 20 }}
-                                            onClick={scrollToTop}
-                                            className="fixed bottom-6 right-6 p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-shadow"
-                                        >
-                                            <ArrowUp className="h-5 w-5" />
-                                        </motion.button>
-                                    )}
-                                </AnimatePresence>
-                            </main>
-                        </>
-                    ) : (
-                        /* Landing View */
-                        <motion.div
-                            key="landing"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex-1 flex flex-col items-center justify-center p-6"
-                        >
-                            <div className="w-full max-w-2xl text-center space-y-8">
-                                {/* Logo */}
-                                <motion.div
-                                    initial={{ scale: 0.9, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    transition={{ duration: 0.5 }}
-                                    className="space-y-2"
-                                >
-                                    <div className="flex items-center justify-center gap-3 mb-2">
-                                        <BookOpen className="h-10 w-10 text-primary" />
-                                    </div>
-                                    <h1 className="font-serif text-5xl md:text-6xl font-semibold tracking-tight">
-                                        Grokipedia
-                                    </h1>
-                                    <p className="text-muted-foreground">
-                                        AI-Powered Encyclopedia • Powered by Grok
-                                    </p>
-                                </motion.div>
-
-                                {/* Search */}
-                                <div className="relative max-w-xl mx-auto w-full">
+                            {/* Search Box */}
+                            <motion.div
+                                className="mb-8"
+                                initial={{ y: -20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                            >
+                                <div className="relative">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                     <input
+                                        ref={searchInputRef}
                                         type="text"
-                                        value={query}
-                                        onChange={(e) => setQuery(e.target.value)}
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
                                         onKeyDown={handleKeySearch}
-                                        placeholder="Search any topic..."
-                                        className="w-full h-14 pl-12 pr-4 rounded-2xl bg-muted/40 border border-border/50 hover:border-border focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 text-lg transition-all outline-none"
-                                        autoFocus
+                                        onFocus={() => setShowHistory(true)}
+                                        onBlur={() => setTimeout(() => setShowHistory(false), 200)}
+                                        placeholder="Search for any topic..."
+                                        className="w-full h-14 pl-12 pr-4 bg-muted border border-border rounded-2xl text-lg placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
                                     />
-                                    <kbd className="absolute right-4 top-1/2 -translate-y-1/2 hidden sm:inline-flex h-7 items-center gap-1 rounded-lg border bg-muted px-2.5 font-mono text-xs font-medium text-muted-foreground">
-                                        Enter ⏎
-                                    </kbd>
+                                    {isSearching && (
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                            <div className="h-5 w-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Trending Topics */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                                        <TrendingUp className="h-4 w-4" />
+                                {/* Search History Dropdown */}
+                                <AnimatePresence>
+                                    {showHistory && searchHistory.length > 0 && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className="absolute z-20 w-full mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden"
+                                        >
+                                            <div className="px-4 py-2 border-b border-border flex items-center gap-2 text-sm text-muted-foreground">
+                                                <History className="h-4 w-4" />
+                                                <span>Recent Searches</span>
+                                            </div>
+                                            {searchHistory.map((term, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => { setSearchTerm(term); handleSearch(term); }}
+                                                    className="w-full px-4 py-2 text-left hover:bg-muted transition-colors"
+                                                >
+                                                    {term}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+
+                            {/* Trending Topics (when no article) */}
+                            {!article && !isSearching && (
+                                <motion.div
+                                    variants={contentVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    className="text-center"
+                                >
+                                    <motion.div
+                                        animate={{ y: [0, -10, 0] }}
+                                        transition={{ duration: 2, repeat: Infinity }}
+                                        className="inline-flex p-6 rounded-3xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 mb-6"
+                                    >
+                                        <Sparkles className="h-12 w-12 text-purple-500" />
+                                    </motion.div>
+
+                                    <h2 className="text-2xl font-bold mb-2">Explore Knowledge</h2>
+                                    <p className="text-muted-foreground mb-8">Search any topic to get a comprehensive AI-generated article</p>
+
+                                    <div className="flex items-center justify-center gap-2 mb-4 text-sm text-muted-foreground">
+                                        <TrendingUp className="h-4 w-4 text-purple-500" />
                                         <span>Trending Topics</span>
                                     </div>
+
                                     <div className="flex flex-wrap justify-center gap-2">
                                         {TRENDING_TOPICS.map((topic, i) => (
                                             <motion.button
                                                 key={topic}
-                                                onClick={() => handleSearch(topic)}
-                                                className="px-4 py-2 text-sm bg-muted/50 hover:bg-muted rounded-full transition-colors"
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
                                                 transition={{ delay: i * 0.05 }}
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => { setSearchTerm(topic); handleSearch(topic); }}
+                                                className="px-4 py-2 bg-muted hover:bg-purple-500/10 rounded-full text-sm transition-colors"
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
                                             >
                                                 {topic}
                                             </motion.button>
                                         ))}
                                     </div>
-                                </div>
+                                </motion.div>
+                            )}
 
-                                {/* Search History */}
-                                {searchHistory.length > 0 && (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                                            <History className="h-4 w-4" />
-                                            <span>Recent Searches</span>
-                                        </div>
-                                        <div className="flex flex-wrap justify-center gap-2">
-                                            {searchHistory.slice(0, 5).map((term, i) => (
-                                                <button
-                                                    key={i}
-                                                    onClick={() => handleSearch(term)}
-                                                    className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground bg-background border border-border/50 hover:border-border rounded-full transition-colors"
-                                                >
-                                                    {term}
-                                                </button>
-                                            ))}
-                                        </div>
+                            {/* Loading State */}
+                            {isSearching && !article?.content && (
+                                <div className="space-y-4">
+                                    <Skeleton className="h-10 w-3/4" />
+                                    <Skeleton className="h-4 w-1/4" />
+                                    <div className="space-y-2 mt-8">
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-3/4" />
                                     </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
+                                </div>
+                            )}
+
+                            {/* Article */}
+                            {article && (
+                                <motion.article
+                                    variants={contentVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                >
+                                    {/* Article Header */}
+                                    <header className="mb-8">
+                                        <h1 className="text-3xl md:text-4xl font-bold mb-4">{article.title}</h1>
+                                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="h-4 w-4" />
+                                                {article.lastUpdated}
+                                            </span>
+                                            {quickFacts && (
+                                                <span className="flex items-center gap-1">
+                                                    <BookOpen className="h-4 w-4" />
+                                                    {quickFacts.readTime}
+                                                </span>
+                                            )}
+                                            {article.model && (
+                                                <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-500/10 text-purple-600 rounded-full">
+                                                    <Sparkles className="h-3 w-3" />
+                                                    {article.model}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex gap-2 mt-4">
+                                            <motion.button
+                                                onClick={handleCopy}
+                                                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                            >
+                                                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                                {copied ? 'Copied!' : 'Copy'}
+                                            </motion.button>
+                                            <motion.button
+                                                onClick={handleShare}
+                                                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                            >
+                                                <Share2 className="h-4 w-4" />
+                                                Share
+                                            </motion.button>
+                                        </div>
+                                    </header>
+
+                                    {/* Article Content */}
+                                    <div
+                                        className="prose prose-lg dark:prose-invert max-w-none"
+                                        dangerouslySetInnerHTML={{ __html: renderMarkdown(article.content) }}
+                                    />
+
+                                    {/* Related Topics */}
+                                    {relatedTopics.length > 0 && !isSearching && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="mt-12 pt-8 border-t border-border"
+                                        >
+                                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                                <Tags className="h-5 w-5 text-purple-500" />
+                                                Explore Related Topics
+                                            </h3>
+                                            <div className="flex flex-wrap gap-2">
+                                                {relatedTopics.map(topic => (
+                                                    <RelatedTopic
+                                                        key={topic}
+                                                        topic={topic}
+                                                        onClick={(t) => { setSearchTerm(t); handleSearch(t); }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </motion.article>
+                            )}
+                        </div>
+                    </main>
                 </div>
+
+                {/* Scroll to Top Button */}
+                <AnimatePresence>
+                    {showScrollTop && (
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            onClick={scrollToTop}
+                            className="fixed bottom-6 right-6 p-3 bg-purple-500 text-white rounded-full shadow-lg hover:bg-purple-600 transition-colors"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                        >
+                            <ChevronUp className="h-5 w-5" />
+                        </motion.button>
+                    )}
+                </AnimatePresence>
             </motion.div>
         </AnimatePresence>
     );

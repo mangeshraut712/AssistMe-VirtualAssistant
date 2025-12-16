@@ -21,7 +21,6 @@ import {
     Clock,
     Cpu,
     Zap,
-    User,
     Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

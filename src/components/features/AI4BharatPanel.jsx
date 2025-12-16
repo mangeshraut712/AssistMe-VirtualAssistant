@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
-    X, Languages, ArrowRightLeft, Globe, Mic, Type, FileText,
-    Cpu, Keyboard, Volume2, ScanText, Sparkles, Check, Copy, RotateCcw,
+    X, Languages, ArrowRightLeft, Mic, FileText,
+    Keyboard, Volume2, ScanText, Sparkles, Check, Copy, RotateCcw,
     BookA, MoveHorizontal
 } from 'lucide-react';
 import { createApiClient } from '@/lib/apiClient';

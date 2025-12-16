@@ -1,7 +1,6 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { Code, Image, MessageSquare } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 // Quick action icons removed as homepage quick actions are hidden
 
@@ -45,11 +44,7 @@ const MODELS = [
     { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini', provider: 'OpenAI', free: false },
 ];
 
-const QUICK_ACTIONS = [
-    { icon: MessageSquare, label: 'Chat', text: 'Hello, how can you help me?' },
-    { icon: Code, label: 'Code', text: 'Write a Python script to...' },
-    { icon: Image, label: 'Image', key: 'imageGen' }
-];
+
 
 const LoadingOverlay = () => (
     <div className="fixed inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-50">
@@ -314,45 +309,7 @@ function App() {
         }
     };
 
-    // Voice Conversation Handler - supports custom model for voice mode
-    const handleVoiceConversation = async (text, customModel = null) => {
-        if (!text.trim()) return;
 
-        const userMsg = { role: 'user', content: text };
-        const updatedMessages = [...messages, userMsg];
-        updateCurrentChatMessages(updatedMessages);
-
-        try {
-            const response = await fetch(`${settings.backendUrl}/api/chat/text`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    messages: updatedMessages.map(msg => ({ role: msg.role, content: msg.content })),
-                    model: customModel || 'google/gemini-2.0-flash-001:free', // Use Gemini for voice
-                    preferred_language: settings.language
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.response) {
-                const assistantMsg = {
-                    role: 'assistant',
-                    content: data.response,
-                    latency: 0
-                };
-                updateCurrentChatMessages([...updatedMessages, assistantMsg]);
-                return data.response;
-            } else {
-                throw new Error('No response from AI');
-            }
-        } catch (error) {
-            console.error('Voice chat error:', error);
-            return "I'm sorry, I encountered an error. Please try again.";
-        }
-    };
 
     return (
         <div

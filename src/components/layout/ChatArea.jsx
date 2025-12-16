@@ -22,8 +22,6 @@ import {
     FileText,
     Globe,
     Zap,
-    ArrowRight,
-    ArrowDown,
     ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,13 +29,7 @@ import InputArea from './InputArea';
 import MessageBubble from './MessageBubble';
 
 // Animation variants
-const welcomeVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: { staggerChildren: 0.08, delayChildren: 0.1 },
-    },
-};
+
 
 const itemVariants = {
     hidden: { opacity: 0, y: 30, filter: 'blur(10px)' },

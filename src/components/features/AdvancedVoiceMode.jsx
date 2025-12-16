@@ -125,7 +125,7 @@ const normalizeForSpeech = (text) => {
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) {
+export default function AdvancedVoiceMode({ isOpen, onClose }) {
     // State
     const [status, setStatus] = useState('idle'); // idle, listening, processing, speaking, error
     const [persona, setPersona] = useState('default');
@@ -151,6 +151,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     const silenceTimerRef = useRef(null);
     const synthRef = useRef(null);
     const streamRef = useRef(null);
+    const startListeningRef = useRef(null);
     const analyserRef = useRef(null);
     const animationFrameRef = useRef(null);
     const isProcessingRef = useRef(false);
@@ -454,7 +455,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             // Auto-restart listening after AI speaks
             setTimeout(() => {
                 if (statusRef.current === 'idle') {
-                    startListening();
+                    startListeningRef.current?.();
                 }
             }, CONFIG.RESTART_DELAY);
         });
@@ -602,7 +603,12 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         } catch (e) {
             console.error('[STT] Start error:', e);
         }
-    }, [startAudioMonitoring, processUserInput]);
+    }, [language, startAudioMonitoring, processUserInput]);
+
+    // Update ref for circular dependency
+    useEffect(() => {
+        startListeningRef.current = startListening;
+    }, [startListening]);
 
     const stopListening = useCallback(() => {
         console.log('[STT] Stopping...');
@@ -661,7 +667,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             stopListening();
             stopSpeaking();
         };
-    }, [isOpen]);
+    }, [isOpen, startListening, stopListening, stopSpeaking]);
 
     // Cleanup on unmount
     useEffect(() => {

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, File, Image as ImageIcon, Video, FileText, X, Download, Eye } from 'lucide-react';
+import { Upload, File, Image as ImageIcon, Video, FileText, X } from 'lucide-react';
 
 const FileUploadPanel = ({ isOpen, onClose, onFileProcess }) => {
     const [files, setFiles] = useState([]);

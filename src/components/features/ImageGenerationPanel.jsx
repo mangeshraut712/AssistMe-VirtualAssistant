@@ -17,9 +17,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Sparkles, Download, Image as ImageIcon,
-    ArrowUp, Settings2, ChevronDown, Copy, ExternalLink, Check,
-    Loader2, Wand2, Palette, Zap, Crown, RefreshCw, Trash2
+    X, Sparkles, Download,
+    ArrowUp, Settings2, Copy, ExternalLink, Check,
+    Loader2, Wand2, Zap, Crown, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

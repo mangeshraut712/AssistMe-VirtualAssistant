@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { Menu, Sparkles, Command } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const Header = ({ onOpenSidebar, showSidebar = false }) => {
+const Header = ({ onOpenSidebar }) => {
     return (
         <motion.header
             initial={{ y: -20, opacity: 0 }}

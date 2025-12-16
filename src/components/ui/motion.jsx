@@ -10,7 +10,7 @@
  */
 
 import * as React from 'react';
-import { motion, AnimatePresence, useInView, useAnimation } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 // Default spring physics (Apple-style)
@@ -181,7 +181,7 @@ StaggerItem.displayName = 'StaggerItem';
  * Animate In View - Triggers animation when element enters viewport
  */
 export const AnimateInView = React.forwardRef(
-    ({ children, className, once = true, threshold = 0.2, ...props }, ref) => {
+    ({ children, className, once = true, threshold = 0.2, ...props }, _) => {
         const localRef = React.useRef(null);
         const isInView = useInView(localRef, { once, amount: threshold });
 

@@ -24,7 +24,7 @@ import {
     Line
 } from 'recharts';
 import {
-    ArrowLeft, TrendingUp, Zap, DollarSign, Clock, Download, Gauge, Filter,
+    ArrowLeft, TrendingUp, DollarSign, Download, Gauge,
     Activity, Server, Users, Globe, Cpu, Award, Briefcase, BarChart2, Newspaper, Terminal, X
 } from 'lucide-react';
 

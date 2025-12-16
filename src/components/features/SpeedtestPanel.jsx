@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, RotateCcw, Pause, Play, Activity, Wifi, Server, Zap, Share2, Info, Clock,
-    Monitor, Gamepad2, Video, Globe, Twitter, Facebook, Link2, ArrowDown, ArrowUp,
-    Smartphone, Laptop, Signal, TrendingUp, Brain, Trophy, MapPin, Download as DownloadIcon,
+    X, Play, Activity,
+    Monitor, Gamepad2, Video, Globe, ArrowDown,
+    Brain, MapPin, Download as DownloadIcon,
     Upload as UploadIcon, Layers, AlertTriangle, FileDown,
     Target, Waves, Zap as ZapIcon,
 } from 'lucide-react';
 import {
     AreaChart, Area, ResponsiveContainer, Tooltip, RadarChart, PolarGrid,
-    PolarAngleAxis, PolarRadiusAxis, Radar as RadarComponent
+    PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
 import { cn } from '@/lib/utils';
 
@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 // --- Advanced Engine Utilities ---
 
 // Simulates TCP Slow Start and Congestion Avoidance for realistic curves
-const calculateSpeedStep = (currentSpeed, targetSpeed, phase, progress) => {
+const calculateSpeedStep = (currentSpeed, targetSpeed, phase) => {
     // Phase 0: Slow Start (Exponential growth)
     if (phase === 'slow_start') {
         return currentSpeed + (targetSpeed * 0.05) + (Math.random() * 2);
@@ -35,13 +35,7 @@ const calculateSpeedStep = (currentSpeed, targetSpeed, phase, progress) => {
     return currentSpeed + (Math.random() - 0.5) * 2;
 };
 
-const formatBytes = (bytes) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
+
 
 // Storage
 const saveTest = (r) => {
@@ -68,15 +62,7 @@ const GlassCard = ({ children, className, glow, active }) => (
     </motion.div>
 );
 
-const InfoTip = ({ text }) => (
-    <div className="group relative inline-block ml-1.5 align-middle">
-        <Info className="h-3.5 w-3.5 text-neutral-400 cursor-help hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" />
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-neutral-900/95 dark:bg-white/95 text-white dark:text-neutral-900 text-xs rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap pointer-events-none z-50 shadow-2xl translate-y-2 group-hover:translate-y-0 backdrop-blur-sm">
-            {text}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-neutral-900/95 dark:border-t-white/95" />
-        </div>
-    </div>
-);
+
 
 const GradeBadge = ({ grade, size = 'md' }) => {
     const colors = {
@@ -214,8 +200,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
     // Advanced Metrics
     const [bufferbloat, setBufferbloat] = useState({ grade: '-', color: 'text-neutral-500' });
     const [geoInfo, setGeoInfo] = useState({ ip: 'Detecting...', city: '...', isp: '...', country: '...', ipv: 'IPv4', asn: '...' });
-    const [serverInfo, setServerInfo] = useState({ city: 'Optimant', country: 'Global', dist: 0 });
-    const [networkHealth, setNetworkHealth] = useState(100);
+    const [serverInfo] = useState({ city: 'Optimant', country: 'Global', dist: 0 });
 
     // Visualization Data
     const [downloadChart, setDownloadChart] = useState(new Array(40).fill({ val: 0 }));
@@ -620,7 +605,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                                     </ResponsiveContainer>
                                 ) : (
                                     <div className="h-full flex flex-col items-center justify-center text-neutral-400">
-                                        <Radar className="h-12 w-12 mb-2 opacity-20" />
+                                        <Target className="h-12 w-12 mb-2 opacity-20" />
                                         <span className="text-xs">Run test to analyze</span>
                                     </div>
                                 )}

@@ -7,7 +7,6 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Paperclip,
-    Send,
     ChevronDown,
     Mic,
     Loader2,
@@ -36,12 +35,7 @@ const fileChipVariants = {
 };
 
 // Listening pulse animation
-const pulseVariants = {
-    listening: {
-        scale: [1, 1.2, 1],
-        transition: { duration: 1.5, repeat: Infinity }
-    }
-};
+
 
 const InputArea = ({
     input,
@@ -49,7 +43,6 @@ const InputArea = ({
     isLoading,
     sendMessage,
     onFileUpload,
-    onVoiceTranscription,
     onOpenVoiceMode,
     variant = 'docked',
     models = [],

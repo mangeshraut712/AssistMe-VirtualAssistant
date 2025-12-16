@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
     X, Wand2, Copy, Check, Sparkles,
-    RefreshCw, FileText, Languages,
-    AlignLeft, CheckCircle, ArrowRight,
-    Upload, ClipboardPaste, RotateCcw,
-    Maximize2, Minimize2, SplitSquareHorizontal,
+    RefreshCw, Languages,
+    AlignLeft, CheckCircle,
+    Maximize2, SplitSquareHorizontal,
     Type
 } from 'lucide-react';
 import { createApiClient } from '@/lib/apiClient';

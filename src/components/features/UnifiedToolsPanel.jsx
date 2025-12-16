@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Wand2, Globe, ChevronRight, LayoutGrid, Sparkles } from 'lucide-react';
+import { X, Wand2, Globe, ChevronRight, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import GrammarlyQuillbotPanel from './GrammarlyQuillbotPanel';
 import AI4BharatPanel from './AI4BharatPanel';

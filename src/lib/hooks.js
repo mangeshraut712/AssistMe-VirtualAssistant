@@ -2,7 +2,7 @@
  * Custom React Hooks for AssistMe Virtual Assistant
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { storage, debounce } from './utils';
 
 /**
@@ -76,8 +76,8 @@ export function useDebouncedCallback(callback, delay = 300) {
     const callbackRef = useRef(callback);
     callbackRef.current = callback;
 
-    return useCallback(
-        debounce((...args) => callbackRef.current(...args), delay),
+    return useMemo(
+        () => debounce((...args) => callbackRef.current(...args), delay),
         [delay]
     );
 }
