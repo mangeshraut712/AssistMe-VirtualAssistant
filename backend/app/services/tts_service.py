@@ -112,8 +112,101 @@ class TextNormalizer:
         return None
 
 
+class EmotionDetector:
+    """Detect emotions in text for expressive TTS.
+    
+    Inspired by Chatterbox Turbo's paralinguistic tags.
+    Maps emotions to Gemini TTS style prompts.
+    """
+    
+    # Emotion keywords to detect
+    EMOTION_KEYWORDS = {
+        "happy": ["happy", "excited", "great", "wonderful", "amazing", "love", "yay", "awesome"],
+        "sad": ["sad", "sorry", "unfortunately", "regret", "miss", "disappointing"],
+        "angry": ["angry", "frustrated", "annoyed", "upset", "furious"],
+        "surprised": ["wow", "oh", "really", "amazing", "incredible", "unbelievable"],
+        "calm": ["okay", "alright", "sure", "understood", "got it"],
+        "empathetic": ["understand", "feel", "care", "sorry to hear", "that's tough"],
+        "enthusiastic": ["absolutely", "definitely", "of course", "yes", "let's go"],
+        "thoughtful": ["hmm", "let me think", "interesting", "consider", "perhaps"],
+    }
+    
+    # Map emotions to Gemini TTS style prompts
+    EMOTION_STYLES = {
+        "happy": "cheerfully and with a smile in your voice",
+        "sad": "with empathy and a gentle, soft tone",
+        "angry": "with concern but controlled energy",
+        "surprised": "with genuine surprise and wonder",
+        "calm": "in a calm, reassuring manner",
+        "empathetic": "with warmth and understanding",
+        "enthusiastic": "with enthusiasm and positive energy",
+        "thoughtful": "thoughtfully with measured pacing",
+        "neutral": "naturally and conversationally",
+    }
+    
+    # Paralinguistic tags (Chatterbox-style) mapped to Gemini prompts
+    PARALINGUISTIC_TAGS = {
+        "[laugh]": "Say with a light laugh: ",
+        "[chuckle]": "Say with a soft chuckle: ",
+        "[sigh]": "Say with a gentle sigh: ",
+        "[pause]": "Say with a thoughtful pause: ",
+        "[whisper]": "Say in a soft whisper: ",
+        "[excited]": "Say with excitement: ",
+        "[serious]": "Say seriously and clearly: ",
+    }
+    
+    @classmethod
+    def detect_emotion(cls, text: str) -> str:
+        """Detect the primary emotion in text."""
+        text_lower = text.lower()
+        
+        # Check for paralinguistic tags first
+        for tag in cls.PARALINGUISTIC_TAGS:
+            if tag in text_lower:
+                return tag
+        
+        # Count emotion keyword matches
+        emotion_scores = {}
+        for emotion, keywords in cls.EMOTION_KEYWORDS.items():
+            score = sum(1 for kw in keywords if kw in text_lower)
+            if score > 0:
+                emotion_scores[emotion] = score
+        
+        if emotion_scores:
+            return max(emotion_scores, key=emotion_scores.get)
+        
+        return "neutral"
+    
+    @classmethod
+    def get_style_prompt(cls, emotion: str) -> str:
+        """Get the TTS style prompt for an emotion."""
+        if emotion in cls.PARALINGUISTIC_TAGS:
+            return cls.PARALINGUISTIC_TAGS[emotion]
+        return cls.EMOTION_STYLES.get(emotion, cls.EMOTION_STYLES["neutral"])
+    
+    @classmethod
+    def process_text_with_emotion(cls, text: str) -> tuple:
+        """Process text and return (cleaned_text, style_prompt, emotion)."""
+        emotion = cls.detect_emotion(text)
+        style_prompt = cls.get_style_prompt(emotion)
+        
+        # Remove paralinguistic tags from text
+        cleaned_text = text
+        for tag in cls.PARALINGUISTIC_TAGS:
+            cleaned_text = cleaned_text.replace(tag, "")
+        cleaned_text = cleaned_text.strip()
+        
+        return cleaned_text, style_prompt, emotion
+
+
 class GeminiVoiceService:
-    """Production-grade Gemini Voice AI service."""
+    """Production-grade Gemini Voice AI service with emotion support.
+    
+    Inspired by Chatterbox Turbo features:
+    - Emotion-tagged speech
+    - Paralinguistic tags
+    - Low latency optimization
+    """
 
     # TTS Model
     TTS_MODEL = "gemini-2.5-flash-preview-tts"
@@ -121,12 +214,13 @@ class GeminiVoiceService:
     # LLM Model for reasoning
     LLM_MODEL = "gemini-2.5-flash"
     
-    # Available voices (30 total) - grouped by style
+    # Available voices (30 total) - grouped by emotion/style
     VOICES = {
         "neutral": ["Puck", "Zephyr", "Aoede"],
         "warm": ["Kore", "Leda", "Autonoe"],
         "authoritative": ["Charon", "Fenrir", "Orus"],
         "playful": ["Io", "Echo", "Calliope"],
+        "emotional": ["Erato", "Melpomene", "Thalia"],  # Good for expressive speech
     }
     
     # All voice names
@@ -191,16 +285,23 @@ class GeminiVoiceService:
         text: str,
         voice: str = "Puck",
         style: Optional[str] = None,
+        auto_emotion: bool = True,
     ) -> Dict:
         """Convert text to speech using Gemini 2.5 Flash TTS.
+        
+        Features (inspired by Chatterbox Turbo):
+        - Automatic emotion detection
+        - Paralinguistic tags: [laugh], [chuckle], [sigh], etc.
+        - Style control via prompts
         
         Args:
             text: Text to convert (will be normalized)
             voice: Voice name from 30 available options
-            style: Speaking style hint (cheerfully, calmly, etc.)
+            style: Speaking style hint (overrides auto-detection)
+            auto_emotion: Auto-detect emotion if style not specified
             
         Returns:
-            Dict with base64 WAV audio data
+            Dict with base64 WAV audio data and emotion info
         """
         if not self.api_key:
             raise ValueError("GOOGLE_API_KEY not configured")
@@ -212,13 +313,20 @@ class GeminiVoiceService:
         # IMPORTANT: Normalize text for TTS
         text = self.normalizer.normalize_for_tts(text)
         
+        # Detect emotion if auto_emotion enabled and no style specified
+        detected_emotion = "neutral"
+        if auto_emotion and not style:
+            cleaned_text, auto_style, detected_emotion = EmotionDetector.process_text_with_emotion(text)
+            text = cleaned_text
+            style = auto_style
+        
         # Log for debugging
-        logger.info(f"TTS Input (normalized): {text[:100]}...")
+        logger.info(f"TTS: emotion={detected_emotion}, text={text[:50]}...")
         
         # Validate voice
         selected_voice = voice if voice in self.ALL_VOICES else "Puck"
         
-        # Add style prefix if specified
+        # Build prompt with style
         if style:
             prompt_text = f"Say {style}: {text}"
         else:

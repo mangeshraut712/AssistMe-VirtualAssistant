@@ -1,13 +1,18 @@
 """
 Gemini Voice AI Routes - Production-Grade Pipeline
 
+Features (inspired by Chatterbox Turbo):
+- Emotion-tagged speech with auto-detection
+- Paralinguistic tags: [laugh], [chuckle], [sigh], etc.
+- 30 HD voices, 24 languages
+- Low latency optimization
+
 Endpoints:
-- POST /api/tts - Text to speech
+- POST /api/tts - Text to speech with emotion
 - POST /api/tts/voice-response - Full voice conversation pipeline
+- GET /api/tts/emotions - List supported emotions
 - GET /api/tts/voices - List voices
 - GET /api/tts/languages - List languages
-
-All endpoints include proper error handling and logging.
 """
 
 from typing import Optional, List, Dict
@@ -15,14 +20,15 @@ from typing import Optional, List, Dict
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from ..services.tts_service import tts_service
+from ..services.tts_service import tts_service, EmotionDetector
 
 
 class TTSRequest(BaseModel):
-    """Text-to-speech request."""
+    """Text-to-speech request with emotion support."""
     text: str = Field(..., min_length=1, max_length=5000)
     voice: Optional[str] = "Puck"
     style: Optional[str] = None
+    auto_emotion: Optional[bool] = True  # Auto-detect emotion
 
 
 class VoiceConversationRequest(BaseModel):
@@ -90,6 +96,34 @@ async def voice_response(req: VoiceConversationRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/emotions")
+async def list_emotions():
+    """List supported emotion tags for expressive TTS.
+    
+    Inspired by Chatterbox Turbo's paralinguistic tags.
+    
+    Paralinguistic tags (use in text):
+    - [laugh] - Light laugh
+    - [chuckle] - Soft chuckle
+    - [sigh] - Gentle sigh
+    - [whisper] - Soft whisper
+    - [excited] - Excited tone
+    - [serious] - Serious tone
+    - [pause] - Thoughtful pause
+    
+    Auto-detected emotions:
+    - happy, sad, angry, surprised
+    - calm, empathetic, enthusiastic, thoughtful
+    """
+    return {
+        "success": True,
+        "paralinguistic_tags": list(EmotionDetector.PARALINGUISTIC_TAGS.keys()),
+        "auto_detected_emotions": list(EmotionDetector.EMOTION_STYLES.keys()),
+        "emotion_keywords": EmotionDetector.EMOTION_KEYWORDS,
+        "note": "Use [tags] in text or let auto_emotion detect mood"
+    }
+
+
 @router.get("/voices")
 async def list_voices():
     """List available Gemini TTS voices.
@@ -99,6 +133,7 @@ async def list_voices():
     - warm: Kore, Leda, Autonoe
     - authoritative: Charon, Fenrir, Orus
     - playful: Io, Echo, Calliope
+    - emotional: Erato, Melpomene, Thalia
     """
     voices = tts_service.get_voices()
     return {
