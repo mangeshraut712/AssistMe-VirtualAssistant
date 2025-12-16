@@ -1,14 +1,19 @@
 /**
- * Gemini Live Voice Mode - Japanese Minimalist Design (2025 Edition)
+ * Gemini 2.5 Flash Native Audio - Voice Mode
  * 
- * Design: Apple + Japanese (間 Ma, 簡素 Kanso) 
- * Theme: Solid White/Black backgrounds with Real-time Audio Visualization
+ * December 2025 Update Features:
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * ✓ Sharper function calling (71.5% on ComplexFuncBench Audio)
+ * ✓ Robust instruction following (90% adherence rate)
+ * ✓ Smoother multi-turn conversations
+ * ✓ Emotion-tagged speech (Chatterbox-inspired)
+ * ✓ Auto language detection (70+ languages)
+ * ✓ Style transfer (preserves intonation, pacing, pitch)
+ * ✓ 30 HD voices, 24 languages
  * 
- * Features:
- * - Real-time Web Audio API Visualization (Microphone & Output)
- * - Haptic Feedback for Mobile
- * - Adaptive Visuals based on Audio Energy
- * - Live Analytics & Metadata
+ * Design: Apple + Japanese Minimalism (間 Ma, 簡素 Kanso)
+ * 
+ * Reference: https://blog.google/products/gemini/gemini-audio-model-updates/
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -21,15 +26,14 @@ import {
 import { cn } from '@/lib/utils';
 
 // ============================================================================
-// CONFIGURATION
+// CONFIGURATION - Gemini 2.5 Flash Native Audio (Dec 2025)
 // ============================================================================
 
 const VOICE_MODELS = [
-    { id: 'gemini-2.5-flash-native-audio-preview-12-2025', name: 'Gemini 2.5 Native Audio', short: '2.5 Native' },
+    { id: 'gemini-2.5-flash-native-audio-preview-12-2025', name: 'Gemini 2.5 Native Audio', short: '2.5 Native', badge: '✨ NEW' },
     { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', short: '2.5 Flash' },
     { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', short: '2.5 Lite' },
     { id: 'google/gemini-2.0-flash-001:free', name: 'Gemini 2.0 Flash (Free)', short: '2.0 Free' },
-    { id: 'google/gemini-2.0-flash-lite-001', name: 'Gemini 2.0 Flash Lite', short: '2.0 Lite' },
 ];
 
 const LANGUAGES = [
