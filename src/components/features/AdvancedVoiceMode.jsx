@@ -245,6 +245,15 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                 })
             });
 
+            if (response.status === 404) {
+                console.warn("Backend TTS not found (404). Falling back to browser TTS.");
+                const fallbackText = "I cannot reach the voice backend, so I am using my backup voice. Please check your Backend URL settings.";
+                setAiText(fallbackText);
+                setConversation([...newHistory, { role: 'assistant', content: fallbackText }]);
+                speak(fallbackText, () => setStatus('idle'));
+                return;
+            }
+
             if (!response.ok) throw new Error('API Error');
             const data = await response.json();
             const aiReply = data.response || "No response";
@@ -256,8 +265,9 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
         } catch (err) {
             console.error(err);
-            setAiText("Network error.");
-            setStatus('idle');
+            const errorMsg = "Network error. Switching to basic voice.";
+            setAiText(errorMsg);
+            speak(errorMsg, () => setStatus('idle'));
         }
     };
 
