@@ -3,7 +3,7 @@
  * Apple-style blur and subtle animations
  */
 
-import React from 'react';
+
 import { motion } from 'framer-motion';
 import { Menu, Sparkles, Command } from 'lucide-react';
 import { cn } from '@/lib/utils';

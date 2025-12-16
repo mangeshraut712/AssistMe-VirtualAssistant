@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { Code, Image, MessageSquare } from 'lucide-react';

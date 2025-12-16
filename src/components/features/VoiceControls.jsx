@@ -3,7 +3,7 @@
  * Mute button and push-to-talk indicator
  */
 
-import React from 'react';
+
 import { motion } from 'framer-motion';
 import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';

@@ -9,7 +9,7 @@
  * - Smooth transitions
  */
 
-import React from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sun, Moon, Monitor, Globe2, Palette, Server, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';

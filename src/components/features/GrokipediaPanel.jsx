@@ -16,13 +16,13 @@
  * Design: Minimalist Wikipedia + Modern Glass UI
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Search, Clock, BookOpen, ChevronRight, ChevronDown,
-    Sparkles, ExternalLink, Copy, Check, Share2, Bookmark,
-    BookmarkCheck, ArrowUp, Globe, Zap, Info, Link2,
-    FileText, History, Star, TrendingUp
+    X, Search, Clock, BookOpen, ChevronRight,
+    Sparkles, Copy, Check, Bookmark,
+    BookmarkCheck, ArrowUp, Info, Link2,
+    FileText, History, TrendingUp
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';

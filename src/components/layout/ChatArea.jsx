@@ -8,7 +8,7 @@
  * - Scroll to Bottom Button
  */
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Image as ImageIcon,

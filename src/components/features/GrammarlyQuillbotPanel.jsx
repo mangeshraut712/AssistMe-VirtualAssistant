@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
     X, Wand2, Copy, Check, Sparkles,
     RefreshCw, FileText, Languages,

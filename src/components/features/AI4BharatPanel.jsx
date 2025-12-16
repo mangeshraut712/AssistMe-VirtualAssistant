@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
     X, Languages, ArrowRightLeft, Globe, Mic, Type, FileText,
     Cpu, Keyboard, Volume2, ScanText, Sparkles, Check, Copy, RotateCcw,

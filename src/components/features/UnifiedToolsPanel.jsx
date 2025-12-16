@@ -9,7 +9,7 @@
  * - Mobile-optimized design
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wand2, Globe, ChevronRight, LayoutGrid, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';

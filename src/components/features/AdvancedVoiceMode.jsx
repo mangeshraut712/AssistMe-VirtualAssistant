@@ -1,25 +1,62 @@
 /**
- * Advanced Voice Mode - Working Simplified Version
+ * Enhanced Voice Mode with Backend Integration
  * 
- * Note: The full-featured version with audio visualization had compatibility issues.
- * This simplified version provides core voice functionality.
+ * Features:
+ * - Web Speech API (browser-based STT/TTS)
+ * - Backend Gemini TTS integration
+ * - Multiple voice options and languages
+ * - Real-time transcription
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mic, MicOff, Volume2 } from 'lucide-react';
+import { X, Mic, MicOff, Volume2, Settings, Globe, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createApiClient } from '@/lib/apiClient';
 
-const AdvancedVoiceMode = ({ isOpen, onClose, settings }) => {
+// Voice configuration
+const VOICES = [
+    { id: 'Puck', name: 'Puck (Neutral)', category: 'neutral' },
+    { id: 'Charon', name: 'Charon (Warm)', category: 'warm' },
+    { id: 'Kore', name: 'Kore (Calm)', category: 'calm' },
+    { id: 'Fenrir', name: 'Fenrir (Energetic)', category: 'energetic' },
+    { id: 'Aoede', name: 'Aoede (Professional)', category: 'professional' },
+];
+
+const LANGUAGES = [
+    { code: 'en-US', name: 'English (US)', native: 'English' },
+    { code: 'en-IN', name: 'English (India)', native: 'English' },
+    { code: 'hi-IN', name: 'Hindi', native: 'हिंदी' },
+    { code: 'es-US', name: 'Spanish', native: 'Español' },
+    { code: 'fr-FR', name: 'French', native: 'Français' },
+    { code: 'de-DE', name: 'German', native: 'Deutsch' },
+    { code: 'ja-JP', name: 'Japanese', native: '日本語' },
+    { code: 'ko-KR', name: 'Korean', native: '한국어' },
+    { code: 'zh-CN', name: 'Chinese', native: '中文' },
+    { code: 'pt-BR', name: 'Portuguese', native: 'Português' },
+];
+
+const AdvancedVoiceMode = ({ isOpen, onClose, backendUrl = '' }) => {
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [response, setResponse] = useState('');
+    const [useBackendTTS, setUseBackendTTS] = useState(true);
+    const [selectedVoice, setSelectedVoice] = useState('Puck');
+    const [selectedLanguage, setSelectedLanguage] = useState('en-US');
+    const [showSettings, setShowSettings] = useState(false);
 
     const recognitionRef = useRef(null);
-    const synthRef = useRef(null);
+    const audioRef = useRef(null);
+    const apiClient = useRef(null);
 
-    // Initialize Speech Recognition
+    useEffect(() => {
+        if (backendUrl) {
+            apiClient.current = createApiClient(backendUrl);
+        }
+    }, [backendUrl]);
+
+    // Speech Recognition (STT)
     const startListening = useCallback(() => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
             alert('Speech recognition not supported in this browser');
@@ -31,21 +68,28 @@ const AdvancedVoiceMode = ({ isOpen, onClose, settings }) => {
 
         recognition.continuous = false;
         recognition.interimResults = false;
-        recognition.lang = 'en-US';
+        recognition.lang = selectedLanguage;
 
         recognition.onstart = () => {
             setIsListening(true);
             setTranscript('Listening...');
         };
 
-        recognition.onresult = (event) => {
+        recognition.onresult = async (event) => {
             const text = event.results[0][0].transcript;
             setTranscript(text);
             setIsListening(false);
 
-            // Simple echo response for now
-            setResponse(`You said: ${text}`);
-            speak(`You said: ${text}`);
+            // Generate response
+            const aiResponse = `You said: ${text}. This is a demo response.`;
+            setResponse(aiResponse);
+
+            // Speak response
+            if (useBackendTTS && apiClient.current) {
+                await speakWithBackend(aiResponse);
+            } else {
+                speakWithBrowser(aiResponse);
+            }
         };
 
         recognition.onerror = (event) => {
@@ -60,7 +104,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, settings }) => {
 
         recognitionRef.current = recognition;
         recognition.start();
-    }, []);
+    }, [selectedLanguage, useBackendTTS]);
 
     const stopListening = useCallback(() => {
         if (recognitionRef.current) {
@@ -69,8 +113,57 @@ const AdvancedVoiceMode = ({ isOpen, onClose, settings }) => {
         }
     }, []);
 
-    // Text-to-Speech
-    const speak = useCallback((text) => {
+    // Backend TTS using Gemini
+    const speakWithBackend = useCallback(async (text) => {
+        if (!apiClient.current) {
+            console.error('Backend API not available');
+            speakWithBrowser(text);
+            return;
+        }
+
+        try {
+            setIsSpeaking(true);
+
+            const response = await fetch(`${backendUrl}/api/tts/synthesize`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text,
+                    voice: selectedVoice,
+                    language: selectedLanguage,
+                    auto_emotion: true
+                })
+            });
+
+            if (!response.ok) throw new Error('TTS failed');
+
+            const blob = await response.blob();
+            const audioUrl = URL.createObjectURL(blob);
+
+            const audio = new Audio(audioUrl);
+            audioRef.current = audio;
+
+            audio.onplay = () => setIsSpeaking(true);
+            audio.onended = () => {
+                setIsSpeaking(false);
+                URL.revokeObjectURL(audioUrl);
+            };
+            audio.onerror = () => {
+                setIsSpeaking(false);
+                console.error('Audio playback failed');
+            };
+
+            await audio.play();
+        } catch (error) {
+            console.error('Backend TTS error:', error);
+            setIsSpeaking(false);
+            // Fallback to browser TTS
+            speakWithBrowser(text);
+        }
+    }, [backendUrl, selectedVoice, selectedLanguage]);
+
+    // Browser TTS (fallback)
+    const speakWithBrowser = useCallback((text) => {
         if (!('speechSynthesis' in window)) {
             console.error('Speech synthesis not supported');
             return;
@@ -82,14 +175,14 @@ const AdvancedVoiceMode = ({ isOpen, onClose, settings }) => {
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
+        utterance.lang = selectedLanguage;
 
         utterance.onstart = () => setIsSpeaking(true);
         utterance.onend = () => setIsSpeaking(false);
         utterance.onerror = () => setIsSpeaking(false);
 
-        synthRef.current = utterance;
         window.speechSynthesis.speak(utterance);
-    }, []);
+    }, [selectedLanguage]);
 
     const toggleListening = () => {
         if (isListening) {
@@ -111,14 +204,108 @@ const AdvancedVoiceMode = ({ isOpen, onClose, settings }) => {
             >
                 {/* Header */}
                 <header className="h-16 border-b border-border flex items-center justify-between px-6">
-                    <h1 className="text-xl font-semibold">Voice Mode</h1>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-muted rounded-full transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <Sparkles className="w-6 h-6 text-primary" />
+                        <div>
+                            <h1 className="text-xl font-semibold">Voice Mode</h1>
+                            <p className="text-xs text-muted-foreground">
+                                {useBackendTTS ? 'Gemini TTS' : 'Browser TTS'} • {selectedLanguage}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowSettings(!showSettings)}
+                            className="p-2 hover:bg-muted rounded-full transition-colors"
+                        >
+                            <Settings className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-muted rounded-full transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </header>
+
+                {/* Settings Panel */}
+                {showSettings && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="border-b border-border bg-muted/50 overflow-hidden"
+                    >
+                        <div className="p-6 space-y-4">
+                            {/* TTS Mode */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">TTS Engine</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setUseBackendTTS(true)}
+                                        className={cn(
+                                            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                                            useBackendTTS
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-background hover:bg-muted"
+                                        )}
+                                    >
+                                        Gemini TTS (Backend)
+                                    </button>
+                                    <button
+                                        onClick={() => setUseBackendTTS(false)}
+                                        className={cn(
+                                            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                                            !useBackendTTS
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-background hover:bg-muted"
+                                        )}
+                                    >
+                                        Browser TTS
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Voice Selection (for backend TTS) */}
+                            {useBackendTTS && (
+                                <div>
+                                    <label className="text-sm font-medium mb-2 block">Voice</label>
+                                    <select
+                                        value={selectedVoice}
+                                        onChange={(e) => setSelectedVoice(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-lg bg-background border border-border"
+                                    >
+                                        {VOICES.map(voice => (
+                                            <option key={voice.id} value={voice.id}>
+                                                {voice.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Language Selection */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                                    <Globe className="w-4 h-4" />
+                                    Language
+                                </label>
+                                <select
+                                    value={selectedLanguage}
+                                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                                    className="w-full px-4 py-2 rounded-lg bg-background border border-border"
+                                >
+                                    {LANGUAGES.map(lang => (
+                                        <option key={lang.code} value={lang.code}>
+                                            {lang.name} ({lang.native})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* Main Content */}
                 <main className="flex-1 flex flex-col items-center justify-center p-6">
@@ -126,10 +313,10 @@ const AdvancedVoiceMode = ({ isOpen, onClose, settings }) => {
                     <motion.button
                         onClick={toggleListening}
                         className={cn(
-                            "w-32 h-32 rounded-full flex items-center justify-center mb-8 transition-all",
+                            "w-32 h-32 rounded-full flex items-center justify-center mb-8 transition-all shadow-lg",
                             isListening
-                                ? "bg-red-500 hover:bg-red-600"
-                                : "bg-primary hover:bg-primary/90"
+                                ? "bg-red-500 hover:bg-red-600 shadow-red-500/50"
+                                : "bg-primary hover:bg-primary/90 shadow-primary/50"
                         )}
                         whileTap={{ scale: 0.95 }}
                         animate={isListening ? { scale: [1, 1.05, 1] } : {}}
@@ -183,7 +370,7 @@ const AdvancedVoiceMode = ({ isOpen, onClose, settings }) => {
                 {/* Footer */}
                 <footer className="h-16 border-t border-border flex items-center justify-center px-6">
                     <p className="text-sm text-muted-foreground">
-                        Using Web Speech API • Click microphone to start
+                        {useBackendTTS ? `Gemini TTS • ${selectedVoice} voice` : 'Web Speech API'} • {LANGUAGES.find(l => l.code === selectedLanguage)?.name}
                     </p>
                 </footer>
             </motion.div>
