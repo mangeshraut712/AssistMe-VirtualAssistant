@@ -1,179 +1,82 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * VOICE MODE 5.0 - Human-Like Continuous Conversation
+ * VOICE MODE 5.1 - Fast & Responsive Human-AI Conversation
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * Major Improvements:
- * 1. Uses Gemini 2.0 Flash (FREE) via OpenRouter for better voice responses
- * 2. Enhanced Browser TTS with emotion control
- * 3. Natural conversation flow with thinking pauses
- * 4. Multiple accent/voice options
- * 5. Continuous listening loop after AI speaks
+ * FIXES:
+ * - Removed artificial thinking delays for faster response
+ * - Improved speech recognition reliability
+ * - Better state management
+ * - Fixed initial start issues
+ * - Shows transcript while listening
  * 
- * @version 5.0.0
+ * @version 5.1.0
  * @date December 2025
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Mic, MicOff, Settings, Sparkles, Zap, Globe,
+    X, Mic, MicOff, Settings, Sparkles, Globe,
     MessageSquare, Volume2, VolumeX, RefreshCw, Waves,
     User, Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CONFIGURATION
+// CONFIGURATION - Optimized for Speed
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const CONFIG = {
-    // Speech Recognition
-    SILENCE_SHORT: 1200,
-    SILENCE_MEDIUM: 1800,
-    SILENCE_LONG: 2500,
-    MIN_CONFIDENCE: 0.65,
+    // Faster silence detection
+    SILENCE_TIMEOUT: 1500,
+    MIN_TRANSCRIPT_LENGTH: 3,
 
-    // Natural Conversation
-    THINKING_MIN: 400,
-    THINKING_MAX: 900,
-    AUTO_RESTART_DELAY: 500,
+    // No artificial delays!
+    RESTART_DELAY: 300,
 
-    // Audio
-    SPEECH_RATE_DEFAULT: 0.92,
-    SPEECH_PITCH_DEFAULT: 1.0,
-
-    // OpenRouter Gemini Model (FREE and works great!)
+    // Use fast Gemini model
     CHAT_MODEL: 'google/gemini-2.0-flash-exp:free',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VOICE PERSONAS WITH EMOTIONS & ACCENTS
+// PERSONAS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const PERSONAS = {
     default: {
         name: 'AssistMe',
         emoji: '🎙️',
-        rate: 0.92,
+        rate: 0.95,
         pitch: 1.0,
-        voicePreference: ['Samantha', 'Karen', 'Daniel', 'Google US', 'Microsoft Zira'],
-        systemPrompt: `You are AssistMe, a warm and intelligent voice assistant having a natural spoken conversation.
-
-🎯 VOICE RESPONSE RULES - FOLLOW EXACTLY:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. KEEP IT SHORT: Maximum 2-3 sentences. This is SPOKEN, not written.
-2. SOUND NATURAL: Use contractions (I'm, you're, can't), filler words occasionally (well, so, actually)
-3. NO MARKDOWN: Never use **, ##, -, *, or any formatting
-4. NO LISTS: Never use bullet points or numbered lists
-5. SPELL NUMBERS: Say "twenty-five" not "25"
-6. ADD PAUSES: Use commas for natural breathing pauses
-7. BE CONVERSATIONAL: Like talking to a friend, not reading a textbook
-8. END CLEARLY: Finish with a complete thought, optionally ask a follow-up
-
-WRONG: "Here are 3 things: 1. First... 2. Second..."
-RIGHT: "Well, I'd say the main thing is... And you might also want to consider..."
-
-Remember: You're being SPOKEN aloud, so sound like a human talking!`,
+        systemPrompt: `You are AssistMe, a friendly voice assistant. Keep responses SHORT (1-2 sentences max). Sound natural and conversational. No markdown, no lists, no formatting. This is spoken dialogue.`,
     },
     friendly: {
         name: 'Buddy',
         emoji: '😊',
-        rate: 0.95,
+        rate: 1.0,
         pitch: 1.05,
-        voicePreference: ['Samantha', 'Karen', 'Google US Female'],
-        systemPrompt: `You are Buddy, a super friendly and upbeat voice assistant!
-
-🎯 YOUR STYLE:
-- Be enthusiastic but not over the top
-- Use casual language like "hey", "cool", "awesome"
-- Keep responses to 2 sentences max
-- Sound genuinely interested in helping
-- Add warmth with phrases like "I'd love to help with that!"
-
-NO FORMATTING OR LISTS - just natural speech!`,
+        systemPrompt: `You are Buddy, a super friendly assistant! Keep it SHORT (1-2 sentences). Be casual and warm. No formatting.`,
     },
     professional: {
         name: 'Expert',
         emoji: '💼',
-        rate: 0.88,
+        rate: 0.9,
         pitch: 0.95,
-        voicePreference: ['Daniel', 'Google UK Male', 'Microsoft David'],
-        systemPrompt: `You are Expert, a professional and authoritative voice advisor.
-
-🎯 YOUR STYLE:
-- Be direct and confident
-- Use precise language
-- Maximum 2 sentences per response
-- No hedging or unnecessary qualifiers
-- Sound knowledgeable without being condescending
-
-NO FORMATTING - concise spoken responses only.`,
-    },
-    empathetic: {
-        name: 'Companion',
-        emoji: '💝',
-        rate: 0.85,
-        pitch: 1.02,
-        voicePreference: ['Samantha', 'Google UK Female', 'Karen'],
-        systemPrompt: `You are Companion, a warm and supportive voice friend.
-
-🎯 YOUR STYLE:
-- Speak softly and warmly
-- Validate feelings: "I understand how you feel..."
-- Use supportive phrases: "That makes sense", "I hear you"
-- Keep responses gentle and brief (2 sentences)
-- Never rush - pause naturally
-
-NO FORMATTING - just warm, spoken comfort.`,
-    },
-    energetic: {
-        name: 'Spark',
-        emoji: '⚡',
-        rate: 1.05,
-        pitch: 1.1,
-        voicePreference: ['Samantha', 'Google US Female'],
-        systemPrompt: `You are Spark, a high-energy motivational voice!
-
-🎯 YOUR STYLE:
-- Be EXCITED and dynamic!
-- Short, punchy responses (1-2 sentences)
-- Use power words: "Absolutely!", "Let's do this!", "You got it!"
-- Inspire action and confidence
-- Keep the energy HIGH
-
-NO FORMATTING - pure spoken energy!`,
+        systemPrompt: `You are Expert, a professional advisor. Be direct and brief (1-2 sentences max). No formatting.`,
     },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// UTILITY FUNCTIONS
+// UTILITIES
 // ═══════════════════════════════════════════════════════════════════════════════
-
-const naturalDelay = () => new Promise(resolve =>
-    setTimeout(resolve, CONFIG.THINKING_MIN + Math.random() * (CONFIG.THINKING_MAX - CONFIG.THINKING_MIN))
-);
-
-const getAdaptiveSilenceTimeout = (length) => {
-    if (length < 30) return CONFIG.SILENCE_SHORT;
-    if (length < 80) return CONFIG.SILENCE_MEDIUM;
-    return CONFIG.SILENCE_LONG;
-};
 
 const normalizeForSpeech = (text) => {
     if (!text) return '';
-    const numbers = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
-        'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
     return text
         .replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '')
         .replace(/#{1,6}\s?/g, '').replace(/\n+/g, '. ')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-        .replace(/•|-\s/g, '')
-        .replace(/\d+\.\s/g, '')
-        .replace(/(\d+)/g, (m) => {
-            const n = parseInt(m);
-            return n <= 20 ? (numbers[n] || m) : m;
-        })
+        .replace(/•|-\s/g, '').replace(/\d+\.\s/g, '')
         .replace(/\s+/g, ' ').trim();
 };
 
@@ -183,137 +86,119 @@ const normalizeForSpeech = (text) => {
 
 export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) {
     // State
-    const [status, setStatus] = useState('idle');
-    const [mode, setMode] = useState('standard');
+    const [status, setStatus] = useState('idle'); // idle, listening, processing, speaking, error
     const [persona, setPersona] = useState('default');
     const [showSettings, setShowSettings] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
 
     // Conversation
     const [transcript, setTranscript] = useState('');
-    const [interimTranscript, setInterimTranscript] = useState('');
     const [aiResponse, setAiResponse] = useState('');
     const [conversation, setConversation] = useState([]);
 
-    // Audio Level
+    // Audio
     const [audioLevel, setAudioLevel] = useState(0);
-    const [isSpeechDetected, setIsSpeechDetected] = useState(false);
 
     // Error
     const [errorMessage, setErrorMessage] = useState('');
 
     // Refs
-    const statusRef = useRef(status);
-    const transcriptRef = useRef('');
-    const personaRef = useRef(persona);
+    const statusRef = useRef('idle');
     const recognitionRef = useRef(null);
     const silenceTimerRef = useRef(null);
-    const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null);
-    const voicesLoadedRef = useRef(false);
-    const currentUtteranceRef = useRef(null);
-    const messagesEndRef = useRef(null);
+    const synthRef = useRef(null);
     const streamRef = useRef(null);
     const analyserRef = useRef(null);
     const animationFrameRef = useRef(null);
+    const isProcessingRef = useRef(false);
+    const messagesEndRef = useRef(null);
 
-    // Sync refs
-    useEffect(() => { statusRef.current = status; }, [status]);
-    useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
-    useEffect(() => { personaRef.current = persona; }, [persona]);
-    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [conversation, aiResponse]);
-
-    // Load voices
+    // Initialize synth
     useEffect(() => {
-        const loadVoices = () => {
-            if (synthRef.current) {
-                synthRef.current.getVoices();
-                voicesLoadedRef.current = true;
-            }
-        };
-        loadVoices();
-        if (synthRef.current) {
-            synthRef.current.onvoiceschanged = loadVoices;
+        if (typeof window !== 'undefined') {
+            synthRef.current = window.speechSynthesis;
+            // Pre-load voices
+            synthRef.current?.getVoices();
         }
     }, []);
 
+    // Sync status ref
+    useEffect(() => {
+        statusRef.current = status;
+        console.log('[VoiceMode] Status:', status);
+    }, [status]);
+
+    // Auto-scroll
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [conversation, aiResponse]);
+
     // ─────────────────────────────────────────────────────────────────────────
-    // ENHANCED TTS WITH EMOTION
+    // TEXT TO SPEECH
     // ─────────────────────────────────────────────────────────────────────────
 
     const speak = useCallback((text, onEnd) => {
         if (!synthRef.current || !text || isMuted) {
+            console.log('[TTS] Skipping - muted or no text');
             if (onEnd) onEnd();
             return;
         }
 
+        // Cancel any ongoing speech
         synthRef.current.cancel();
-        const normalizedText = normalizeForSpeech(text);
 
-        if (!normalizedText) {
+        const cleanText = normalizeForSpeech(text);
+        if (!cleanText) {
             if (onEnd) onEnd();
             return;
         }
 
-        const utterance = new SpeechSynthesisUtterance(normalizedText);
-        const personaConfig = PERSONAS[personaRef.current] || PERSONAS.default;
+        console.log('[TTS] Speaking:', cleanText.substring(0, 50) + '...');
 
-        // Apply persona voice settings
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        const personaConfig = PERSONAS[persona] || PERSONAS.default;
+
         utterance.rate = personaConfig.rate;
         utterance.pitch = personaConfig.pitch;
         utterance.volume = 1.0;
 
-        // Find best matching voice
+        // Try to get a good English voice
         const voices = synthRef.current.getVoices();
-        const preferredVoice = voices.find(v =>
-            personaConfig.voicePreference.some(pref =>
-                v.name.toLowerCase().includes(pref.toLowerCase())
-            ) && v.lang.startsWith('en')
-        );
+        const englishVoice = voices.find(v =>
+            v.lang.startsWith('en') && (v.name.includes('Samantha') || v.name.includes('Google') || v.name.includes('Microsoft'))
+        ) || voices.find(v => v.lang.startsWith('en'));
 
-        if (preferredVoice) {
-            utterance.voice = preferredVoice;
-        } else {
-            // Fallback to any English voice
-            const englishVoice = voices.find(v => v.lang.startsWith('en'));
-            if (englishVoice) utterance.voice = englishVoice;
-        }
+        if (englishVoice) utterance.voice = englishVoice;
 
         utterance.onstart = () => {
+            console.log('[TTS] Started speaking');
             setStatus('speaking');
-            currentUtteranceRef.current = utterance;
         };
 
         utterance.onend = () => {
-            currentUtteranceRef.current = null;
+            console.log('[TTS] Finished speaking');
+            setStatus('idle');
             if (onEnd) onEnd();
         };
 
         utterance.onerror = (e) => {
-            console.error('TTS Error:', e);
-            currentUtteranceRef.current = null;
+            console.error('[TTS] Error:', e);
+            setStatus('idle');
             if (onEnd) onEnd();
         };
 
-        try {
-            synthRef.current.speak(utterance);
-        } catch (e) {
-            console.error('Speak error:', e);
-            if (onEnd) onEnd();
-        }
-    }, [isMuted]);
+        synthRef.current.speak(utterance);
+    }, [isMuted, persona]);
 
     const stopSpeaking = useCallback(() => {
-        if (synthRef.current) {
-            synthRef.current.cancel();
-        }
-        currentUtteranceRef.current = null;
+        synthRef.current?.cancel();
         if (statusRef.current === 'speaking') {
             setStatus('idle');
         }
     }, []);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // AUDIO MONITORING FOR VISUALIZATION
+    // AUDIO MONITORING
     // ─────────────────────────────────────────────────────────────────────────
 
     const startAudioMonitoring = useCallback((stream) => {
@@ -334,124 +219,124 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                 let sum = 0;
                 for (let i = 0; i < dataArray.length; i++) sum += dataArray[i] * dataArray[i];
                 const rms = Math.sqrt(sum / dataArray.length);
-                smoothed = smoothed * 0.85 + rms * 0.15;
+                smoothed = smoothed * 0.8 + rms * 0.2;
                 setAudioLevel(Math.min(1, smoothed * 15));
-                setIsSpeechDetected(smoothed > 0.02);
                 animationFrameRef.current = requestAnimationFrame(update);
             };
             update();
         } catch (e) {
-            console.error('Audio monitoring error:', e);
+            console.error('[Audio] Monitoring error:', e);
         }
     }, []);
 
     const stopAudioMonitoring = useCallback(() => {
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
         }
         if (analyserRef.current) {
             try { analyserRef.current.ctx.close(); } catch (e) { }
             analyserRef.current = null;
         }
         setAudioLevel(0);
-        setIsSpeechDetected(false);
     }, []);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // GEMINI-POWERED RESPONSE GENERATION
+    // AI RESPONSE - No artificial delays!
     // ─────────────────────────────────────────────────────────────────────────
 
-    const generateResponse = useCallback(async (userText, history) => {
-        const personaConfig = PERSONAS[personaRef.current] || PERSONAS.default;
+    const generateResponse = useCallback(async (userText) => {
+        console.log('[AI] Generating response for:', userText);
+
+        const personaConfig = PERSONAS[persona] || PERSONAS.default;
 
         try {
-            // Use OpenRouter with Gemini 2.0 Flash (FREE!)
             const response = await fetch('/api/chat/text', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: [
                         { role: 'system', content: personaConfig.systemPrompt },
-                        ...history.slice(-10).map(m => ({ role: m.role, content: m.content }))
+                        ...conversation.slice(-6).map(m => ({ role: m.role, content: m.content })),
+                        { role: 'user', content: userText }
                     ],
                     model: CONFIG.CHAT_MODEL,
-                    max_tokens: 150,
-                    temperature: 0.85,
+                    max_tokens: 100, // Keep short for fast response
+                    temperature: 0.8,
                 })
             });
 
             if (!response.ok) {
-                throw new Error('Chat API failed');
+                console.error('[AI] API error:', response.status);
+                throw new Error('API failed');
             }
 
             const data = await response.json();
-            return data.response || "I'm not sure how to respond to that.";
+            return data.response || "I'm sorry, I didn't catch that.";
 
         } catch (e) {
-            console.error('Response generation error:', e);
-            return "I'm having trouble connecting. Please try again.";
+            console.error('[AI] Error:', e);
+            return "Sorry, I'm having connection issues.";
         }
-    }, []);
+    }, [conversation, persona]);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // CONVERSATION HANDLER WITH CONTINUOUS FLOW
+    // PROCESS USER INPUT
     // ─────────────────────────────────────────────────────────────────────────
 
-    const handleUserInput = useCallback(async (userText, confidence = 1.0) => {
-        if (!userText.trim()) return;
-
-        setStatus('processing');
-        setTranscript('');
-        setInterimTranscript('');
-        setErrorMessage('');
-
-        // Add user message
-        const newHistory = [...conversation, { role: 'user', content: userText }];
-        setConversation(newHistory);
-
-        // Low confidence - ask for clarification
-        if (confidence < CONFIG.MIN_CONFIDENCE) {
-            const clarification = "I didn't quite catch that. Could you say it again?";
-            setAiResponse(clarification);
-            setConversation([...newHistory, { role: 'assistant', content: clarification }]);
-            speak(clarification, () => {
-                setStatus('idle');
-                // Auto-restart listening after speaking
-                setTimeout(() => {
-                    if (statusRef.current === 'idle') startRecognition();
-                }, CONFIG.AUTO_RESTART_DELAY);
-            });
+    const processUserInput = useCallback(async (userText) => {
+        if (!userText.trim() || userText.length < CONFIG.MIN_TRANSCRIPT_LENGTH) {
+            console.log('[Process] Text too short, ignoring');
             return;
         }
 
-        // Natural thinking pause
-        await naturalDelay();
+        if (isProcessingRef.current) {
+            console.log('[Process] Already processing, ignoring');
+            return;
+        }
 
-        // Generate AI response
-        const response = await generateResponse(userText, newHistory);
+        console.log('[Process] Processing:', userText);
+        isProcessingRef.current = true;
+        setStatus('processing');
+        setTranscript('');
+
+        // Add user message
+        const newConversation = [...conversation, { role: 'user', content: userText }];
+        setConversation(newConversation);
+
+        // Generate and speak response
+        const response = await generateResponse(userText);
+
+        console.log('[Process] Got response:', response.substring(0, 50) + '...');
 
         setAiResponse(response);
-        setConversation([...newHistory, { role: 'assistant', content: response }]);
+        setConversation([...newConversation, { role: 'assistant', content: response }]);
 
-        // Speak the response, then auto-resume listening
+        // Speak the response
         speak(response, () => {
-            setStatus('idle');
-            // CONTINUOUS CONVERSATION: Auto-restart listening after AI speaks
+            console.log('[Process] Done speaking, restarting listening');
+            isProcessingRef.current = false;
+            // Auto-restart listening after AI speaks
             setTimeout(() => {
-                if (statusRef.current === 'idle' && mode === 'standard') {
-                    startRecognition();
+                if (statusRef.current === 'idle') {
+                    startListening();
                 }
-            }, CONFIG.AUTO_RESTART_DELAY);
+            }, CONFIG.RESTART_DELAY);
         });
-
-    }, [conversation, generateResponse, speak, mode]);
+    }, [conversation, generateResponse, speak]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // SPEECH RECOGNITION
     // ─────────────────────────────────────────────────────────────────────────
 
-    const startRecognition = useCallback(async () => {
-        if (statusRef.current === 'processing' || statusRef.current === 'speaking') return;
+    const startListening = useCallback(async () => {
+        // Don't start if already listening or processing
+        if (statusRef.current !== 'idle') {
+            console.log('[STT] Not idle, cannot start. Current status:', statusRef.current);
+            return;
+        }
+
+        console.log('[STT] Starting listening...');
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
@@ -460,108 +345,148 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             return;
         }
 
-        // Stop any existing recognition
-        if (recognitionRef.current) {
-            try { recognitionRef.current.stop(); } catch (e) { }
-        }
-
-        // Get microphone access
+        // Get microphone
         try {
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(t => t.stop());
             }
+
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
             });
             streamRef.current = stream;
             startAudioMonitoring(stream);
+            console.log('[STT] Microphone ready');
         } catch (e) {
+            console.error('[STT] Microphone error:', e);
             setErrorMessage('Microphone access denied.');
             setStatus('error');
             return;
         }
 
+        // Setup recognition
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
         recognition.maxAlternatives = 1;
 
-        let finalTranscript = '';
-        let lastConfidence = 1.0;
+        let currentTranscript = '';
 
         recognition.onstart = () => {
+            console.log('[STT] Recognition started');
             setStatus('listening');
-            finalTranscript = '';
-            transcriptRef.current = '';
+            currentTranscript = '';
+            setTranscript('');
         };
 
         recognition.onresult = (event) => {
             let interim = '';
+            let final = '';
 
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const result = event.results[i];
                 if (result.isFinal) {
-                    finalTranscript += result[0].transcript + ' ';
-                    lastConfidence = result[0].confidence || 1.0;
+                    final += result[0].transcript + ' ';
                 } else {
                     interim += result[0].transcript;
                 }
             }
 
-            setTranscript(finalTranscript.trim());
-            setInterimTranscript(interim);
-            transcriptRef.current = finalTranscript.trim();
+            if (final) {
+                currentTranscript += final;
+            }
 
-            // Clear existing timer
-            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            const displayText = (currentTranscript + interim).trim();
+            setTranscript(displayText);
+            console.log('[STT] Transcript:', displayText);
 
-            // Adaptive silence detection
-            const timeout = getAdaptiveSilenceTimeout(transcriptRef.current.length);
+            // Reset silence timer on any input
+            if (silenceTimerRef.current) {
+                clearTimeout(silenceTimerRef.current);
+            }
+
+            // Set silence timer - will trigger processing when user stops speaking
             silenceTimerRef.current = setTimeout(() => {
-                if (transcriptRef.current.trim().length > 2) {
+                const finalText = currentTranscript.trim();
+                if (finalText.length >= CONFIG.MIN_TRANSCRIPT_LENGTH) {
+                    console.log('[STT] Silence detected, stopping recognition');
                     recognition.stop();
                 }
-            }, timeout);
+            }, CONFIG.SILENCE_TIMEOUT);
         };
 
         recognition.onend = () => {
-            const finalText = transcriptRef.current;
-            if (finalText.trim().length > 2 && statusRef.current === 'listening') {
-                handleUserInput(finalText, lastConfidence);
-            } else if (statusRef.current === 'listening') {
-                // Restart if no input
+            console.log('[STT] Recognition ended');
+
+            // Clear any pending timer
+            if (silenceTimerRef.current) {
+                clearTimeout(silenceTimerRef.current);
+                silenceTimerRef.current = null;
+            }
+
+            const finalText = currentTranscript.trim();
+
+            if (finalText.length >= CONFIG.MIN_TRANSCRIPT_LENGTH && !isProcessingRef.current) {
+                // Process the transcript
+                processUserInput(finalText);
+            } else if (statusRef.current === 'listening' && !isProcessingRef.current) {
+                // No valid input, restart listening
+                console.log('[STT] No valid input, restarting...');
                 setTimeout(() => {
                     if (statusRef.current === 'listening') {
-                        try { recognition.start(); } catch (e) { }
+                        try { recognition.start(); } catch (e) { console.log('[STT] Restart failed:', e); }
                     }
                 }, 100);
             }
         };
 
         recognition.onerror = (event) => {
-            if (event.error === 'no-speech' && statusRef.current === 'listening') {
+            console.log('[STT] Error:', event.error);
+
+            if (event.error === 'no-speech') {
+                // Just restart if no speech detected
                 setTimeout(() => {
-                    try { recognition.start(); } catch (e) { }
+                    if (statusRef.current === 'listening' && !isProcessingRef.current) {
+                        try { recognition.start(); } catch (e) { }
+                    }
                 }, 100);
             } else if (event.error !== 'aborted') {
-                console.error('Recognition error:', event.error);
+                setErrorMessage('Speech recognition error: ' + event.error);
             }
         };
 
         recognitionRef.current = recognition;
-        try { recognition.start(); } catch (e) { console.error(e); }
-    }, [handleUserInput, startAudioMonitoring]);
 
-    const stopRecognition = useCallback(() => {
+        try {
+            recognition.start();
+        } catch (e) {
+            console.error('[STT] Start error:', e);
+        }
+    }, [startAudioMonitoring, processUserInput]);
+
+    const stopListening = useCallback(() => {
+        console.log('[STT] Stopping...');
+
         if (recognitionRef.current) {
             try { recognitionRef.current.stop(); } catch (e) { }
+            recognitionRef.current = null;
         }
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+        }
+
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(t => t.stop());
             streamRef.current = null;
         }
+
         stopAudioMonitoring();
     }, [stopAudioMonitoring]);
 
@@ -569,31 +494,47 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     // LIFECYCLE
     // ─────────────────────────────────────────────────────────────────────────
 
-    useEffect(() => {
-        if (isOpen && status === 'idle' && mode === 'standard') {
-            setTimeout(startRecognition, 400);
-        }
-    }, [isOpen, status, mode, startRecognition]);
-
+    // Start listening when opened
     useEffect(() => {
         if (!isOpen) return;
 
+        console.log('[Lifecycle] Voice mode opened');
+
+        // Check browser support
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
             setStatus('error');
             setErrorMessage('Speech recognition not supported. Use Chrome or Edge.');
             return;
         }
 
+        // Reset state
         setStatus('idle');
         setConversation([]);
         setAiResponse('');
         setTranscript('');
+        setErrorMessage('');
+        isProcessingRef.current = false;
+
+        // Auto-start listening after a brief delay
+        const timer = setTimeout(() => {
+            console.log('[Lifecycle] Auto-starting listening');
+            startListening();
+        }, 500);
 
         return () => {
-            stopRecognition();
+            clearTimeout(timer);
+            stopListening();
             stopSpeaking();
         };
-    }, [isOpen, stopRecognition, stopSpeaking]);
+    }, [isOpen]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            stopListening();
+            stopSpeaking();
+        };
+    }, [stopListening, stopSpeaking]);
 
     if (!isOpen) return null;
 
@@ -602,18 +543,45 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     // ─────────────────────────────────────────────────────────────────────────
 
     const getOrbColor = () => {
-        if (status === 'error') return 'from-red-500 to-rose-600';
-        if (status === 'speaking') return 'from-emerald-400 to-teal-500';
-        if (status === 'processing') return 'from-amber-400 to-orange-500';
-        if (status === 'listening') return 'from-blue-400 to-cyan-500';
-        return 'from-slate-400 to-slate-500';
+        switch (status) {
+            case 'error': return 'from-red-500 to-rose-600';
+            case 'speaking': return 'from-emerald-400 to-teal-500';
+            case 'processing': return 'from-amber-400 to-orange-500';
+            case 'listening': return 'from-blue-400 to-cyan-500';
+            default: return 'from-slate-400 to-slate-500';
+        }
+    };
+
+    const getStatusText = () => {
+        switch (status) {
+            case 'listening': return audioLevel > 0.1 ? 'Hearing you...' : 'Listening...';
+            case 'processing': return 'Thinking...';
+            case 'speaking': return 'Speaking...';
+            case 'error': return errorMessage || 'Error';
+            default: return 'Tap to start';
+        }
     };
 
     const handleOrbClick = () => {
-        if (status === 'speaking') stopSpeaking();
-        else if (status === 'error') { setStatus('idle'); setErrorMessage(''); startRecognition(); }
-        else if (status === 'idle') startRecognition();
-        else if (status === 'listening') { stopRecognition(); setStatus('idle'); }
+        console.log('[UI] Orb clicked, status:', status);
+
+        switch (status) {
+            case 'speaking':
+                stopSpeaking();
+                break;
+            case 'error':
+                setStatus('idle');
+                setErrorMessage('');
+                setTimeout(startListening, 100);
+                break;
+            case 'idle':
+                startListening();
+                break;
+            case 'listening':
+                stopListening();
+                setStatus('idle');
+                break;
+        }
     };
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -633,11 +601,11 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-muted/50 border border-border/50">
                             <Globe className="w-4 h-4" />
-                            <span className="hidden sm:inline">Gemini Voice</span>
+                            <span>Voice Mode</span>
                         </div>
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-muted/30 border border-border/30">
-                            <span>{PERSONAS[persona]?.emoji || '🎙️'}</span>
-                            <span className="hidden sm:inline">{PERSONAS[persona]?.name || 'AssistMe'}</span>
+                            <span>{PERSONAS[persona]?.emoji}</span>
+                            <span className="hidden sm:inline">{PERSONAS[persona]?.name}</span>
                         </div>
                     </div>
 
@@ -683,20 +651,20 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                         >
                             <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4">
                                 <h3 className="text-sm font-semibold mb-3">Voice Persona</h3>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                <div className="flex gap-2 flex-wrap">
                                     {Object.entries(PERSONAS).map(([key, p]) => (
                                         <button
                                             key={key}
                                             onClick={() => setPersona(key)}
                                             className={cn(
-                                                "p-3 rounded-xl text-xs font-medium transition-all border text-left",
+                                                "px-4 py-2 rounded-xl text-sm font-medium transition-all border",
                                                 persona === key
                                                     ? "bg-blue-500/20 border-blue-500 text-blue-600 dark:text-blue-400"
                                                     : "border-border/50 hover:bg-muted"
                                             )}
                                         >
-                                            <span className="text-lg mr-1">{p.emoji}</span>
-                                            <span>{p.name}</span>
+                                            <span className="mr-1">{p.emoji}</span>
+                                            {p.name}
                                         </button>
                                     ))}
                                 </div>
@@ -711,32 +679,17 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                         {/* Outer Glow */}
                         <motion.div
                             animate={{
-                                scale: status === 'listening' ? 1 + audioLevel * 0.6 : status === 'speaking' ? [1, 1.25, 1] : 1,
-                                opacity: status === 'idle' ? 0.15 : 0.5
+                                scale: status === 'listening' ? 1 + audioLevel * 0.5 : status === 'speaking' ? [1, 1.2, 1] : 1,
+                                opacity: status === 'idle' ? 0.1 : 0.4
                             }}
                             transition={{ repeat: status === 'speaking' ? Infinity : 0, duration: 0.5 }}
                             className={cn("absolute -inset-10 sm:-inset-14 rounded-full blur-3xl bg-gradient-to-br", getOrbColor())}
                         />
 
-                        {/* Speech Waves */}
-                        {status === 'listening' && isSpeechDetected && (
-                            <>
-                                {[0, 1, 2].map((i) => (
-                                    <motion.div
-                                        key={i}
-                                        initial={{ scale: 1, opacity: 0.6 }}
-                                        animate={{ scale: 1.6 + i * 0.35, opacity: 0 }}
-                                        transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.3 }}
-                                        className="absolute inset-0 rounded-full border-2 border-blue-500"
-                                    />
-                                ))}
-                            </>
-                        )}
-
                         {/* Core Orb */}
                         <motion.div
                             animate={{
-                                scale: status === 'speaking' ? [1, 1.1, 0.95, 1.05, 1] : status === 'processing' ? [1, 0.95, 1] : 1,
+                                scale: status === 'speaking' ? [1, 1.08, 0.96, 1.04, 1] : status === 'processing' ? [1, 0.95, 1] : 1,
                             }}
                             transition={{ repeat: Infinity, duration: status === 'speaking' ? 0.5 : 1.5 }}
                             className={cn(
@@ -764,22 +717,23 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
                     {/* Status */}
                     <motion.div
-                        key={status + aiResponse.slice(0, 20)}
+                        key={status}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="mt-8 text-center max-w-md px-4"
                     >
                         <h2 className="text-xl sm:text-2xl font-medium mb-2">
-                            {status === 'listening' && (isSpeechDetected ? 'Hearing you...' : 'Listening...')}
-                            {status === 'processing' && 'Thinking...'}
-                            {status === 'speaking' && 'Speaking...'}
-                            {status === 'error' && (errorMessage || 'Error')}
-                            {status === 'idle' && 'Tap to start'}
+                            {getStatusText()}
                         </h2>
-                        <p className="text-sm text-muted-foreground">
-                            {status === 'listening' && (transcript || interimTranscript || 'Say something...')}
-                            {status === 'speaking' && 'Tap orb to stop'}
-                        </p>
+                        {/* Show transcript while listening */}
+                        {status === 'listening' && (
+                            <p className="text-sm text-muted-foreground min-h-[1.5rem]">
+                                {transcript || 'Say something...'}
+                            </p>
+                        )}
+                        {status === 'speaking' && (
+                            <p className="text-sm text-muted-foreground">Tap orb to stop</p>
+                        )}
                     </motion.div>
                 </div>
 
@@ -820,19 +774,18 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                 </motion.div>
                             ))}
 
-                            {/* Streaming response */}
-                            {(status === 'processing' || status === 'speaking') && aiResponse &&
-                                conversation[conversation.length - 1]?.role !== 'assistant' && (
-                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2 justify-start">
-                                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                            <Bot className="w-3.5 h-3.5 text-primary" />
-                                        </div>
-                                        <div className="max-w-[80%] px-4 py-2.5 rounded-2xl bg-muted rounded-bl-md text-sm">
-                                            {aiResponse}
-                                            {status === 'processing' && <span className="inline-block w-2 h-4 bg-foreground/30 ml-1 animate-pulse" />}
-                                        </div>
-                                    </motion.div>
-                                )}
+                            {/* Show AI response while processing */}
+                            {status === 'processing' && aiResponse && (
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2 justify-start">
+                                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                        <Bot className="w-3.5 h-3.5 text-primary" />
+                                    </div>
+                                    <div className="max-w-[80%] px-4 py-2.5 rounded-2xl bg-muted rounded-bl-md text-sm">
+                                        {aiResponse}
+                                        <span className="inline-block w-2 h-4 bg-foreground/30 ml-1 animate-pulse" />
+                                    </div>
+                                </motion.div>
+                            )}
                         </div>
                     )}
                     <div ref={messagesEndRef} />
