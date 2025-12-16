@@ -46,31 +46,50 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     const speak = useCallback((text, onEnd) => {
         if (!synthRef.current) return;
 
-        // Cancel any current speech
         synthRef.current.cancel();
 
-        const utterance = new SpeechSynthesisUtterance(cleanTextForTTS(text));
+        // Split into sentences for better interruptibility
+        const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
 
-        // Get available voices and try to pick a better one
-        const voices = synthRef.current.getVoices();
-        const preferredVoice = voices.find(v => v.name.includes('Google US English')) ||
-            voices.find(v => v.name.includes('Samantha')) ||
-            voices[0];
+        let currentIndex = 0;
 
-        if (preferredVoice) utterance.voice = preferredVoice;
-        utterance.rate = 1.1; // Slightly faster for natural feel
-        utterance.pitch = 1.0;
+        const speakNext = () => {
+            if (currentIndex >= sentences.length) {
+                if (onEnd) onEnd();
+                return;
+            }
 
-        utterance.onstart = () => setStatus('speaking');
-        utterance.onend = () => {
-            if (onEnd) onEnd();
+            const sentence = cleanTextForTTS(sentences[currentIndex]);
+            if (!sentence.trim()) {
+                currentIndex++;
+                speakNext();
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(sentence);
+            const voices = synthRef.current.getVoices();
+            const preferredVoice = voices.find(v => v.name.includes('Google US English')) ||
+                voices.find(v => v.name.includes('Samantha')) ||
+                voices[0];
+
+            if (preferredVoice) utterance.voice = preferredVoice;
+            utterance.rate = 1.1;
+            utterance.pitch = 1.0;
+
+            utterance.onstart = () => setStatus('speaking');
+            utterance.onend = () => {
+                currentIndex++;
+                speakNext();
+            };
+            utterance.onerror = () => {
+                currentIndex++;
+                speakNext();
+            };
+
+            synthRef.current.speak(utterance);
         };
-        utterance.onerror = () => {
-            // If error, just resume listening
-            if (onEnd) onEnd();
-        };
 
-        synthRef.current.speak(utterance);
+        speakNext();
     }, []);
 
     const stopSpeaking = useCallback(() => {
@@ -97,20 +116,29 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         setTranscript(userText); // Show final result
 
         try {
-            // Prepare messages for API
+            // Prepare messages for API with Voice System Instruction
+            const systemInstruction = {
+                role: 'system',
+                content: `You are AssistMe's Voice Mode. 
+                CRITICAL INSTRUCTIONS:
+                1. Act as a helpful, human-like verbal assistant.
+                2. Keep responses BRIEF and CONVERSATIONAL (1-3 sentences max).
+                3. Do NOT use markdown (no bold, no lists, no code blocks). 
+                4. Speak naturally, using common contractions (I'm, It's).
+                5. Avoid long monologues. Ask follow-up questions if needed.`
+            };
+
             const apiMessages = [
+                systemInstruction,
                 ...newHistory.slice(-6).map(m => ({ role: m.role, content: m.content })),
                 { role: 'user', content: userText }
-            ]; // Ensure last message is included if not in history yet? Wait, newHistory has it.
-
-            // Actually, conversation state update is async, so use local var
-            // But simplify: standard fetch
+            ];
 
             const response = await fetch(`${backendUrl}/api/chat/text`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: newHistory.slice(-8), // Send enough context
+                    messages: apiMessages,
                     model: 'google/gemini-2.0-flash-001:free'
                 })
             });
@@ -123,10 +151,9 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             setAiText(aiReply);
             setConversation([...newHistory, { role: 'assistant', content: aiReply }]);
 
-            // Auto-speak and then Auto-listen
+            // Auto-speak with interruptible chunks
             speak(aiReply, () => {
-                // When done speaking, resume listening automatically (Hands-free)
-                setStatus('idle'); // Will trigger useEffect to start listening
+                setStatus('idle'); // Resume listening logic
             });
 
         } catch (err) {
@@ -161,7 +188,13 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                 console.log('Gemini Live Connected');
                 setStatus('idle'); // Ready!
                 ws.send(JSON.stringify({
-                    setup: { model: "models/gemini-2.0-flash-exp", generationConfig: { responseModalities: ["TEXT"] } }
+                    setup: {
+                        model: "models/gemini-2.0-flash-exp",
+                        generationConfig: { responseModalities: ["TEXT"] },
+                        systemInstruction: {
+                            parts: [{ text: "You are a voice assistant. Keep responses under 3 sentences. Be concise and conversational." }]
+                        }
+                    }
                 }));
             };
 
@@ -422,7 +455,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                         <h2 className="text-2xl font-light tracking-tight">
                             {status === 'listening' && "Listening..."}
                             {status === 'processing' && "Thinking..."}
-                            {status === 'speaking' && "Speaking..."}
+                            {status === 'speaking' && "Tap orb to interrupt"}
                             {status === 'idle' && "Tap orb or wait..."}
                             {status === 'error' && "Connection Issue"}
                         </h2>
