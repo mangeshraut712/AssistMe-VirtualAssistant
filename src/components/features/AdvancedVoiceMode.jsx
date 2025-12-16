@@ -17,10 +17,19 @@ import { cn } from '@/lib/utils';
 const SILENCE_TIMEOUT = 1500; // ms to wait after speech before processing
 const RECONNECT_DELAY = 1000;
 
+// Director Prompts (Expressivity Control)
+const DIRECTOR_PROMPTS = {
+    friendly: "Act as a friendly, casual assistant. Speak naturally with a warm tone. Use common contractions.",
+    professional: "Act as a concise, professional expert. Keep responses precise, factual, and to the point. Maintain a formal tone.",
+    empathetic: "Act as a compassionate listener. Use warm, validating language. Speak softly and show emotional intelligence.",
+    energetic: "Act as a high-energy, enthusiastic motivator! Speak excitedly and use dynamic phrasing to show passion."
+};
+
 export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) {
     // State Machine: 'idle' | 'listening' | 'processing' | 'speaking' | 'error'
     const [status, setStatus] = useState('idle');
     const [mode, setMode] = useState('standard'); // 'standard' (OpenRouter) | 'gemini-live' (WebSocket)
+    const [voiceStyle, setVoiceStyle] = useState('friendly'); // 'friendly' | 'professional' | 'empathetic' | 'energetic'
     const [transcript, setTranscript] = useState('');
     const [aiText, setAiText] = useState('');
     const [showSettings, setShowSettings] = useState(false);
@@ -155,7 +164,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                 role: 'system',
                 content: `You are AssistMe's Voice Mode. 
                 CRITICAL INSTRUCTIONS:
-                1. Act as a helpful, human-like verbal assistant.
+                1. ${DIRECTOR_PROMPTS[voiceStyle]}
                 2. Keep responses BRIEF and CONVERSATIONAL (1-3 sentences max).
                 3. Do NOT use markdown (no bold, no lists, no code blocks). 
                 4. Speak naturally, using common contractions (I'm, It's).
@@ -226,7 +235,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                         model: "models/gemini-2.0-flash-exp",
                         generationConfig: { responseModalities: ["TEXT"] },
                         systemInstruction: {
-                            parts: [{ text: "You are a voice assistant. Keep responses under 3 sentences. Be concise and conversational." }]
+                            parts: [{ text: `You are a voice assistant. ${DIRECTOR_PROMPTS[voiceStyle]} Keep responses under 3 sentences.` }]
                         }
                     }
                 }));
@@ -267,7 +276,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             setAiText(`Connection Failed: ${e.message}`);
             // Do NOT auto-switch mode. Let user see the error.
         }
-    }, [backendUrl, speak, mode]);
+    }, [backendUrl, speak, mode, voiceStyle]);
 
     // =========================================================================
     // 👂 Speech Recognition Logic (The Core Loop)
@@ -422,7 +431,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                             className="absolute top-20 right-6 w-72 bg-card border border-border shadow-2xl rounded-2xl p-4 z-50"
                         >
                             <h3 className="font-semibold mb-3 px-1">Voice Engine</h3>
-                            <div className="space-y-2">
+                            <div className="space-y-2 mb-4">
                                 <button
                                     onClick={() => { setMode('standard'); setShowSettings(false); }}
                                     className={cn("w-full flex items-center justify-between p-3 rounded-xl transition-all", mode === 'standard' ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
@@ -437,6 +446,24 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                     <span className="text-sm">Gemini Live (Key)</span>
                                     {mode === 'gemini-live' && <CheckIcon />}
                                 </button>
+                            </div>
+
+                            <h3 className="font-semibold mb-3 px-1">Persona (Tone)</h3>
+                            <div className="grid grid-cols-2 gap-2">
+                                {['friendly', 'professional', 'empathetic', 'energetic'].map((style) => (
+                                    <button
+                                        key={style}
+                                        onClick={() => { setVoiceStyle(style); if (mode === 'gemini-live') connectLive(); }}
+                                        className={cn(
+                                            "p-2 text-xs rounded-lg capitalize border transition-all",
+                                            voiceStyle === style
+                                                ? "bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                                : "border-border hover:bg-muted"
+                                        )}
+                                    >
+                                        {style}
+                                    </button>
+                                ))}
                             </div>
                         </motion.div>
                     )}
