@@ -354,8 +354,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         }
     }, [isOpen, status, startRecognition]);
 
-    // Initial Mount
+    // Initial Mount & Browser Check
     useEffect(() => {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            setStatus('error');
+            setAiText("Browser not supported. Please use Chrome, Edge, or Safari.");
+            return;
+        }
+
         if (isOpen) {
             setStatus('idle'); // Triggers loop
             if (mode === 'gemini-live') connectLive();
