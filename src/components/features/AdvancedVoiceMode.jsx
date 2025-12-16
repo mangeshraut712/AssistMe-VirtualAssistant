@@ -5,9 +5,9 @@
  * This simplified version provides core voice functionality.
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mic, MicOff, Volume2, Settings } from 'lucide-react';
+import { X, Mic, MicOff, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const AdvancedVoiceMode = ({ isOpen, onClose, settings }) => {

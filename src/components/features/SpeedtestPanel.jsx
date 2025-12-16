@@ -4,13 +4,12 @@ import {
     X, RotateCcw, Pause, Play, Activity, Wifi, Server, Zap, Share2, Info, Clock,
     Monitor, Gamepad2, Video, Globe, Twitter, Facebook, Link2, ArrowDown, ArrowUp,
     Smartphone, Laptop, Signal, TrendingUp, Brain, Trophy, MapPin, Download as DownloadIcon,
-    Upload as UploadIcon, Layers, CheckCircle2, AlertTriangle, FileDown, History, Cpu,
-    Shield, Satellite, Router, Gauge, Radio, WifiOff, TrendingDown, Star, Sparkles,
-    Target, Flame, Waves, Zap as ZapIcon, BarChart3, PieChart, Network, Lock, Cloud
+    Upload as UploadIcon, Layers, AlertTriangle, FileDown,
+    Target, Waves, Zap as ZapIcon,
 } from 'lucide-react';
 import {
     AreaChart, Area, ResponsiveContainer, Tooltip, RadarChart, PolarGrid,
-    PolarAngleAxis, PolarRadiusAxis, Radar, CartesianGrid
+    PolarAngleAxis, PolarRadiusAxis, Radar as RadarComponent
 } from 'recharts';
 import { cn } from '@/lib/utils';
 
