@@ -43,6 +43,40 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             .replace(/https?:\/\/\S+/g, 'a link'); // Remove URLs
     };
 
+
+
+    // Synthesize simple UI sounds (Earcons)
+    const playSound = useCallback((type) => {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            const now = ctx.currentTime;
+
+            if (type === 'start') {
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'listening') {
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(500, now + 0.1);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+        } catch (e) {
+            // Ignore auto-play strictness errors
+        }
+    }, []);
+
     const speak = useCallback((text, onEnd) => {
         if (!synthRef.current) return;
 
@@ -253,7 +287,11 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        recognition.onstart = () => setStatus('listening');
+        recognition.onstart = () => {
+            setStatus('listening');
+            playSound('listening');
+            if (navigator.vibrate) navigator.vibrate(20);
+        };
 
         recognition.onresult = (e) => {
             const current = e.results[0][0].transcript;
@@ -440,7 +478,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                         >
                             {status === 'listening' && <Mic className="w-12 h-12 text-blue-500" />}
                             {status === 'processing' && <Sparkles className="w-12 h-12 text-blue-500 animate-pulse" />}
-                            {status === 'speaking' && <Volume2 className="w-12 h-12 text-white" />}
+                            {status === 'speaking' && <StopCircle className="w-12 h-12 text-white animate-pulse" />}
                             {status === 'idle' && <div className="w-4 h-4 rounded-full bg-slate-400" />}
                         </motion.div>
                     </div>
