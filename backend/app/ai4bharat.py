@@ -358,17 +358,9 @@ Translation:"""
             return f"{text} (Translation: {text})"
         else:
             # For other language pairs, just indicate the translation attempt
-            return f"{text} [{
-                LANGUAGE_NAMES.get(
-                    source_lang,
-                    {}).get(
-                    'name',
-                    source_lang)} → {
-                LANGUAGE_NAMES.get(
-                    target_lang,
-                    {}).get(
-                        'name',
-                    target_lang)}]"
+            src_name = LANGUAGE_NAMES.get(source_lang, {}).get('name', source_lang)
+            tgt_name = LANGUAGE_NAMES.get(target_lang, {}).get('name', target_lang)
+            return f"{text} [{src_name} → {tgt_name}]"
 
     def get_supported_languages(self) -> List[Dict]:
         """Get list of supported languages"""

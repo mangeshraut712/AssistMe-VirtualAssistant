@@ -207,10 +207,7 @@ class WebSearchService:
             # Prepare context from search results
             context_text = ""
             for i, result in enumerate(context_results, 1):
-                context_text += f"Source [{i}]: {
-                    result['title']}\nURL: {
-                    result['url']}\nContent: {
-                    result['content']}\n\n"
+                context_text += f"Source [{i}]: {result['title']}\nURL: {result['url']}\nContent: {result['content']}\n\n"
 
             # Construct prompt for Grok
             messages = [
