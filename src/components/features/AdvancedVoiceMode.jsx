@@ -106,19 +106,20 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                 }
             }
 
-            setTranscript(interimTranscript || finalTranscript);
+            // Show interim or final transcript
+            const currentText = finalTranscript || interimTranscript;
+            setTranscript(currentText);
+            console.log('[Voice] Transcript:', currentText, 'Final:', !!finalTranscript);
 
-            // Reset silence timer
-            if (silenceTimerRef.current) {
-                clearTimeout(silenceTimerRef.current);
-            }
-
-            silenceTimerRef.current = setTimeout(() => {
-                if (finalTranscript.trim().length >= CONFIG.MIN_TRANSCRIPT_LENGTH) {
-                    recognition.stop();
-                    processUserInput(finalTranscript.trim());
+            // Process immediately when we get a final transcript
+            if (finalTranscript.trim().length >= CONFIG.MIN_TRANSCRIPT_LENGTH) {
+                console.log('[Voice] Processing final transcript:', finalTranscript);
+                if (silenceTimerRef.current) {
+                    clearTimeout(silenceTimerRef.current);
                 }
-            }, CONFIG.SILENCE_TIMEOUT);
+                recognition.stop();
+                processUserInput(finalTranscript.trim());
+            }
         };
 
         recognition.onerror = (event) => {
@@ -130,11 +131,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
         };
 
         recognition.onend = () => {
-            console.log('[Voice] Recognition ended');
-            if (status === 'listening' && !isProcessingRef.current) {
-                // Auto-restart if still in listening mode
-                setTimeout(() => recognition.start(), 100);
-            }
+            console.log('[Voice] Recognition ended, isProcessing:', isProcessingRef.current);
+            // Don't auto-restart - let the user control it
         };
 
         recognitionRef.current = recognition;
@@ -156,44 +154,48 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
     // ─────────────────────────────────────────────────────────────────────────
 
     const processUserInput = useCallback(async (text) => {
-        if (!text || isProcessingRef.current) return;
+        if (!text || isProcessingRef.current) {
+            console.log('[Voice] Skipping process - empty or already processing');
+            return;
+        }
 
+        console.log('[Voice] Processing input:', text);
         isProcessingRef.current = true;
         setStatus('processing');
+        stopListening();
 
         // Add user message to conversation
         setConversation(prev => [...prev, { role: 'user', content: text }]);
         setTranscript('');
 
         try {
-            // Use Gemini via OpenRouter for standard, native Gemini for premium
-            const model = ttsMode === 'premium' ? CONFIG.PREMIUM_MODEL : CONFIG.GEMINI_MODEL;
-
-            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            // Use the chat endpoint that's already working in your app
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
                 },
                 body: JSON.stringify({
-                    model: model,
-                    messages: [
-                        {
-                            role: 'system',
-                            content: `You are a helpful voice assistant. Keep responses SHORT (1-2 sentences max). No markdown. Respond in ${LANGUAGES[language].name}.`
-                        },
-                        ...conversation.map(msg => ({ role: msg.role, content: msg.content })),
-                        { role: 'user', content: text }
-                    ],
+                    message: text,
+                    model: CONFIG.GEMINI_MODEL,
+                    conversationHistory: conversation.map(msg => ({
+                        role: msg.role,
+                        content: msg.content
+                    }))
                 }),
             });
 
             if (!response.ok) {
-                throw new Error(`AI error: ${response.status}`);
+                console.error('[Voice] API error:', response.status);
+                throw new Error(`Failed to get response: ${response.status}`);
             }
 
             const data = await response.json();
-            const aiMessage = data.choices[0]?.message?.content || 'Sorry, I could not respond.';
+            let aiMessage = data.response || 'Sorry, I could not respond.';
+
+            // Clean up the response for speech
+            aiMessage = aiMessage.replace(/\*\*/g, '').replace(/```[\s\S]*?```/g, '').trim();
+            console.log('[Voice] Got AI response:', aiMessage.substring(0, 50));
 
             // Add AI response to conversation
             setConversation(prev => [...prev, { role: 'assistant', content: aiMessage }]);
@@ -201,9 +203,17 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
             // Speak the response
             await speak(aiMessage);
 
+            // Restart listening after speaking
+            console.log('[Voice] Restarting listening...');
+            setTimeout(() => {
+                if (status !== 'error') {
+                    startListening();
+                }
+            }, 500);
+
         } catch (error) {
-            console.error('[Voice] AI error:', error);
-            setErrorMessage('Failed to process request');
+            console.error('[Voice] Processing error:', error);
+            setErrorMessage(error.message || 'Failed to process request');
             setStatus('error');
         } finally {
             isProcessingRef.current = false;
