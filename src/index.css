@@ -328,6 +328,45 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /* Prose mobile optimization - code blocks */
+  .prose pre {
+    @apply overflow-x-auto;
+    max-width: 100%;
+  }
+
+  .prose code {
+    @apply break-words;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .prose pre code {
+    @apply break-normal;
+    white-space: pre;
+  }
+
+  /* Mobile-specific prose adjustments */
+  @media (max-width: 640px) {
+    .prose {
+      @apply text-sm;
+    }
+
+    .prose pre {
+      @apply text-xs p-3;
+      max-width: calc(100vw - 4rem);
+    }
+
+    .prose code {
+      @apply text-xs;
+    }
+
+    .prose table {
+      @apply text-xs;
+      display: block;
+      overflow-x: auto;
+    }
+  }
 }
 
 /* ========================================

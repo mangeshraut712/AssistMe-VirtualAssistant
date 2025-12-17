@@ -136,14 +136,14 @@ const MessageBubble = ({ message, renderContent, onRegenerate, isLoading = false
             >
                 <motion.div
                     className={cn(
-                        'max-w-[85%] px-4 py-3 rounded-2xl',
+                        'max-w-[90%] sm:max-w-[85%] px-4 py-3 rounded-2xl',
                         'bg-primary text-primary-foreground',
                         'shadow-lg shadow-primary/20'
                     )}
                     whileHover={{ scale: 1.01 }}
                 >
                     <div className="flex items-start gap-2">
-                        <div className="flex-1 text-[15px] leading-relaxed whitespace-pre-wrap">
+                        <div className="flex-1 text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words">
                             {message.content}
                         </div>
                     </div>

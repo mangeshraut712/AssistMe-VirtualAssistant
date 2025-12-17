@@ -288,7 +288,7 @@ const InputArea = ({
                                         'pl-8 pr-7 py-1.5 rounded-xl',
                                         'text-xs font-medium transition-colors',
                                         'cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20',
-                                        'max-w-[140px] truncate'
+                                        'max-w-[120px] sm:max-w-[140px] truncate'
                                     )}
                                 >
                                     <optgroup label="Free Models">
@@ -311,13 +311,14 @@ const InputArea = ({
 
                     {/* Right: Voice & Send */}
                     <div className="flex items-center gap-1.5">
-                        {/* Voice Mode */}
+                        {/* Voice Mode - Larger touch target on mobile */}
                         <motion.button
                             onClick={onOpenVoiceMode}
                             disabled={isLoading}
                             className={cn(
-                                'p-2 rounded-xl transition-colors',
-                                'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
+                                'p-2.5 sm:p-2 rounded-xl transition-colors',
+                                'text-muted-foreground hover:text-foreground hover:bg-foreground/5',
+                                'min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center'
                             )}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -326,12 +327,13 @@ const InputArea = ({
                             <AudioLines className="h-5 w-5" />
                         </motion.button>
 
-                        {/* Dictation */}
+                        {/* Dictation - Larger touch target on mobile */}
                         <motion.button
                             onClick={toggleListening}
                             disabled={isLoading}
                             className={cn(
-                                'p-2 rounded-xl transition-colors',
+                                'p-2.5 sm:p-2 rounded-xl transition-colors',
+                                'min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center',
                                 isListening
                                     ? 'text-red-500 bg-red-500/10'
                                     : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
@@ -345,12 +347,13 @@ const InputArea = ({
                             <Mic className={cn('h-5 w-5', isListening && 'fill-current')} />
                         </motion.button>
 
-                        {/* Send Button */}
+                        {/* Send Button - Larger on mobile */}
                         <motion.button
                             onClick={handleSubmit}
                             disabled={isLoading || (!input.trim() && uploadedFiles.length === 0)}
                             className={cn(
-                                'h-10 w-10 flex items-center justify-center rounded-xl transition-all',
+                                'h-11 w-11 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl transition-all',
+                                'min-w-[44px] min-h-[44px]',
                                 input.trim() || uploadedFiles.length > 0
                                     ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl'
                                     : 'bg-muted text-muted-foreground cursor-not-allowed'
@@ -373,8 +376,8 @@ const InputArea = ({
                 </div>
             </motion.div>
 
-            {/* Hint Text - Compact */}
-            <p className="text-center text-[10px] text-muted-foreground/50 mt-2">
+            {/* Hint Text - Compact, hidden on mobile */}
+            <p className="hidden sm:block text-center text-[10px] text-muted-foreground/50 mt-2 pb-safe">
                 Press <kbd className="px-1 py-0.5 rounded bg-foreground/5 font-mono text-[9px]">Enter</kbd> to send, <kbd className="px-1 py-0.5 rounded bg-foreground/5 font-mono text-[9px]">Shift+Enter</kbd> for new line
             </p>
         </div>
