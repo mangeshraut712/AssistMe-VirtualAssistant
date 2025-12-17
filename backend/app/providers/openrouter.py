@@ -354,6 +354,89 @@ class OpenRouterProvider(BaseProvider):
         """
         return "gemini-2.5-flash-native-audio-preview-12-2025"
 
+    async def chat_completion_stream(
+        self,
+        messages: list[dict[str, str]],
+        model: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        **kwargs
+    ):
+        """Generate streaming chat completion (required by BaseProvider)."""
+        from .base import StreamChunk, FinishReason
+        
+        if self.dev_mode:
+            # Mock streaming for dev mode
+            async def mock_stream():
+                response_text = f"[MOCK] Streaming response to: {messages[-1]['content'][:50]}..."
+                words = response_text.split()
+                for i, word in enumerate(words):
+                    yield StreamChunk(
+                        id=f"test-{i}",
+                        delta=word + " ",
+                        model=model or "mock-model",
+                        finish_reason=FinishReason.STOP if i == len(words) - 1 else None
+                    )
+            return mock_stream()
+        
+        if not self.api_key:
+            raise ValueError("OpenRouter API key not configured")
+        
+        # Use existing streaming implementation
+        url = f"{self.base_url}/chat/completions"
+        
+        # Get models to try with fallback
+        models_to_try = []
+        if model:
+            models_to_try.append(model)
+        
+        # Add fallbacks
+        available_models = sorted(self.DEFAULT_MODELS, key=lambda x: x.get("priority", 99))
+        for fallback_model in available_models:
+            if fallback_model["id"] not in models_to_try:
+                models_to_try.append(fallback_model["id"])
+        
+        payload = {
+            "model": models_to_try[0] if models_to_try else (model or self.default_model),
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+        
+        # Convert old stream format to new StreamChunk format
+        async def stream_generator():
+            chunk_id = 0
+            async for chunk in self._stream_with_fallback(url, payload, models_to_try):
+                if isinstance(chunk, dict):
+                    if "content" in chunk:
+                        chunk_id += 1
+                        yield StreamChunk(
+                            id=f"chatcmpl-{chunk_id}",
+                            delta=chunk["content"],
+                            model=models_to_try[0],
+                            finish_reason=None
+                        )
+                    elif "error" in chunk:
+                        # Last chunk with error
+                        yield StreamChunk(
+                            id=f"chatcmpl-{chunk_id}-error",
+                            delta="",
+                            model=models_to_try[0],
+                            finish_reason=FinishReason.ERROR
+                        )
+                        break
+            
+            # Final chunk
+            yield StreamChunk(
+                id=f"chatcmpl-{chunk_id}-final",
+                delta="",
+                model=models_to_try[0],
+                finish_reason=FinishReason.STOP
+            )
+        
+        return stream_generator()
+
     def is_available(self) -> bool:
         """Check if OpenRouter is configured."""
         return bool(self.api_key) or self.dev_mode
