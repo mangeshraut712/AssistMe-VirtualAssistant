@@ -1,126 +1,49 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * VOICE MODE 5.1 - Fast & Responsive Human-AI Conversation
+ * VOICE MODE 6.0 - Modern, Compact, Feature-Rich
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * FIXES:
- * - Removed artificial thinking delays for faster response
- * - Improved speech recognition reliability
- * - Better state management
- * - Fixed initial start issues
- * - Shows transcript while listening
+ * Features:
+ * - Clean modern UI for mobile and desktop
+ * - Collapsible settings panel
+ * - Conversation display
+ * - Gemini Premium + OpenRouter Standard support
+ * - Real-time audio visualization
+ * - Better error handling
  * 
- * @version 5.1.0
+ * @version 6.0.0
  * @date December 2025
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Mic, MicOff, Settings, Sparkles, Globe,
-    MessageSquare, Volume2, VolumeX, RefreshCw, Waves,
-    User, Bot
+    X, Mic, MicOff, Settings, Volume2, VolumeX,
+    MessageSquare, Trash2, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CONFIGURATION - Optimized for Speed
+// CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const CONFIG = {
-    // Speech Recognition
     SILENCE_TIMEOUT: 1500,
     MIN_TRANSCRIPT_LENGTH: 3,
-    RESTART_DELAY: 300,
 
-    // AI Model - Using UNLIMITED Native Audio Dialog (Gemini Live API)
-    // This model has 0/Unlimited RPM, 0/1M TPM, 0/Unlimited RPD on Vertex AI
-    CHAT_MODEL: 'google/gemini-2.5-flash-native-audio-dialog',
-    LIVE_MODEL: 'gemini-2.5-flash-native-audio-dialog',
+    // Models
+    GEMINI_MODEL: 'google/gemini-2.5-flash',  // OpenRouter Gemini
+    PREMIUM_MODEL: 'gemini-2.5-flash-native-audio-dialog', // Native Gemini (unlimited)
 
-    // TTS Backend endpoint
+    // TTS
     TTS_ENDPOINT: '/api/tts',
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// LANGUAGE SUPPORT (24+ languages via Gemini TTS)
-// ═══════════════════════════════════════════════════════════════════════════════
-
+// Languages
 const LANGUAGES = {
-    'en-US': { name: 'English', nativeName: 'English', flag: '🇺🇸', geminiCode: 'en-US' },
-    'hi-IN': { name: 'Hindi', nativeName: 'हिंदी', flag: '🇮🇳', geminiCode: 'hi-IN' },
-    'mr-IN': { name: 'Marathi', nativeName: 'मराठी', flag: '🇮🇳', geminiCode: 'mr-IN' },
-    'ta-IN': { name: 'Tamil', nativeName: 'தமிழ்', flag: '🇮🇳', geminiCode: 'ta-IN' },
-    'te-IN': { name: 'Telugu', nativeName: 'తెలుగు', flag: '🇮🇳', geminiCode: 'te-IN' },
-    'bn-BD': { name: 'Bengali', nativeName: 'বাংলা', flag: '🇧🇩', geminiCode: 'bn-BD' },
-};
-
-// TTS Modes - Premium uses Gemini Native Audio Dialog (UNLIMITED)
-const TTS_MODES = {
-    standard: {
-        name: 'Standard',
-        description: 'Browser TTS (fast, offline)',
-        model: null
-    },
-    premium: {
-        name: 'Premium',
-        description: 'Gemini Native Audio (unlimited, natural)',
-        model: 'native'  // Uses gemini-2.5-flash-native-audio-dialog
-    },
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PERSONAS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const PERSONAS = {
-    default: {
-        name: 'AssistMe',
-        emoji: '🎙️',
-        rate: 0.95,
-        pitch: 1.0,
-        systemPrompt: `You are AssistMe, a friendly multilingual voice assistant.
-
-RULES:
-- Keep responses SHORT (1-2 sentences max)
-- Sound natural and conversational
-- No markdown, no lists, no formatting - this is spoken dialogue
-- Respond in the SAME LANGUAGE the user speaks to you
-- If user speaks Marathi, respond in Marathi
-- If user speaks Hindi, respond in Hindi
-- If user speaks English, respond in English`,
-    },
-    friendly: {
-        name: 'Buddy',
-        emoji: '😊',
-        rate: 1.0,
-        pitch: 1.05,
-        systemPrompt: `You are Buddy, a super friendly multilingual assistant!
-Keep it SHORT (1-2 sentences). Be casual and warm. No formatting.
-Respond in the same language the user speaks.`,
-    },
-    professional: {
-        name: 'Expert',
-        emoji: '💼',
-        rate: 0.9,
-        pitch: 0.95,
-        systemPrompt: `You are Expert, a professional multilingual advisor.
-Be direct and brief (1-2 sentences max). No formatting.
-Respond in the same language the user speaks.`,
-    },
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// UTILITIES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const normalizeForSpeech = (text) => {
-    if (!text) return '';
-    return text
-        .replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '')
-        .replace(/#{1,6}\s?/g, '').replace(/\n+/g, '. ')
-        .replace(/•|-\s/g, '').replace(/\d+\.\s/g, '')
-        .replace(/\s+/g, ' ').trim();
+    'en-US': { name: 'English', flag: '🇺🇸', code: 'en-US' },
+    'hi-IN': { name: 'हिंदी', flag: '🇮🇳', code: 'hi-IN' },
+    'mr-IN': { name: 'मराठी', flag: '🇮🇳', code: 'mr-IN' },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -130,600 +53,281 @@ const normalizeForSpeech = (text) => {
 export default function AdvancedVoiceMode({ isOpen, onClose }) {
     // State
     const [status, setStatus] = useState('idle'); // idle, listening, processing, speaking, error
-    const [persona, setPersona] = useState('default');
-    const [language, setLanguage] = useState('en-US'); // Speech recognition language
-    const [ttsMode, setTtsMode] = useState('standard'); // 'standard' = browser, 'premium' = Gemini
-    const [showSettings, setShowSettings] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
-
-    // Conversation
-    const [transcript, setTranscript] = useState('');
-    const [aiResponse, setAiResponse] = useState('');
     const [conversation, setConversation] = useState([]);
-
-    // Audio
+    const [transcript, setTranscript] = useState('');
+    const [isMuted, setIsMuted] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [language, setLanguage] = useState('en-US');
+    const [ttsMode, setTtsMode] = useState('premium'); // premium or standard
     const [audioLevel, setAudioLevel] = useState(0);
-
-    // Error
     const [errorMessage, setErrorMessage] = useState('');
 
     // Refs
-    const statusRef = useRef('idle');
     const recognitionRef = useRef(null);
     const silenceTimerRef = useRef(null);
-    const synthRef = useRef(null);
-    const streamRef = useRef(null);
-    const startListeningRef = useRef(null);
-    const analyserRef = useRef(null);
-    const animationFrameRef = useRef(null);
     const isProcessingRef = useRef(false);
-    const messagesEndRef = useRef(null);
-
-    // Initialize synth
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            synthRef.current = window.speechSynthesis;
-            // Pre-load voices
-            synthRef.current?.getVoices();
-        }
-    }, []);
-
-    // Sync status ref
-    useEffect(() => {
-        statusRef.current = status;
-        console.log('[VoiceMode] Status:', status);
-    }, [status]);
-
-    // Auto-scroll
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [conversation, aiResponse]);
+    const conversationEndRef = useRef(null);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // TEXT TO SPEECH - Hybrid: Backend for Indian languages, Browser for English
+    // SPEECH TO TEXT
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Check if language is Indian (needs backend TTS)
-    const isIndicLanguage = (lang) => ['hi-IN', 'mr-IN', 'ta-IN', 'te-IN', 'bn-BD'].includes(lang);
-
-    // Try backend TTS (Gemini 2.5 Flash TTS - supports Indian languages)
-    const speakWithBackend = useCallback(async (text, langCode, onEnd) => {
-        try {
-            console.log('[TTS] Trying Gemini 2.5 TTS for:', langCode);
-
-            const response = await fetch('/api/tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: text,
-                    voice: 'Puck',
-                    language: langCode,
-                    model: 'flash', // Gemini 2.5 Flash TTS
-                })
-            });
-
-            if (!response.ok) {
-                console.log('[TTS] Backend failed, status:', response.status);
-                return false;
-            }
-
-            const data = await response.json();
-            if (!data.success || !data.audio) {
-                console.log('[TTS] No audio in response');
-                return false;
-            }
-
-            // Play the audio
-            console.log('[TTS] Playing backend audio');
-            setStatus('speaking');
-
-            const audioData = `data:audio/wav;base64,${data.audio}`;
-            const audio = new Audio(audioData);
-
-            audio.onended = () => {
-                console.log('[TTS] Backend audio ended');
-                setStatus('idle');
-                if (onEnd) onEnd();
-            };
-
-            audio.onerror = (e) => {
-                console.error('[TTS] Audio playback error:', e);
-                setStatus('idle');
-                if (onEnd) onEnd();
-            };
-
-            await audio.play();
-            return true;
-
-        } catch (e) {
-            console.error('[TTS] Backend error:', e);
-            return false;
-        }
-    }, []);
-
-    // Browser TTS (for English)
-    const speakWithBrowser = useCallback((text, onEnd) => {
-        if (!synthRef.current) {
-            if (onEnd) onEnd();
-            return;
-        }
-
-        synthRef.current.cancel();
-        const cleanText = normalizeForSpeech(text);
-        if (!cleanText) {
-            if (onEnd) onEnd();
-            return;
-        }
-
-        console.log('[TTS] Browser TTS:', cleanText.substring(0, 50) + '...');
-
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        const personaConfig = PERSONAS[persona] || PERSONAS.default;
-
-        utterance.rate = personaConfig.rate;
-        utterance.pitch = personaConfig.pitch;
-        utterance.volume = 1.0;
-
-        // Find best voice for the language
-        const voices = synthRef.current.getVoices();
-        const langPrefix = language.split('-')[0];
-
-        let voice = voices.find(v => v.lang.startsWith(langPrefix));
-        if (!voice && language !== 'en-US') {
-            // Fallback to English if no voice for selected language
-            voice = voices.find(v => v.lang.startsWith('en'));
-        }
-        if (voice) utterance.voice = voice;
-
-        utterance.onstart = () => {
-            setStatus('speaking');
-        };
-
-        utterance.onend = () => {
-            setStatus('idle');
-            if (onEnd) onEnd();
-        };
-
-        utterance.onerror = () => {
-            setStatus('idle');
-            if (onEnd) onEnd();
-        };
-
-        synthRef.current.speak(utterance);
-    }, [persona, language]);
-
-    // Main speak function - respects TTS mode setting
-    const speak = useCallback(async (text, onEnd) => {
-        if (!text || isMuted) {
-            console.log('[TTS] Skipping - muted or no text');
-            if (onEnd) onEnd();
-            return;
-        }
-
-        // Premium Mode: Always try backend Gemini TTS (supports 24+ languages)
-        if (ttsMode === 'premium') {
-            console.log('[TTS] Premium mode - using Gemini TTS');
-            const success = await speakWithBackend(text, language, onEnd);
-            if (success) return;
-
-            // Fallback to browser if backend unavailable
-            console.log('[TTS] Backend unavailable, falling back to browser TTS');
-            speakWithBrowser(text, onEnd);
-            return;
-        }
-
-        // Standard Mode: Browser TTS for English, Backend for Indian languages
-        if (isIndicLanguage(language)) {
-            const success = await speakWithBackend(text, language, onEnd);
-            if (success) return;
-
-            // If backend fails, show text (browser can't speak Indic well)
-            console.log('[TTS] Backend unavailable for Indic language');
-            setStatus('idle');
-            if (onEnd) onEnd();
-            return;
-        }
-
-        // Standard English: use browser TTS
-        speakWithBrowser(text, onEnd);
-    }, [isMuted, language, ttsMode, speakWithBackend, speakWithBrowser]);
-
-    const stopSpeaking = useCallback(() => {
-        synthRef.current?.cancel();
-        if (statusRef.current === 'speaking') {
-            setStatus('idle');
-        }
-    }, []);
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // AUDIO MONITORING
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const startAudioMonitoring = useCallback((stream) => {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const analyser = ctx.createAnalyser();
-            analyser.fftSize = 256;
-            const source = ctx.createMediaStreamSource(stream);
-            source.connect(analyser);
-            analyserRef.current = { ctx, analyser };
-
-            const dataArray = new Float32Array(analyser.fftSize);
-            let smoothed = 0;
-
-            const update = () => {
-                if (!analyserRef.current) return;
-                analyser.getFloatTimeDomainData(dataArray);
-                let sum = 0;
-                for (let i = 0; i < dataArray.length; i++) sum += dataArray[i] * dataArray[i];
-                const rms = Math.sqrt(sum / dataArray.length);
-                smoothed = smoothed * 0.8 + rms * 0.2;
-                setAudioLevel(Math.min(1, smoothed * 15));
-                animationFrameRef.current = requestAnimationFrame(update);
-            };
-            update();
-        } catch (e) {
-            console.error('[Audio] Monitoring error:', e);
-        }
-    }, []);
-
-    const stopAudioMonitoring = useCallback(() => {
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
-        }
-        if (analyserRef.current) {
-            try { analyserRef.current.ctx.close(); } catch (e) { }
-            analyserRef.current = null;
-        }
-        setAudioLevel(0);
-    }, []);
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // AI RESPONSE - No artificial delays!
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const generateResponse = useCallback(async (userText) => {
-        console.log('[AI] Generating response for:', userText);
-
-        const personaConfig = PERSONAS[persona] || PERSONAS.default;
-
-        try {
-            const response = await fetch('/api/chat/text', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [
-                        { role: 'system', content: personaConfig.systemPrompt },
-                        ...conversation.slice(-6).map(m => ({ role: m.role, content: m.content })),
-                        { role: 'user', content: userText }
-                    ],
-                    model: CONFIG.CHAT_MODEL,
-                    max_tokens: 100, // Keep short for fast response
-                    temperature: 0.8,
-                })
-            });
-
-            if (!response.ok) {
-                console.error('[AI] API error:', response.status);
-                throw new Error('API failed');
-            }
-
-            const data = await response.json();
-            return data.response || "I'm sorry, I didn't catch that.";
-
-        } catch (e) {
-            console.error('[AI] Error:', e);
-            return "Sorry, I'm having connection issues.";
-        }
-    }, [conversation, persona]);
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // PROCESS USER INPUT
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const processUserInput = useCallback(async (userText) => {
-        if (!userText.trim() || userText.length < CONFIG.MIN_TRANSCRIPT_LENGTH) {
-            console.log('[Process] Text too short, ignoring');
-            return;
-        }
-
-        if (isProcessingRef.current) {
-            console.log('[Process] Already processing, ignoring');
-            return;
-        }
-
-        console.log('[Process] Processing:', userText);
-        isProcessingRef.current = true;
-        setStatus('processing');
-        setTranscript('');
-
-        // Add user message
-        const newConversation = [...conversation, { role: 'user', content: userText }];
-        setConversation(newConversation);
-
-        // Generate and speak response
-        const response = await generateResponse(userText);
-
-        console.log('[Process] Got response:', response.substring(0, 50) + '...');
-
-        setAiResponse(response);
-        setConversation([...newConversation, { role: 'assistant', content: response }]);
-
-        // Speak the response
-        speak(response, () => {
-            console.log('[Process] Done speaking, restarting listening');
-            isProcessingRef.current = false;
-            // Auto-restart listening after AI speaks
-            setTimeout(() => {
-                if (statusRef.current === 'idle') {
-                    startListeningRef.current?.();
-                }
-            }, CONFIG.RESTART_DELAY);
-        });
-    }, [conversation, generateResponse, speak]);
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // SPEECH RECOGNITION
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const startListening = useCallback(async () => {
-        // Don't start if already listening or processing
-        if (statusRef.current !== 'idle') {
-            console.log('[STT] Not idle, cannot start. Current status:', statusRef.current);
-            return;
-        }
-
-        console.log('[STT] Starting listening...');
+    const startListening = useCallback(() => {
+        if (typeof window === 'undefined' || isProcessingRef.current) return;
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            setErrorMessage('Speech recognition not supported.');
+            setErrorMessage('Speech recognition not supported');
             setStatus('error');
             return;
         }
 
-        // Get microphone
-        try {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(t => t.stop());
-            }
-
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                }
-            });
-            streamRef.current = stream;
-            startAudioMonitoring(stream);
-            console.log('[STT] Microphone ready');
-        } catch (e) {
-            console.error('[STT] Microphone error:', e);
-            setErrorMessage('Microphone access denied.');
-            setStatus('error');
-            return;
-        }
-
-        // Setup recognition
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = language;
-        recognition.maxAlternatives = 1;
-
-        let currentTranscript = '';
 
         recognition.onstart = () => {
-            console.log('[STT] Recognition started');
+            console.log('[Voice] Started listening');
             setStatus('listening');
-            currentTranscript = '';
             setTranscript('');
         };
 
         recognition.onresult = (event) => {
-            let interim = '';
-            let final = '';
+            let interimTranscript = '';
+            let finalTranscript = '';
 
             for (let i = event.resultIndex; i < event.results.length; i++) {
-                const result = event.results[i];
-                if (result.isFinal) {
-                    final += result[0].transcript + ' ';
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript;
                 } else {
-                    interim += result[0].transcript;
+                    interimTranscript += transcript;
                 }
             }
 
-            if (final) {
-                currentTranscript += final;
-            }
+            setTranscript(interimTranscript || finalTranscript);
 
-            const displayText = (currentTranscript + interim).trim();
-            setTranscript(displayText);
-            console.log('[STT] Transcript:', displayText);
-
-            // Reset silence timer on any input
+            // Reset silence timer
             if (silenceTimerRef.current) {
                 clearTimeout(silenceTimerRef.current);
             }
 
-            // Set silence timer - will trigger processing when user stops speaking
             silenceTimerRef.current = setTimeout(() => {
-                const finalText = currentTranscript.trim();
-                if (finalText.length >= CONFIG.MIN_TRANSCRIPT_LENGTH) {
-                    console.log('[STT] Silence detected, stopping recognition');
+                if (finalTranscript.trim().length >= CONFIG.MIN_TRANSCRIPT_LENGTH) {
                     recognition.stop();
+                    processUserInput(finalTranscript.trim());
                 }
             }, CONFIG.SILENCE_TIMEOUT);
         };
 
-        recognition.onend = () => {
-            console.log('[STT] Recognition ended');
-
-            // Clear any pending timer
-            if (silenceTimerRef.current) {
-                clearTimeout(silenceTimerRef.current);
-                silenceTimerRef.current = null;
-            }
-
-            const finalText = currentTranscript.trim();
-
-            if (finalText.length >= CONFIG.MIN_TRANSCRIPT_LENGTH && !isProcessingRef.current) {
-                // Process the transcript
-                processUserInput(finalText);
-            } else if (statusRef.current === 'listening' && !isProcessingRef.current) {
-                // No valid input, restart listening
-                console.log('[STT] No valid input, restarting...');
-                setTimeout(() => {
-                    if (statusRef.current === 'listening') {
-                        try { recognition.start(); } catch (e) { console.log('[STT] Restart failed:', e); }
-                    }
-                }, 100);
+        recognition.onerror = (event) => {
+            console.error('[Voice] Recognition error:', event.error);
+            if (event.error !== 'no-speech') {
+                setErrorMessage(`Error: ${event.error}`);
+                setStatus('error');
             }
         };
 
-        recognition.onerror = (event) => {
-            console.log('[STT] Error:', event.error);
-
-            if (event.error === 'no-speech') {
-                // Just restart if no speech detected
-                setTimeout(() => {
-                    if (statusRef.current === 'listening' && !isProcessingRef.current) {
-                        try { recognition.start(); } catch (e) { }
-                    }
-                }, 100);
-            } else if (event.error !== 'aborted') {
-                setErrorMessage('Speech recognition error: ' + event.error);
+        recognition.onend = () => {
+            console.log('[Voice] Recognition ended');
+            if (status === 'listening' && !isProcessingRef.current) {
+                // Auto-restart if still in listening mode
+                setTimeout(() => recognition.start(), 100);
             }
         };
 
         recognitionRef.current = recognition;
-
-        try {
-            recognition.start();
-        } catch (e) {
-            console.error('[STT] Start error:', e);
-        }
-    }, [language, startAudioMonitoring, processUserInput]);
-
-    // Update ref for circular dependency
-    useEffect(() => {
-        startListeningRef.current = startListening;
-    }, [startListening]);
+        recognition.start();
+    }, [language, status]);
 
     const stopListening = useCallback(() => {
-        console.log('[STT] Stopping...');
-
         if (recognitionRef.current) {
-            try { recognitionRef.current.stop(); } catch (e) { }
+            recognitionRef.current.stop();
             recognitionRef.current = null;
         }
-
         if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current);
-            silenceTimerRef.current = null;
         }
+    }, []);
 
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(t => t.stop());
-            streamRef.current = null;
+    // ─────────────────────────────────────────────────────────────────────────
+    // AI PROCESSING
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const processUserInput = useCallback(async (text) => {
+        if (!text || isProcessingRef.current) return;
+
+        isProcessingRef.current = true;
+        setStatus('processing');
+
+        // Add user message to conversation
+        setConversation(prev => [...prev, { role: 'user', content: text }]);
+        setTranscript('');
+
+        try {
+            // Use Gemini via OpenRouter for standard, native Gemini for premium
+            const model = ttsMode === 'premium' ? CONFIG.PREMIUM_MODEL : CONFIG.GEMINI_MODEL;
+
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `You are a helpful voice assistant. Keep responses SHORT (1-2 sentences max). No markdown. Respond in ${LANGUAGES[language].name}.`
+                        },
+                        ...conversation.map(msg => ({ role: msg.role, content: msg.content })),
+                        { role: 'user', content: text }
+                    ],
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`AI error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const aiMessage = data.choices[0]?.message?.content || 'Sorry, I could not respond.';
+
+            // Add AI response to conversation
+            setConversation(prev => [...prev, { role: 'assistant', content: aiMessage }]);
+
+            // Speak the response
+            await speak(aiMessage);
+
+        } catch (error) {
+            console.error('[Voice] AI error:', error);
+            setErrorMessage('Failed to process request');
+            setStatus('error');
+        } finally {
+            isProcessingRef.current = false;
+            if (status !== 'error') {
+                setStatus('idle');
+                setTimeout(startListening, 500);
+            }
         }
+    }, [conversation, language, ttsMode, startListening]);
 
-        stopAudioMonitoring();
-    }, [stopAudioMonitoring]);
+    // ─────────────────────────────────────────────────────────────────────────
+    // TEXT TO SPEECH
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const speak = useCallback(async (text) => {
+        if (!text || isMuted) return;
+
+        setStatus('speaking');
+
+        try {
+            if (ttsMode === 'premium') {
+                // Use Gemini TTS via backend
+                const response = await fetch(CONFIG.TTS_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text,
+                        language: language,
+                        model: 'native',
+                    }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.audio) {
+                        const audio = new Audio(`data:audio/wav;base64,${data.audio}`);
+                        await audio.play();
+                        await new Promise(resolve => {
+                            audio.onended = resolve;
+                        });
+                    }
+                }
+            } else {
+                // Use browser TTS
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = language;
+                utterance.rate = 0.95;
+                window.speechSynthesis.speak(utterance);
+                await new Promise(resolve => {
+                    utterance.onend = resolve;
+                });
+            }
+        } catch (error) {
+            console.error('[Voice] TTS error:', error);
+        } finally {
+            setStatus('idle');
+        }
+    }, [isMuted, language, ttsMode]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // LIFECYCLE
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Start listening when opened
     useEffect(() => {
         if (!isOpen) return;
 
-        console.log('[Lifecycle] Voice mode opened');
+        // Auto-scroll conversation
+        setTimeout(() => {
+            conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    }, [conversation, isOpen]);
 
-        // Check browser support
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            setStatus('error');
-            setErrorMessage('Speech recognition not supported. Use Chrome or Edge.');
-            return;
-        }
+    useEffect(() => {
+        if (!isOpen) return;
 
-        // Reset state
+        // Reset and start
         setStatus('idle');
         setConversation([]);
-        setAiResponse('');
         setTranscript('');
         setErrorMessage('');
-        isProcessingRef.current = false;
-
-        // Auto-start listening after a brief delay
-        const timer = setTimeout(() => {
-            console.log('[Lifecycle] Auto-starting listening');
-            startListening();
-        }, 500);
 
         return () => {
-            clearTimeout(timer);
             stopListening();
-            stopSpeaking();
+            window.speechSynthesis?.cancel();
         };
-    }, [isOpen, startListening, stopListening, stopSpeaking]);
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            stopListening();
-            stopSpeaking();
-        };
-    }, [stopListening, stopSpeaking]);
+    }, [isOpen, stopListening]);
 
     if (!isOpen) return null;
 
     // ─────────────────────────────────────────────────────────────────────────
-    // UI HELPERS
+    // HELPERS
     // ─────────────────────────────────────────────────────────────────────────
 
-    const getOrbColor = () => {
+    const getStatusColor = () => {
         switch (status) {
-            case 'error': return 'from-red-500 to-rose-600';
-            case 'speaking': return 'from-emerald-400 to-teal-500';
-            case 'processing': return 'from-amber-400 to-orange-500';
-            case 'listening': return 'from-blue-400 to-cyan-500';
-            default: return 'from-slate-400 to-slate-500';
+            case 'listening': return 'from-blue-500 to-cyan-500';
+            case 'processing': return 'from-amber-500 to-orange-500';
+            case 'speaking': return 'from-emerald-500 to-teal-500';
+            case 'error': return 'from-red-500 to-rose-500';
+            default: return 'from-neutral-400 to-neutral-500';
         }
     };
 
     const getStatusText = () => {
         switch (status) {
-            case 'listening': return audioLevel > 0.1 ? 'Hearing you...' : 'Listening...';
+            case 'listening': return 'Listening...';
             case 'processing': return 'Thinking...';
             case 'speaking': return 'Speaking...';
-            case 'error': return errorMessage || 'Error';
-            default: return 'Tap to start';
+            case 'error': return errorMessage;
+            default: return 'Tap to speak';
         }
     };
 
     const handleOrbClick = () => {
-        console.log('[UI] Orb clicked, status:', status);
-
-        switch (status) {
-            case 'speaking':
-                stopSpeaking();
-                break;
-            case 'error':
-                setStatus('idle');
-                setErrorMessage('');
-                setTimeout(startListening, 100);
-                break;
-            case 'idle':
-                startListening();
-                break;
-            case 'listening':
-                stopListening();
-                setStatus('idle');
-                break;
+        if (status === 'idle' || status === 'error') {
+            setStatus('listening');
+            setErrorMessage('');
+            startListening();
+        } else if (status === 'listening') {
+            stopListening();
+            setStatus('idle');
+        } else if (status === 'speaking') {
+            window.speechSynthesis?.cancel();
+            setStatus('idle');
         }
     };
 
@@ -734,25 +338,20 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
     return (
         <AnimatePresence>
             <motion.div
-                className="fixed inset-0 z-50 bg-gradient-to-b from-background via-background to-background/95 flex flex-col"
+                className="fixed inset-0 z-50 bg-gradient-to-b from-white via-neutral-50 to-neutral-100 dark:from-neutral-900 dark:via-neutral-950 dark:to-black flex flex-col"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
             >
                 {/* Header */}
-                <header className="flex items-center justify-between p-4 sm:p-6">
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-muted/50 border border-border/50">
-                            <Globe className="w-4 h-4" />
-                            <span>Voice Mode</span>
+                <header className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs sm:text-sm font-semibold">
+                            <Mic className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline">Voice Mode</span>
                         </div>
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-muted/30 border border-border/30">
-                            <span>{LANGUAGES[language]?.flag}</span>
-                            <span className="hidden sm:inline">{LANGUAGES[language]?.nativeName}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-muted/30 border border-border/30">
-                            <span>{PERSONAS[persona]?.emoji}</span>
-                            <span className="hidden sm:inline">{PERSONAS[persona]?.name}</span>
+                        <div className="text-xs sm:text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                            {LANGUAGES[language].flag} {LANGUAGES[language].name}
                         </div>
                     </div>
 
@@ -761,8 +360,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setIsMuted(!isMuted)}
                             className={cn(
-                                "p-2.5 rounded-full transition-colors",
-                                isMuted ? "bg-red-500/20 text-red-500" : "bg-muted/50 hover:bg-muted"
+                                "p-2 rounded-full transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center",
+                                isMuted ? "bg-red-500/20 text-red-500" : "bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                             )}
                         >
                             {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
@@ -771,49 +370,61 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setShowSettings(!showSettings)}
                             className={cn(
-                                "p-2.5 rounded-full transition-colors",
-                                showSettings ? "bg-primary text-primary-foreground" : "bg-muted/50 hover:bg-muted"
+                                "p-2 rounded-full transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center",
+                                showSettings ? "bg-purple-500 text-white" : "bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                             )}
                         >
                             <Settings className="w-5 h-5" />
                         </motion.button>
+                        {conversation.length > 0 && (
+                            <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setConversation([])}
+                                className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-red-500 hover:text-white transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
+                            >
+                                <Trash2 className="w-5 h-5" />
+                            </motion.button>
+                        )}
                         <motion.button
                             whileTap={{ scale: 0.95 }}
                             onClick={onClose}
-                            className="p-2.5 rounded-full bg-muted/50 hover:bg-red-500 hover:text-white transition-colors"
+                            className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-red-500 hover:text-white transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
                         >
                             <X className="w-5 h-5" />
                         </motion.button>
                     </div>
                 </header>
 
-                {/* Settings */}
+                {/* Settings Panel */}
                 <AnimatePresence>
                     {showSettings && (
                         <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="px-4 sm:px-6 pb-4 overflow-hidden"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden border-b border-neutral-200 dark:border-neutral-800"
                         >
-                            <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 space-y-4">
+                            <div className="p-4 sm:p-6 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl space-y-4">
                                 {/* TTS Mode */}
                                 <div>
-                                    <h3 className="text-sm font-semibold mb-2">Voice Quality</h3>
-                                    <div className="flex gap-2">
-                                        {Object.entries(TTS_MODES).map(([key, mode]) => (
+                                    <h3 className="text-sm font-semibold mb-2 text-neutral-900 dark:text-white">Voice Quality</h3>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { key: 'premium', name: 'Premium', desc: 'Gemini Native (Unlimited)' },
+                                            { key: 'standard', name: 'Standard', desc: 'Browser TTS (Fast)' }
+                                        ].map(mode => (
                                             <button
-                                                key={key}
-                                                onClick={() => setTtsMode(key)}
+                                                key={mode.key}
+                                                onClick={() => setTtsMode(mode.key)}
                                                 className={cn(
-                                                    "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border text-left",
-                                                    ttsMode === key
+                                                    "px-3 py-2 rounded-lg text-left transition-all border-2",
+                                                    ttsMode === mode.key
                                                         ? "bg-purple-500/20 border-purple-500 text-purple-600 dark:text-purple-400"
-                                                        : "border-border/50 hover:bg-muted"
+                                                        : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                                 )}
                                             >
-                                                <div className="font-semibold">{mode.name}</div>
-                                                <div className="text-xs opacity-70">{mode.description}</div>
+                                                <div className="text-sm font-semibold">{mode.name}</div>
+                                                <div className="text-xs opacity-70">{mode.desc}</div>
                                             </button>
                                         ))}
                                     </div>
@@ -821,43 +432,20 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
 
                                 {/* Language */}
                                 <div>
-                                    <h3 className="text-sm font-semibold mb-2">Language</h3>
-                                    <div className="flex gap-2 flex-wrap">
+                                    <h3 className="text-sm font-semibold mb-2 text-neutral-900 dark:text-white">Language</h3>
+                                    <div className="grid grid-cols-3 gap-2">
                                         {Object.entries(LANGUAGES).map(([code, lang]) => (
                                             <button
                                                 key={code}
                                                 onClick={() => setLanguage(code)}
                                                 className={cn(
-                                                    "px-3 py-1.5 rounded-lg text-sm font-medium transition-all border",
+                                                    "px-3 py-2 rounded-lg text-sm font-medium transition-all border-2",
                                                     language === code
                                                         ? "bg-green-500/20 border-green-500 text-green-600 dark:text-green-400"
-                                                        : "border-border/50 hover:bg-muted"
+                                                        : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                                 )}
                                             >
-                                                <span className="mr-1">{lang.flag}</span>
-                                                {lang.nativeName}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Persona */}
-                                <div>
-                                    <h3 className="text-sm font-semibold mb-2">Voice Persona</h3>
-                                    <div className="flex gap-2 flex-wrap">
-                                        {Object.entries(PERSONAS).map(([key, p]) => (
-                                            <button
-                                                key={key}
-                                                onClick={() => setPersona(key)}
-                                                className={cn(
-                                                    "px-3 py-1.5 rounded-lg text-sm font-medium transition-all border",
-                                                    persona === key
-                                                        ? "bg-blue-500/20 border-blue-500 text-blue-600 dark:text-blue-400"
-                                                        : "border-border/50 hover:bg-muted"
-                                                )}
-                                            >
-                                                <span className="mr-1">{p.emoji}</span>
-                                                {p.name}
+                                                {lang.flag} {lang.name}
                                             </button>
                                         ))}
                                     </div>
@@ -867,122 +455,93 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                     )}
                 </AnimatePresence>
 
-                {/* Main Orb */}
-                <div className="flex-1 flex flex-col items-center justify-center px-4">
-                    <div className="relative cursor-pointer" onClick={handleOrbClick}>
-                        {/* Outer Glow */}
-                        <motion.div
-                            animate={{
-                                scale: status === 'listening' ? 1 + audioLevel * 0.5 : status === 'speaking' ? [1, 1.2, 1] : 1,
-                                opacity: status === 'idle' ? 0.1 : 0.4
-                            }}
-                            transition={{ repeat: status === 'speaking' ? Infinity : 0, duration: 0.5 }}
-                            className={cn("absolute -inset-10 sm:-inset-14 rounded-full blur-3xl bg-gradient-to-br", getOrbColor())}
-                        />
-
-                        {/* Core Orb */}
-                        <motion.div
-                            animate={{
-                                scale: status === 'speaking' ? [1, 1.08, 0.96, 1.04, 1] : status === 'processing' ? [1, 0.95, 1] : 1,
-                            }}
-                            transition={{ repeat: Infinity, duration: status === 'speaking' ? 0.5 : 1.5 }}
-                            className={cn(
-                                "w-36 h-36 sm:w-44 sm:h-44 rounded-full flex items-center justify-center shadow-2xl relative z-10 bg-gradient-to-br",
-                                getOrbColor()
-                            )}
-                        >
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={status}
-                                    initial={{ scale: 0, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    exit={{ scale: 0, opacity: 0 }}
-                                    className="text-white"
-                                >
-                                    {status === 'listening' && <Mic className="w-12 h-12 sm:w-14 sm:h-14" />}
-                                    {status === 'processing' && <Sparkles className="w-12 h-12 sm:w-14 sm:h-14 animate-pulse" />}
-                                    {status === 'speaking' && <Waves className="w-12 h-12 sm:w-14 sm:h-14" />}
-                                    {status === 'idle' && <MicOff className="w-10 h-10 sm:w-12 sm:h-12 opacity-70" />}
-                                    {status === 'error' && <RefreshCw className="w-10 h-10 sm:w-12 sm:h-12" />}
-                                </motion.div>
-                            </AnimatePresence>
-                        </motion.div>
-                    </div>
-
-                    {/* Status */}
-                    <motion.div
-                        key={status}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mt-8 text-center max-w-md px-4"
-                    >
-                        <h2 className="text-xl sm:text-2xl font-medium mb-2">
-                            {getStatusText()}
-                        </h2>
-                        {/* Show transcript while listening */}
-                        {status === 'listening' && (
-                            <p className="text-sm text-muted-foreground min-h-[1.5rem]">
-                                {transcript || 'Say something...'}
-                            </p>
-                        )}
-                        {status === 'speaking' && (
-                            <p className="text-sm text-muted-foreground">Tap orb to stop</p>
-                        )}
-                    </motion.div>
-                </div>
-
-                {/* Conversation */}
-                <div className="h-1/3 max-h-72 border-t border-border/50 bg-background/80 backdrop-blur-sm overflow-y-auto p-4 sm:p-6">
-                    {conversation.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground/50">
-                            <MessageSquare className="w-8 h-8 mb-2" />
-                            <p className="text-sm">Start speaking to begin</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {conversation.map((msg, i) => (
-                                <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className={cn("flex gap-2", msg.role === 'user' ? "justify-end" : "justify-start")}
-                                >
-                                    {msg.role === 'assistant' && (
-                                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                            <Bot className="w-3.5 h-3.5 text-primary" />
-                                        </div>
-                                    )}
-                                    <div className={cn(
-                                        "max-w-[80%] px-4 py-2.5 rounded-2xl text-sm",
-                                        msg.role === 'user'
-                                            ? "bg-primary text-primary-foreground rounded-br-md"
-                                            : "bg-muted rounded-bl-md"
-                                    )}>
-                                        {msg.content}
-                                    </div>
-                                    {msg.role === 'user' && (
-                                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                                            <User className="w-3.5 h-3.5 text-primary-foreground" />
-                                        </div>
-                                    )}
-                                </motion.div>
-                            ))}
-
-                            {/* Show AI response while processing */}
-                            {status === 'processing' && aiResponse && (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2 justify-start">
-                                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                        <Bot className="w-3.5 h-3.5 text-primary" />
-                                    </div>
-                                    <div className="max-w-[80%] px-4 py-2.5 rounded-2xl bg-muted rounded-bl-md text-sm">
-                                        {aiResponse}
-                                        <span className="inline-block w-2 h-4 bg-foreground/30 ml-1 animate-pulse" />
-                                    </div>
-                                </motion.div>
-                            )}
+                {/* Conversation Area */}
+                <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 space-y-4">
+                    {conversation.length === 0 && (
+                        <div className="text-center py-12">
+                            <MessageSquare className="w-16 h-16 mx-auto mb-4 text-neutral-300 dark:text-neutral-700" />
+                            <p className="text-neutral-500 dark:text-neutral-400">Start speaking to begin conversation</p>
                         </div>
                     )}
-                    <div ref={messagesEndRef} />
+
+                    {conversation.map((msg, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={cn(
+                                "flex",
+                                msg.role === 'user' ? "justify-end" : "justify-start"
+                            )}
+                        >
+                            <div className={cn(
+                                "max-w-[85%] sm:max-w-[75%] px-4 py-3 rounded-2xl",
+                                msg.role === 'user'
+                                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                                    : "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white"
+                            )}>
+                                <p className="text-sm sm:text-base">{msg.content}</p>
+                            </div>
+                        </motion.div>
+                    ))}
+
+                    {transcript && status === 'listening' && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex justify-end"
+                        >
+                            <div className="max-w-[85%] sm:max-w-[75%] px-4 py-3 rounded-2xl bg-purple-500/20 border-2 border-purple-500 border-dashed text-purple-600 dark:text-purple-400">
+                                <p className="text-sm sm:text-base">{transcript}</p>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    <div ref={conversationEndRef} />
+                </div>
+
+                {/* Orb and Status */}
+                <div className="pb-safe px-4 py-6 sm:px-6 sm:py-8 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800">
+                    <div className="flex flex-col items-center gap-4">
+                        {/* Main Orb */}
+                        <motion.button
+                            onClick={handleOrbClick}
+                            whileTap={{ scale: 0.95 }}
+                            className="relative"
+                        >
+                            <motion.div
+                                className={cn(
+                                    "w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br shadow-2xl flex items-center justify-center",
+                                    getStatusColor()
+                                )}
+                                animate={{
+                                    scale: status === 'listening' ? [1, 1.05, 1] : 1,
+                                }}
+                                transition={{
+                                    repeat: status === 'listening' ? Infinity : 0,
+                                    duration: 1.5,
+                                }}
+                            >
+                                {status === 'listening' ? (
+                                    <Mic className="w-12 h-12 sm:w-16 sm:h-16 text-white" />
+                                ) : (
+                                    <MicOff className="w-12 h-12 sm:w-16 sm:h-16 text-white" />
+                                )}
+                            </motion.div>
+                        </motion.button>
+
+                        {/* Status Text */}
+                        <div className="text-center">
+                            <p className="text-lg sm:text-xl font-semibold text-neutral-900 dark:text-white">
+                                {getStatusText()}
+                            </p>
+                            {status === 'listening' && (
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                                    Speak now...
+                                </p>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </motion.div>
         </AnimatePresence>
