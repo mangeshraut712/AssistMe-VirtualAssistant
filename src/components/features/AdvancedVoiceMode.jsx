@@ -76,7 +76,7 @@ Be warm but efficient.`
 const cleanResponseText = (text) => {
     if (!text) return '';
 
-    let cleaned = text
+    const cleaned = text
         // Remove **bold markers** like **Thinking...**, **Providing a Response**, etc.
         .replace(/\*\*[^*]+\*\*\s*/g, '')
         // Remove lines that look like internal thoughts

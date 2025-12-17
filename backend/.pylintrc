@@ -1,0 +1,73 @@
+[MASTER]
+# Files/directories to ignore
+ignore=migrations,venv,.venv,__pycache__,tests
+ignore-patterns=test_.*\.py
+
+# Use multiple processes for faster analysis
+jobs=4
+
+[MESSAGES CONTROL]
+# Disable specific warnings that are acceptable in this project
+disable=
+    # Missing docstrings (we use type hints instead)
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring
+    # Import-related (handled by flake8)
+    E0401,  # import-error (dependencies may not be installed locally)
+    W0611,  # unused-import (handled by flake8)
+    # Argument-related
+    W0613,  # unused-argument (common in callbacks/handlers)
+    R0913,  # too-many-arguments (API handlers often need many params)
+    # Class-related
+    R0903,  # too-few-public-methods (Pydantic models)
+    # Complexity (handled separately)
+    R0914,  # too-many-locals
+    R0915,  # too-many-statements
+    R1702,  # too-many-nested-blocks
+    # Logging f-strings (modern Python idiom)
+    W1203,  # logging-fstring-interpolation
+    # Broad exceptions (often intentional in error handlers)
+    W0718,  # broad-exception-caught
+    # Protected access (sometimes needed for internal APIs)
+    W0212,  # protected-access
+    # Global statements (used sparingly for singletons)
+    W0603,  # global-statement
+    # Redefined names (acceptable for local logger instances)
+    W0621,  # redefined-outer-name
+
+[FORMAT]
+# Maximum line length
+max-line-length=120
+
+# String used as indentation unit
+indent-string='    '
+
+[DESIGN]
+# Maximum number of arguments for function/method
+max-args=10
+
+# Maximum number of return statements
+max-returns=6
+
+# Maximum number of branch for function/method body
+max-branches=15
+
+# Maximum number of statements in function/method body
+max-statements=60
+
+# Maximum complexity (McCabe)
+max-complexity=15
+
+[SIMILARITIES]
+# Minimum lines number of a similarity
+min-similarity-lines=6
+
+# Ignore comments when computing similarities
+ignore-comments=yes
+
+# Ignore docstrings when computing similarities
+ignore-docstrings=yes
+
+# Ignore imports when computing similarities
+ignore-imports=yes

@@ -222,8 +222,7 @@ class ConversationBase(BaseSchema):
 
 
 class ConversationCreate(ConversationBase):
-    """Schema for conversation creation."""
-    pass
+    """Schema for conversation creation - inherits all fields from ConversationBase."""
 
 
 class ConversationResponse(ConversationBase, TimestampMixin):

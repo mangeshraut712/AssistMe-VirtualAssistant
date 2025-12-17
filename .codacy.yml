@@ -1,0 +1,68 @@
+---
+# Codacy Configuration File
+# Documentation: https://docs.codacy.com/repositories-configure/codacy-configuration-file/
+
+# Exclude files/directories from analysis
+exclude_paths:
+  - "node_modules/**"
+  - "dist/**"
+  - "build/**"
+  - ".vite/**"
+  - "*.min.js"
+  - "*.bundle.js"
+  - "coverage/**"
+  - "__pycache__/**"
+  - ".git/**"
+  - "uploads/**"
+  - "backend/venv/**"
+  - "backend/.venv/**"
+  - "**/*.test.js"
+  - "**/*.spec.js"
+  - "test_*.html"
+
+# Languages to analyze
+languages:
+  javascript:
+    extensions:
+      - ".js"
+      - ".jsx"
+  python:
+    extensions:
+      - ".py"
+  css:
+    extensions:
+      - ".css"
+
+# Tool-specific configurations
+engines:
+  # ESLint for JavaScript/React
+  eslint:
+    enabled: true
+    config_file: ".eslintrc.json"
+  
+  # Pylint for Python
+  pylint:
+    enabled: true
+    
+  # Flake8 for Python
+  flake8:
+    enabled: true
+    config_file: "backend/.flake8"
+  
+  # Bandit for Python Security
+  bandit:
+    enabled: true
+    
+  # Stylelint for CSS
+  stylelint:
+    enabled: true
+
+  # Complexity analysis
+  complexity:
+    enabled: true
+    threshold: 15
+
+  # Duplication detection
+  duplication:
+    enabled: true
+    min_tokens: 100

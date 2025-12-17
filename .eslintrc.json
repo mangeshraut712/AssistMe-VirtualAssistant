@@ -16,7 +16,9 @@
         "node_modules",
         ".vite",
         "build",
-        "modules/*/node_modules"
+        "modules/*/node_modules",
+        "*.min.js",
+        "*.bundle.js"
     ],
     "parserOptions": {
         "ecmaVersion": "latest",
@@ -54,6 +56,30 @@
                 "checkLoops": false
             }
         ],
-        "react-hooks/exhaustive-deps": "warn"
+        "react-hooks/exhaustive-deps": "warn",
+        "complexity": [
+            "off"
+        ],
+        "max-depth": [
+            "off"
+        ],
+        "max-lines-per-function": [
+            "off"
+        ],
+        "no-console": "off",
+        "prefer-const": "warn",
+        "no-var": "error",
+        "eqeqeq": [
+            "warn",
+            "always",
+            {
+                "null": "ignore"
+            }
+        ],
+        "curly": [
+            "warn",
+            "multi-line"
+        ],
+        "no-duplicate-imports": "error"
     }
 }
