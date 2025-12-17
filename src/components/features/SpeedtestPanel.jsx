@@ -73,6 +73,25 @@ const getPingGrade = (ping) => {
     return 'D';
 };
 
+const getConnectionQuality = (download, upload, ping) => {
+    const avgSpeed = (download + upload) / 2;
+    if (avgSpeed >= 100 && ping <= 20) return { quality: 'Excellent', color: 'text-emerald-500', icon: '🚀' };
+    if (avgSpeed >= 50 && ping <= 50) return { quality: 'Great', color: 'text-green-500', icon: '⭐' };
+    if (avgSpeed >= 25 && ping <= 100) return { quality: 'Good', color: 'text-yellow-500', icon: '👍' };
+    if (avgSpeed >= 10) return { quality: 'Fair', color: 'text-orange-500', icon: '⚠️' };
+    return { quality: 'Poor', color: 'text-red-500', icon: '❌' };
+};
+
+const getStatusMessage = (status) => {
+    switch (status) {
+        case 'pinging': return '📡 Measuring latency...';
+        case 'download': return '⬇️ Testing download speed...';
+        case 'upload': return '⬆️ Testing upload speed...';
+        case 'complete': return '✅ Test complete!';
+        default: return 'Ready to test your connection';
+    }
+};
+
 // Components
 const GlassCard = ({ children, className, glow, active }) => (
     <motion.div
@@ -484,7 +503,17 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                            {/* Status Message */}
+                            {status !== 'idle' && (
+                                <motion.div
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs font-medium text-neutral-600 dark:text-neutral-400"
+                                >
+                                    <span>{getStatusMessage(status)}</span>
+                                </motion.div>
+                            )}
                             {status !== 'idle' && (
                                 <div className="hidden md:flex items-center gap-3 px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs font-mono">
                                     <span className={cn(status === 'pinging' ? "text-blue-500 font-bold" : "text-neutral-400")}>PING</span>
@@ -597,6 +626,48 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                             </div>
                         </GlassCard>
                     </div>
+
+                    {/* Connection Quality Indicator */}
+                    {status === 'complete' && metrics.down > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ delay: 0.3 }}
+                        >
+                            <GlassCard className="p-4 sm:p-5 md:p-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-3xl sm:text-4xl">
+                                            {getConnectionQuality(metrics.down, metrics.up, metrics.ping).icon}
+                                        </div>
+                                        <div>
+                                            <div className="text-xs sm:text-sm font-semibold text-neutral-500 uppercase tracking-wider">Connection Quality</div>
+                                            <div className={cn(
+                                                "text-2xl sm:text-3xl font-bold",
+                                                getConnectionQuality(metrics.down, metrics.up, metrics.ping).color
+                                            )}>
+                                                {getConnectionQuality(metrics.down, metrics.up, metrics.ping).quality}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="hidden sm:flex flex-col items-end gap-1">
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-xs text-neutral-500">Download</div>
+                                            <div className="font-mono font-bold text-sm">{metrics.down.toFixed(1)} Mbps</div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-xs text-neutral-500">Upload</div>
+                                            <div className="font-mono font-bold text-sm">{metrics.up.toFixed(1)} Mbps</div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-xs text-neutral-500">Latency</div>
+                                            <div className="font-mono font-bold text-sm">{metrics.ping} ms</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </GlassCard>
+                        </motion.div>
+                    )}
 
                     {/* Secondary Metrics */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
