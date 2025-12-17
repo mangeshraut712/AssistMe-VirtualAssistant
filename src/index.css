@@ -10,7 +10,44 @@
    - Chōwa (Harmony): Balanced elements
    ======================================== */
 
+/* ========================================
+   PERFORMANCE OPTIMIZATIONS (60+ FPS)
+   ======================================== */
 @layer base {
+  /* Enable GPU acceleration globally */
+  *,
+  *::before,
+  *::after {
+    /* Force GPU compositing for smoother animations */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  /* Optimize animations for 60+ FPS */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    /* GPU-accelerated properties for animations */
+    .animate-gpu {
+      transform: translateZ(0);
+      will-change: transform, opacity;
+    }
+  }
+
+  /* Respect reduced motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   :root {
     /* LIGHT MODE - Pure White Background (Kanso) */
     --background: 0 0% 100%;           /* #FFFFFF */
