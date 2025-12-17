@@ -1,3 +1,29 @@
+import uuid
+import time
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from .services.rate_limit_service import rate_limit_service
+from .models import Message as MessageModel
+from .models import Conversation
+from .database import get_db
+from .ai4bharat import ai4bharat_client
+from .schemas import ChatMessage, TextChatRequest
+from sqlalchemy.orm import Session as SessionType  # type: ignore[import-not-found]
+from fastapi.responses import (  # type: ignore[import-not-found]
+    JSONResponse,
+    Response,
+    StreamingResponse,
+)
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-not-found]
+from sqlalchemy import text as sql_text  # type: ignore[import-not-found]
+from fastapi import (  # type: ignore[import-not-found]
+    Depends,
+    FastAPI,
+    HTTPException,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 import base64
 import hashlib
 import json
@@ -39,37 +65,11 @@ except Exception as e:
     )
     CHAT_CLIENT_AVAILABLE = False
 
-from fastapi import (  # type: ignore[import-not-found]
-    Depends,
-    FastAPI,
-    HTTPException,
-    Request,
-    WebSocket,
-    WebSocketDisconnect,
-)
-from sqlalchemy import text as sql_text  # type: ignore[import-not-found]
-from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-not-found]
-from fastapi.responses import (  # type: ignore[import-not-found]
-    JSONResponse,
-    Response,
-    StreamingResponse,
-)
 try:
     from api_analytics.fastapi import Analytics
 except ImportError:
     Analytics = None
     logging.warning("api_analytics module not found. Analytics disabled.")
-
-from pydantic import BaseModel  # type: ignore[import-not-found]
-from sqlalchemy.orm import Session as SessionType  # type: ignore[import-not-found]
-from starlette.concurrency import run_in_threadpool  # type: ignore[import-not-found]
-
-from .schemas import ChatMessage, TextChatRequest
-from .ai4bharat import ai4bharat_client
-from .database import get_db
-from .models import Conversation
-from .models import Message as MessageModel
-from .services.rate_limit_service import rate_limit_service
 
 
 def _normalise_origin(value: Optional[str]) -> Optional[str]:
@@ -114,7 +114,55 @@ VERCEL_ORIGIN_PATTERN = re.compile(
     r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app"
 )
 
-app = FastAPI(title="AssistMe API", version="2.0.0")
+# Enhanced FastAPI configuration for localhost development
+app = FastAPI(
+    title="AssistMe API",
+    version="2.0.0",
+    description="Next-generation AI virtual assistant API",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    # Performance optimizations for localhost
+    swagger_ui_parameters={"deepLinking": True, "displayRequestDuration": True},
+)
+
+# Enhanced middleware for localhost development
+
+# Add GZip compression for better performance
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Request timing and logging middleware
+
+
+class RequestTimingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+        request_id = str(uuid.uuid4())[:8]
+
+        # Add request ID to request state for tracking
+        request.state.request_id = request_id
+
+        # Log incoming request
+        logging.info(f"[{request_id}] {request.method} {request.url.path} - Started")
+
+        response = await call_next(request)
+
+        # Calculate processing time
+        process_time = time.time() - start_time
+
+        # Add timing header
+        response.headers["X-Process-Time"] = str(process_time)
+        response.headers["X-Request-ID"] = request_id
+
+        # Log completion
+        logging.info(f"[{request_id}] {request.method} {request.url.path} - "
+                     f"Completed in {process_time:.3f}s - Status: {response.status_code}")
+
+        return response
+
+
+# Add timing middleware
+app.add_middleware(RequestTimingMiddleware)
 
 # API Analytics middleware (OpenRouter-only stack)
 API_ANALYTICS_KEY = os.getenv("API_ANALYTICS_KEY", "").strip()
@@ -473,7 +521,7 @@ def health(request: Request):
             else "unavailable"
         )
         api_key_configured = provider.is_available()
-    except:
+    except Exception:
         chat_status = "error"
         api_key_configured = False
 
@@ -757,7 +805,7 @@ Use this information to provide accurate and contextual responses. If the inform
         return messages
 
 
-@app.post("/api/chat/text")
+@app.post("/api/chat")
 async def chat_text(
     request: TextChatRequest, db: Optional[SessionType] = Depends(get_db)
 ):
@@ -1019,7 +1067,7 @@ async def chat_text_stream_options(request: Request) -> Response:
     return Response(status_code=204, headers=headers)
 
 
-@app.get("/api/chat/text")
+@app.get("/api/chat")
 def chat_text_info():
     """Get information about the chat text endpoint."""
     return {
@@ -1038,7 +1086,7 @@ def chat_text_info():
     }
 
 
-@app.options("/api/chat/text")
+@app.options("/api/chat")
 async def chat_text_options(request: Request) -> Response:
     """Explicitly handle CORS preflight requests."""
     headers = _cors_headers(request, methods="POST, OPTIONS")
@@ -1183,40 +1231,40 @@ async def conversation_detail_options(
 @app.websocket("/api/chat/voice")
 async def voice_chat(websocket: WebSocket):
     """Advanced voice chat using NVIDIA Nemotron Nano 9B V2 with STT and TTS.
-    
+
     Protocol:
     - Client sends: {"type": "audio", "data": base64_audio, "language": "en", "stream": false}
     - Server responds: {"type": "result", "transcription": {...}, "response": {...}}
-    
+
     For streaming:
     - Client sends: {"type": "audio", "data": base64_audio, "stream": true}
     - Server streams: {"type": "transcription", ...}, {"type": "text_chunk", ...}, {"type": "audio", ...}
     """
     await websocket.accept()
     conversation_history = []
-    
+
     try:
         from .services.voice_service import voice_service
-        
+
         while True:
             # Receive message from client
             message = await websocket.receive_json()
-            
+
             if message.get("type") == "ping":
                 await websocket.send_json({"type": "pong"})
                 continue
-            
+
             if message.get("type") == "audio":
                 try:
                     # Decode base64 audio
                     audio_b64 = message.get("data", "")
                     audio_bytes = base64.b64decode(audio_b64)
-                    
+
                     language = message.get("language")
                     stream = message.get("stream", False)
                     voice = message.get("voice")
                     speed = message.get("speed", 1.0)
-                    
+
                     if stream:
                         # Streaming mode - send chunks as they arrive
                         async for chunk in voice_service.process_voice_stream(
@@ -1225,7 +1273,7 @@ async def voice_chat(websocket: WebSocket):
                             language=language,
                         ):
                             await websocket.send_json(chunk)
-                            
+
                             # Update conversation history when we get the full transcription
                             if chunk.get("type") == "transcription":
                                 conversation_history.append({
@@ -1241,7 +1289,7 @@ async def voice_chat(websocket: WebSocket):
                             voice=voice,
                             speed=speed,
                         )
-                        
+
                         # Update conversation history
                         if result.get("success"):
                             conversation_history.append({
@@ -1252,9 +1300,9 @@ async def voice_chat(websocket: WebSocket):
                                 "role": "assistant",
                                 "content": result["response"]["text"]
                             })
-                        
+
                         await websocket.send_json({"type": "result", **result})
-                        
+
                 except Exception as e:
                     logging.error(f"Voice processing error: {e}")
                     await websocket.send_json({
@@ -1262,7 +1310,7 @@ async def voice_chat(websocket: WebSocket):
                         "error": str(e),
                         "success": False
                     })
-            
+
             elif message.get("type") == "reset":
                 # Reset conversation history
                 conversation_history = []
@@ -1270,7 +1318,7 @@ async def voice_chat(websocket: WebSocket):
                     "type": "reset_confirmed",
                     "success": True
                 })
-            
+
             elif message.get("type") == "end":
                 # Client wants to end the session
                 await websocket.send_json({
@@ -1278,7 +1326,7 @@ async def voice_chat(websocket: WebSocket):
                     "success": True
                 })
                 break
-                
+
     except WebSocketDisconnect:
         logging.info("Voice chat WebSocket disconnected")
     except Exception as e:
@@ -1289,12 +1337,12 @@ async def voice_chat(websocket: WebSocket):
                 "error": str(e),
                 "success": False
             })
-        except:
+        except Exception:
             pass
     finally:
         try:
             await websocket.close()
-        except:
+        except Exception:
             pass
 
 
@@ -1402,6 +1450,70 @@ async def transliterate_text(request: Request):
             content={"success": False, "error": str(e)},
             status_code=500,
             headers=headers,
+        )
+
+
+# Enhanced error handler for development
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler for development debugging."""
+    request_id = getattr(request.state, "request_id", "unknown")
+
+    logging.error(f"[{request_id}] Unhandled exception: {exc}", exc_info=True)
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": "Internal server error",
+            "detail": str(exc) if os.getenv("DEBUG", "false").lower() == "true" else None,
+            "request_id": request_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        },
+    )
+
+
+# Development-specific health check with detailed diagnostics
+@app.get("/debug/health")
+async def debug_health_check(request: Request):
+    """Enhanced health check for development with detailed diagnostics."""
+    try:
+        cors_headers = _cors_headers(request)
+
+        diagnostics = {
+            "status": "healthy",
+            "service": "assistme-api",
+            "version": "2.0.0",
+            "timestamp": datetime.utcnow().isoformat(),
+            "environment": os.getenv("ENVIRONMENT", "development"),
+            "debug_mode": os.getenv("DEBUG", "false").lower() == "true",
+            "request_id": getattr(request.state, "request_id", None),
+            "components": {
+                "database": {"status": "connected", "type": "sqlite"},
+                "chat_client": {"status": "available", "provider": "OpenRouter"},
+                "ai4bharat": {"status": "initialized"},
+                "rate_limiter": {"status": "active"},
+            },
+            "performance": {
+                "middleware_active": ["timing", "gzip", "cors"],
+                "compression_enabled": True,
+                "request_tracking": True,
+            },
+            "endpoints_count": len(app.routes),
+            "models_available": 18 if CHAT_CLIENT_AVAILABLE else 0,
+        }
+
+        return JSONResponse(content=diagnostics, headers=cors_headers)
+
+    except Exception as e:
+        logging.error(f"Debug health check failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
 

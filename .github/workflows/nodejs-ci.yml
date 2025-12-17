@@ -83,8 +83,8 @@ jobs:
         run: |
           # Stop build on syntax errors or undefined names
           flake8 app --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Warnings for other issues (non-blocking)
-          flake8 app --count --exit-zero --max-complexity=15 --max-line-length=120 --statistics
+          # Full lint using project config (expects 0 errors)
+          flake8 app --count --statistics
           
       - name: Type check with mypy
         working-directory: backend

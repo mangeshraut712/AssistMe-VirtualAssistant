@@ -13,42 +13,42 @@ logger = logging.getLogger(__name__)
 
 class ImageService:
     """Service for generating images using AI models."""
-    
+
     def __init__(self):
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
         self.use_dalle = bool(self.openai_api_key)
         self.use_openrouter = bool(self.openrouter_api_key)
-        
+
     async def generate_image(
-        self, 
-        prompt: str, 
-        model: str = "flux", 
+        self,
+        prompt: str,
+        model: str = "flux",
         size: str = "1024x1024",
         quality: str = "standard",
         style: Optional[str] = None
     ) -> str:
         """
         Generate an image based on the prompt.
-        
+
         Args:
             prompt: Text description of the image
             model: Model to use ("flux", "dall-e-3", etc.)
             size: Image size ("1024x1024", "1024x1792", etc.)
             quality: Image quality for DALL-E
             style: Optional artistic style
-            
+
         Returns:
             URL of the generated image
         """
         # Enhance prompt using Gemini if possible
         enhanced_prompt = await self._enhance_prompt(prompt)
         logger.info(f"Generating image with {model}. Original: '{prompt}' -> Enhanced: '{enhanced_prompt[:50]}...'")
-        
+
         # Pollinations (Free Models)
         if model in ["flux", "flux-realism", "flux-anime", "flux-3d", "turbo"]:
             return await self._generate_pollinations(enhanced_prompt, model, size, style)
-            
+
         # DALL-E
         if model.startswith("dall-e") and self.use_dalle:
             try:
@@ -56,7 +56,7 @@ class ImageService:
             except Exception as e:
                 logger.error(f"DALL-E generation failed: {e}")
                 return self._placeholder_image(prompt)
-                
+
         # OpenRouter
         elif self.use_openrouter:
             try:
@@ -72,7 +72,7 @@ class ImageService:
         """Enhance prompt using Gemini 2.0 Flash via OpenRouter."""
         if not self.use_openrouter:
             return prompt
-            
+
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
@@ -95,7 +95,7 @@ class ImageService:
                     return content.strip('" ')
         except Exception as e:
             logger.warning(f"Prompt enhancement failed: {e}")
-            
+
         return prompt
 
     async def _generate_pollinations(self, prompt: str, model: str, size: str, style: Optional[str]) -> str:
@@ -105,9 +105,9 @@ class ImageService:
         try:
             w, h = size.split('x')
             width, height = int(w), int(h)
-        except:
+        except Exception:
             pass
-            
+
         # Apply style
         final_prompt = prompt
         if style and style != 'none':
@@ -122,7 +122,7 @@ class ImageService:
             }
             if style in style_map:
                 final_prompt = f"{prompt}, {style_map[style]}"
-        
+
         # Model specific params
         url_suffix = ""
         if model == "flux-realism":
@@ -138,15 +138,15 @@ class ImageService:
 
         encoded = quote(final_prompt)
         seed = random.randint(0, 1000000)
-        
+
         image_url = f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&seed={seed}&nologo=true{url_suffix}"
-        
+
         logger.info(f"Generated Pollinations URL: {image_url}")
         return image_url
-    
+
     async def _generate_dalle(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         model: str,
         size: str,
         quality: str
@@ -168,19 +168,19 @@ class ImageService:
                     "response_format": "url"
                 }
             )
-            
+
             if response.status_code != 200:
                 error_data = response.json()
                 raise Exception(f"DALL-E API error: {error_data}")
-            
+
             data = response.json()
             image_url = data["data"][0]["url"]
             logger.info(f"Image generated successfully: {image_url}")
             return image_url
 
     async def _generate_openrouter(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         model: str,
         size: str
     ) -> str:
@@ -216,23 +216,23 @@ class ImageService:
                     },
                     json=payload
                 )
-                
+
                 logger.info(f"OpenRouter response status: {response.status_code}")
-                
+
                 if response.status_code != 200:
                     error_text = response.text
                     logger.error(f"OpenRouter API error ({response.status_code}): {error_text}")
                     raise Exception(f"OpenRouter returned {response.status_code}: {error_text}")
-                
+
                 data = response.json()
                 image_url = self._extract_image_from_openrouter(data)
                 if image_url:
                     logger.info("Image URL extracted from OpenRouter response")
                     return image_url
-                
+
                 logger.error(f"No image data found in OpenRouter response: {data}")
                 raise Exception("No image data found in response")
-            
+
             except httpx.HTTPError as e:
                 logger.error(f"HTTP error during OpenRouter request: {e}")
                 raise Exception(f"Network error: {str(e)}")
@@ -254,7 +254,7 @@ class ImageService:
             # Reduce ratio to simplest form
             from math import gcd
             g = gcd(w, h)
-            return f"{w//g}:{h//g}"
+            return f"{w // g}:{h // g}"
         except Exception:
             return None
 

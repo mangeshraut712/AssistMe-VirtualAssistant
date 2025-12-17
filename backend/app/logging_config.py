@@ -34,7 +34,11 @@ try:
     JSON_SERIALIZER = orjson_dumps
 except ImportError:
     import json
-    JSON_SERIALIZER = lambda v, **kw: json.dumps(v, default=str)
+
+    def json_fallback_dumps(v: Any, **kw: Any) -> str:
+        return json.dumps(v, default=str)
+
+    JSON_SERIALIZER = json_fallback_dumps
 
 
 # Context variables for request tracking

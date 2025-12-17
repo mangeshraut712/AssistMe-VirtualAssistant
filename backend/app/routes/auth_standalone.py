@@ -2,6 +2,8 @@
 Standalone authentication routes - no dependencies on embedding services.
 """
 
+from app.models import User
+from app.database import get_db
 import os
 import sys
 from datetime import datetime, timedelta
@@ -16,8 +18,6 @@ from sqlalchemy.orm import Session
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from app.database import get_db
-from app.models import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv(

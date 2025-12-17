@@ -21,6 +21,7 @@ class OpenRouterProvider(BaseProvider):
         # Primary: Gemini 2.5 Flash Native Audio (Dec 2025 release via BYOK)
         "gemini-2.5-flash-native-audio-preview-12-2025",
         # Fallbacks in order of preference
+        "google/gemini-2.0-flash-exp:free",
         "google/gemini-2.5-flash",
         "google/gemini-2.5-flash-lite",
         "google/gemini-2.5-flash-lite-preview-09-2025",
@@ -30,21 +31,40 @@ class OpenRouterProvider(BaseProvider):
 
     DEFAULT_MODELS = [
         # Gemini 2.5 Flash Native Audio (December 2025 - via Google AI Studio BYOK)
-        {"id": "gemini-2.5-flash-native-audio-preview-12-2025", "name": "Gemini 2.5 Flash Native Audio (Dec 2025)", "priority": 0, "voice_optimized": True, "native_audio": True},
-        {"id": "google/gemini-2.5-flash", "name": "Google: Gemini 2.5 Flash", "priority": 0, "voice_optimized": True, "native_audio": True},
+        {"id": "gemini-2.5-flash-native-audio-preview-12-2025",
+         "name": "Gemini 2.5 Flash Native Audio (Dec 2025)",
+         "priority": 0,
+         "voice_optimized": True,
+         "native_audio": True},
+        {"id": "google/gemini-2.5-flash", "name": "Google: Gemini 2.5 Flash",
+            "priority": 0, "voice_optimized": True, "native_audio": True},
         {"id": "google/gemini-2.5-flash-lite", "name": "Google: Gemini 2.5 Flash Lite", "priority": 0, "voice_optimized": True},
-        {"id": "google/gemini-2.5-flash-lite-preview-09-2025", "name": "Google: Gemini 2.5 Flash Lite Preview", "priority": 0, "voice_optimized": True},
-        {"id": "google/gemini-2.0-flash-001:free", "name": "Google: Gemini 2.0 Flash (Free)", "priority": 1, "voice_optimized": True},
-        {"id": "google/gemini-2.0-flash-lite-001", "name": "Google: Gemini 2.0 Flash Lite", "priority": 1, "voice_optimized": True},
-        
+        {"id": "google/gemini-2.5-flash-lite-preview-09-2025",
+         "name": "Google: Gemini 2.5 Flash Lite Preview",
+         "priority": 0,
+         "voice_optimized": True},
+        {"id": "google/gemini-2.0-flash-exp:free",
+         "name": "Google: Gemini 2.0 Flash Experimental (free)",
+         "priority": 1,
+         "voice_optimized": True},
+        {"id": "google/gemini-2.0-flash-001:free",
+         "name": "Google: Gemini 2.0 Flash (Free)",
+         "priority": 1,
+         "voice_optimized": True},
+        {"id": "google/gemini-2.0-flash-lite-001",
+         "name": "Google: Gemini 2.0 Flash Lite",
+         "priority": 1,
+         "voice_optimized": True},
+
         # Free Models (Working and Verified)
         {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct (Free)", "priority": 2},
         {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2 (Free)", "priority": 2},
         {"id": "google/gemma-3-27b-it:free", "name": "Google: Gemma 3 27B IT (Free)", "priority": 2},
         {"id": "nvidia/nemotron-nano-12b-v2-vl:free", "name": "NVIDIA: Nemotron Nano 12B V2 VL (Free)", "priority": 2},
         {"id": "meituan/longcat-flash-chat:free", "name": "Meituan: LongCat Flash Chat (Free)", "priority": 2},
-        {"id": "alibaba/tongyi-deepresearch-30b-a3b:free", "name": "Alibaba: Tongyi DeepResearch 30B A3B (Free)", "priority": 2},
-        
+        {"id": "alibaba/tongyi-deepresearch-30b-a3b:free",
+            "name": "Alibaba: Tongyi DeepResearch 30B A3B (Free)", "priority": 2},
+
         # Premium Models (Fallback)
         {"id": "google/gemini-2.5-pro", "name": "Google: Gemini 2.5 Pro", "priority": 3},
         {"id": "x-ai/grok-code-fast-1", "name": "xAI: Grok Code Fast 1", "priority": 3},
@@ -104,8 +124,9 @@ class OpenRouterProvider(BaseProvider):
         # STRICT VOICE MODEL ISOLATION
         # If the requested model is one of our designated VOICE_MODELS, we MUST NOT fallback
         # to generic text models like Llama as they lack native audio/voice capabilities.
-        is_voice_request = model in self.VOICE_MODELS or model == "gemini-2.5-flash-native-audio-preview-12-2025" or model.startswith("google/gemini-2.5")
-        
+        is_voice_request = model in self.VOICE_MODELS or model == "gemini-2.5-flash-native-audio-preview-12-2025" or model.startswith(
+            "google/gemini-2.5")
+
         if is_voice_request:
             # Only add other VOICE_MODELS as fallbacks
             for voice_model in self.VOICE_MODELS:
@@ -310,7 +331,7 @@ class OpenRouterProvider(BaseProvider):
 
     def get_voice_models_only(self) -> List[str]:
         """Get ONLY the Gemini audio models for voice mode.
-        
+
         These are the ONLY models that should be used for voice conversations:
         - gemini-2.5-flash-native-audio-preview-12-2025 (Primary)
         - google/gemini-2.5-flash
@@ -323,7 +344,7 @@ class OpenRouterProvider(BaseProvider):
 
     def get_voice_optimized_model(self, prefer_free: bool = False) -> str:
         """Get the best model for voice chat from VOICE_MODELS list.
-        
+
         Tries models in order:
         1. gemini-2.5-flash-native-audio-preview-12-2025 (BYOK)
         2. google/gemini-2.5-flash
@@ -338,13 +359,13 @@ class OpenRouterProvider(BaseProvider):
                 if model.endswith(":free"):
                     return model
             return "google/gemini-2.0-flash-001:free"
-        
+
         # Return first available (primary is gemini-2.5-flash-native-audio)
         return self.VOICE_MODELS[0] if self.VOICE_MODELS else "google/gemini-2.0-flash-001:free"
 
     def get_native_audio_model(self) -> str:
         """Get the model with native audio TTS support.
-        
+
         Primary: gemini-2.5-flash-native-audio-preview-12-2025 (Dec 2025 GA)
         Features:
         - 30 HD voices across 24 languages
@@ -364,7 +385,7 @@ class OpenRouterProvider(BaseProvider):
     ):
         """Generate streaming chat completion (required by BaseProvider)."""
         from .base import StreamChunk, FinishReason
-        
+
         if self.dev_mode:
             # Mock streaming for dev mode
             async def mock_stream():
@@ -378,24 +399,24 @@ class OpenRouterProvider(BaseProvider):
                         finish_reason=FinishReason.STOP if i == len(words) - 1 else None
                     )
             return mock_stream()
-        
+
         if not self.api_key:
             raise ValueError("OpenRouter API key not configured")
-        
+
         # Use existing streaming implementation
         url = f"{self.base_url}/chat/completions"
-        
+
         # Get models to try with fallback
         models_to_try = []
         if model:
             models_to_try.append(model)
-        
+
         # Add fallbacks
         available_models = sorted(self.DEFAULT_MODELS, key=lambda x: x.get("priority", 99))
         for fallback_model in available_models:
             if fallback_model["id"] not in models_to_try:
                 models_to_try.append(fallback_model["id"])
-        
+
         payload = {
             "model": models_to_try[0] if models_to_try else (model or self.default_model),
             "messages": messages,
@@ -403,7 +424,7 @@ class OpenRouterProvider(BaseProvider):
             "max_tokens": max_tokens,
             "stream": True,
         }
-        
+
         # Convert old stream format to new StreamChunk format
         async def stream_generator():
             chunk_id = 0
@@ -426,7 +447,7 @@ class OpenRouterProvider(BaseProvider):
                             finish_reason=FinishReason.ERROR
                         )
                         break
-            
+
             # Final chunk
             yield StreamChunk(
                 id=f"chatcmpl-{chunk_id}-final",
@@ -434,7 +455,7 @@ class OpenRouterProvider(BaseProvider):
                 model=models_to_try[0],
                 finish_reason=FinishReason.STOP
             )
-        
+
         return stream_generator()
 
     def is_available(self) -> bool:

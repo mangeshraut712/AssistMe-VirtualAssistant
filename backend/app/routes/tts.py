@@ -38,6 +38,7 @@ class VoiceConversationRequest(BaseModel):
     voice: Optional[str] = "Puck"
     language: Optional[str] = "en-US"
     stt_confidence: Optional[float] = Field(1.0, ge=0.0, le=1.0)
+    model: Optional[str] = "google/gemini-2.0-flash-001:free"  # Default to standard mode model
 
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
@@ -48,11 +49,11 @@ router = APIRouter(prefix="/api/tts", tags=["tts"])
 @router.post("/synthesize")
 async def synthesize(req: TTSRequest):
     """Convert text to speech using Gemini 2.5 Flash TTS.
-    
+
     Returns WAV audio as base64 (24kHz, 16-bit PCM).
-    
+
     30 voices available: Puck, Kore, Charon, Fenrir, Aoede, Zephyr, etc.
-    
+
     Style hints: "cheerfully", "calmly", "seriously", etc.
     """
     try:
@@ -71,14 +72,14 @@ async def synthesize(req: TTSRequest):
 @router.post("/voice-response")
 async def voice_response(req: VoiceConversationRequest):
     """Complete voice AI pipeline: Understand → Generate → Speak.
-    
+
     Pipeline stages:
     1. Check STT confidence (asks for clarification if low)
     2. Check for emergency keywords (uses fixed scripts)
     3. Generate LLM response (optimized for voice)
     4. Normalize response for TTS
     5. Convert to speech audio
-    
+
     Returns both text response and audio.
     """
     try:
@@ -88,6 +89,7 @@ async def voice_response(req: VoiceConversationRequest):
             voice=req.voice or "Puck",
             language=req.language or "en-US",
             stt_confidence=req.stt_confidence or 1.0,
+            model=req.model or "google/gemini-2.0-flash-001:free",
         )
         return {"success": True, **result}
     except ValueError as e:
@@ -99,9 +101,9 @@ async def voice_response(req: VoiceConversationRequest):
 @router.get("/emotions")
 async def list_emotions():
     """List supported emotion tags for expressive TTS.
-    
+
     Inspired by Chatterbox Turbo's paralinguistic tags.
-    
+
     Paralinguistic tags (use in text):
     - [laugh] - Light laugh
     - [chuckle] - Soft chuckle
@@ -110,7 +112,7 @@ async def list_emotions():
     - [excited] - Excited tone
     - [serious] - Serious tone
     - [pause] - Thoughtful pause
-    
+
     Auto-detected emotions:
     - happy, sad, angry, surprised
     - calm, empathetic, enthusiastic, thoughtful
@@ -127,7 +129,7 @@ async def list_emotions():
 @router.get("/voices")
 async def list_voices():
     """List available Gemini TTS voices.
-    
+
     Returns voices grouped by style:
     - neutral: Puck, Zephyr, Aoede
     - warm: Kore, Leda, Autonoe
@@ -155,7 +157,7 @@ async def list_languages():
 @router.get("/languages/indian")
 async def list_indian_languages():
     """List Indian languages supported by Gemini TTS.
-    
+
     Supported:
     - Hindi (hi-IN) - हिंदी
     - Bengali (bn-BD) - বাংলা

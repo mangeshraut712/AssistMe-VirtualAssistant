@@ -9,14 +9,14 @@ from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
-# Import AI Provider Factory
+# Import AI Provider Factory (may be used for future enhancements)
 try:
-    from .providers import get_provider
+    from .providers import get_provider  # noqa: F401
 
-    PROVIDER_AVAILABLE = True
+    _PROVIDER_AVAILABLE = True
     logger.info("AI Provider available for AI4Bharat translations")
 except ImportError:
-    PROVIDER_AVAILABLE = False
+    _PROVIDER_AVAILABLE = False
     logger.warning("AI Provider not available, using fallback translations")
 
 
@@ -358,7 +358,17 @@ Translation:"""
             return f"{text} (Translation: {text})"
         else:
             # For other language pairs, just indicate the translation attempt
-            return f"{text} [{LANGUAGE_NAMES.get(source_lang, {}).get('name', source_lang)} → {LANGUAGE_NAMES.get(target_lang, {}).get('name', target_lang)}]"
+            return f"{text} [{
+                LANGUAGE_NAMES.get(
+                    source_lang,
+                    {}).get(
+                    'name',
+                    source_lang)} → {
+                LANGUAGE_NAMES.get(
+                    target_lang,
+                    {}).get(
+                        'name',
+                    target_lang)}]"
 
     def get_supported_languages(self) -> List[Dict]:
         """Get list of supported languages"""

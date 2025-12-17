@@ -1,6 +1,6 @@
 """Knowledge Base and Web Search API endpoints (Grokipedia)."""
 
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -49,40 +49,40 @@ async def ingest_documents(request: IngestRequest):
 async def search_knowledge(request: SearchRequest):
     """
     Search the knowledge base and optionally the web.
-    
+
     This endpoint combines local RAG with web search for comprehensive results.
     """
     try:
         results = []
-        
+
         # First, search local knowledge base if available
         if embedding_service.index:
             local_results = await embedding_service.search(request.query, request.top_k)
             results.extend([
                 {
-                    "text": text, 
+                    "text": text,
                     "score": float(score),
                     "source": "local"
-                } 
+                }
                 for text, score in local_results
             ])
-        
+
         # Then, search the web if enabled
         if request.use_web_search:
             web_results = await web_search_service.search_web(
-                request.query, 
+                request.query,
                 max_results=request.top_k
             )
             results.extend([
                 {
-                    "text": f"{r['title']}: {r['content']}", 
+                    "text": f"{r['title']}: {r['content']}",
                     "score": r.get("score", 0.5),
                     "source": "web",
                     "url": r.get("url", "")
-                } 
+                }
                 for r in web_results
             ])
-        
+
         # Sort by score and limit results
         results.sort(key=lambda x: x["score"], reverse=True)
         results = results[:request.top_k * 2]  # Return more results when combining sources
@@ -96,7 +96,7 @@ async def search_knowledge(request: SearchRequest):
 async def grokipedia_search(request: GrokipediaRequest):
     """
     Grokipedia-style deep search with AI-generated answers.
-    
+
     This endpoint provides a comprehensive answer with sources,
     similar to the real Grokipedia experience.
     """
@@ -107,13 +107,13 @@ async def grokipedia_search(request: GrokipediaRequest):
             max_results=request.max_results,
             search_depth=request.search_depth
         )
-        
+
         # Generate comprehensive answer
         answer = await web_search_service.get_answer(
             request.query,
             context_results=search_results
         )
-        
+
         return {
             "success": True,
             "query": request.query,
@@ -130,7 +130,7 @@ async def knowledge_stats():
     """Return knowledge base stats."""
     count = len(embedding_service.documents) if embedding_service.documents else 0
     return {
-        "success": True, 
+        "success": True,
         "documents": count,
         "web_search_enabled": True,
         "tavily_enabled": web_search_service.use_tavily

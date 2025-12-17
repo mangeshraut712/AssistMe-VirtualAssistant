@@ -37,7 +37,11 @@ class RateLimitService:
             "x-ai/grok-4-fast": 0.0006,
         }
 
-        logger.info(f"Rate limit service initialized: {self.requests_per_minute} RPM, {self.requests_per_hour} RPH, ${self.max_credits} credits")
+        logger.info(
+            f"Rate limit service initialized: {
+                self.requests_per_minute} RPM, {
+                self.requests_per_hour} RPH, ${
+                self.max_credits} credits")
 
     async def check_rate_limit(self) -> tuple[bool, str]:
         """Check if request is within rate limits."""
@@ -79,7 +83,10 @@ class RateLimitService:
             cost = cost_per_token * (tokens_used / 1000)
             self.current_credits -= cost
 
-            logger.info(f"Request recorded: {model}, tokens: {tokens_used}, cost: ${cost:.6f}, credits remaining: ${self.current_credits:.4f}")
+            logger.info(
+                f"Request recorded: {model}, tokens: {tokens_used}, cost: ${
+                    cost:.6f}, credits remaining: ${
+                    self.current_credits:.4f}")
 
     async def get_status(self) -> Dict:
         """Get current rate limit and credit status."""

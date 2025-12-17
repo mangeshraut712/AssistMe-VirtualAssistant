@@ -12,6 +12,14 @@
 
 AssistMe is a state-of-the-art virtual assistant platform built with the latest web technologies (**React 19**, **Tailwind CSS 4**-ready, **FastAPI**). It features a modular architecture allowing independent use of its core components.
 
+## 🚀 Features
+
+- **Advanced Voice Mode** with NVIDIA Nemotron Nano 9B V2
+- Multimodal AI interactions
+- Real-time speech-to-text and text-to-speech
+- Support for multiple AI models
+- Responsive design for all devices
+
 ### key Functionalities:
 - **Voice Mode 4.0**: Bi-directional, interruptible voice chat with emotional intelligence (like Gemini Live).
 - **Grokipedia 2.0**: RAG-powered knowledge engine with "Deep Research" capabilities and table of contents.

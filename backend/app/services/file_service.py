@@ -1,14 +1,12 @@
-import os
-import shutil
 import uuid
 from pathlib import Path
-from typing import List, Optional
 
 import aiofiles
 from fastapi import UploadFile
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
 
 class FileService:
     async def save_file(self, file: UploadFile) -> dict:
@@ -59,5 +57,6 @@ class FileService:
     async def _read_text(self, path: Path) -> str:
         async with aiofiles.open(path, 'r', encoding='utf-8', errors='ignore') as f:
             return await f.read()
+
 
 file_service = FileService()

@@ -65,7 +65,7 @@ const getSpeedGrade = (speed) => {
     return 'F';
 };
 
-const getPingGrade = (ping) => {
+const _getPingGrade = (ping) => {
     if (ping <= 20) return 'A+';
     if (ping <= 50) return 'A';
     if (ping <= 100) return 'B';

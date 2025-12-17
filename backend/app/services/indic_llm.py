@@ -4,7 +4,7 @@ Integration with AI4Bharat's Indic models and other Indian language LLMs
 """
 
 import logging
-from typing import AsyncIterator, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from ..providers import get_provider
 

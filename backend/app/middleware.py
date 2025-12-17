@@ -17,13 +17,11 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp
 
 from .logging_config import (
     logger,
     log_request,
     set_request_context,
-    get_request_id,
 )
 
 

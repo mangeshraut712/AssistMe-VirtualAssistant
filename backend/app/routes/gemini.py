@@ -25,42 +25,43 @@ GEMINI_VOICES = {
     "emotional": ["Erato", "Melpomene", "Thalia"],
 }
 
-# Recommended model for Live API
-LIVE_MODEL = "models/gemini-2.0-flash-exp"
+# Recommended model for Live API - December 2025 Preview (tested and working)
+# This model works on v1beta Live API with Audio response modality
+LIVE_MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
 
 
 @router.get("/key")
 async def get_gemini_key():
     """Get Gemini API key for Live API WebSocket connection.
-    
+
     Security Notes:
     - In production, consider short-lived tokens
     - Or use server-side WebSocket proxy
     - Or implement OAuth2 with Vertex AI
-    
+
     Returns:
         JSON with apiKey field
     """
     api_key = os.getenv("GOOGLE_API_KEY")
-    
+
     if not api_key:
         raise HTTPException(
             status_code=503,
             detail="Gemini API key not configured. Add GOOGLE_API_KEY to environment."
         )
-    
+
     return {"apiKey": api_key}
 
 
 @router.get("/status")
 async def gemini_status():
     """Check if Gemini Live API is available and configured.
-    
+
     Returns:
         JSON with availability status and feature list
     """
     api_key = os.getenv("GOOGLE_API_KEY")
-    
+
     return {
         "available": bool(api_key),
         "model": LIVE_MODEL,
@@ -75,14 +76,13 @@ async def gemini_status():
         ],
         "requirements": {
             "GOOGLE_API_KEY": "configured" if api_key else "missing",
-        }
-    }
+        }}
 
 
 @router.get("/config")
 async def get_gemini_config():
     """Get recommended Gemini Live configuration.
-    
+
     Returns configuration suitable for voice conversations.
     """
     return {
@@ -115,7 +115,7 @@ async def get_gemini_config():
 @router.get("/voices")
 async def list_gemini_voices():
     """List available Gemini Live voices organized by style.
-    
+
     Returns:
         JSON with voices grouped by category
     """

@@ -116,7 +116,7 @@ class WhisperService:
                 device = self.model.device if hasattr(self.model, 'device') else 'cpu'
                 if isinstance(device, str) and device == 'cpu':
                     device = torch.device('cpu')
-                    
+
                 audio = whisper.load_audio(tmp_path)
                 audio = whisper.pad_or_trim(audio)
                 mel = whisper.log_mel_spectrogram(audio).to(device)

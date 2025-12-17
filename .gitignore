@@ -1,66 +1,156 @@
+# ============================================
 # Dependencies
+# ============================================
 node_modules/
+.pnp
+.pnp.js
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 .venv/
 venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+env/
+ENV/
 
-# Build outputs
+# ============================================
+# Environment & Secrets
+# ============================================
+.env
+.env.*
+!.env.example
+secrets.yaml
+config.yaml
+config/*.local.yaml
+
+# ============================================
+# Build & Distribution
+# ============================================
 dist/
 build/
-*.egg-info/
-.eggs/
+out/
+.next/
+.nuxt/
+.nuxt-
+.cache/
 .vite/
+*.tsbuildinfo
 
-# Environment
-.env
-.env.local
-.env.*.local
-backend/.env
-*.env
-
-# IDE
-.vscode/
+# ============================================
+# IDE & Editor Files
+# ============================================
 .idea/
-*.swp
-*.swo
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 *~
 .DS_Store
+Thumbs.db
 
-# Logs
-*.log
+# ============================================
+# Logs & Debug
+# ============================================
 logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
-# Testing
-.coverage
+# ============================================
+# Testing & Coverage
+# ============================================
+coverage/
+.nyc_output/
 htmlcov/
 .pytest_cache/
 .mypy_cache/
+.coverage
 
+# ============================================
 # Database
+# ============================================
 *.db
 *.sqlite
 *.sqlite3
+*.sql
+*.sql.gz
+*.frm
+*.myd
+*.myi
+*.ibd
 
-# Temp files
+# ============================================
+# Temporary Files
+# ============================================
 tmp/
 temp/
 *.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+*.swp
+*.swo
+*~
 
-# Archives (removed - no longer needed)
-archive/
-backup/
-legacy/
+# ============================================
+# OS Generated Files
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Large files
+# ============================================
+# Archives & Large Files
+# ============================================
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
 *.mp4
 *.mp3
 *.wav
 *.avi
 *.mov
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx

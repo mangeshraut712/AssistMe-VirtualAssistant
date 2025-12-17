@@ -20,7 +20,6 @@ Models:
 - TTS: gemini-2.5-flash-preview-tts
 """
 
-import base64
 import logging
 from typing import Dict, List, Optional
 
@@ -70,7 +69,7 @@ class VoiceService:
 
             # Step 2: Prepare messages for LLM
             messages = conversation_history or []
-            
+
             # Add system message for voice chat if not present
             if not any(msg.get("role") == "system" for msg in messages):
                 messages.insert(
@@ -86,7 +85,7 @@ class VoiceService:
 
             # Step 3: Get response from Gemini 2.0 Flash
             logger.info("Generating response with Gemini 2.0 Flash...")
-            
+
             # Get voice-optimized model (Gemini 2.5 Flash)
             if hasattr(self.provider, 'get_voice_optimized_model'):
                 model = self.provider.get_voice_optimized_model()
@@ -187,7 +186,7 @@ class VoiceService:
 
             # Step 3: Stream response from LLM
             logger.info("Streaming response from Gemini 2.0 Flash...")
-            
+
             # Get voice-optimized model
             if hasattr(self.provider, 'get_voice_optimized_model'):
                 model = self.provider.get_voice_optimized_model()

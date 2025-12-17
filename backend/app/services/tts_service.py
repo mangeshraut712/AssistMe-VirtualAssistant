@@ -23,8 +23,6 @@ Models:
 Reference: https://ai.google.dev/gemini-api/docs/speech-generation
 """
 
-import asyncio
-import base64
 import logging
 import os
 import re
@@ -37,20 +35,20 @@ logger = logging.getLogger(__name__)
 
 class TextNormalizer:
     """Normalize text for TTS - critical for voice quality."""
-    
+
     # Numbers to words (for natural speech)
     NUMBER_WORDS = {
         '0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four',
         '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine',
         '10': 'ten', '11': 'eleven', '12': 'twelve'
     }
-    
+
     @staticmethod
     def normalize_for_tts(text: str) -> str:
         """Normalize text for natural TTS output."""
         if not text:
             return text
-            
+
         # 1. Replace common abbreviations
         abbrevs = {
             'Dr.': 'Doctor',
@@ -67,33 +65,33 @@ class TextNormalizer:
         }
         for abbrev, full in abbrevs.items():
             text = text.replace(abbrev, full)
-        
+
         # 2. Handle phone numbers (read digit by digit)
         def phone_to_digits(match):
             number = match.group()
             return ' '.join(number.replace('-', '').replace('(', '').replace(')', '').replace(' ', ''))
         text = re.sub(r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', phone_to_digits, text)
-        
+
         # 3. Handle URLs (just say "link" or domain)
         text = re.sub(r'https?://[^\s]+', 'link', text)
-        
+
         # 4. Handle email addresses
         text = re.sub(r'[\w.-]+@[\w.-]+\.\w+', lambda m: m.group().replace('@', ' at ').replace('.', ' dot '), text)
-        
+
         # 5. Add prosody hints (commas for pauses)
         # Add pause after colons
         text = re.sub(r':(?!\s)', ': ', text)
-        
+
         # 6. Clean up excessive punctuation
         text = re.sub(r'\.{3,}', '...', text)
         text = re.sub(r'!{2,}', '!', text)
         text = re.sub(r'\?{2,}', '?', text)
-        
+
         # 7. Remove markdown
         text = re.sub(r'\*{1,2}([^*]+)\*{1,2}', r'\1', text)  # Bold/italic
         text = re.sub(r'`([^`]+)`', r'\1', text)  # Code
         text = re.sub(r'#{1,6}\s+', '', text)  # Headers
-        
+
         return text.strip()
 
     @staticmethod
@@ -114,11 +112,11 @@ class TextNormalizer:
 
 class EmotionDetector:
     """Detect emotions in text for expressive TTS.
-    
+
     Inspired by Chatterbox Turbo's paralinguistic tags.
     Maps emotions to Gemini TTS style prompts.
     """
-    
+
     # Emotion keywords to detect
     EMOTION_KEYWORDS = {
         "happy": ["happy", "excited", "great", "wonderful", "amazing", "love", "yay", "awesome"],
@@ -130,7 +128,7 @@ class EmotionDetector:
         "enthusiastic": ["absolutely", "definitely", "of course", "yes", "let's go"],
         "thoughtful": ["hmm", "let me think", "interesting", "consider", "perhaps"],
     }
-    
+
     # Map emotions to Gemini TTS style prompts
     EMOTION_STYLES = {
         "happy": "cheerfully and with a smile in your voice",
@@ -143,7 +141,7 @@ class EmotionDetector:
         "thoughtful": "thoughtfully with measured pacing",
         "neutral": "naturally and conversationally",
     }
-    
+
     # Paralinguistic tags (Chatterbox-style) mapped to Gemini prompts
     PARALINGUISTIC_TAGS = {
         "[laugh]": "Say with a light laugh: ",
@@ -154,54 +152,54 @@ class EmotionDetector:
         "[excited]": "Say with excitement: ",
         "[serious]": "Say seriously and clearly: ",
     }
-    
+
     @classmethod
     def detect_emotion(cls, text: str) -> str:
         """Detect the primary emotion in text."""
         text_lower = text.lower()
-        
+
         # Check for paralinguistic tags first
         for tag in cls.PARALINGUISTIC_TAGS:
             if tag in text_lower:
                 return tag
-        
+
         # Count emotion keyword matches
         emotion_scores = {}
         for emotion, keywords in cls.EMOTION_KEYWORDS.items():
             score = sum(1 for kw in keywords if kw in text_lower)
             if score > 0:
                 emotion_scores[emotion] = score
-        
+
         if emotion_scores:
             return max(emotion_scores, key=emotion_scores.get)
-        
+
         return "neutral"
-    
+
     @classmethod
     def get_style_prompt(cls, emotion: str) -> str:
         """Get the TTS style prompt for an emotion."""
         if emotion in cls.PARALINGUISTIC_TAGS:
             return cls.PARALINGUISTIC_TAGS[emotion]
         return cls.EMOTION_STYLES.get(emotion, cls.EMOTION_STYLES["neutral"])
-    
+
     @classmethod
     def process_text_with_emotion(cls, text: str) -> tuple:
         """Process text and return (cleaned_text, style_prompt, emotion)."""
         emotion = cls.detect_emotion(text)
         style_prompt = cls.get_style_prompt(emotion)
-        
+
         # Remove paralinguistic tags from text
         cleaned_text = text
         for tag in cls.PARALINGUISTIC_TAGS:
             cleaned_text = cleaned_text.replace(tag, "")
         cleaned_text = cleaned_text.strip()
-        
+
         return cleaned_text, style_prompt, emotion
 
 
 class GeminiVoiceService:
     """Production-grade Gemini 2.5 Flash Native Audio Service.
-    
+
     Features (December 2025 Update):
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     ✓ Sharper function calling (71.5% on ComplexFuncBench Audio)
@@ -211,24 +209,24 @@ class GeminiVoiceService:
     ✓ Auto language detection (70+ languages)
     ✓ Style transfer (preserves intonation, pacing, pitch)
     ✓ Noise robustness (filters ambient noise)
-    
+
     Models:
     - TTS: gemini-2.5-flash-preview-tts (30 voices, 24 languages)
     - LLM: gemini-2.5-flash (reasoning with native audio)
     - Native Audio: gemini-2.5-flash-native-audio-preview-12-2025
-    
+
     Reference: https://blog.google/products/gemini/gemini-audio-model-updates/
     """
 
     # TTS Model for speech synthesis
     TTS_MODEL = "gemini-2.5-flash-preview-tts"
-    
+
     # LLM Model for reasoning
     LLM_MODEL = "gemini-2.5-flash"
-    
+
     # Native Audio Model (Dec 2025) - for advanced voice agents
     NATIVE_AUDIO_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
-    
+
     # Available voices (30 total) - grouped by emotion/style
     VOICES = {
         "neutral": ["Puck", "Zephyr", "Aoede"],
@@ -238,7 +236,7 @@ class GeminiVoiceService:
         "emotional": ["Erato", "Melpomene", "Thalia"],
         "professional": ["Helios", "Pegasus", "Orpheus"],
     }
-    
+
     # All voice names
     ALL_VOICES = [
         "Aoede", "Charon", "Fenrir", "Kore", "Puck", "Zephyr",
@@ -247,7 +245,7 @@ class GeminiVoiceService:
         "Polyhymnia", "Terpsichore", "Thalia", "Urania", "Algieba",
         "Altair", "Ananke", "Autonoe", "Callirrhoe", "Carpo", "Dione", "Gacrux"
     ]
-    
+
     # Supported languages with full metadata
     # Gemini TTS supports 24 languages including 6 Indian languages
     LANGUAGES = {
@@ -258,7 +256,7 @@ class GeminiVoiceService:
         "ta-IN": {"name": "Tamil", "native": "தமிழ்", "region": "India"},
         "te-IN": {"name": "Telugu", "native": "తెలుగు", "region": "India"},
         "en-IN": {"name": "English (India)", "native": "English", "region": "India"},
-        
+
         # Major World Languages
         "en-US": {"name": "English (US)", "native": "English", "region": "USA"},
         "es-US": {"name": "Spanish", "native": "Español", "region": "Americas"},
@@ -271,20 +269,20 @@ class GeminiVoiceService:
         "ko-KR": {"name": "Korean", "native": "한국어", "region": "South Korea"},
         "zh-CN": {"name": "Chinese", "native": "中文", "region": "China"},
         "ar-EG": {"name": "Arabic", "native": "العربية", "region": "Egypt"},
-        
+
         # European Languages
         "nl-NL": {"name": "Dutch", "native": "Nederlands", "region": "Netherlands"},
         "pl-PL": {"name": "Polish", "native": "Polski", "region": "Poland"},
         "ro-RO": {"name": "Romanian", "native": "Română", "region": "Romania"},
         "uk-UA": {"name": "Ukrainian", "native": "Українська", "region": "Ukraine"},
-        
+
         # Asian Languages
         "th-TH": {"name": "Thai", "native": "ไทย", "region": "Thailand"},
         "vi-VN": {"name": "Vietnamese", "native": "Tiếng Việt", "region": "Vietnam"},
         "id-ID": {"name": "Indonesian", "native": "Bahasa Indonesia", "region": "Indonesia"},
         "tr-TR": {"name": "Turkish", "native": "Türkçe", "region": "Turkey"},
     }
-    
+
     # Indian languages list for quick access
     INDIAN_LANGUAGES = ["hi-IN", "bn-BD", "mr-IN", "ta-IN", "te-IN", "en-IN"]
 
@@ -292,7 +290,7 @@ class GeminiVoiceService:
         self.api_key = os.getenv("GOOGLE_API_KEY", "").strip()
         self.base_url = "https://generativelanguage.googleapis.com/v1beta"
         self.normalizer = TextNormalizer()
-        
+
         if not self.api_key:
             logger.warning("GOOGLE_API_KEY not set - Gemini TTS will not work")
 
@@ -304,52 +302,52 @@ class GeminiVoiceService:
         auto_emotion: bool = True,
     ) -> Dict:
         """Convert text to speech using Gemini 2.5 Flash TTS.
-        
+
         Features (inspired by Chatterbox Turbo):
         - Automatic emotion detection
         - Paralinguistic tags: [laugh], [chuckle], [sigh], etc.
         - Style control via prompts
-        
+
         Args:
             text: Text to convert (will be normalized)
             voice: Voice name from 30 available options
             style: Speaking style hint (overrides auto-detection)
             auto_emotion: Auto-detect emotion if style not specified
-            
+
         Returns:
             Dict with base64 WAV audio data and emotion info
         """
         if not self.api_key:
             raise ValueError("GOOGLE_API_KEY not configured")
-        
+
         text = (text or "").strip()
         if not text:
             raise ValueError("Text is required")
-        
+
         # IMPORTANT: Normalize text for TTS
         text = self.normalizer.normalize_for_tts(text)
-        
+
         # Detect emotion if auto_emotion enabled and no style specified
         detected_emotion = "neutral"
         if auto_emotion and not style:
             cleaned_text, auto_style, detected_emotion = EmotionDetector.process_text_with_emotion(text)
             text = cleaned_text
             style = auto_style
-        
+
         # Log for debugging
         logger.info(f"TTS: emotion={detected_emotion}, text={text[:50]}...")
-        
+
         # Validate voice
         selected_voice = voice if voice in self.ALL_VOICES else "Puck"
-        
+
         # Build prompt with style
         if style:
             prompt_text = f"Say {style}: {text}"
         else:
             prompt_text = text
-        
+
         url = f"{self.base_url}/models/{self.TTS_MODEL}:generateContent?key={self.api_key}"
-        
+
         payload = {
             "contents": [{
                 "parts": [{"text": prompt_text}]
@@ -365,17 +363,17 @@ class GeminiVoiceService:
                 }
             }
         }
-        
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, json=payload)
-            
+
             if response.status_code != 200:
                 error = response.text
                 logger.error(f"Gemini TTS error {response.status_code}: {error}")
                 raise Exception(f"TTS API error: {response.status_code}")
-            
+
             data = response.json()
-            
+
             # Extract audio
             if "candidates" in data and data["candidates"]:
                 candidate = data["candidates"][0]
@@ -389,7 +387,7 @@ class GeminiVoiceService:
                                 "voice": selected_voice,
                                 "provider": "gemini-2.5-flash-tts"
                             }
-            
+
             raise Exception("No audio in response")
 
     async def generate_voice_response(
@@ -399,32 +397,33 @@ class GeminiVoiceService:
         voice: str = "Puck",
         language: str = "en-US",
         stt_confidence: float = 1.0,
+        model: str = "google/gemini-2.0-flash-001:free",
     ) -> Dict:
         """Complete voice AI pipeline: Understand + Generate + Speak.
-        
+
         Pipeline:
         1. Check STT confidence (ask for clarification if low)
         2. Check for emergency keywords (use fixed scripts)
         3. Generate LLM response (optimized for voice)
         4. Normalize response for TTS
         5. Convert to speech audio
-        
+
         Args:
             user_message: Transcribed user speech (from STT)
             conversation_history: Previous conversation turns
             voice: TTS voice to use
             language: Language code
             stt_confidence: STT confidence score (0.0 to 1.0)
-            
+
         Returns:
             Dict with text response and audio
         """
         if not self.api_key:
             raise ValueError("GOOGLE_API_KEY not configured")
-        
+
         # LOG: Raw STT input
         logger.info(f"[STT→LLM] Input: {user_message}, Confidence: {stt_confidence}")
-        
+
         # GUARDRAIL 1: Check STT confidence
         if stt_confidence < 0.7:
             clarification = "I'm not sure I heard you correctly. Could you please repeat that?"
@@ -436,7 +435,7 @@ class GeminiVoiceService:
                 "voice": voice,
                 "needs_clarification": True
             }
-        
+
         # GUARDRAIL 2: Check for emergency keywords
         emergency_response = self.normalizer.normalize_for_emergency(user_message)
         if emergency_response:
@@ -449,7 +448,7 @@ class GeminiVoiceService:
                 "voice": voice,
                 "is_emergency": True
             }
-        
+
         # Step 1: Generate text response using LLM
         try:
             text_response = await self._generate_voice_optimized_response(
@@ -466,13 +465,13 @@ class GeminiVoiceService:
                 "voice": voice,
                 "llm_error": True
             }
-        
+
         # LOG: LLM output
         logger.info(f"[LLM→TTS] Output: {text_response[:100]}...")
-        
+
         # Step 2: Normalize for TTS
         normalized_response = self.normalizer.normalize_for_tts(text_response)
-        
+
         # Step 3: Convert to speech
         try:
             tts_result = await self.text_to_speech(
@@ -490,9 +489,9 @@ class GeminiVoiceService:
                 "tts_error": True,
                 "error_details": str(e)
             }
-        
-        logger.info(f"[Complete] Voice pipeline success")
-        
+
+        logger.info("Voice pipeline completed successfully")
+
         return {
             "response": text_response,
             "audio": tts_result["audio"],
@@ -510,7 +509,7 @@ class GeminiVoiceService:
         detected_input_lang: str = None,
     ) -> str:
         """Generate voice-optimized response using Gemini 2.5 Flash.
-        
+
         December 2025 Improvements:
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━
         ✓ 90% instruction adherence (up from 84%)
@@ -518,7 +517,7 @@ class GeminiVoiceService:
         ✓ Smoother conversation flow
         ✓ Auto language detection support
         """
-        
+
         # Enhanced system prompt for robust instruction following
         system_prompt = f"""You are AssistMe, a professional AI voice assistant.
 
@@ -557,7 +556,7 @@ PERSONALITY:
 Remember: Your response will be spoken aloud by Gemini TTS."""
 
         messages = [{"role": "user", "parts": [{"text": system_prompt}]}]
-        
+
         # Enhanced context retrieval (Dec 2025 improvement)
         # Use last 8 turns for better conversation coherence
         if conversation_history:
@@ -567,12 +566,12 @@ Remember: Your response will be spoken aloud by Gemini TTS."""
                     "role": role,
                     "parts": [{"text": msg.get("content", "")}]
                 })
-        
+
         # Add current message
         messages.append({"role": "user", "parts": [{"text": user_message}]})
-        
+
         url = f"{self.base_url}/models/{self.LLM_MODEL}:generateContent?key={self.api_key}"
-        
+
         payload = {
             "contents": messages,
             "generationConfig": {
@@ -582,18 +581,18 @@ Remember: Your response will be spoken aloud by Gemini TTS."""
                 "topK": 40,
             }
         }
-        
+
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.post(url, json=payload)
-            
+
             if response.status_code != 200:
                 raise Exception(f"LLM API error: {response.status_code}")
-            
+
             data = response.json()
-            
+
             if "candidates" in data and data["candidates"]:
                 return data["candidates"][0]["content"]["parts"][0]["text"]
-            
+
             raise Exception("No response generated")
 
     def get_voices(self) -> Dict:
@@ -609,20 +608,20 @@ Remember: Your response will be spoken aloud by Gemini TTS."""
         return {
             "languages": self.LANGUAGES,
             "indian": {
-                code: self.LANGUAGES[code] 
+                code: self.LANGUAGES[code]
                 for code in self.INDIAN_LANGUAGES
             },
             "codes": list(self.LANGUAGES.keys()),
             "count": len(self.LANGUAGES)
         }
-    
+
     def get_indian_languages(self) -> Dict:
         """Get Indian languages specifically supported by Gemini TTS."""
         return {
-            code: self.LANGUAGES[code] 
+            code: self.LANGUAGES[code]
             for code in self.INDIAN_LANGUAGES
         }
-    
+
     def is_indian_language(self, lang_code: str) -> bool:
         """Check if a language code is an Indian language."""
         return lang_code in self.INDIAN_LANGUAGES
@@ -630,4 +629,3 @@ Remember: Your response will be spoken aloud by Gemini TTS."""
 
 # Singleton
 tts_service = GeminiVoiceService()
-
