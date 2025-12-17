@@ -189,23 +189,23 @@ const BoxPlot = ({ label, count, min, max, median, q1, q3, color }) => {
 };
 
 const MetricCard = ({ icon: Icon, label, value, unit, subtext, color, trend }) => (
-    <GlassCard className="p-2 sm:p-2.5 md:p-3 flex flex-col justify-between h-16 sm:h-20 md:h-24 relative overflow-hidden group">
-        <div className={cn("absolute right-0 top-0 p-12 sm:p-16 rounded-full blur-3xl opacity-5 group-hover:opacity-10 transition-opacity", color.replace('text-', 'bg-'))} />
+    <GlassCard className="p-2.5 sm:p-3 md:p-3 flex flex-col justify-between h-20 sm:h-22 md:h-24 relative overflow-hidden group">
+        <div className={cn("absolute right-0 top-0 p-14 sm:p-16 rounded-full blur-3xl opacity-5 group-hover:opacity-10 transition-opacity", color.replace('text-', 'bg-'))} />
         <div className="flex justify-between items-start z-10">
-            <div className="flex items-center gap-1">
-                <div className={cn("p-1 rounded-md bg-neutral-100 dark:bg-neutral-800", color)}>
-                    <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+            <div className="flex items-center gap-1.5">
+                <div className={cn("p-1 sm:p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800", color)}>
+                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 </div>
-                <span className="text-[8px] sm:text-[9px] font-semibold uppercase tracking-wider text-neutral-500">{label}</span>
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-400">{label}</span>
             </div>
-            {trend && <span className={cn("text-[8px] font-bold px-1 py-0.5 rounded-full", trend > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>{trend > 0 ? '+' : ''}{trend}%</span>}
+            {trend && <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded-full", trend > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>{trend > 0 ? '+' : ''}{trend}%</span>}
         </div>
         <div className="z-10 mt-auto">
-            <div className="flex items-baseline gap-0.5">
-                <span className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white truncate">{value}</span>
-                <span className="text-[9px] sm:text-[10px] font-medium text-neutral-400">{unit}</span>
+            <div className="flex items-baseline gap-1">
+                <span className="text-xl sm:text-2xl md:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white truncate">{value}</span>
+                <span className="text-xs sm:text-sm font-semibold text-neutral-500">{unit}</span>
             </div>
-            {subtext && <div className="text-[8px] text-neutral-400 mt-0.5 font-medium truncate">{subtext}</div>}
+            {subtext && <div className="text-[10px] sm:text-[11px] text-neutral-500 mt-0.5 font-medium truncate">{subtext}</div>}
         </div>
     </GlassCard>
 );
@@ -605,24 +605,22 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                         <MetricCard icon={AlertTriangle} label="Loss" value={metrics.loss} unit="%" color="text-rose-500" subtext="Packet Loss" />
                         <MetricCard icon={Globe} label="Server" value={serverInfo.city} unit="" color="text-blue-500" subtext={serverInfo.country} />
                         <div className="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-1">
-                            <GlassCard className="h-16 sm:h-20 md:h-24 p-0 flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-                                <button
-                                    onClick={status === 'idle' || status === 'complete' ? runTest : reset}
-                                    className="flex items-center gap-2 font-bold text-sm sm:text-base px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all shadow-lg hover:shadow-xl active:scale-95"
-                                >
-                                    {status === 'idle' || status === 'complete' ? (
-                                        <>
-                                            <Play className="h-5 w-5 fill-current" />
-                                            <span className="font-bold text-xs uppercase tracking-widest">{status === 'complete' ? 'RETEST' : 'START'}</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <X className="h-5 w-5" />
-                                            <span className="font-bold text-xs uppercase tracking-widest">STOP</span>
-                                        </>
-                                    )}
-                                </button>
-                            </GlassCard>
+                            <button
+                                onClick={status === 'idle' || status === 'complete' ? runTest : reset}
+                                className="w-full h-20 sm:h-22 md:h-24 flex items-center justify-center gap-2.5 font-bold text-base sm:text-lg px-6 py-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl active:scale-95"
+                            >
+                                {status === 'idle' || status === 'complete' ? (
+                                    <>
+                                        <Play className="h-6 w-6 fill-current" />
+                                        <span className="font-bold uppercase tracking-wide">{status === 'complete' ? 'RETEST' : 'START'}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <X className="h-6 w-6" />
+                                        <span className="font-bold uppercase tracking-wide">STOP</span>
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
 
