@@ -33,8 +33,10 @@ const CONFIG = {
     MIN_TRANSCRIPT_LENGTH: 3,
     RESTART_DELAY: 300,
 
-    // AI Model (via OpenRouter)
-    CHAT_MODEL: 'google/gemini-2.0-flash-exp:free',
+    // AI Model - Using UNLIMITED Native Audio Dialog (Gemini Live API)
+    // This model has 0/Unlimited RPM, 0/1M TPM, 0/Unlimited RPD on Vertex AI
+    CHAT_MODEL: 'google/gemini-2.5-flash-native-audio-dialog',
+    LIVE_MODEL: 'gemini-2.5-flash-native-audio-dialog',
 
     // TTS Backend endpoint
     TTS_ENDPOINT: '/api/tts',
@@ -53,7 +55,7 @@ const LANGUAGES = {
     'bn-BD': { name: 'Bengali', nativeName: 'বাংলা', flag: '🇧🇩', geminiCode: 'bn-BD' },
 };
 
-// TTS Modes - Premium uses Gemini 2.5 Flash TTS
+// TTS Modes - Premium uses Gemini Native Audio Dialog (UNLIMITED)
 const TTS_MODES = {
     standard: {
         name: 'Standard',
@@ -62,8 +64,8 @@ const TTS_MODES = {
     },
     premium: {
         name: 'Premium',
-        description: 'Gemini 2.5 TTS (natural, 24+ languages)',
-        model: 'flash'
+        description: 'Gemini Native Audio (unlimited, natural)',
+        model: 'native'  // Uses gemini-2.5-flash-native-audio-dialog
     },
 };
 

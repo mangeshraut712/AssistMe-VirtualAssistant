@@ -22,14 +22,14 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// Latest Gemini TTS Models (December 2025)
+// Latest Gemini TTS Models (December 2025) - Using UNLIMITED Live API
 const TTS_MODELS = {
-    // Gemini 2.5 Flash TTS - Fast, high quality
+    // PRIMARY: Native Audio Dialog - UNLIMITED RPM/RPD on Vertex AI
+    native: 'gemini-2.5-flash-native-audio-dialog',
+    // Fallback: Flash TTS
     flash: 'gemini-2.5-flash-preview-tts',
-    // Gemini 2.5 Pro TTS - Highest quality
+    // Fallback: Pro TTS
     pro: 'gemini-2.5-pro-preview-tts',
-    // Gemini 2.5 Flash Native Audio - Real-time, conversational
-    native: 'gemini-2.5-flash-native-audio-preview-12-2025',
 };
 
 // Available voices (30+ options)
@@ -100,7 +100,7 @@ export default async function handler(req) {
             text,
             voice = 'Puck',
             language = 'en-US',
-            model = 'flash',
+            model = 'native',  // Default to unlimited native audio dialog
             style = null,
             speed = 1.0
         } = body;

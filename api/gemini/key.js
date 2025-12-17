@@ -58,11 +58,19 @@ export default async function handler(req) {
         });
     }
 
-    // Return the API key
+    // Return the API key with unlimited native audio dialog model
     return new Response(JSON.stringify({
         apiKey,
-        model: 'models/gemini-2.0-flash-exp',
-        endpoint: 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent'
+        model: 'models/gemini-2.5-flash-native-audio-dialog',
+        modelName: 'gemini-2.5-flash-native-audio-dialog',
+        endpoint: 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent',
+        features: {
+            liveAPI: true,
+            unlimitedRPM: true,
+            unlimitedRPD: true,
+            nativeAudio: true,
+            bidirectional: true
+        }
     }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
