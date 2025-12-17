@@ -47,6 +47,32 @@ const saveTest = (r) => {
 };
 const getHistory = () => { try { return JSON.parse(localStorage.getItem('speedtest_v8') || '[]'); } catch { return []; } };
 
+// Utility Functions
+const getSpeedColor = (speed) => {
+    if (speed >= 100) return { gradient: 'from-emerald-500 to-green-600', text: 'text-emerald-500', hex: '#10b981' };
+    if (speed >= 50) return { gradient: 'from-green-500 to-teal-600', text: 'text-green-500', hex: '#22c55e' };
+    if (speed >= 25) return { gradient: 'from-yellow-500 to-amber-600', text: 'text-yellow-500', hex: '#eab308' };
+    if (speed >= 10) return { gradient: 'from-orange-500 to-red-500', text: 'text-orange-500', hex: '#f97316' };
+    return { gradient: 'from-red-500 to-rose-600', text: 'text-red-500', hex: '#ef4444' };
+};
+
+const getSpeedGrade = (speed) => {
+    if (speed >= 100) return 'A+';
+    if (speed >= 50) return 'A';
+    if (speed >= 25) return 'B';
+    if (speed >= 10) return 'C';
+    if (speed >= 5) return 'D';
+    return 'F';
+};
+
+const getPingGrade = (ping) => {
+    if (ping <= 20) return 'A+';
+    if (ping <= 50) return 'A';
+    if (ping <= 100) return 'B';
+    if (ping <= 150) return 'C';
+    return 'D';
+};
+
 // Components
 const GlassCard = ({ children, className, glow, active }) => (
     <motion.div
@@ -491,7 +517,10 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                         <GlassCard className="p-3 sm:p-4 md:p-5 relative overflow-hidden" glow active={status === 'download'}>
                             <div className="flex justify-between items-start mb-2 sm:mb-3 md:mb-4 relative z-10">
                                 <div className="flex items-center gap-2">
-                                    <div className="p-1.5 sm:p-2 bg-orange-100 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg">
+                                    <div className={cn(
+                                        "p-1.5 sm:p-2 rounded-lg",
+                                        metrics.down > 0 ? `bg-gradient-to-br ${getSpeedColor(metrics.down).gradient} text-white` : "bg-orange-100 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                                    )}>
                                         <DownloadIcon className="h-4 w-4" />
                                     </div>
                                     <div>
@@ -499,11 +528,19 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                                         <div className="text-[9px] sm:text-[10px] text-neutral-400">Mbps</div>
                                     </div>
                                 </div>
-                                {status === 'download' && <Activity className="h-4 w-4 text-orange-500 animate-pulse" />}
+                                <div className="flex items-center gap-2">
+                                    {metrics.down > 0 && (
+                                        <GradeBadge grade={getSpeedGrade(metrics.down)} size="sm" />
+                                    )}
+                                    {status === 'download' && <Activity className="h-4 w-4 text-orange-500 animate-pulse" />}
+                                </div>
                             </div>
 
                             <div className="relative z-10 mb-2 sm:mb-4">
-                                <div className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tighter text-neutral-900 dark:text-white tabular-nums">
+                                <div className={cn(
+                                    "text-3xl sm:text-4xl md:text-5xl font-light tracking-tighter tabular-nums",
+                                    metrics.down > 0 ? getSpeedColor(metrics.down).text : "text-neutral-900 dark:text-white"
+                                )}>
                                     {metrics.down.toFixed(1)}
                                 </div>
                                 {metrics.downPeak > 0 && (
@@ -514,7 +551,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                             </div>
 
                             <div className="absolute inset-x-0 bottom-0 h-20 sm:h-28 md:h-32 opacity-50">
-                                <SpeedChart data={downloadChart} color="#f97316" isActive={status === 'download'} />
+                                <SpeedChart data={downloadChart} color={metrics.down > 0 ? getSpeedColor(metrics.down).hex : "#f97316"} isActive={status === 'download'} />
                             </div>
                         </GlassCard>
 
@@ -522,7 +559,10 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                         <GlassCard className="p-3 sm:p-4 md:p-5 relative overflow-hidden" glow active={status === 'upload'}>
                             <div className="flex justify-between items-start mb-2 sm:mb-3 md:mb-4 relative z-10">
                                 <div className="flex items-center gap-2">
-                                    <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-lg">
+                                    <div className={cn(
+                                        "p-1.5 sm:p-2 rounded-lg",
+                                        metrics.up > 0 ? `bg-gradient-to-br ${getSpeedColor(metrics.up).gradient} text-white` : "bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                                    )}>
                                         <UploadIcon className="h-4 w-4" />
                                     </div>
                                     <div>
@@ -530,11 +570,19 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                                         <div className="text-[9px] sm:text-[10px] text-neutral-400">Mbps</div>
                                     </div>
                                 </div>
-                                {status === 'upload' && <Activity className="h-4 w-4 text-purple-500 animate-pulse" />}
+                                <div className="flex items-center gap-2">
+                                    {metrics.up > 0 && (
+                                        <GradeBadge grade={getSpeedGrade(metrics.up)} size="sm" />
+                                    )}
+                                    {status === 'upload' && <Activity className="h-4 w-4 text-purple-500 animate-pulse" />}
+                                </div>
                             </div>
 
                             <div className="relative z-10 mb-2 sm:mb-4">
-                                <div className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tighter text-neutral-900 dark:text-white tabular-nums">
+                                <div className={cn(
+                                    "text-3xl sm:text-4xl md:text-5xl font-light tracking-tighter tabular-nums",
+                                    metrics.up > 0 ? getSpeedColor(metrics.up).text : "text-neutral-900 dark:text-white"
+                                )}>
                                     {metrics.up.toFixed(1)}
                                 </div>
                                 {metrics.upPeak > 0 && (
@@ -545,7 +593,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                             </div>
 
                             <div className="absolute inset-x-0 bottom-0 h-20 sm:h-28 md:h-32 opacity-50">
-                                <SpeedChart data={uploadChart} color="#a855f7" isActive={status === 'upload'} />
+                                <SpeedChart data={uploadChart} color={metrics.up > 0 ? getSpeedColor(metrics.up).hex : "#a855f7"} isActive={status === 'upload'} />
                             </div>
                         </GlassCard>
                     </div>
