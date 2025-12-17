@@ -52,9 +52,9 @@ const GlassCard = ({ children, className, glow, active }) => (
     <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        whileHover={{ scale: 1.005, transition: { duration: 0.2 } }}
+        whileHover={{ scale: 1.002, transition: { duration: 0.2 } }}
         className={cn(
-            "bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-3xl border border-neutral-200/50 dark:border-neutral-800/50 shadow-xl transition-all duration-300",
+            "bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl rounded-2xl border border-neutral-200/50 dark:border-neutral-800/50 shadow-lg transition-all duration-300",
             glow && active && "ring-2 ring-purple-500/30 shadow-purple-500/20",
             className
         )}>
@@ -483,10 +483,10 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                     )}
                 </header>
 
-                <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+                <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
 
                     {/* Hero Section */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                         {/* Download Card */}
                         <GlassCard className="p-3 sm:p-4 md:p-6 lg:p-8 relative overflow-hidden" glow active={status === 'download'}>
                             <div className="flex justify-between items-start mb-4 sm:mb-6 md:mb-8 relative z-10">
@@ -613,7 +613,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                         </GlassCard>
 
                         {/* 2. Latency Heatmap/Boxplots */}
-                        <GlassCard className="p-3 sm:p-4 md:p-6 lg:col-span-2">
+                        <GlassCard className="p-3 sm:p-4 md:p-5 lg:col-span-2">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-2">
                                     <Layers className="h-5 w-5 text-neutral-500" />
