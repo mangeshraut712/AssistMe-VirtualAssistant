@@ -163,21 +163,21 @@ const BoxPlot = ({ label, count, min, max, median, q1, q3, color }) => {
 };
 
 const MetricCard = ({ icon: Icon, label, value, unit, subtext, color, trend }) => (
-    <GlassCard className="p-5 flex flex-col justify-between h-32 relative overflow-hidden group">
+    <GlassCard className="p-3 sm:p-5 flex flex-col justify-between h-24 sm:h-32 relative overflow-hidden group">
         <div className={cn("absolute right-0 top-0 p-20 rounded-full blur-3xl opacity-5 group-hover:opacity-10 transition-opacity", color.replace('text-', 'bg-'))} />
         <div className="flex justify-between items-start z-10">
             <div className="flex items-center gap-2">
-                <div className={cn("p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800", color)}>
-                    <Icon className="h-4 w-4" />
+                <div className={cn("p-1.5 sm:p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800", color)}>
+                    <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
                 </div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{label}</span>
+                <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-neutral-500">{label}</span>
             </div>
             {trend && <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", trend > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>{trend > 0 ? '+' : ''}{trend}%</span>}
         </div>
         <div className="z-10 mt-auto">
             <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white truncate">{value}</span>
-                <span className="text-sm font-medium text-neutral-400">{unit}</span>
+                <span className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white truncate">{value}</span>
+                <span className="text-xs sm:text-sm font-medium text-neutral-400">{unit}</span>
             </div>
             {subtext && <div className="text-[10px] text-neutral-400 mt-1 font-medium">{subtext}</div>}
         </div>
@@ -488,22 +488,22 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                     {/* Hero Section */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Download Card */}
-                        <GlassCard className="p-4 sm:p-6 md:p-8 relative overflow-hidden" glow active={status === 'download'}>
-                            <div className="flex justify-between items-start mb-8 relative z-10">
+                        <GlassCard className="p-3 sm:p-4 md:p-6 lg:p-8 relative overflow-hidden" glow active={status === 'download'}>
+                            <div className="flex justify-between items-start mb-4 sm:mb-6 md:mb-8 relative z-10">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-orange-100 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl">
+                                    <div className="p-2 sm:p-2.5 bg-orange-100 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl">
                                         <DownloadIcon className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <div className="text-sm font-bold text-neutral-600 dark:text-neutral-300">DOWNLOAD</div>
-                                        <div className="text-xs text-neutral-400">Mbps</div>
+                                        <div className="text-xs sm:text-sm font-bold text-neutral-600 dark:text-neutral-300">DOWNLOAD</div>
+                                        <div className="text-[10px] sm:text-xs text-neutral-400">Mbps</div>
                                     </div>
                                 </div>
                                 {status === 'download' && <Activity className="h-5 w-5 text-orange-500 animate-pulse" />}
                             </div>
 
-                            <div className="relative z-10 mb-6 sm:mb-8">
-                                <div className="text-5xl sm:text-6xl md:text-7xl font-light tracking-tighter text-neutral-900 dark:text-white tabular-nums">
+                            <div className="relative z-10 mb-4 sm:mb-6">
+                                <div className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tighter text-neutral-900 dark:text-white tabular-nums">
                                     {metrics.down.toFixed(1)}
                                 </div>
                                 {metrics.downPeak > 0 && (
@@ -513,28 +513,28 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                                 )}
                             </div>
 
-                            <div className="absolute inset-x-0 bottom-0 h-48 opacity-50">
+                            <div className="absolute inset-x-0 bottom-0 h-32 sm:h-40 md:h-48 opacity-50">
                                 <SpeedChart data={downloadChart} color="#f97316" isActive={status === 'download'} />
                             </div>
                         </GlassCard>
 
                         {/* Upload Card */}
-                        <GlassCard className="p-4 sm:p-6 md:p-8 relative overflow-hidden" glow active={status === 'upload'}>
-                            <div className="flex justify-between items-start mb-8 relative z-10">
+                        <GlassCard className="p-3 sm:p-4 md:p-6 lg:p-8 relative overflow-hidden" glow active={status === 'upload'}>
+                            <div className="flex justify-between items-start mb-4 sm:mb-6 md:mb-8 relative z-10">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl">
+                                    <div className="p-2 sm:p-2.5 bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl">
                                         <UploadIcon className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <div className="text-sm font-bold text-neutral-600 dark:text-neutral-300">UPLOAD</div>
-                                        <div className="text-xs text-neutral-400">Mbps</div>
+                                        <div className="text-xs sm:text-sm font-bold text-neutral-600 dark:text-neutral-300">UPLOAD</div>
+                                        <div className="text-[10px] sm:text-xs text-neutral-400">Mbps</div>
                                     </div>
                                 </div>
                                 {status === 'upload' && <Activity className="h-5 w-5 text-purple-500 animate-pulse" />}
                             </div>
 
-                            <div className="relative z-10 mb-6 sm:mb-8">
-                                <div className="text-5xl sm:text-6xl md:text-7xl font-light tracking-tighter text-neutral-900 dark:text-white tabular-nums">
+                            <div className="relative z-10 mb-4 sm:mb-6">
+                                <div className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tighter text-neutral-900 dark:text-white tabular-nums">
                                     {metrics.up.toFixed(1)}
                                 </div>
                                 {metrics.upPeak > 0 && (
@@ -544,7 +544,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                                 )}
                             </div>
 
-                            <div className="absolute inset-x-0 bottom-0 h-48 opacity-50">
+                            <div className="absolute inset-x-0 bottom-0 h-32 sm:h-40 md:h-48 opacity-50">
                                 <SpeedChart data={uploadChart} color="#a855f7" isActive={status === 'upload'} />
                             </div>
                         </GlassCard>
@@ -557,10 +557,10 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                         <MetricCard icon={AlertTriangle} label="Loss" value={metrics.loss} unit="%" color="text-rose-500" subtext="Packet Loss" />
                         <MetricCard icon={Globe} label="Server" value={serverInfo.city} unit="" color="text-blue-500" subtext={serverInfo.country} />
                         <div className="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-1">
-                            <GlassCard className="h-32 p-0 flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                            <GlassCard className="h-24 sm:h-32 p-0 flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
                                 <button
                                     onClick={status === 'idle' || status === 'complete' ? runTest : reset}
-                                    className="w-full h-full flex flex-col items-center justify-center hover:bg-white/10 transition-colors"
+                                    className="flex items-center gap-2 sm:gap-3 font-bold text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all shadow-lg hover:shadow-xl active:scale-95"
                                 >
                                     {status === 'idle' || status === 'complete' ? (
                                         <>
@@ -579,7 +579,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                     </div>
 
                     {/* Advanced Analysis Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
 
                         {/* 1. Network Health Radar */}
                         <GlassCard className="p-6">
@@ -613,7 +613,7 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                         </GlassCard>
 
                         {/* 2. Latency Heatmap/Boxplots */}
-                        <GlassCard className="p-4 sm:p-6 lg:col-span-2">
+                        <GlassCard className="p-3 sm:p-4 md:p-6 lg:col-span-2">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-2">
                                     <Layers className="h-5 w-5 text-neutral-500" />
@@ -646,9 +646,9 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
                     </div>
 
                     {/* Technical Reports */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                         {/* Map */}
-                        <GlassCard className="overflow-hidden h-64 relative group">
+                        <GlassCard className="overflow-hidden h-48 sm:h-56 md:h-64 relative group">
                             <div className="absolute inset-0 z-0">
                                 <iframe
                                     width="100%"
