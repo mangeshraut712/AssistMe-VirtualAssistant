@@ -615,7 +615,7 @@ WRITING GUIDELINES:
 
                     {/* Article Content */}
                     <main ref={contentRef} className="flex-1 overflow-y-auto">
-                        <div className="max-w-4xl mx-auto p-4 md:p-8">
+                        <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8">
 
                             {/* Search Box */}
                             <motion.div
@@ -634,7 +634,8 @@ WRITING GUIDELINES:
                                         onFocus={() => setShowHistory(true)}
                                         onBlur={() => setTimeout(() => setShowHistory(false), 200)}
                                         placeholder="Search for any topic..."
-                                        className="w-full h-14 pl-12 pr-4 bg-muted border border-border rounded-2xl text-lg placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                                        className="w-full h-12 sm:h-14 pl-12 pr-4 bg-muted border border-border rounded-2xl text-base sm:text-lg placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                                        style={{ fontSize: '16px' }}
                                     />
                                     {isSearching && (
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2">

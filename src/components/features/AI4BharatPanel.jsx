@@ -166,23 +166,23 @@ const OverviewSection = ({ onTryDemo }) => {
     ];
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-12 space-y-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12 sm:space-y-16">
             {/* Hero */}
-            <div className="text-center space-y-8 max-w-3xl mx-auto">
+            <div className="text-center space-y-6 sm:space-y-8 max-w-3xl mx-auto">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-semibold uppercase tracking-wider">
                     <Sparkles className="h-3 w-3" />
                     Powered by Grok 4.1
                 </div>
-                <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground">
+                <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-foreground">
                     Building AI <br />
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-white to-green-500 dark:from-orange-400 dark:via-neutral-200 dark:to-green-400 animate-gradient">for India!</span>
                 </h1>
-                <p className="text-xl text-muted-foreground leading-relaxed">
+                <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed px-4">
                     Experience the power of Indian Language AI. Translate, transliterate, and interact in 22+ languages with state-of-the-art models.
                 </p>
                 <button
                     onClick={onTryDemo}
-                    className="px-8 py-4 bg-foreground text-background rounded-full font-bold text-lg hover:opacity-90 transition-opacity shadow-xl shadow-foreground/10"
+                    className="px-6 sm:px-8 py-3 sm:py-4 bg-foreground text-background rounded-full font-bold text-base sm:text-lg hover:opacity-90 transition-opacity shadow-xl shadow-foreground/10"
                 >
                     Try Live Demo
                 </button>
