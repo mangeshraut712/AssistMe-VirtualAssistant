@@ -1,74 +1,51 @@
 # 🤖 AssistMe - Next-Gen AI Virtual Assistant
 
-**A production-ready AI assistant featuring Voice Mode 4.0, Deep Research, and Native Multilingual Support.**
+**A production-ready AI assistant featuring Advanced Voice Mode, Deep Research, and Native Multilingual Support.**
 
-[![React](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=white)](https://react.dev)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
-[![Codacy](https://img.shields.io/badge/Codacy-A-00C853?logo=codacy&logoColor=white)](https://www.codacy.com)
+[![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
+[![Codacy](https://img.shields.io/badge/Codacy-00C853?logo=codacy&logoColor=white)](https://www.codacy.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 ---
 
 ## 🔥 Recent Highlights
 
-- **✨ Premium AI Features:** Google Gemini integration for voice & images (FREE)
-- **🎙️ Enhanced Voice Recognition:** 95%+ accuracy with intelligent speech processing
-- **🎨 Dual Image Generation:** Premium (Gemini) + Standard (Pollinations) modes
-- **♿ WCAG AA Compliant:** 100% accessible with proper color contrast
-- **🚀 Smart Fallback:** Auto-switches modes based on API availability
+- **✨ Premium AI Voice:** Real-time conversation with Gemini Live API and aggressive thinking filters.
+- **🚀 AI Network Intelligence:** Advanced speedtest with neural diagnostics and use-case analysis.
+- **🎨 Ultra-Premium UI:** Modern design system with glassmorphism, dynamic animations, and responsive layout.
+- **♿ Fully Accessible:** 100% WCAG AA compliant with proper contrast and screen reader support.
+- **🧠 Intelligent Processing:** Real-time fallback mechanisms and context-aware AI responses.
 
 ---
 
 ## 🚀 Features
 
-### 🎙️ **Voice Mode**
-- **Premium AI:** Real-time conversation with Gemini Live API (natural audio synthesis)
-- **Standard:** Browser-based text-to-speech (high quality, offline capable)
-- **Enhanced Recognition:** 95%+ accuracy with noise suppression and echo cancellation
-- **Smart Processing:** Intelligent sentence completion, confidence scoring
-- **Visual Feedback:** Real-time transcript display with pulsing indicators
+### 🎙️ **Advanced Voice Mode**
+- **Premium Mode:** Natural real-time conversations via Gemini Live with zero-latency audio synthesis.
+- **Aggressive Filtering:** Advanced "thinking" filter ensures only final spoken responses are displayed.
+- **Standard Mode:** High-performance browser-based TTS with offline capabilities.
+- **Visual Feedback:** Immersive listening indicators and real-time transcript synchronization.
 
 ### 🎨 **Imagine Studio**
-- **Premium AI:** Google Gemini image generation (500 images/day FREE)
-- **Standard:** Pollinations.ai with multiple models (unlimited, FREE)
-- **Style Presets:** Photorealistic, Digital Art, Anime, Oil Painting, 3D, Watercolor
-- **Flexible Formats:** Square, Landscape, Portrait, Standard aspect ratios
-- **Smart Toggle:** Auto-fallback when API unavailable
+- **Premium Mode:** High-fidelity image generation via Gemini Flash.
+- **Standard Mode:** Unlimited free generation via Pollinations.ai infrastructure.
+- **Pro Features:** Multiple aspect ratios, style presets (Digital Art, Anime, 3D), and smart upscaling.
 
-### 💬 **Chat & AI**
-- **Multi-Model Support:** GPT-4, Claude, Gemini, Grok, and 100+ models via OpenRouter
-- **Streaming Responses:** Real-time AI responses with typewriter effect
-- **Context Management:** Maintains conversation history
-- **Smart Suggestions:** Quick action buttons for common queries
+### 💬 **Intelligent Chat**
+- **Omni-Model Support:** Access GPT-4, Claude, Gemini, Grok, and 100+ models via unified OpenRouter integration.
+- **Deep Research:** Context-aware RAG pipeline for complex queries with automatic citations.
+- **Smart Interface:** Typewriter effects, message actions (Copy/Speak), and interactive suggestion chips.
 
-### 📚 **Grokipedia**
-- **Deep Research:** RAG-powered research with auto-citations
-- **Source Verification:** Automatic citation and reference linking
-- **Knowledge Base:** Access to comprehensive information
+### ⚡ **Network Intelligence**
+- **Ultra Speedtest:** Professional-grade diagnostics measuring Bandwidth, Latency, Jitter, and Bufferbloat.
+- **Neural Diagnostics:** AI-powered analysis determining suitability for Gaming, 4K Streaming, and Cloud Work.
+- **TCP Simulation:** Realistic speed curves mimicking multi-threaded download/upload behavior.
 
-### 🇮🇳 **AI4Bharat (Multilingual)**
-- **22+ Indian Languages:** Hindi, Marathi, Tamil, Telugu, and more
-- **Translation:** Seamless language-to-language translation
-- **Transliteration:** Script conversion support
-- **Native Support:** Full UI support for Indian languages
-
-### ⚡ **Speed Test**
-- **Network Diagnostics:** Professional speed testing
-- **Performance Metrics:** Download/upload speed, latency, jitter
-- **Real-time Monitoring:** Live performance graphs
-
-### ✍️ **Writing Tools**
-- **Grammar Check:** AI-powered grammar correction
-- **Paraphrasing:** Intelligent text rewriting
-- **Style Suggestions:** Writing improvement recommendations
-
-### 🎯 **Core Capabilities**
-- **Premium/Standard Modes:** Seamless switching with smart fallback
-- **WCAG AA Compliant:** Full accessibility support (4.5:1 contrast ratio)
-- **Dark/Light Theme:** Beautiful UI in both modes
-- **Mobile Optimized:** Responsive design for all devices
-- **Offline Capable:** Key features work without internet
+### 🇮🇳 **Multilingual Engine**
+- **Native Support:** Optimized for 22+ Indian languages including Hindi, Marathi, Tamil, and Telugu.
+- **Neural Translation:** Real-time translation and transliteration services.
 
 ---
 
@@ -76,31 +53,24 @@
 
 ```
 AssistMe-VirtualAssistant/
-├── src/                        # ⚛️ React Frontend
+├── src/                        # ⚛️ React Frontend (Vite)
 │   ├── components/
-│   │   ├── features/           # Feature panels (Voice, Grokipedia, etc.)
-│   │   ├── layout/             # Layout components (Sidebar, Header)
-│   │   └── ui/                 # Reusable UI components
-│   ├── config/                 # App configuration
-│   ├── hooks/                  # Custom React hooks
-│   ├── lib/                    # API clients and utilities
-│   ├── pages/                  # Page components
-│   └── utils/                  # Helper functions
+│   │   ├── features/           # Feature-specific modules (Voice, Speedtest, etc.)
+│   │   ├── layout/             # Core layout (Header, Sidebar)
+│   │   └── ui/                 # Reusable atomic UI components
+│   ├── hooks/                  # Custom application hooks
+│   ├── lib/                    # API clients and unified libraries
+│   └── styles/                 # global CSS and theme tokens
 │
 ├── backend/                    # 🐍 FastAPI Backend
 │   ├── app/
-│   │   ├── routes/             # API endpoints
-│   │   ├── services/           # Business logic
-│   │   ├── providers/          # AI provider integrations
-│   │   └── middleware.py       # Request middleware
-│   ├── .flake8                 # Python linting config
-│   ├── .pylintrc               # Pylint config (9.23/10)
-│   └── requirements.txt        # Python dependencies
+│   │   ├── routes/             # REST/WebSocket API endpoints
+│   │   ├── services/           # Orchestration and business logic
+│   │   └── providers/          # AI Model provider integrations
+│   └── requirements.txt        # Backend dependencies
 │
-├── api/                        # ⚡ Vercel Edge Functions
-├── public/                     # Static assets
-├── .github/workflows/          # CI/CD pipelines
-└── Configuration files         # ESLint, Prettier, Codacy, etc.
+├── .github/workflows/          # Automated CI/CD pipelines
+└── config/                     # Shared configuration
 ```
 
 ---
@@ -109,9 +79,9 @@ AssistMe-VirtualAssistant/
 
 ### Prerequisites
 
-- **Node.js** 20+ ([Download](https://nodejs.org))
-- **Python** 3.10+ ([Download](https://python.org))
-- **OpenRouter API Key** ([Get one free](https://openrouter.ai))
+- **Node.js** (Latest LTS)
+- **Python** (3.10+)
+- **OpenRouter API Key** (For multi-model chat)
 
 ### Installation
 
@@ -141,104 +111,44 @@ VITE_BACKEND_URL=http://localhost:8001
 
 **Backend `.env`:**
 ```env
-# Required for chat
 OPENROUTER_API_KEY=your_key_here
-
-# Optional: Premium Features (100% FREE)
-GOOGLE_API_KEY=your_gemini_key_here  # Enables Premium Voice + Image Generation
+GOOGLE_API_KEY=your_gemini_key_here  # Optional for Premium Voice/Images
 ```
-
-**Premium Features with GOOGLE_API_KEY:**
-- ✅ Voice Mode: Gemini Live API (natural audio)
-- ✅ Image Generation: Gemini 2.0 Flash (500 images/day)
-- ✅ Both completely FREE via Google AI Studio
-
-**Without GOOGLE_API_KEY:**
-- ✅ Voice Mode: Browser TTS (works great!)
-- ✅ Image Generation: Pollinations (unlimited, free)
-- ✅ Full functionality maintained
-
-### Run Development Servers
-
-```bash
-# Terminal 1: Frontend (port 5173)
-npm run dev
-
-# Terminal 2: Backend (port 8001)
-cd backend
-source venv/bin/activate
-uvicorn app.main:app --reload --port 8001
-```
-
-Visit **http://localhost:5173** 🚀
 
 ---
 
 ## 🛠️ Technology Stack
 
 ### Frontend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| React | 19.0 | UI Framework |
-| Vite | 6.0 | Build Tool |
-| Tailwind CSS | 3.4 | Styling |
-| Framer Motion | 12.0 | Animations |
-| Lucide Icons | Latest | Icon Library |
+| Technology | Purpose |
+|------------|---------|
+| React | UI Framework |
+| Vite | Modern Build Tool |
+| Tailwind CSS | Progressive Styling |
+| Framer Motion | High-Performance Animations |
+| Lucide Icons | Unified Vector Icons |
+| Recharts | Data Visualization |
 
 ### Backend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| FastAPI | 0.115+ | API Framework |
-| Pydantic | 2.10+ | Data Validation |
-| SQLAlchemy | 2.0+ | ORM |
-| httpx | 0.28+ | HTTP Client |
-| structlog | 24.4+ | Structured Logging |
-
-### AI Providers
-- **OpenRouter** - Multi-model access (GPT-4, Claude, Gemini, Grok)
-- **Google Gemini** - Native audio and TTS
-- **Pollinations** - Free image generation
+| Technology | Purpose |
+|------------|---------|
+| FastAPI | High-Performance API Framework |
+| Pydantic | Data Validation & Settings |
+| SQLAlchemy | Modern Database ORM |
+| httpx | Asynchronous HTTP Clients |
+| structlog | Enterprise Structured Logging |
 
 ---
 
-## 📊 Code Quality
+## 📊 Code Integrity
 
-| Tool | Score/Status |
+| Metric | Status |
 |------|-------------|
-| **ESLint** | ✅ 0 errors |
-| **Flake8** | ✅ 0 errors |
-| **Pylint** | ⭐ 9.23/10 |
-| **Bandit** | ✅ No security issues |
-| **npm audit** | ✅ 0 vulnerabilities |
-
----
-
-## 🔧 Scripts
-
-```bash
-# Development
-npm run dev           # Start frontend dev server
-npm run build         # Production build
-npm run lint          # Run ESLint
-npm run preview       # Preview production build
-
-# Backend
-cd backend
-uvicorn app.main:app --reload  # Start with hot reload
-flake8 app/                     # Run linting
-pylint app/                     # Run Pylint
-```
-
----
-
-## 📚 Documentation
-
-Comprehensive documentation is available in the [`docs/`](./docs/) folder:
-
-- **[Voice Mode Quick Start](./docs/VOICE_QUICKSTART.md)** - Get started with voice features
-- **[Voice Setup Guide](./docs/VOICE_SETUP.md)** - Detailed configuration
-- **[Project Roadmap](./docs/ROADMAP.md)** - Future development plans
-- **[API Documentation](./docs/)** - See docs folder for all guides
+| **ESLint** | ✅ Passing |
+| **Flake8** | ✅ Passing |
+| **Pylint** | ⭐ High (9.23/10) |
+| **Bandit** | ✅ Security Verified |
+| **Tests** | ✅ 0 Critical Issues |
 
 ---
 
@@ -246,7 +156,7 @@ Comprehensive documentation is available in the [`docs/`](./docs/) folder:
 
 1. Fork the repository
 2. Create your feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
+3. Commit your changes: `git commit -m 'feat: add amazing feature'`
 4. Push to the branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
