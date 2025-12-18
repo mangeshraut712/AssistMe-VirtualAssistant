@@ -169,6 +169,17 @@ pylint app/                     # Run Pylint
 
 ---
 
+## 📚 Documentation
+
+Comprehensive documentation is available in the [`docs/`](./docs/) folder:
+
+- **[Voice Mode Quick Start](./docs/VOICE_QUICKSTART.md)** - Get started with voice features
+- **[Voice Setup Guide](./docs/VOICE_SETUP.md)** - Detailed configuration
+- **[Project Roadmap](./docs/ROADMAP.md)** - Future development plans
+- **[API Documentation](./docs/)** - See docs folder for all guides
+
+---
+
 ## 🤝 Contributing
 
 1. Fork the repository
