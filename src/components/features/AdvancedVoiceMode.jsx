@@ -476,56 +476,92 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
         ];
 
         try {
-            const chatResponse = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: messagesWithSystem,
-                    model: CONFIG.STANDARD_MODEL,
-                    temperature: 0.7,
-                    max_tokens: 300  // Keep responses concise for voice
-                }),
-            });
+            // Add timeout protection
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s max
 
-            if (!chatResponse.ok) {
-                throw new Error(`API error: ${chatResponse.status}`);
-            }
+            try {
+                const chatResponse = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                        messages: messagesWithSystem,
+                        model: CONFIG.STANDARD_MODEL,
+                        stream: false,  // CRITICAL: Voice mode needs complete response
+                        temperature: 0.7,
+                        max_tokens: 150  // Shorter for faster voice response
+                    }),
+                });
 
-            const data = await chatResponse.json();
+                clearTimeout(timeoutId);
 
-            if (data.response) {
-                const cleanText = cleanResponseText(data.response);
-                setConversation(p => [...p, { role: 'assistant', content: cleanText }]);
-                setStatus('speaking');
-                await speak(cleanText);
-            } else if (data.error) {
-                throw new Error(data.error);
+                if (!chatResponse.ok) {
+                    throw new Error(`API error: ${chatResponse.status}`);
+                }
+
+                const data = await chatResponse.json();
+
+                if (data.response) {
+                    const cleanText = cleanResponseText(data.response);
+                    if (cleanText) {
+                        setConversation(p => [...p, { role: 'assistant', content: cleanText }]);
+                        setStatus('speaking');
+                        await speak(cleanText);
+                    } else {
+                        throw new Error('Empty response');
+                    }
+                } else if (data.error) {
+                    throw new Error(data.error);
+                } else {
+                    throw new Error('Invalid response format');
+                }
+            } catch (fetchErr) {
+                clearTimeout(timeoutId);
+                throw fetchErr;
             }
         } catch (err) {
             console.error('[Voice] Standard mode error:', err);
-            // Try fallback model
-            const fallbackResponse = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: messagesWithSystem,
-                    model: CONFIG.STANDARD_FALLBACK,
-                    temperature: 0.7,
-                    max_tokens: 300
-                }),
-            });
 
-            const fallbackData = await fallbackResponse.json();
-            if (fallbackData.response) {
-                const cleanText = cleanResponseText(fallbackData.response);
-                setConversation(p => [...p, { role: 'assistant', content: cleanText }]);
-                setStatus('speaking');
-                await speak(cleanText);
-            } else {
-                throw new Error('Both models failed');
+            // Try fallback model with same non-streaming approach
+            try {
+                const fallbackController = new AbortController();
+                const fallbackTimeout = setTimeout(() => fallbackController.abort(), 10000);
+
+                const fallbackResponse = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: fallbackController.signal,
+                    body: JSON.stringify({
+                        messages: messagesWithSystem,
+                        model: CONFIG.STANDARD_FALLBACK,
+                        stream: false,
+                        temperature: 0.7,
+                        max_tokens: 150
+                    }),
+                });
+
+                clearTimeout(fallbackTimeout);
+
+                const fallbackData = await fallbackResponse.json();
+                if (fallbackData.response) {
+                    const cleanText = cleanResponseText(fallbackData.response);
+                    if (cleanText) {
+                        setConversation(p => [...p, { role: 'assistant', content: cleanText }]);
+                        setStatus('speaking');
+                        await speak(cleanText);
+                        return;
+                    }
+                }
+                throw new Error('Fallback failed');
+            } catch (fallbackErr) {
+                console.error('[Voice] Fallback error:', fallbackErr);
+                setErrorMessage('Unable to connect. Please try again.');
+                throw fallbackErr;
             }
         }
     }, [conversation, speak]);
+
 
     const processPremium = useCallback(async (text) => {
         try {
