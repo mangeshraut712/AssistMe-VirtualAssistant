@@ -51,19 +51,33 @@ const CONFIG = {
     GEMINI_WS_URL: 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent',
 
     // Voice-specific system prompts
-    PREMIUM_SYSTEM_PROMPT: `You are a warm, intelligent AI assistant with a natural conversational style.
-Speak with genuine emotion, warmth, and enthusiasm.
-Keep responses concise (1-3 sentences for simple queries, longer for complex ones).
-Use natural speech patterns - contractions, casual phrasing, occasional filler words.
-Never prefix responses with thoughts like "Thinking..." or "Providing...".
-Engage like a knowledgeable friend having a real conversation.`,
+    PREMIUM_SYSTEM_PROMPT: `You are a warm, intelligent AI assistant having a natural voice conversation.
+
+CRITICAL RULES:
+- NEVER share your internal thoughts, planning, or reasoning process
+- NEVER say things like "I'm considering how to respond" or "I'm aiming for a warm style"
+- NEVER describe what you're about to do - just do it
+- Start responses directly with the actual answer or response
+- If asked "how are you?", respond naturally like "I'm doing great, thanks for asking!"
+
+STYLE:
+- Speak with genuine warmth and enthusiasm
+- Keep responses concise (1-3 sentences for simple queries)
+- Use natural speech patterns - contractions, casual phrasing
+- Engage like a knowledgeable friend in real conversation`,
 
     STANDARD_SYSTEM_PROMPT: `You are a helpful, friendly voice assistant.
-Keep responses clear, concise, and conversational - optimized for text-to-speech.
-Use simple sentence structures that sound natural when spoken aloud.
-Avoid markdown formatting, bullet points, or code blocks - speak in natural paragraphs.
-Limit responses to 2-4 sentences unless the user asks for detailed information.
-Be warm but efficient.`
+
+CRITICAL RULES:
+- NEVER share internal thoughts or planning
+- Start responses directly with the answer
+- No meta-commentary about your response style
+
+STYLE:
+- Keep responses clear, concise, and conversational
+- Use simple sentences that sound natural when spoken
+- Limit to 2-4 sentences unless asked for detail
+- Be warm but efficient`
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -76,23 +90,67 @@ Be warm but efficient.`
 const cleanResponseText = (text) => {
     if (!text) return '';
 
+    // First, check if the ENTIRE text is just thinking/meta-commentary
+    const lowerText = text.toLowerCase();
+    const thinkingPatterns = [
+        "i've been considering",
+        "i'm aiming for",
+        "i plan to provide",
+        "ensuring my response",
+        "i'm processing",
+        "starting to form",
+        "feeling optimistic about",
+        "i'm crafting",
+        "the direction i'm taking",
+        "my conversational style",
+        "initial ideas about how",
+        "just wanted to give you a quick heads-up",
+        "i'm formulating",
+        "working on your",
+        "let me think about"
+    ];
+
+    // If content starts with thinking pattern and is short, skip entirely
+    if (thinkingPatterns.some(p => lowerText.startsWith(p)) && text.length < 200) {
+        return '';
+    }
+
     const cleaned = text
         // Remove **bold markers** like **Thinking...**, **Providing a Response**, etc.
         .replace(/\*\*[^*]+\*\*\s*/g, '')
+        // Remove common AI meta-commentary sentences
+        .replace(/I've been considering how to respond[^.]*\./gi, '')
+        .replace(/I'm aiming for a[^.]*style[^.]*\./gi, '')
+        .replace(/I plan to provide[^.]*\./gi, '')
+        .replace(/ensuring my response[^.]*\./gi, '')
+        .replace(/I'm processing your[^.]*\./gi, '')
+        .replace(/starting to form[^.]*\./gi, '')
+        .replace(/feeling optimistic about[^.]*\./gi, '')
+        .replace(/just wanted to give you a quick heads-up[^.]*\./gi, '')
+        .replace(/I'm crafting[^.]*\./gi, '')
         // Remove lines that look like internal thoughts
         .split('\n')
         .filter(line => {
             const trimmed = line.trim().toLowerCase();
+            if (!trimmed) return false;
             // Skip lines that start with common AI thinking patterns
             if (trimmed.startsWith("i've processed")) return false;
             if (trimmed.startsWith("i've tackled")) return false;
+            if (trimmed.startsWith("i've been considering")) return false;
+            if (trimmed.startsWith("i'm aiming")) return false;
             if (trimmed.startsWith("i aimed to")) return false;
+            if (trimmed.startsWith("i plan to provide")) return false;
             if (trimmed.startsWith("my aim is")) return false;
             if (trimmed.startsWith("my focus is")) return false;
             if (trimmed.startsWith("i've begun")) return false;
             if (trimmed.startsWith("keeping it")) return false;
             if (trimmed.startsWith("i'm thinking")) return false;
             if (trimmed.startsWith("let me think")) return false;
+            if (trimmed.startsWith("ensuring my response")) return false;
+            if (trimmed.startsWith("i'm processing")) return false;
+            if (trimmed.startsWith("starting to form")) return false;
+            if (trimmed.startsWith("feeling optimistic")) return false;
+            if (trimmed.startsWith("working on")) return false;
             return true;
         })
         .join('\n')
@@ -103,6 +161,7 @@ const cleanResponseText = (text) => {
 
     return cleaned;
 };
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
