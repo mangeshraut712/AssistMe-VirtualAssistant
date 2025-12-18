@@ -533,11 +533,13 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                     speech_config: {
                                         voice_config: {
                                             prebuilt_voice_config: {
-                                                voice_name: 'Kore'  // Natural, warm voice
+                                                voice_name: 'Kore'
                                             }
                                         }
                                     }
                                 },
+                                // Request transcription of what AI actually says
+                                output_audio_transcription: {},
                                 system_instruction: {
                                     parts: [{ text: CONFIG.PREMIUM_SYSTEM_PROMPT }]
                                 }
@@ -575,13 +577,15 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                     return;
                                 }
 
+                                // Collect audio data
                                 if (serverContent.modelTurn?.parts) {
                                     for (const part of serverContent.modelTurn.parts) {
-                                        if (part.text) accumulatedText += part.text;
+                                        // ONLY collect audio, ignore text (it's internal thinking)
                                         if (part.inlineData?.data) audioChunks.push(part.inlineData.data);
                                     }
                                 }
 
+                                // This is what the AI ACTUALLY SAYS - use this for display
                                 if (serverContent.outputAudioTranscription?.text) {
                                     accumulatedText += serverContent.outputAudioTranscription.text;
                                 }
@@ -589,25 +593,26 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                 if (serverContent.turnComplete) {
                                     if (timeoutId) clearTimeout(timeoutId);
 
-                                    const cleanText = cleanResponseText(accumulatedText);
-                                    if (cleanText) {
+                                    // Only show the audio transcription (what AI actually spoke)
+                                    const spokenText = accumulatedText.trim();
+                                    if (spokenText) {
                                         setConversation(prev => [...prev, {
                                             role: 'assistant',
-                                            content: cleanText
+                                            content: spokenText
                                         }]);
                                     }
 
                                     // Play all audio chunks at once for smooth, fast playback
                                     if (audioChunks.length > 0) {
                                         setStatus('speaking');
-                                        await playPCMAudioChunks(audioChunks);  // IMPROVED: Batch playback
-                                    } else if (cleanText) {
+                                        await playPCMAudioChunks(audioChunks);
+                                    } else if (spokenText) {
                                         setStatus('speaking');
-                                        await speak(cleanText);
+                                        await speak(spokenText);
                                     }
 
                                     cleanup();
-                                    resolve({ text: cleanText, audioCount: audioChunks.length });
+                                    resolve({ text: spokenText, audioCount: audioChunks.length });
                                     return;
                                 }
                             }
@@ -1010,34 +1015,85 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                     key={i}
                                     initial={{ opacity: 0, y: 20, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}
+                                    className={cn("flex gap-3", msg.role === 'user' ? "justify-end" : "justify-start")}
                                 >
+                                    {/* AI Avatar */}
+                                    {msg.role === 'assistant' && (
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                                            <Brain className="w-4 h-4 text-white" />
+                                        </div>
+                                    )}
+
                                     <div
                                         className={cn(
-                                            "max-w-[85%] sm:max-w-[70%] px-5 py-3 rounded-2xl",
+                                            "max-w-[80%] sm:max-w-[70%] px-5 py-3 rounded-2xl",
                                             msg.role === 'user'
                                                 ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/20"
-                                                : "bg-gray-100 dark:bg-gray-800/80 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700"
+                                                : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 shadow-sm"
                                         )}
                                     >
+                                        {msg.role === 'assistant' && (
+                                            <p className="text-[10px] font-medium text-violet-600 dark:text-violet-400 mb-1 uppercase tracking-wide">Gemini says</p>
+                                        )}
                                         <p className="text-sm sm:text-base leading-relaxed">{msg.content}</p>
                                     </div>
+
+                                    {/* User Avatar */}
+                                    {msg.role === 'user' && (
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                                            <Mic className="w-4 h-4 text-white" />
+                                        </div>
+                                    )}
                                 </motion.div>
                             ))}
 
+                            {/* Real-time Transcript Display */}
                             {transcript && status === 'listening' && (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className="flex justify-end"
+                                    className="flex gap-3 justify-end"
                                 >
-                                    <div className="max-w-[85%] px-6 py-4 rounded-2xl bg-violet-100 dark:bg-violet-500/20 border-2 border-violet-400 dark:border-violet-500/50">
-                                        <div className="flex items-start gap-2">
-                                            <div className="flex-shrink-0 w-3 h-3 mt-1.5 bg-violet-500 dark:bg-violet-400 rounded-full animate-pulse" />
-                                            <div className="flex-1">
-                                                <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 mb-1">What I'm hearing:</p>
-                                                <p className="text-base font-medium text-violet-800 dark:text-violet-200">{transcript}</p>
+                                    <div className="max-w-[80%] px-5 py-4 rounded-2xl bg-gradient-to-r from-violet-500/10 to-indigo-500/10 dark:from-violet-500/20 dark:to-indigo-500/20 border-2 border-violet-400 dark:border-violet-500 shadow-lg">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="flex gap-1">
+                                                <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                                             </div>
+                                            <span className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">Listening...</span>
+                                        </div>
+                                        <p className="text-base font-medium text-gray-900 dark:text-white">{transcript}</p>
+                                    </div>
+                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shadow-lg animate-pulse">
+                                        <Mic className="w-4 h-4 text-white" />
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* AI Speaking Indicator */}
+                            {status === 'speaking' && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex gap-3 justify-start"
+                                >
+                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                                        <Volume2 className="w-4 h-4 text-white animate-pulse" />
+                                    </div>
+                                    <div className="px-5 py-3 rounded-2xl bg-violet-100 dark:bg-violet-500/20 border border-violet-300 dark:border-violet-500/50">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex gap-0.5">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <motion.div
+                                                        key={i}
+                                                        className="w-1 bg-violet-500 dark:bg-violet-400 rounded-full"
+                                                        animate={{ height: [8, 20, 8] }}
+                                                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <span className="text-sm font-medium text-violet-700 dark:text-violet-300">Speaking...</span>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -1150,9 +1206,9 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                 )}
                             </div>
                         </div>
-                    </div>
-                </motion.div>
-            </AnimatePresence>
+                    </div >
+                </motion.div >
+            </AnimatePresence >
         );
     }
 
