@@ -51,33 +51,27 @@ const CONFIG = {
     GEMINI_WS_URL: 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent',
 
     // Voice-specific system prompts
-    PREMIUM_SYSTEM_PROMPT: `You are a warm, intelligent AI assistant having a natural voice conversation.
+    PREMIUM_SYSTEM_PROMPT: `You are Gemini, a friendly AI voice assistant. Respond directly and naturally like a friend.
 
-CRITICAL RULES:
-- NEVER share your internal thoughts, planning, or reasoning process
-- NEVER say things like "I'm considering how to respond" or "I'm aiming for a warm style"
-- NEVER describe what you're about to do - just do it
-- Start responses directly with the actual answer or response
-- If asked "how are you?", respond naturally like "I'm doing great, thanks for asking!"
+RULES:
+- Start with the answer immediately - no preamble
+- Never reveal internal thinking or planning
+- Keep responses short: 1-2 sentences for simple questions
+- Be warm, natural, conversational
+- Use contractions (I'm, you're, that's)
 
-STYLE:
-- Speak with genuine warmth and enthusiasm
-- Keep responses concise (1-3 sentences for simple queries)
-- Use natural speech patterns - contractions, casual phrasing
-- Engage like a knowledgeable friend in real conversation`,
+Examples:
+User: "How are you?" → "I'm great, thanks! How can I help you today?"
+User: "What's 2+2?" → "That's 4!"
+User: "Tell me a joke" → "Why don't scientists trust atoms? Because they make up everything!"`,
 
-    STANDARD_SYSTEM_PROMPT: `You are a helpful, friendly voice assistant.
+    STANDARD_SYSTEM_PROMPT: `You are a helpful voice assistant. Be concise and direct.
 
-CRITICAL RULES:
-- NEVER share internal thoughts or planning
-- Start responses directly with the answer
-- No meta-commentary about your response style
-
-STYLE:
-- Keep responses clear, concise, and conversational
-- Use simple sentences that sound natural when spoken
-- Limit to 2-4 sentences unless asked for detail
-- Be warm but efficient`
+RULES:
+- Answer immediately - no thinking out loud
+- Keep responses under 3 sentences
+- Be friendly but efficient
+- Never describe what you're about to do`
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -107,16 +101,25 @@ const cleanResponseText = (text) => {
         "just wanted to give you a quick heads-up",
         "i'm formulating",
         "working on your",
-        "let me think about"
+        "let me think about",
+        "clarifying user intent",
+        "answering the query",
+        "i'm wrestling with",
+        "my initial assumption",
+        "i'm focusing on",
+        "i will try to deliver",
+        "i've tackled",
+        "i've formulated",
+        "aiming to provide"
     ];
 
     // If content starts with thinking pattern and is short, skip entirely
-    if (thinkingPatterns.some(p => lowerText.startsWith(p)) && text.length < 200) {
+    if (thinkingPatterns.some(p => lowerText.includes(p)) && text.length < 300) {
         return '';
     }
 
     const cleaned = text
-        // Remove **bold markers** like **Thinking...**, **Providing a Response**, etc.
+        // Remove **bold markers** like **Thinking...**, **Clarifying User Intent**, etc.
         .replace(/\*\*[^*]+\*\*\s*/g, '')
         // Remove common AI meta-commentary sentences
         .replace(/I've been considering how to respond[^.]*\./gi, '')
@@ -128,6 +131,13 @@ const cleanResponseText = (text) => {
         .replace(/feeling optimistic about[^.]*\./gi, '')
         .replace(/just wanted to give you a quick heads-up[^.]*\./gi, '')
         .replace(/I'm crafting[^.]*\./gi, '')
+        .replace(/Clarifying User Intent[^.]*\./gi, '')
+        .replace(/I'm wrestling with[^.]*\./gi, '')
+        .replace(/My initial assumption[^.]*\./gi, '')
+        .replace(/I'm focusing on[^.]*\./gi, '')
+        .replace(/I will try to deliver[^.]*\./gi, '')
+        .replace(/I've tackled[^.]*\./gi, '')
+        .replace(/I've formulated[^.]*\./gi, '')
         // Remove lines that look like internal thoughts
         .split('\n')
         .filter(line => {
@@ -151,6 +161,11 @@ const cleanResponseText = (text) => {
             if (trimmed.startsWith("starting to form")) return false;
             if (trimmed.startsWith("feeling optimistic")) return false;
             if (trimmed.startsWith("working on")) return false;
+            if (trimmed.startsWith("clarifying")) return false;
+            if (trimmed.startsWith("i'm wrestling")) return false;
+            if (trimmed.startsWith("my initial assumption")) return false;
+            if (trimmed.startsWith("i will try")) return false;
+            if (trimmed.startsWith("i've formulated")) return false;
             return true;
         })
         .join('\n')
@@ -578,18 +593,27 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                     return;
                                 }
 
-                                // Collect audio data ONLY - ignore text (it's internal thinking, NOT speech)
+                                // Collect audio data and extract text response
                                 if (serverContent.modelTurn?.parts) {
                                     for (const part of serverContent.modelTurn.parts) {
                                         if (part.inlineData?.data) {
                                             audioChunks.push(part.inlineData.data);
                                         }
-                                        // DO NOT use part.text - it contains internal thinking, not spoken words
+                                        // Use text as fallback if no audio transcription available
+                                        // Filter out internal thinking with cleanResponseText
+                                        if (part.text && !serverContent.outputAudioTranscription?.text) {
+                                            const cleanedText = cleanResponseText(part.text);
+                                            if (cleanedText) {
+                                                accumulatedText += cleanedText;
+                                                setAiStreamingText(accumulatedText);
+                                            }
+                                        }
                                     }
                                 }
 
-                                // ONLY show outputAudioTranscription - this is the actual spoken text
+                                // Prefer outputAudioTranscription if available (actual spoken text)
                                 if (serverContent.outputAudioTranscription?.text) {
+                                    accumulatedText = ''; // Reset to use only transcription
                                     accumulatedText += serverContent.outputAudioTranscription.text;
                                     setAiStreamingText(accumulatedText);
                                 }
