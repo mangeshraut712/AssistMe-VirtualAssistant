@@ -28,8 +28,8 @@ import { cn } from '@/lib/utils';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const CONFIG = {
-    SILENCE_TIMEOUT: 1500,
-    MIN_TRANSCRIPT_LENGTH: 3,
+    SILENCE_TIMEOUT: 800, // Reduced from 1500ms for faster response
+    MIN_TRANSCRIPT_LENGTH: 2, // Reduced from 3 for faster detection
 
     // Models for Standard Mode (via OpenRouter)
     STANDARD_MODEL: 'x-ai/grok-3-mini-beta',  // Fast, conversational
@@ -573,60 +573,37 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                             if (data.serverContent) {
                                 const serverContent = data.serverContent;
 
-                                // DEBUG: Log everything the API returns
-                                console.log('[Voice] Server content received:', JSON.stringify(serverContent, null, 2));
-
                                 if (serverContent.interrupted) {
                                     audioChunks.length = 0;
                                     return;
                                 }
 
-                                // Collect audio data
+                                // Collect audio data ONLY - ignore text (it's internal thinking, NOT speech)
                                 if (serverContent.modelTurn?.parts) {
                                     for (const part of serverContent.modelTurn.parts) {
-                                        // ONLY collect audio, ignore text (it's internal thinking)
                                         if (part.inlineData?.data) {
                                             audioChunks.push(part.inlineData.data);
-                                            console.log('[Voice] Audio chunk received');
                                         }
-                                        // Check if there's text in modelTurn (sometimes transcription comes here)
-                                        if (part.text) {
-                                            console.log('[Voice] Text in modelTurn:', part.text);
-                                            // Use this as fallback if no outputAudioTranscription
-                                            if (!serverContent.outputAudioTranscription?.text) {
-                                                accumulatedText += part.text;
-                                                setAiStreamingText(accumulatedText);
-                                            }
-                                        }
+                                        // DO NOT use part.text - it contains internal thinking, not spoken words
                                     }
                                 }
 
-                                // This is what the AI ACTUALLY SAYS - use this for display
+                                // ONLY show outputAudioTranscription - this is the actual spoken text
                                 if (serverContent.outputAudioTranscription?.text) {
                                     accumulatedText += serverContent.outputAudioTranscription.text;
-                                    console.log('[Voice] AI streaming (transcription):', accumulatedText);
-                                    // Stream to UI in real-time while AI is speaking
                                     setAiStreamingText(accumulatedText);
                                 }
 
                                 if (serverContent.turnComplete) {
                                     if (timeoutId) clearTimeout(timeoutId);
 
-                                    // Only show the audio transcription (what AI actually spoke)
+                                    // Add AI response to conversation
                                     const spokenText = accumulatedText.trim();
-                                    console.log('[Voice] Turn complete. Spoken text:', spokenText);
                                     if (spokenText) {
-                                        console.log('[Voice] Adding AI response to conversation');
-                                        setConversation(prev => {
-                                            const updated = [...prev, {
-                                                role: 'assistant',
-                                                content: spokenText
-                                            }];
-                                            console.log('[Voice] Updated conversation:', updated);
-                                            return updated;
-                                        });
-                                    } else {
-                                        console.warn('[Voice] No spoken text to add!');
+                                        setConversation(prev => [...prev, {
+                                            role: 'assistant',
+                                            content: spokenText
+                                        }]);
                                     }
 
                                     // Clear streaming text after adding to conversation
@@ -1517,62 +1494,84 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                 </header>
 
                 {/* Conversation Area */}
-                <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-                    {conversation.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full text-center">
-                            <div className="w-20 h-20 mb-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                <Mic className="w-10 h-10 text-gray-400" />
+                <div className="flex-1 overflow-y-auto">
+                    <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-3xl mx-auto">
+                        {conversation.length === 0 && (
+                            <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
+                                <div className="w-20 h-20 mb-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                    <Mic className="w-10 h-10 text-gray-400" />
+                                </div>
+                                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                                    Standard Voice Mode
+                                </h2>
+                                <p className="text-gray-500 dark:text-gray-400 max-w-md">
+                                    Fast, browser-based voice interaction. Tap the button below to start.
+                                </p>
                             </div>
-                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                                Standard Voice Mode
-                            </h2>
-                            <p className="text-gray-500 dark:text-gray-400 max-w-md">
-                                Fast, browser-based voice interaction. Tap the button below to start.
-                            </p>
-                        </div>
-                    )}
-
-                    <div className="space-y-4">
-                        {conversation.map((msg, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}
-                            >
-                                <div
-                                    className={cn(
-                                        "max-w-[85%] sm:max-w-[70%] px-4 py-3 rounded-2xl",
-                                        msg.role === 'user'
-                                            ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
-                                            : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
-                                    )}
-                                >
-                                    <p className="text-sm sm:text-base">{msg.content}</p>
-                                </div>
-                            </motion.div>
-                        ))}
-
-                        {transcript && status === 'listening' && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="flex justify-end"
-                            >
-                                <div className="max-w-[85%] px-5 py-4 rounded-2xl bg-primary/10 dark:bg-primary/20 border-2 border-primary/50">
-                                    <div className="flex items-start gap-2">
-                                        <div className="flex-shrink-0 w-3 h-3 mt-1.5 bg-primary rounded-full animate-pulse" />
-                                        <div className="flex-1">
-                                            <p className="text-xs font-semibold text-primary/80 mb-1">Listening...</p>
-                                            <p className="text-base font-medium text-foreground">{transcript}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
                         )}
-                    </div>
 
-                    <div ref={conversationEndRef} />
+                        <div className="space-y-4">
+                            {conversation.map((msg, i) => (
+                                <motion.div
+                                    key={i}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={cn("flex items-end gap-3", msg.role === 'user' ? "justify-end" : "justify-start")}
+                                >
+                                    {/* AI Avatar */}
+                                    {msg.role === 'assistant' && (
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                            <Sparkles className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                                        </div>
+                                    )}
+
+                                    <div
+                                        className={cn(
+                                            "max-w-[75%] sm:max-w-[65%] px-4 py-3 rounded-2xl",
+                                            msg.role === 'user'
+                                                ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                                                : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        )}
+                                    >
+                                        <p className="text-sm sm:text-base leading-relaxed">{msg.content}</p>
+                                    </div>
+
+                                    {/* User Avatar */}
+                                    {msg.role === 'user' && (
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-900 dark:bg-white flex items-center justify-center">
+                                            <Mic className="w-4 h-4 text-white dark:text-gray-900" />
+                                        </div>
+                                    )}
+                                </motion.div>
+                            ))}
+
+                            {/* Listening Transcript */}
+                            {transcript && status === 'listening' && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex items-end gap-3 justify-end"
+                                >
+                                    <div className="max-w-[75%] sm:max-w-[65%] px-4 py-3 rounded-2xl bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-400 dark:border-blue-500">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="flex gap-1">
+                                                <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                            </div>
+                                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">Listening</span>
+                                        </div>
+                                        <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">{transcript}</p>
+                                    </div>
+                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center animate-pulse">
+                                        <Mic className="w-4 h-4 text-white" />
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
+
+                        <div ref={conversationEndRef} className="h-4" />
+                    </div>
                 </div>
 
                 {/* Simple Orb */}
