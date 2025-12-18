@@ -423,7 +423,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                         </motion.div>
                         <div>
                             <h1 className="font-bold text-lg">Imagine</h1>
-                            <p className="text-xs text-muted-foreground">AI Image Studio • Free & Unlimited</p>
+                            <p className="text-xs text-muted-foreground">{isPremium ? 'Premium AI Enhancement • Better Prompts' : 'AI Image Studio • Free & Unlimited'}</p>
                         </div>
                     </div>
 

@@ -1,11 +1,10 @@
 /**
- * Premium Image Generation API using Google Gemini
+ * Premium Image Generation API
  * 
- * FREE TIER: 500 images/day via Gemini 2.5 Flash Image
- * Uses Gemini's native image generation capability
+ * Premium Mode: Gemini AI enhances prompts for better results + Pollinations generation
+ * Standard Mode: Direct Pollinations generation
  * 
- * Premium Mode: Gemini 2.5 Flash Image (FREE)
- * Standard Mode: Pollinations.ai (FREE)
+ * Both modes are 100% FREE!
  */
 
 export const config = {
@@ -40,103 +39,72 @@ export default async function handler(req) {
             });
         }
 
-        // PREMIUM MODE: Use Gemini 2.5 Flash Image (FREE)
+        let enhancedPrompt = prompt;
+        let wasEnhanced = false;
+
+        // PREMIUM MODE: Use Gemini to enhance the prompt for better image generation
         if (usePremium) {
             const geminiKey = process.env.GOOGLE_API_KEY;
 
-            if (!geminiKey) {
-                return new Response(JSON.stringify({
-                    success: false,
-                    error: 'Premium mode requires GOOGLE_API_KEY. Please add it to your Vercel environment variables.',
-                    fallbackToStandard: true
-                }), {
-                    status: 503,
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                });
-            }
+            if (geminiKey) {
+                try {
+                    // Use Gemini to create a better, more detailed prompt
+                    const geminiResponse = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [{
+                                        text: `You are an expert AI image prompt engineer. Transform this simple prompt into a highly detailed, artistic prompt for AI image generation. Include specific details about:
+- Lighting (golden hour, studio lighting, dramatic shadows, etc.)
+- Composition (rule of thirds, centered, wide angle, macro, etc.)
+- Style (photorealistic, digital art, oil painting, etc.)
+- Atmosphere (moody, vibrant, serene, dynamic, etc.)
+- Technical quality (8k, ultra detailed, professional, etc.)
 
-            try {
-                // Build enhanced prompt with style
-                let finalPrompt = prompt;
-                if (style && style !== 'none') {
-                    finalPrompt = `${prompt}, ${style} style`;
-                }
+Keep the enhanced prompt under 250 characters. Respond with ONLY the enhanced prompt, no explanations.
 
-                // Call Gemini API for image generation
-                // Model: gemini-2.5-flash (supports IMAGE response modality)
-                const geminiResponse = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [{
-                                    text: `Generate a high-quality image: ${finalPrompt}`
-                                }]
-                            }],
-                            generationConfig: {
-                                temperature: 1,
-                                responseModalities: ['IMAGE'],  // Request image output
-                            }
-                        })
+Original prompt: "${prompt}"
+${style && style !== 'none' ? `Desired style: ${style}` : ''}
+
+Enhanced prompt:`
+                                    }]
+                                }],
+                                generationConfig: {
+                                    temperature: 0.8,
+                                    maxOutputTokens: 100
+                                }
+                            })
+                        }
+                    );
+
+                    if (geminiResponse.ok) {
+                        const geminiData = await geminiResponse.json();
+                        const enhanced = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+                        if (enhanced && enhanced.length > 10) {
+                            enhancedPrompt = enhanced.replace(/^["']|["']$/g, ''); // Remove quotes
+                            wasEnhanced = true;
+                            console.log('[Imagine Premium] Enhanced prompt:', enhancedPrompt);
+                        }
                     }
-                );
-
-                if (!geminiResponse.ok) {
-                    const errorData = await geminiResponse.json();
-                    throw new Error(errorData.error?.message || 'Gemini API error');
+                } catch (error) {
+                    console.warn('[Imagine] Gemini enhancement failed:', error.message);
+                    // Continue with original prompt
                 }
-
-                const geminiData = await geminiResponse.json();
-
-                // Extract image data
-                const imageData = geminiData.candidates?.[0]?.content?.parts?.[0];
-
-                if (imageData && imageData.inlineData) {
-                    // Convert base64 to data URL
-                    const imageUrl = `data:${imageData.inlineData.mimeType};base64,${imageData.inlineData.data}`;
-
-                    return new Response(JSON.stringify({
-                        success: true,
-                        data: [{
-                            url: imageUrl,
-                            prompt: finalPrompt,
-                            originalPrompt: prompt,
-                            enhanced: true,
-                            model: 'Gemini 2.0 Flash',
-                            provider: 'Google Gemini',
-                            free: true
-                        }]
-                    }), {
-                        status: 200,
-                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                    });
-                } else {
-                    throw new Error('No image data in Gemini response');
-                }
-
-            } catch (error) {
-                console.error('[Imagine Premium] Gemini error:', error);
-                // Fall back to standard mode
-                return new Response(JSON.stringify({
-                    success: false,
-                    error: `Gemini error: ${error.message}. Falling back to standard mode.`,
-                    fallbackToStandard: true
-                }), {
-                    status: 503,
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                });
             }
         }
 
-        // STANDARD MODE: Use Pollinations.ai (FREE)
-        let finalPrompt = prompt;
-        if (style && style !== 'none') {
-            finalPrompt = `${prompt}, ${style} style`;
+        // Add style to prompt if not already enhanced with style
+        let finalPrompt = enhancedPrompt;
+        if (style && style !== 'none' && !wasEnhanced) {
+            finalPrompt = `${enhancedPrompt}, ${style} style, high quality, detailed`;
         }
 
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=${model}&width=${size.split('x')[0]}&height=${size.split('x')[1]}&nologo=true&enhance=true`;
+        // Generate image using Pollinations.ai (FREE, unlimited)
+        const [width, height] = size.split('x');
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=true&seed=${Date.now()}`;
 
         return new Response(JSON.stringify({
             success: true,
@@ -144,9 +112,9 @@ export default async function handler(req) {
                 url: imageUrl,
                 prompt: finalPrompt,
                 originalPrompt: prompt,
-                enhanced: false,
+                enhanced: wasEnhanced,
                 model: model,
-                provider: 'Pollinations.ai',
+                provider: wasEnhanced ? 'Gemini AI + Pollinations' : 'Pollinations.ai',
                 free: true
             }]
         }), {
