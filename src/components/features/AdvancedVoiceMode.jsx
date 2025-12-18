@@ -994,17 +994,18 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                     </header>
 
                     {/* Conversation Area */}
-                    <div className="relative z-10 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-                        {conversation.length === 0 && (
-                            <div className="flex flex-col items-center justify-center h-full text-center">
+                    <div className="relative z-10 flex-1 overflow-y-auto px-6 py-6 sm:px-8">
+                        {/* Welcome message - shows until conversation starts */}
+                        {conversation.length === 0 && status !== 'speaking' && (
+                            <div className="flex flex-col items-center justify-center h-full text-center pb-20">
                                 <div className="relative mb-6">
                                     <div className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500/20 to-indigo-500/20 dark:from-violet-500/10 dark:to-indigo-500/10 blur-xl" />
                                     <Brain className="relative w-20 h-20 text-violet-500 dark:text-violet-400" />
                                 </div>
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Gemini Live Voice</h2>
-                                <p className="text-gray-500 dark:text-gray-400 max-w-md">
+                                <p className="text-gray-600 dark:text-gray-300 max-w-md text-base">
                                     Experience natural AI conversation with native audio synthesis.
-                                    Tap the orb to begin.
+                                    <br /><span className="font-semibold text-violet-600 dark:text-violet-400">Tap the orb to begin.</span>
                                 </p>
                             </div>
                         )}
