@@ -84,94 +84,49 @@ RULES:
 const cleanResponseText = (text) => {
     if (!text) return '';
 
-    // First, check if the ENTIRE text is just thinking/meta-commentary
-    const lowerText = text.toLowerCase();
-    const thinkingPatterns = [
-        "i've been considering",
-        "i'm aiming for",
-        "i plan to provide",
-        "ensuring my response",
-        "i'm processing",
-        "starting to form",
-        "feeling optimistic about",
-        "i'm crafting",
-        "the direction i'm taking",
-        "my conversational style",
-        "initial ideas about how",
-        "just wanted to give you a quick heads-up",
-        "i'm formulating",
-        "working on your",
-        "let me think about",
-        "clarifying user intent",
-        "answering the query",
-        "i'm wrestling with",
-        "my initial assumption",
-        "i'm focusing on",
-        "i will try to deliver",
-        "i've tackled",
-        "i've formulated",
-        "aiming to provide"
+    // Patterns that indicate internal thinking - if ANY of these exist, we need to clean
+    const thinkingIndicators = [
+        "i'm currently", "i've been", "i'm breaking down", "i'm crafting",
+        "i'm aiming", "i'm focusing", "i'm wrestling", "i'm processing",
+        "i'm zeroing in", "i've checked", "i've crafted", "i've formulated",
+        "my aim is", "my focus is", "my initial assumption",
+        "looking good to go", "feels good", "the current draft",
+        "i will try to", "i plan to", "let me",
+        "clarifying user intent", "answering the query",
+        "emphasizing my availability", "mirroring their",
+        "avoiding unnecessary", "laid-back interaction"
     ];
 
-    // If content starts with thinking pattern and is short, skip entirely
-    if (thinkingPatterns.some(p => lowerText.includes(p)) && text.length < 300) {
+    const lowerText = text.toLowerCase();
+
+    // If it looks like pure thinking, return empty
+    if (thinkingIndicators.some(p => lowerText.includes(p))) {
+        // Try to extract just the actual response part
+        // Look for patterns like "Hey there!" or direct greetings
+        const directResponsePatterns = [
+            /^(hey|hi|hello|sure|absolutely|great|thanks|okay|alright)[^.!?]*[.!?]/gi,
+            /(?:^|\n)(I'm doing|I am doing|I'm great|I'm good|I'm well|That's|The answer)[^.!?]*[.!?]/gi
+        ];
+
+        for (const pattern of directResponsePatterns) {
+            const match = text.match(pattern);
+            if (match) {
+                return match[0].trim();
+            }
+        }
+
+        // If no direct pattern found, return empty - don't show thinking
         return '';
     }
 
+    // For normal text, do light cleaning
     const cleaned = text
-        // Remove **bold markers** like **Thinking...**, **Clarifying User Intent**, etc.
+        // Remove **bold markers**
         .replace(/\*\*[^*]+\*\*\s*/g, '')
-        // Remove common AI meta-commentary sentences
-        .replace(/I've been considering how to respond[^.]*\./gi, '')
-        .replace(/I'm aiming for a[^.]*style[^.]*\./gi, '')
+        // Remove common meta-commentary
+        .replace(/I've been considering[^.]*\./gi, '')
+        .replace(/I'm aiming for[^.]*\./gi, '')
         .replace(/I plan to provide[^.]*\./gi, '')
-        .replace(/ensuring my response[^.]*\./gi, '')
-        .replace(/I'm processing your[^.]*\./gi, '')
-        .replace(/starting to form[^.]*\./gi, '')
-        .replace(/feeling optimistic about[^.]*\./gi, '')
-        .replace(/just wanted to give you a quick heads-up[^.]*\./gi, '')
-        .replace(/I'm crafting[^.]*\./gi, '')
-        .replace(/Clarifying User Intent[^.]*\./gi, '')
-        .replace(/I'm wrestling with[^.]*\./gi, '')
-        .replace(/My initial assumption[^.]*\./gi, '')
-        .replace(/I'm focusing on[^.]*\./gi, '')
-        .replace(/I will try to deliver[^.]*\./gi, '')
-        .replace(/I've tackled[^.]*\./gi, '')
-        .replace(/I've formulated[^.]*\./gi, '')
-        // Remove lines that look like internal thoughts
-        .split('\n')
-        .filter(line => {
-            const trimmed = line.trim().toLowerCase();
-            if (!trimmed) return false;
-            // Skip lines that start with common AI thinking patterns
-            if (trimmed.startsWith("i've processed")) return false;
-            if (trimmed.startsWith("i've tackled")) return false;
-            if (trimmed.startsWith("i've been considering")) return false;
-            if (trimmed.startsWith("i'm aiming")) return false;
-            if (trimmed.startsWith("i aimed to")) return false;
-            if (trimmed.startsWith("i plan to provide")) return false;
-            if (trimmed.startsWith("my aim is")) return false;
-            if (trimmed.startsWith("my focus is")) return false;
-            if (trimmed.startsWith("i've begun")) return false;
-            if (trimmed.startsWith("keeping it")) return false;
-            if (trimmed.startsWith("i'm thinking")) return false;
-            if (trimmed.startsWith("let me think")) return false;
-            if (trimmed.startsWith("ensuring my response")) return false;
-            if (trimmed.startsWith("i'm processing")) return false;
-            if (trimmed.startsWith("starting to form")) return false;
-            if (trimmed.startsWith("feeling optimistic")) return false;
-            if (trimmed.startsWith("working on")) return false;
-            if (trimmed.startsWith("clarifying")) return false;
-            if (trimmed.startsWith("i'm wrestling")) return false;
-            if (trimmed.startsWith("my initial assumption")) return false;
-            if (trimmed.startsWith("i will try")) return false;
-            if (trimmed.startsWith("i've formulated")) return false;
-            return true;
-        })
-        .join('\n')
-        // Clean up extra whitespace
-        .replace(/^\s*\n+/g, '')
-        .replace(/\n{3,}/g, '\n\n')
         .trim();
 
     return cleaned;
@@ -593,40 +548,45 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                     return;
                                 }
 
-                                // Collect audio data and extract text response
+                                // Collect audio data
                                 if (serverContent.modelTurn?.parts) {
                                     for (const part of serverContent.modelTurn.parts) {
                                         if (part.inlineData?.data) {
                                             audioChunks.push(part.inlineData.data);
                                         }
-                                        // Use text as fallback if no audio transcription available
-                                        // Filter out internal thinking with cleanResponseText
-                                        if (part.text && !serverContent.outputAudioTranscription?.text) {
-                                            const cleanedText = cleanResponseText(part.text);
-                                            if (cleanedText) {
-                                                accumulatedText += cleanedText;
-                                                setAiStreamingText(accumulatedText);
-                                            }
+                                        // Collect text but DON'T show it yet (it's mostly thinking)
+                                        if (part.text) {
+                                            accumulatedText += part.text;
                                         }
                                     }
                                 }
 
-                                // Prefer outputAudioTranscription if available (actual spoken text)
+                                // If we have audio transcription, use that instead
                                 if (serverContent.outputAudioTranscription?.text) {
-                                    accumulatedText = ''; // Reset to use only transcription
-                                    accumulatedText += serverContent.outputAudioTranscription.text;
+                                    // This is the actual spoken text - much better
+                                    accumulatedText = serverContent.outputAudioTranscription.text;
                                     setAiStreamingText(accumulatedText);
                                 }
 
                                 if (serverContent.turnComplete) {
                                     if (timeoutId) clearTimeout(timeoutId);
 
-                                    // Add AI response to conversation
-                                    const spokenText = accumulatedText.trim();
-                                    if (spokenText) {
+                                    // Apply aggressive filtering to get ONLY the actual response
+                                    // Remove all internal thinking, planning, meta-commentary
+                                    let finalText = cleanResponseText(accumulatedText.trim());
+
+                                    // If filter removed everything, try extracting the last sentence
+                                    if (!finalText && accumulatedText.length > 50) {
+                                        const sentences = accumulatedText.split(/[.!?]+/).filter(s => s.trim());
+                                        // Take last 1-2 sentences as they're usually the actual response
+                                        finalText = sentences.slice(-2).join('. ').trim();
+                                        if (finalText) finalText += '.';
+                                    }
+
+                                    if (finalText) {
                                         setConversation(prev => [...prev, {
                                             role: 'assistant',
-                                            content: spokenText
+                                            content: finalText
                                         }]);
                                     }
 
@@ -637,13 +597,13 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                     if (audioChunks.length > 0) {
                                         setStatus('speaking');
                                         await playPCMAudioChunks(audioChunks);
-                                    } else if (spokenText) {
+                                    } else if (finalText) {
                                         setStatus('speaking');
-                                        await speak(spokenText);
+                                        await speak(finalText);
                                     }
 
                                     cleanup();
-                                    resolve({ text: spokenText, audioCount: audioChunks.length });
+                                    resolve({ text: finalText, audioCount: audioChunks.length });
                                     return;
                                 }
                             }
