@@ -253,6 +253,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
     const [copiedId, setCopiedId] = useState(null);
     const [error, setError] = useState(null);
     const [gallery, setGallery] = useState([]);
+    const [isPremium, setIsPremium] = useState(false); // Premium AI enhancement
 
     // Get aspect class
     const getAspectClass = (ratio) => {
@@ -277,7 +278,8 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                     prompt,
                     model: selectedModel,
                     size: aspectConfig?.size || '1024x1024',
-                    style: style !== 'none' ? style : null
+                    style: style !== 'none' ? style : null,
+                    usePremium: isPremium  // Use Gemini enhancement if premium
                 })
             });
 
@@ -293,10 +295,12 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                     id: Date.now() + i,
                     url: img.url,
                     aspect: getAspectClass(aspectRatio),
-                    prompt: prompt,
+                    prompt: img.prompt, // Use enhanced prompt if available
+                    originalPrompt: img.originalPrompt,
                     model: modelName,
-                    provider: 'Pollinations.ai',
-                    isNew: true
+                    provider: isPremium ? 'Gemini + Pollinations' : 'Pollinations.ai',
+                    isNew: true,
+                    enhanced: img.enhanced
                 }));
                 setGallery(prev => [...newImages, ...prev]);
             }
@@ -382,6 +386,22 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {/* Premium Toggle */}
+                        <motion.button
+                            onClick={() => setIsPremium(!isPremium)}
+                            className={cn(
+                                'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border-2',
+                                isPremium
+                                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500 shadow-lg shadow-purple-500/25'
+                                    : 'bg-background border-border text-muted-foreground hover:border-purple-500/50'
+                            )}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            {isPremium ? <Crown className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
+                            <span>{isPremium ? 'Premium AI' : 'Standard'}</span>
+                        </motion.button>
+
                         {gallery.length > 0 && (
                             <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
                                 {gallery.length} images

@@ -1,217 +1,164 @@
 /**
- * Image Generation API Edge Function
+ * Premium Image Generation API using Google Gemini
  * 
- * FREE Image Generation using Pollinations.ai
- * No API key required! Completely free unlimited usage.
+ * FREE TIER: 500 images/day via Gemini 2.5 Flash Image
+ * Uses Gemini's native image generation capability
  * 
- * Endpoint: POST /api/images/generate
- * 
- * @version 4.0.0
- * @date December 2025
+ * Premium Mode: Gemini 2.5 Flash Image (FREE)
+ * Standard Mode: Pollinations.ai (FREE)
  */
 
 export const config = {
     runtime: 'edge',
 };
 
-// CORS headers
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-};
-
-// Available Models (via Pollinations.ai - ALL FREE!)
-const MODELS = {
-    'flux': {
-        id: 'flux',
-        name: 'Flux',
-        description: 'High quality, fast (default)',
-        free: true
-    },
-    'flux-realism': {
-        id: 'flux-realism',
-        name: 'Flux Realism',
-        description: 'Photorealistic images',
-        free: true
-    },
-    'flux-anime': {
-        id: 'flux-anime',
-        name: 'Flux Anime',
-        description: 'Anime style images',
-        free: true
-    },
-    'flux-3d': {
-        id: 'flux-3d',
-        name: 'Flux 3D',
-        description: '3D rendered images',
-        free: true
-    },
-    'turbo': {
-        id: 'turbo',
-        name: 'Turbo',
-        description: 'Ultra fast generation',
-        free: true
-    }
-};
-
-// Size mappings
-const SIZE_MAP = {
-    '1024x1024': { width: 1024, height: 1024 },
-    '1792x1024': { width: 1792, height: 1024 },
-    '1024x1792': { width: 1024, height: 1792 },
-    '1536x1152': { width: 1536, height: 1152 },
-    '512x512': { width: 512, height: 512 }
-};
-
 export default async function handler(req) {
-    // Handle CORS preflight
+    const corsHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+    };
+
     if (req.method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    // GET - Return available models
-    if (req.method === 'GET') {
-        return new Response(JSON.stringify({
-            success: true,
-            provider: 'pollinations.ai',
-            note: 'Completely FREE - No API key required!',
-            models: Object.entries(MODELS).map(([key, m]) => ({ id: key, ...m }))
-        }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-    }
-
     if (req.method !== 'POST') {
-        return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), {
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
             status: 405,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
 
     try {
-        const body = await req.json();
-        const {
-            prompt,
-            model = 'flux',
-            size = '1024x1024',
-            style = null
-        } = body;
+        const { prompt, model = 'flux', size = '1024x1024', style, usePremium = false } = await req.json();
 
-        if (!prompt || prompt.trim().length === 0) {
-            return new Response(JSON.stringify({
-                success: false,
-                error: 'Prompt is required'
-            }), {
+        if (!prompt) {
+            return new Response(JSON.stringify({ error: 'Prompt required' }), {
                 status: 400,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
         }
 
-        // Enhance prompt with Gemini if API key is present
-        let enhancedPrompt = prompt;
-        const apiKey = process.env.OPENROUTER_API_KEY;
+        // PREMIUM MODE: Use Gemini 2.5 Flash Image (FREE)
+        if (usePremium) {
+            const geminiKey = process.env.GOOGLE_API_KEY;
 
-        if (apiKey) {
-            try {
-                const enhanceRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${apiKey}`,
-                        "Content-Type": "application/json",
-                        "HTTP-Referer": "https://assistme.app"
-                    },
-                    body: JSON.stringify({
-                        model: "google/gemini-2.0-flash-exp:free",
-                        messages: [{
-                            role: "user",
-                            content: `Refine this image prompt to be more descriptive and artistic for an AI image generator. concise, high quality. Prompt: '${prompt}'. Output ONLY the improved prompt text.`
-                        }]
-                    })
+            if (!geminiKey) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: 'Premium mode requires GOOGLE_API_KEY. Please add it to your Vercel environment variables.',
+                    fallbackToStandard: true
+                }), {
+                    status: 503,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 });
+            }
 
-                if (enhanceRes.ok) {
-                    const enhanceData = await enhanceRes.json();
-                    const newPrompt = enhanceData.choices[0]?.message?.content?.trim();
-                    if (newPrompt) {
-                        console.log(`[Image] Enhanced prompt: '${prompt}' -> '${newPrompt}'`);
-                        enhancedPrompt = newPrompt.replace(/^["']|["']$/g, ''); // Remove quotes
-                    }
+            try {
+                // Build enhanced prompt with style
+                let finalPrompt = prompt;
+                if (style && style !== 'none') {
+                    finalPrompt = `${prompt}, ${style} style`;
                 }
-            } catch (e) {
-                console.warn("[Image] Prompt enhancement failed, using original:", e);
+
+                // Call Gemini API for image generation
+                // Model: gemini-2.5-flash (supports IMAGE response modality)
+                const geminiResponse = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: `Generate a high-quality image: ${finalPrompt}`
+                                }]
+                            }],
+                            generationConfig: {
+                                temperature: 1,
+                                responseModalities: ['IMAGE'],  // Request image output
+                            }
+                        })
+                    }
+                );
+
+                if (!geminiResponse.ok) {
+                    const errorData = await geminiResponse.json();
+                    throw new Error(errorData.error?.message || 'Gemini API error');
+                }
+
+                const geminiData = await geminiResponse.json();
+
+                // Extract image data
+                const imageData = geminiData.candidates?.[0]?.content?.parts?.[0];
+
+                if (imageData && imageData.inlineData) {
+                    // Convert base64 to data URL
+                    const imageUrl = `data:${imageData.inlineData.mimeType};base64,${imageData.inlineData.data}`;
+
+                    return new Response(JSON.stringify({
+                        success: true,
+                        data: [{
+                            url: imageUrl,
+                            prompt: finalPrompt,
+                            originalPrompt: prompt,
+                            enhanced: true,
+                            model: 'Gemini 2.0 Flash',
+                            provider: 'Google Gemini',
+                            free: true
+                        }]
+                    }), {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                } else {
+                    throw new Error('No image data in Gemini response');
+                }
+
+            } catch (error) {
+                console.error('[Imagine Premium] Gemini error:', error);
+                // Fall back to standard mode
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: `Gemini error: ${error.message}. Falling back to standard mode.`,
+                    fallbackToStandard: true
+                }), {
+                    status: 503,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
             }
         }
 
-        // Get dimensions
-        const dimensions = SIZE_MAP[size] || SIZE_MAP['1024x1024'];
-
-        // Append style
-        let finalPrompt = enhancedPrompt;
+        // STANDARD MODE: Use Pollinations.ai (FREE)
+        let finalPrompt = prompt;
         if (style && style !== 'none') {
-            const styleMap = {
-                'photorealistic': 'photorealistic, highly detailed, 8k',
-                'digital-art': 'digital art, vibrant colors, detailed',
-                'anime': 'anime style, japanese animation, colorful',
-                'oil-painting': 'oil painting, classical art, brushstrokes',
-                '3d-render': '3D render, octane render, volumetric lighting',
-                'watercolor': 'watercolor painting, soft colors, artistic',
-                'minimalist': 'minimalist, clean, simple, modern design'
-            };
-            const styleCheck = styleMap[style] || style;
-            finalPrompt = `${finalPrompt}, ${styleCheck}`;
+            finalPrompt = `${prompt}, ${style} style`;
         }
 
-        // Use model-specific enhancements
-        const modelConfig = MODELS[model] || MODELS['flux'];
-        let modelParam = '';
-        if (model === 'flux-realism') {
-            modelParam = '&model=flux-realism';
-        } else if (model === 'flux-anime') {
-            modelParam = '&model=flux-anime';
-            finalPrompt = `${finalPrompt}, anime style`;
-        } else if (model === 'flux-3d') {
-            modelParam = '&model=flux-3d';
-            finalPrompt = `${finalPrompt}, 3D render`;
-        } else if (model === 'turbo') {
-            modelParam = '&model=turbo';
-        }
-
-        // Encode prompt for URL
-        const encodedPrompt = encodeURIComponent(finalPrompt);
-
-        // Generate unique seed for variety
-        const seed = Math.floor(Math.random() * 1000000);
-
-        // Build Pollinations URL
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${dimensions.width}&height=${dimensions.height}&seed=${seed}&nologo=true${modelParam}`;
-
-        console.log(`[Image] Pollinations URL: ${imageUrl.substring(0, 100)}...`);
-
-        // Skip HEAD check to avoid timeouts - Pollinations usually works
-        // The frontend will handle load errors
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=${model}&width=${size.split('x')[0]}&height=${size.split('x')[1]}&nologo=true&enhance=true`;
 
         return new Response(JSON.stringify({
             success: true,
             data: [{
                 url: imageUrl,
-                width: dimensions.width,
-                height: dimensions.height
-            }],
-            model: modelConfig.name,
-            provider: 'pollinations.ai',
-            prompt: finalPrompt
+                prompt: finalPrompt,
+                originalPrompt: prompt,
+                enhanced: false,
+                model: model,
+                provider: 'Pollinations.ai',
+                free: true
+            }]
         }), {
             status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
 
-    } catch (e) {
-        console.error('[Image] Error:', e);
+    } catch (error) {
+        console.error('[Imagine] Error:', error);
         return new Response(JSON.stringify({
             success: false,
-            error: e.message || 'Image generation failed'
+            error: error.message || 'Image generation failed'
         }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
