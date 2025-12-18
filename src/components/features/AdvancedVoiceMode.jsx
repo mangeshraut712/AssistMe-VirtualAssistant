@@ -529,11 +529,33 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
 
     const processPremium = useCallback(async (text) => {
         try {
-            const statusRes = await fetch('/api/gemini/status');
-            const statusData = await statusRes.json();
+            // Add timeout to prevent hanging
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-            if (!statusData.available) {
-                setErrorMessage('Premium unavailable. Using standard.');
+            try {
+                const statusRes = await fetch('/api/gemini/status', {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (!statusRes.ok) {
+                    throw new Error(`Status check failed: ${statusRes.status}`);
+                }
+
+                const statusData = await statusRes.json();
+
+                if (!statusData.available) {
+                    setErrorMessage('Premium unavailable. Using standard mode.');
+                    setTimeout(() => setErrorMessage(''), 3000);
+                    await processStandard(text);
+                    return;
+                }
+            } catch (fetchErr) {
+                clearTimeout(timeoutId);
+                console.error('[Voice] Status check failed:', fetchErr.message);
+                // If status check fails, fall back to standard mode
+                setErrorMessage('Server unavailable. Using browser voice.');
                 setTimeout(() => setErrorMessage(''), 3000);
                 await processStandard(text);
                 return;
@@ -547,6 +569,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
             await processStandard(text);
         }
     }, [processStandard, connectToGeminiLive]);
+
 
     const processUserInput = useCallback(async (text) => {
         if (!text || isProcessingRef.current) return;

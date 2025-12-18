@@ -24,6 +24,18 @@
       "destination": "/api/gemini/key.js"
     },
     {
+      "source": "/api/gemini/status",
+      "destination": "/api/gemini/status.js"
+    },
+    {
+      "source": "/api/tts/(.*)",
+      "destination": "/api/tts.js"
+    },
+    {
+      "source": "/api/images/(.*)",
+      "destination": "/api/images/generate.js"
+    },
+    {
       "source": "/((?!api/|_next/|assets/|favicon.ico|manifest.json|robots.txt).*)",
       "destination": "/index.html"
     }
