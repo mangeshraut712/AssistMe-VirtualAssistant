@@ -322,13 +322,20 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                     model: selectedModel,
                     size: aspectConfig?.size || '1024x1024',
                     style: style !== 'none' ? style : null,
-                    usePremium: isPremium  // Use Gemini enhancement if premium
+                    usePremium: isPremium
                 })
             });
 
             const data = await response.json();
 
-            if (!response.ok || !data.success) {
+            // Handle fallback to standard mode
+            if (data.fallbackToStandard) {
+                setError(data.error);
+                setIsPremium(false);
+                return;
+            }
+
+            if (!data.success) {
                 throw new Error(data.error || 'Generation failed');
             }
 
@@ -338,14 +345,23 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                     id: Date.now() + i,
                     url: img.url,
                     aspect: getAspectClass(aspectRatio),
-                    prompt: img.prompt, // Use enhanced prompt if available
+                    prompt: img.prompt,
                     originalPrompt: img.originalPrompt,
                     model: modelName,
-                    provider: isPremium ? 'Gemini + Pollinations' : 'Pollinations.ai',
+                    provider: img.provider || 'Pollinations.ai',
+                    mode: img.mode || 'Standard',
                     isNew: true,
-                    enhanced: img.enhanced
+                    enhanced: img.enhanced,
+                    note: img.note
                 }));
                 setGallery(prev => [...newImages, ...prev]);
+
+                // Show success message for Premium
+                const firstImg = data.data[0];
+                if (firstImg.enhanced && firstImg.note) {
+                    setStatusMessage(firstImg.note);
+                    setTimeout(() => setStatusMessage(''), 3000);
+                }
             }
         } catch (e) {
             console.error('[Imagine] Error:', e);
