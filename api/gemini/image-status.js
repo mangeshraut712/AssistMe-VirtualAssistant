@@ -1,8 +1,8 @@
 /**
- * Gemini Image Enhancement Status Check
+ * Gemini Image Generation Status Check
  * 
- * Premium mode uses Gemini AI for intelligent prompt enhancement
- * Both Premium and Standard generate images via Pollinations (FREE)
+ * Premium mode uses Gemini's native image generation
+ * Standard mode uses Pollinations.ai
  */
 
 export const config = {
@@ -30,9 +30,8 @@ export default async function handler(req) {
         return new Response(JSON.stringify({
             available: false,
             reason: 'API key not configured',
-            message: 'Add GOOGLE_API_KEY to Vercel for Premium AI prompt enhancement',
-            standardAvailable: true,
-            standardNote: 'Standard mode works without API key'
+            message: 'Add GOOGLE_API_KEY to Vercel for Premium image generation',
+            standardAvailable: true
         }), {
             status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -41,14 +40,13 @@ export default async function handler(req) {
 
     return new Response(JSON.stringify({
         available: true,
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.0-flash-preview-image-generation',
         features: {
-            promptEnhancement: true,
-            imageGeneration: 'pollinations', // Pollinations for actual generation
+            nativeImageGeneration: true,
             free: true,
-            unlimited: true
+            provider: 'Google Gemini AI'
         },
-        description: 'Premium uses Gemini AI for intelligent prompt enhancement'
+        description: 'Premium generates images directly using Google Gemini AI'
     }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
