@@ -573,6 +573,9 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                             if (data.serverContent) {
                                 const serverContent = data.serverContent;
 
+                                // DEBUG: Log everything the API returns
+                                console.log('[Voice] Server content received:', JSON.stringify(serverContent, null, 2));
+
                                 if (serverContent.interrupted) {
                                     audioChunks.length = 0;
                                     return;
@@ -582,13 +585,26 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                 if (serverContent.modelTurn?.parts) {
                                     for (const part of serverContent.modelTurn.parts) {
                                         // ONLY collect audio, ignore text (it's internal thinking)
-                                        if (part.inlineData?.data) audioChunks.push(part.inlineData.data);
+                                        if (part.inlineData?.data) {
+                                            audioChunks.push(part.inlineData.data);
+                                            console.log('[Voice] Audio chunk received');
+                                        }
+                                        // Check if there's text in modelTurn (sometimes transcription comes here)
+                                        if (part.text) {
+                                            console.log('[Voice] Text in modelTurn:', part.text);
+                                            // Use this as fallback if no outputAudioTranscription
+                                            if (!serverContent.outputAudioTranscription?.text) {
+                                                accumulatedText += part.text;
+                                                setAiStreamingText(accumulatedText);
+                                            }
+                                        }
                                     }
                                 }
 
                                 // This is what the AI ACTUALLY SAYS - use this for display
                                 if (serverContent.outputAudioTranscription?.text) {
                                     accumulatedText += serverContent.outputAudioTranscription.text;
+                                    console.log('[Voice] AI streaming (transcription):', accumulatedText);
                                     // Stream to UI in real-time while AI is speaking
                                     setAiStreamingText(accumulatedText);
                                 }
@@ -598,11 +614,19 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
 
                                     // Only show the audio transcription (what AI actually spoke)
                                     const spokenText = accumulatedText.trim();
+                                    console.log('[Voice] Turn complete. Spoken text:', spokenText);
                                     if (spokenText) {
-                                        setConversation(prev => [...prev, {
-                                            role: 'assistant',
-                                            content: spokenText
-                                        }]);
+                                        console.log('[Voice] Adding AI response to conversation');
+                                        setConversation(prev => {
+                                            const updated = [...prev, {
+                                                role: 'assistant',
+                                                content: spokenText
+                                            }];
+                                            console.log('[Voice] Updated conversation:', updated);
+                                            return updated;
+                                        });
+                                    } else {
+                                        console.warn('[Voice] No spoken text to add!');
                                     }
 
                                     // Clear streaming text after adding to conversation
@@ -1075,115 +1099,252 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                         </div>
                     </header>
 
-                    {/* Conversation Area */}
-                    <div className="relative z-10 flex-1 overflow-y-auto px-6 py-6 sm:px-8">
-                        {/* Welcome message - shows until conversation starts */}
-                        {conversation.length === 0 && status !== 'speaking' && (
-                            <div className="flex flex-col items-center justify-center h-full text-center pb-20">
-                                <div className="relative mb-6">
-                                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500/20 to-indigo-500/20 dark:from-violet-500/10 dark:to-indigo-500/10 blur-xl" />
-                                    <Brain className="relative w-20 h-20 text-violet-500 dark:text-violet-400" />
-                                </div>
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Gemini Live Voice</h2>
-                                <p className="text-gray-600 dark:text-gray-300 max-w-md text-base">
-                                    Experience natural AI conversation with native audio synthesis.
-                                    <br /><span className="font-semibold text-violet-600 dark:text-violet-400">Tap the orb to begin.</span>
-                                </p>
-                            </div>
-                        )}
+                    {/* ═══════════════════════════════════════════════════════════════
+                        PREMIUM CONVERSATION AREA - Apple Intelligence Style
+                    ═══════════════════════════════════════════════════════════════ */}
+                    <div className="relative z-10 flex-1 overflow-y-auto">
+                        {/* Gradient Background */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-violet-50/50 via-white to-indigo-50/50 dark:from-violet-950/20 dark:via-gray-950 dark:to-indigo-950/20" />
 
-                        <div className="space-y-4">
-                            {conversation.map((msg, i) => (
+                        <div className="relative px-4 py-6 sm:px-6 lg:px-8 max-w-3xl mx-auto">
+                            {/* Welcome Hero - Shows when no conversation */}
+                            {conversation.length === 0 && !aiStreamingText && !transcript && (
                                 <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    className={cn("flex gap-3", msg.role === 'user' ? "justify-end" : "justify-start")}
+                                    className="flex flex-col items-center justify-center min-h-[50vh] text-center"
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ type: "spring", stiffness: 200 }}
                                 >
-                                    {/* AI Avatar */}
-                                    {msg.role === 'assistant' && (
-                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                                            <Brain className="w-4 h-4 text-white" />
+                                    <motion.div
+                                        className="relative mb-8"
+                                        animate={{
+                                            y: [0, -10, 0],
+                                            rotateZ: [0, 5, -5, 0]
+                                        }}
+                                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                                    >
+                                        <div className="absolute inset-0 w-28 h-28 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 blur-2xl opacity-30" />
+                                        <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-2xl">
+                                            <Brain className="w-14 h-14 text-white" />
                                         </div>
-                                    )}
+                                    </motion.div>
+                                    <h2 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400 bg-clip-text text-transparent mb-3">
+                                        Gemini Live Voice
+                                    </h2>
+                                    <p className="text-gray-600 dark:text-gray-300 max-w-sm text-lg leading-relaxed">
+                                        Experience natural AI conversation with real-time audio synthesis
+                                    </p>
+                                    <motion.p
+                                        className="mt-4 text-violet-600 dark:text-violet-400 font-semibold"
+                                        animate={{ opacity: [1, 0.5, 1] }}
+                                        transition={{ duration: 2, repeat: Infinity }}
+                                    >
+                                        ✨ Tap the orb below to begin
+                                    </motion.p>
+                                </motion.div>
+                            )}
 
-                                    <div
+                            {/* Messages Container */}
+                            <div className="space-y-6">
+                                {/* Conversation History */}
+                                {conversation.map((msg, i) => (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 300,
+                                            damping: 25,
+                                            delay: i * 0.05
+                                        }}
                                         className={cn(
-                                            "max-w-[80%] sm:max-w-[70%] px-5 py-3 rounded-2xl",
-                                            msg.role === 'user'
-                                                ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/20"
-                                                : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 shadow-sm"
+                                            "flex items-end gap-3",
+                                            msg.role === 'user' ? "justify-end" : "justify-start"
                                         )}
                                     >
+                                        {/* AI Avatar */}
                                         {msg.role === 'assistant' && (
-                                            <p className="text-[10px] font-medium text-violet-600 dark:text-violet-400 mb-1 uppercase tracking-wide">Gemini says</p>
+                                            <motion.div
+                                                className="flex-shrink-0"
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                transition={{ type: "spring", delay: 0.1 }}
+                                            >
+                                                <div className="relative w-10 h-10">
+                                                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-full blur-md opacity-50" />
+                                                    <div className="relative w-full h-full bg-gradient-to-br from-violet-500 to-indigo-600 rounded-full flex items-center justify-center shadow-xl ring-2 ring-white/50 dark:ring-gray-800/50">
+                                                        <Sparkles className="w-5 h-5 text-white" />
+                                                    </div>
+                                                </div>
+                                            </motion.div>
                                         )}
-                                        <p className="text-sm sm:text-base leading-relaxed">{msg.content}</p>
-                                    </div>
 
-                                    {/* User Avatar */}
-                                    {msg.role === 'user' && (
-                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                                            <Mic className="w-4 h-4 text-white" />
+                                        {/* Message Bubble */}
+                                        <div className={cn(
+                                            "relative max-w-[80%] sm:max-w-[70%] rounded-3xl shadow-xl",
+                                            msg.role === 'user'
+                                                ? "bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 text-white px-6 py-4"
+                                                : "bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 px-6 py-4"
+                                        )}>
+                                            {/* AI Header */}
+                                            {msg.role === 'assistant' && (
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="flex gap-1">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                                                    </div>
+                                                    <span className="text-[11px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest">
+                                                        Gemini
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* Message Text */}
+                                            <p className={cn(
+                                                "text-[15px] leading-relaxed font-medium",
+                                                msg.role === 'user' ? "text-white" : "text-gray-800 dark:text-gray-100"
+                                            )}>
+                                                {msg.content}
+                                            </p>
                                         </div>
-                                    )}
-                                </motion.div>
-                            ))}
 
-                            {/* Real-time Transcript Display */}
-                            {transcript && status === 'listening' && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="flex gap-3 justify-end"
-                                >
-                                    <div className="max-w-[80%] px-5 py-4 rounded-2xl bg-gradient-to-r from-violet-500/10 to-indigo-500/10 dark:from-violet-500/20 dark:to-indigo-500/20 border-2 border-violet-400 dark:border-violet-500 shadow-lg">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <div className="flex gap-1">
-                                                <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                                <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                                <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                        {/* User Avatar */}
+                                        {msg.role === 'user' && (
+                                            <motion.div
+                                                className="flex-shrink-0"
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                transition={{ type: "spring", delay: 0.1 }}
+                                            >
+                                                <div className="relative w-10 h-10">
+                                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full blur-md opacity-50" />
+                                                    <div className="relative w-full h-full bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-xl ring-2 ring-white/50 dark:ring-gray-800/50">
+                                                        <Mic className="w-5 h-5 text-white" />
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </motion.div>
+                                ))}
+
+                                {/* ═══════════════════════════════════════════════════════════
+                                    REAL-TIME AI RESPONSE - Shows while Gemini is speaking
+                                ═══════════════════════════════════════════════════════════ */}
+                                {aiStreamingText && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 30 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="flex items-end gap-3 justify-start"
+                                    >
+                                        <motion.div
+                                            className="flex-shrink-0"
+                                            animate={{ scale: [1, 1.15, 1] }}
+                                            transition={{ repeat: Infinity, duration: 1.5 }}
+                                        >
+                                            <div className="relative w-10 h-10">
+                                                <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-full blur-lg opacity-70 animate-pulse" />
+                                                <div className="relative w-full h-full bg-gradient-to-br from-violet-500 to-indigo-600 rounded-full flex items-center justify-center shadow-2xl ring-2 ring-violet-300 dark:ring-violet-700">
+                                                    <Volume2 className="w-5 h-5 text-white" />
+                                                </div>
                                             </div>
-                                            <span className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">Listening...</span>
-                                        </div>
-                                        <p className="text-base font-medium text-gray-900 dark:text-white">{transcript}</p>
-                                    </div>
-                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shadow-lg animate-pulse">
-                                        <Mic className="w-4 h-4 text-white" />
-                                    </div>
-                                </motion.div>
-                            )}
+                                        </motion.div>
 
-                            {/* AI Speaking Indicator */}
-                            {status === 'speaking' && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="flex gap-3 justify-start"
-                                >
-                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                                        <Volume2 className="w-4 h-4 text-white animate-pulse" />
-                                    </div>
-                                    <div className="px-5 py-3 rounded-2xl bg-violet-100 dark:bg-violet-500/20 border border-violet-300 dark:border-violet-500/50">
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex gap-0.5">
-                                                {[...Array(5)].map((_, i) => (
+                                        <div className="relative max-w-[80%] sm:max-w-[70%] px-6 py-4 rounded-3xl bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/40 dark:to-indigo-900/40 border-2 border-violet-300 dark:border-violet-600 shadow-2xl backdrop-blur-xl">
+                                            {/* Speaking Header with Waveform */}
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="flex items-center gap-0.5">
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <motion.div
+                                                            key={i}
+                                                            className="w-1 bg-gradient-to-t from-violet-500 to-indigo-500 rounded-full"
+                                                            animate={{ height: [4, 20, 4] }}
+                                                            transition={{
+                                                                duration: 0.5,
+                                                                repeat: Infinity,
+                                                                delay: i * 0.08,
+                                                                ease: "easeInOut"
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400 bg-clip-text text-transparent uppercase tracking-wider">
+                                                    Gemini Speaking
+                                                </span>
+                                            </div>
+
+                                            {/* Streaming Text */}
+                                            <p className="text-[15px] leading-relaxed font-medium text-gray-800 dark:text-gray-100">
+                                                {aiStreamingText}
+                                                <motion.span
+                                                    className="inline-block w-0.5 h-5 ml-1 bg-violet-500 rounded-full"
+                                                    animate={{ opacity: [1, 0] }}
+                                                    transition={{ duration: 0.6, repeat: Infinity }}
+                                                />
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* ═══════════════════════════════════════════════════════════
+                                    USER LISTENING INDICATOR - Shows what user is saying
+                                ═══════════════════════════════════════════════════════════ */}
+                                {transcript && status === 'listening' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 30 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="flex items-end gap-3 justify-end"
+                                    >
+                                        <div className="relative max-w-[80%] sm:max-w-[70%] px-6 py-4 rounded-3xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/40 dark:to-cyan-900/40 border-2 border-blue-300 dark:border-blue-600 shadow-2xl backdrop-blur-xl">
+                                            {/* Listening Header */}
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="flex gap-1">
                                                     <motion.div
-                                                        key={i}
-                                                        className="w-1 bg-violet-500 dark:bg-violet-400 rounded-full"
-                                                        animate={{ height: [8, 20, 8] }}
-                                                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                                                        className="w-2 h-2 bg-blue-500 rounded-full"
+                                                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                                                        transition={{ duration: 1, repeat: Infinity }}
                                                     />
-                                                ))}
+                                                    <motion.div
+                                                        className="w-2 h-2 bg-blue-500 rounded-full"
+                                                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                                                        transition={{ duration: 1, repeat: Infinity, delay: 0.15 }}
+                                                    />
+                                                    <motion.div
+                                                        className="w-2 h-2 bg-blue-500 rounded-full"
+                                                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                                                        transition={{ duration: 1, repeat: Infinity, delay: 0.3 }}
+                                                    />
+                                                </div>
+                                                <span className="text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent uppercase tracking-wider">
+                                                    Listening
+                                                </span>
                                             </div>
-                                            <span className="text-sm font-medium text-violet-700 dark:text-violet-300">Speaking...</span>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </div>
 
-                        <div ref={conversationEndRef} />
+                                            {/* User's Speech */}
+                                            <p className="text-[15px] leading-relaxed font-medium text-gray-800 dark:text-gray-100">
+                                                {transcript}
+                                            </p>
+                                        </div>
+
+                                        <motion.div
+                                            className="flex-shrink-0"
+                                            animate={{ scale: [1, 1.15, 1] }}
+                                            transition={{ repeat: Infinity, duration: 1 }}
+                                        >
+                                            <div className="relative w-10 h-10">
+                                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full blur-lg opacity-70 animate-pulse" />
+                                                <div className="relative w-full h-full bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-2xl ring-2 ring-blue-300 dark:ring-blue-700">
+                                                    <Mic className="w-5 h-5 text-white" />
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </div>
+
+                            <div ref={conversationEndRef} className="h-4" />
+                        </div>
                     </div>
 
                     {/* Neural Orb */}
