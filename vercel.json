@@ -28,6 +28,14 @@
       "destination": "/api/gemini/status.js"
     },
     {
+      "source": "/api/xai/key",
+      "destination": "/api/xai/key.js"
+    },
+    {
+      "source": "/api/xai/status",
+      "destination": "/api/xai/status.js"
+    },
+    {
       "source": "/api/tts/(.*)",
       "destination": "/api/tts.js"
     },
@@ -55,6 +63,24 @@
         {
           "key": "Access-Control-Allow-Headers",
           "value": "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     },
