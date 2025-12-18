@@ -240,51 +240,125 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
     }, []);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // AUDIO PLAYBACK
+    // AUDIO PLAYBACK (IMPROVED)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const playPCMAudio = useCallback(async (base64Data) => {
-        if (!base64Data || isMuted) return;
+    // Single persistent AudioContext for playback (separate from visualizer context)
+    const playbackContextRef = useRef(null);
+
+    const getAudioContext = useCallback(() => {
+        if (!playbackContextRef.current || playbackContextRef.current.state === 'closed') {
+            playbackContextRef.current = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 24000,  // Match Gemini's output
+                latencyHint: 'interactive'  // Low latency for real-time feel
+            });
+        }
+        // Resume if suspended (happens on mobile)
+        if (playbackContextRef.current.state === 'suspended') {
+            playbackContextRef.current.resume();
+        }
+        return playbackContextRef.current;
+    }, []);
+
+    /**
+     * Play multiple PCM audio chunks smoothly by concatenating them
+     * This eliminates gaps between chunks for natural-sounding speech
+     */
+    const playPCMAudioChunks = useCallback(async (chunks) => {
+        if (!chunks || chunks.length === 0 || isMuted) return;
 
         try {
-            const binaryString = atob(base64Data);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+            const audioCtx = getAudioContext();
+
+            // Decode all chunks first
+            const decodedChunks = [];
+            let totalSamples = 0;
+
+            for (const base64Data of chunks) {
+                try {
+                    const binaryString = atob(base64Data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+
+                    // Convert int16 PCM to float32
+                    const int16Array = new Int16Array(bytes.buffer);
+                    const float32Array = new Float32Array(int16Array.length);
+                    for (let i = 0; i < int16Array.length; i++) {
+                        // Normalize and apply slight gain for clarity
+                        float32Array[i] = Math.max(-1, Math.min(1, int16Array[i] / 32768.0 * 1.1));
+                    }
+
+                    decodedChunks.push(float32Array);
+                    totalSamples += float32Array.length;
+                } catch (err) {
+                    console.warn('[Voice] Failed to decode chunk:', err);
+                }
             }
 
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)({
-                sampleRate: CONFIG.AUDIO_OUTPUT.sampleRate
-            });
-
-            const int16Array = new Int16Array(bytes.buffer);
-            const float32Array = new Float32Array(int16Array.length);
-            for (let i = 0; i < int16Array.length; i++) {
-                float32Array[i] = int16Array[i] / 32768.0;
+            if (decodedChunks.length === 0 || totalSamples === 0) {
+                console.warn('[Voice] No valid audio chunks to play');
+                return;
             }
 
+            // Concatenate all chunks into a single buffer for smooth playback
+            const concatenated = new Float32Array(totalSamples);
+            let offset = 0;
+            for (const chunk of decodedChunks) {
+                concatenated.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            // Create audio buffer
             const audioBuffer = audioCtx.createBuffer(
-                CONFIG.AUDIO_OUTPUT.channels,
-                float32Array.length,
-                CONFIG.AUDIO_OUTPUT.sampleRate
+                1,  // Mono
+                concatenated.length,
+                24000  // Gemini's native sample rate
             );
-            audioBuffer.getChannelData(0).set(float32Array);
+            audioBuffer.getChannelData(0).set(concatenated);
 
+            // Create and configure source
             const source = audioCtx.createBufferSource();
             source.buffer = audioBuffer;
-            source.connect(audioCtx.destination);
 
+            // Add gain node for volume control and dynamic range
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.value = 1.0;
+
+            // Optional: Add compression for better dynamics
+            const compressor = audioCtx.createDynamicsCompressor();
+            compressor.threshold.value = -24;
+            compressor.knee.value = 30;
+            compressor.ratio.value = 12;
+            compressor.attack.value = 0.003;
+            compressor.release.value = 0.25;
+
+            // Connect: source -> compressor -> gain -> destination
+            source.connect(compressor);
+            compressor.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            // Play and return promise
             return new Promise((resolve) => {
                 source.onended = () => {
-                    audioCtx.close();
+                    // Don't close context, reuse it
                     resolve();
                 };
                 source.start(0);
             });
         } catch (error) {
-            console.error('[Voice] PCM audio error:', error);
+            console.error('[Voice] PCM audio playback error:', error);
         }
-    }, [isMuted]);
+    }, [isMuted, getAudioContext]);
+
+    /**
+     * Legacy single-chunk playback (for fallback/compatibility)
+     */
+    const playPCMAudio = useCallback(async (base64Data) => {
+        return playPCMAudioChunks([base64Data]);
+    }, [playPCMAudioChunks]);
+
 
     const speak = useCallback(async (text) => {
         if (!text || isMuted) return;
@@ -412,11 +486,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                         }]);
                                     }
 
+                                    // Play all audio chunks at once for smooth, fast playback
                                     if (audioChunks.length > 0) {
                                         setStatus('speaking');
-                                        for (const chunk of audioChunks) {
-                                            await playPCMAudio(chunk);
-                                        }
+                                        await playPCMAudioChunks(audioChunks);  // IMPROVED: Batch playback
                                     } else if (cleanText) {
                                         setStatus('speaking');
                                         await speak(cleanText);
@@ -662,6 +735,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
             stopListening();
             window.speechSynthesis?.cancel();
             window.removeEventListener('keydown', handleKeyDown);
+            // Cleanup audio context
+            if (playbackContextRef.current && playbackContextRef.current.state !== 'closed') {
+                playbackContextRef.current.close();
+            }
         };
     }, [isOpen, stopListening, onClose]);
 
