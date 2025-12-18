@@ -19,7 +19,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Mic, MicOff, Volume2, VolumeX, Trash2,
-    Sparkles, Zap, Brain, AudioWaveform
+    Sparkles, Zap, Brain, AudioWaveform, Copy, Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -171,7 +171,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
     // State
     const [status, setStatus] = useState('idle');
     const [conversation, setConversation] = useState([]);
-    const [transcript, setTranscript] = useState('');
+    const [transcript, setTranscript] = useState(''); // User's speech transcript
+    const [aiStreamingText, setAiStreamingText] = useState(''); // AI's current speech (real-time)
     const [isMuted, setIsMuted] = useState(false);
     const [isPremium, setIsPremium] = useState(true);
     const [errorMessage, setErrorMessage] = useState('');
@@ -588,6 +589,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                 // This is what the AI ACTUALLY SAYS - use this for display
                                 if (serverContent.outputAudioTranscription?.text) {
                                     accumulatedText += serverContent.outputAudioTranscription.text;
+                                    // Stream to UI in real-time while AI is speaking
+                                    setAiStreamingText(accumulatedText);
                                 }
 
                                 if (serverContent.turnComplete) {
@@ -601,6 +604,9 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                             content: spokenText
                                         }]);
                                     }
+
+                                    // Clear streaming text after adding to conversation
+                                    setAiStreamingText('');
 
                                     // Play all audio chunks at once for smooth, fast playback
                                     if (audioChunks.length > 0) {
@@ -861,6 +867,61 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
     if (!isOpen) return null;
 
     // ─────────────────────────────────────────────────────────────────────────
+    // CONVERSATION MANAGEMENT
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const exportConversation = (format = 'text') => {
+        if (conversation.length === 0) return;
+
+        let content;
+        const timestamp = new Date().toLocaleString();
+
+        if (format === 'json') {
+            content = JSON.stringify({
+                exported: timestamp,
+                mode: isPremium ? 'Premium (Gemini Live)' : 'Standard',
+                messages: conversation
+            }, null, 2);
+        } else {
+            content = `Voice Conversation Export\nMode: ${isPremium ? 'Premium (Gemini Live)' : 'Standard'}\nDate: ${timestamp}\n\n`;
+            conversation.forEach((msg, i) => {
+                content += `${msg.role === 'user' ? 'You' : 'Gemini'}: ${msg.content}\n\n`;
+            });
+        }
+
+        const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `voice-conversation-${Date.now()}.${format === 'json' ? 'json' : 'txt'}`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const copyConversation = async () => {
+        if (conversation.length === 0) return;
+
+        const text = conversation.map(msg =>
+            `${msg.role === 'user' ? 'You' : 'AI'}: ${msg.content}`
+        ).join('\n\n');
+
+        try {
+            await navigator.clipboard.writeText(text);
+            // Could add a toast notification here
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
+
+    const clearConversation = () => {
+        if (confirm('Clear conversation history?')) {
+            setConversation([]);
+            setTranscript('');
+            setStatus('idle');
+        }
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
     // HELPERS
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -971,22 +1032,43 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                         ? "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30"
                                         : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                                 )}
+                                title={isMuted ? 'Unmute' : 'Mute'}
                             >
                                 {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                             </motion.button>
                             {conversation.length > 0 && (
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => setConversation([])}
-                                    className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-all border border-gray-200 dark:border-gray-700"
-                                >
-                                    <Trash2 className="w-5 h-5" />
-                                </motion.button>
+                                <>
+                                    <motion.button
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={copyConversation}
+                                        className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-500/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all border border-gray-200 dark:border-gray-700"
+                                        title="Copy conversation"
+                                    >
+                                        <Copy className="w-5 h-5" />
+                                    </motion.button>
+                                    <motion.button
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => exportConversation('text')}
+                                        className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-500/20 hover:text-green-600 dark:hover:text-green-400 transition-all border border-gray-200 dark:border-gray-700"
+                                        title="Download conversation"
+                                    >
+                                        <Download className="w-5 h-5" />
+                                    </motion.button>
+                                    <motion.button
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={clearConversation}
+                                        className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-all border border-gray-200 dark:border-gray-700"
+                                        title="Clear conversation"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </motion.button>
+                                </>
                             )}
                             <motion.button
                                 whileTap={{ scale: 0.95 }}
                                 onClick={onClose}
                                 className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
+                                title="Close"
                             >
                                 <X className="w-5 h-5" />
                             </motion.button>
