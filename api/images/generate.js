@@ -1,10 +1,18 @@
 /**
  * Premium Image Generation API
  * 
- * Premium Mode: Gemini AI enhances prompts for better results + Pollinations generation
+ * Premium Mode: Gemini Flash AI enhances prompts for BETTER images
  * Standard Mode: Direct Pollinations generation
  * 
  * Both modes are 100% FREE!
+ * 
+ * How Premium Works:
+ * 1. User enters simple prompt: "a cat"
+ * 2. Gemini Flash enhances it: "a fluffy orange tabby cat, golden hour lighting, 
+ *    shallow depth of field, professional photography, 8k ultra detailed"
+ * 3. Enhanced prompt creates MUCH better image
+ * 
+ * Result: Premium users get significantly better quality images!
  */
 
 export const config = {
@@ -32,23 +40,30 @@ export default async function handler(req) {
     try {
         const { prompt, model = 'flux', size = '1024x1024', style, usePremium = false } = await req.json();
 
-        if (!prompt) {
+        if (!prompt || !prompt.trim()) {
             return new Response(JSON.stringify({ error: 'Prompt required' }), {
                 status: 400,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
         }
 
-        let enhancedPrompt = prompt;
+        let enhancedPrompt = prompt.trim();
         let wasEnhanced = false;
+        let enhancementNote = '';
 
-        // PREMIUM MODE: Use Gemini to enhance the prompt for better image generation
+        // PREMIUM MODE: Use Gemini Flash to intelligently enhance the prompt
         if (usePremium) {
             const geminiKey = process.env.GOOGLE_API_KEY;
 
-            if (geminiKey) {
+            if (!geminiKey) {
+                // No API key - continue with standard mode but note it
+                enhancementNote = 'Premium requires GOOGLE_API_KEY. Using standard mode.';
+                console.log('[Imagine] No API key, using standard mode');
+            } else {
                 try {
-                    // Use Gemini to create a better, more detailed prompt
+                    console.log('[Imagine Premium] Enhancing prompt:', prompt);
+
+                    // Use Gemini Flash for intelligent prompt enhancement
                     const geminiResponse = await fetch(
                         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`,
                         {
@@ -57,24 +72,28 @@ export default async function handler(req) {
                             body: JSON.stringify({
                                 contents: [{
                                     parts: [{
-                                        text: `You are an expert AI image prompt engineer. Transform this simple prompt into a highly detailed, artistic prompt for AI image generation. Include specific details about:
-- Lighting (golden hour, studio lighting, dramatic shadows, etc.)
-- Composition (rule of thirds, centered, wide angle, macro, etc.)
-- Style (photorealistic, digital art, oil painting, etc.)
-- Atmosphere (moody, vibrant, serene, dynamic, etc.)
-- Technical quality (8k, ultra detailed, professional, etc.)
+                                        text: `You are an expert AI image prompt engineer. Your job is to transform simple prompts into detailed, artistic prompts that will generate stunning images.
 
-Keep the enhanced prompt under 250 characters. Respond with ONLY the enhanced prompt, no explanations.
+Transform this prompt into a highly detailed image generation prompt. Include specific details about:
+- Subject details (colors, textures, features)
+- Lighting (golden hour, studio, dramatic, soft, etc.)
+- Composition (close-up, wide angle, centered, rule of thirds)
+- Style (photorealistic, digital art, cinematic, etc.)
+- Atmosphere (moody, vibrant, peaceful, dynamic)
+- Quality modifiers (8k, ultra detailed, professional, award-winning)
 
-Original prompt: "${prompt}"
-${style && style !== 'none' ? `Desired style: ${style}` : ''}
+Keep the enhanced prompt under 200 characters. Respond with ONLY the enhanced prompt, nothing else.
 
-Enhanced prompt:`
+Original: "${prompt}"
+${style && style !== 'none' ? `Style preference: ${style}` : ''}
+
+Enhanced:`
                                     }]
                                 }],
                                 generationConfig: {
-                                    temperature: 0.8,
-                                    maxOutputTokens: 100
+                                    temperature: 0.7,
+                                    maxOutputTokens: 100,
+                                    topP: 0.8
                                 }
                             })
                         }
@@ -83,28 +102,42 @@ Enhanced prompt:`
                     if (geminiResponse.ok) {
                         const geminiData = await geminiResponse.json();
                         const enhanced = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-                        if (enhanced && enhanced.length > 10) {
-                            enhancedPrompt = enhanced.replace(/^["']|["']$/g, ''); // Remove quotes
+
+                        if (enhanced && enhanced.length > 10 && enhanced.length < 500) {
+                            // Clean up the enhanced prompt
+                            enhancedPrompt = enhanced
+                                .replace(/^["']|["']$/g, '')  // Remove quotes
+                                .replace(/^Enhanced:\s*/i, '') // Remove "Enhanced:" prefix
+                                .trim();
                             wasEnhanced = true;
-                            console.log('[Imagine Premium] Enhanced prompt:', enhancedPrompt);
+                            console.log('[Imagine Premium] SUCCESS! Enhanced to:', enhancedPrompt);
+                        } else {
+                            console.warn('[Imagine Premium] Enhancement too short/long, using original');
                         }
+                    } else {
+                        const errorText = await geminiResponse.text();
+                        console.error('[Imagine Premium] Gemini error:', errorText);
+                        enhancementNote = 'Enhancement service busy. Using optimized standard mode.';
                     }
                 } catch (error) {
-                    console.warn('[Imagine] Gemini enhancement failed:', error.message);
-                    // Continue with original prompt
+                    console.error('[Imagine Premium] Enhancement failed:', error.message);
+                    enhancementNote = 'Enhancement unavailable. Using optimized standard mode.';
                 }
             }
         }
 
-        // Add style to prompt if not already enhanced with style
+        // Add style and quality modifiers if not enhanced
         let finalPrompt = enhancedPrompt;
-        if (style && style !== 'none' && !wasEnhanced) {
-            finalPrompt = `${enhancedPrompt}, ${style} style, high quality, detailed`;
+        if (!wasEnhanced) {
+            // For standard mode, add basic quality improvements
+            const styleText = (style && style !== 'none') ? `${style} style, ` : '';
+            finalPrompt = `${enhancedPrompt}, ${styleText}high quality, detailed, professional`;
         }
 
-        // Generate image using Pollinations.ai (FREE, unlimited)
+        // Generate image using Pollinations.ai (FREE, unlimited, reliable)
         const [width, height] = size.split('x');
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=true&seed=${Date.now()}`;
+        const seed = Date.now();
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=true&seed=${seed}`;
 
         return new Response(JSON.stringify({
             success: true,
@@ -114,8 +147,9 @@ Enhanced prompt:`
                 originalPrompt: prompt,
                 enhanced: wasEnhanced,
                 model: model,
-                provider: wasEnhanced ? 'Gemini AI + Pollinations' : 'Pollinations.ai',
-                free: true
+                provider: wasEnhanced ? 'Gemini AI Enhanced' : 'Pollinations.ai',
+                free: true,
+                note: enhancementNote || (wasEnhanced ? 'Prompt enhanced by Gemini AI for better results!' : null)
             }]
         }), {
             status: 200,

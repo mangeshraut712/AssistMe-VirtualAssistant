@@ -4,15 +4,16 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * Features:
- * - Multiple Gemini & Imagen models (Free + Premium)
+ * - Premium: Gemini Flash AI for intelligent prompt enhancement
+ * - Standard: Multiple Flux models via Pollinations (FREE)
  * - Animated masonry gallery
  * - Style presets for quick generation
  * - Smooth hover effects & loading animations
  * - Glass morphism design
  * 
- * @version 2.0.0
- * @date December 2025
+ * Both modes are 100% FREE!
  */
+
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
