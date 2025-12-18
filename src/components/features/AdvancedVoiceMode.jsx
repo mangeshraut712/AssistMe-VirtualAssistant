@@ -144,9 +144,18 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
         }
 
         const recognition = new SpeechRecognition();
+
+        // IMPROVED: Better recognition settings for accuracy
         recognition.continuous = true;
         recognition.interimResults = true;
+        recognition.maxAlternatives = 3;  // Get multiple alternatives for better accuracy
         recognition.lang = 'en-US';
+
+        // Enhanced language hints for better recognition
+        if (recognition.grammars) {
+            const speechRecognitionList = new (window.SpeechGrammarList || window.webkitSpeechGrammarList)();
+            recognition.grammars = speechRecognitionList;
+        }
 
         recognition.onstart = async () => {
             console.log('[Voice] Started listening');
@@ -154,7 +163,15 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
             setTranscript('');
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Request high-quality audio for better recognition
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 48000  // Higher sample rate for better quality
+                    }
+                });
                 streamRef.current = stream;
 
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -183,39 +200,74 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
             }
         };
 
+        let accumulatedFinalTranscript = '';
+
         recognition.onresult = (event) => {
             let interimTranscript = '';
-            let finalTranscript = '';
 
+            // Process all results to get the most accurate transcript
             for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcript = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    finalTranscript += transcript;
+                const result = event.results[i];
+
+                // Choose the best alternative (highest confidence)
+                let bestTranscript = result[0].transcript;
+                let bestConfidence = result[0].confidence;
+
+                for (let j = 1; j < result.length; j++) {
+                    if (result[j].confidence > bestConfidence) {
+                        bestTranscript = result[j].transcript;
+                        bestConfidence = result[j].confidence;
+                    }
+                }
+
+                if (result.isFinal) {
+                    accumulatedFinalTranscript += bestTranscript + ' ';
+                    console.log('[Voice] Final:', bestTranscript, 'Confidence:', bestConfidence);
                 } else {
-                    interimTranscript += transcript;
+                    interimTranscript += bestTranscript;
                 }
             }
 
-            const currentText = finalTranscript || interimTranscript;
+            // Show accumulated final + current interim
+            const currentText = (accumulatedFinalTranscript + interimTranscript).trim();
             setTranscript(currentText);
 
-            if (finalTranscript.trim().length >= CONFIG.MIN_TRANSCRIPT_LENGTH) {
+            // Wait for a complete sentence with better timeout
+            if (accumulatedFinalTranscript.trim().length >= CONFIG.MIN_TRANSCRIPT_LENGTH) {
                 if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-                recognition.stop();
-                if (processRef.current) processRef.current(finalTranscript.trim());
+
+                // Longer timeout to capture complete thoughts (2.5s)
+                silenceTimerRef.current = setTimeout(() => {
+                    recognition.stop();
+                    const finalText = accumulatedFinalTranscript.trim();
+                    console.log('[Voice] Processing complete transcript:', finalText);
+                    if (processRef.current && finalText) {
+                        processRef.current(finalText);
+                    }
+                    accumulatedFinalTranscript = '';
+                }, 2500);
             }
         };
 
         recognition.onerror = (event) => {
             console.error('[Voice] Recognition error:', event.error);
-            if (event.error !== 'no-speech') {
+            if (event.error === 'no-speech') {
+                setErrorMessage('No speech detected. Please try again.');
+            } else if (event.error === 'audio-capture') {
+                setErrorMessage('Microphone not accessible. Check permissions.');
+            } else if (event.error !== 'aborted') {
                 setErrorMessage(`Error: ${event.error}`);
+            }
+            if (event.error !== 'no-speech' && event.error !== 'aborted') {
                 setStatus('error');
             }
         };
 
         recognition.onend = () => {
             console.log('[Voice] Recognition ended');
+            if (silenceTimerRef.current) {
+                clearTimeout(silenceTimerRef.current);
+            }
         };
 
         recognitionRef.current = recognition;
@@ -920,8 +972,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                     animate={{ opacity: 1, scale: 1 }}
                                     className="flex justify-end"
                                 >
-                                    <div className="max-w-[85%] px-5 py-3 rounded-2xl bg-violet-100 dark:bg-violet-500/20 border-2 border-violet-400 dark:border-violet-500/50 border-dashed">
-                                        <p className="text-sm text-violet-700 dark:text-violet-300">{transcript}</p>
+                                    <div className="max-w-[85%] px-6 py-4 rounded-2xl bg-violet-100 dark:bg-violet-500/20 border-2 border-violet-400 dark:border-violet-500/50">
+                                        <div className="flex items-start gap-2">
+                                            <div className="flex-shrink-0 w-3 h-3 mt-1.5 bg-violet-500 dark:bg-violet-400 rounded-full animate-pulse" />
+                                            <div className="flex-1">
+                                                <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 mb-1">What I'm hearing:</p>
+                                                <p className="text-base font-medium text-violet-800 dark:text-violet-200">{transcript}</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </motion.div>
                             )}
@@ -1142,8 +1200,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                 animate={{ opacity: 1 }}
                                 className="flex justify-end"
                             >
-                                <div className="max-w-[85%] px-4 py-3 rounded-2xl bg-gray-200 dark:bg-gray-700 border-2 border-gray-400 dark:border-gray-500 border-dashed">
-                                    <p className="text-sm text-gray-600 dark:text-gray-300">{transcript}</p>
+                                <div className="max-w-[85%] px-5 py-4 rounded-2xl bg-primary/10 dark:bg-primary/20 border-2 border-primary/50">
+                                    <div className="flex items-start gap-2">
+                                        <div className="flex-shrink-0 w-3 h-3 mt-1.5 bg-primary rounded-full animate-pulse" />
+                                        <div className="flex-1">
+                                            <p className="text-xs font-semibold text-primary/80 mb-1">Listening...</p>
+                                            <p className="text-base font-medium text-foreground">{transcript}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </motion.div>
                         )}
