@@ -84,52 +84,47 @@ RULES:
 const cleanResponseText = (text) => {
     if (!text) return '';
 
-    // Patterns that indicate internal thinking - if ANY of these exist, we need to clean
-    const thinkingIndicators = [
-        "i'm currently", "i've been", "i'm breaking down", "i'm crafting",
-        "i'm aiming", "i'm focusing", "i'm wrestling", "i'm processing",
-        "i'm zeroing in", "i've checked", "i've crafted", "i've formulated",
-        "my aim is", "my focus is", "my initial assumption",
-        "looking good to go", "feels good", "the current draft",
-        "i will try to", "i plan to", "let me",
-        "clarifying user intent", "answering the query",
-        "emphasizing my availability", "mirroring their",
-        "avoiding unnecessary", "laid-back interaction"
-    ];
-
     const lowerText = text.toLowerCase();
 
-    // If it looks like pure thinking, return empty
-    if (thinkingIndicators.some(p => lowerText.includes(p))) {
-        // Try to extract just the actual response part
-        // Look for patterns like "Hey there!" or direct greetings
-        const directResponsePatterns = [
-            /^(hey|hi|hello|sure|absolutely|great|thanks|okay|alright)[^.!?]*[.!?]/gi,
-            /(?:^|\n)(I'm doing|I am doing|I'm great|I'm good|I'm well|That's|The answer)[^.!?]*[.!?]/gi
-        ];
+    // VERY aggressive - any of these words indicate internal thinking
+    const thinkingKeywords = [
+        "i've determined", "i've settled", "i've crafted", "i've formulated",
+        "i've checked", "i've begun", "i've processed", "i've tackled",
+        "i'm crafting", "i'm aiming", "i'm focusing", "i'm wrestling",
+        "i'm processing", "i'm zeroing", "i'm breaking down", "i'm currently",
+        "my aim", "my focus", "my approach", "my response will",
+        "the exact wording", "along the lines of", "this fits",
+        "directly addressing", "reciprocating", "maintains a",
+        "conversational tone", "friendly approach", "concise, natural",
+        "positive inquiry", "settled on a response", "will be along",
+        "let me", "i plan to", "i will try"
+    ];
 
-        for (const pattern of directResponsePatterns) {
-            const match = text.match(pattern);
-            if (match) {
-                return match[0].trim();
-            }
+    // If ANY thinking keyword exists, the whole text is thinking
+    const isThinking = thinkingKeywords.some(k => lowerText.includes(k));
+
+    if (isThinking) {
+        // Try to extract the QUOTED actual response
+        // Pattern: "I'm doing great, thanks!"
+        const quotedMatch = text.match(/"([^"]+)"/);
+        if (quotedMatch && quotedMatch[1].length > 5) {
+            return quotedMatch[1].trim();
         }
 
-        // If no direct pattern found, return empty - don't show thinking
+        // Pattern: 'I'm doing great, thanks!'
+        const singleQuotedMatch = text.match(/'([^']+)'/);
+        if (singleQuotedMatch && singleQuotedMatch[1].length > 5) {
+            return singleQuotedMatch[1].trim();
+        }
+
+        // No quoted response found - return empty, don't show thinking
         return '';
     }
 
-    // For normal text, do light cleaning
-    const cleaned = text
-        // Remove **bold markers**
+    // For normal text, just clean up formatting
+    return text
         .replace(/\*\*[^*]+\*\*\s*/g, '')
-        // Remove common meta-commentary
-        .replace(/I've been considering[^.]*\./gi, '')
-        .replace(/I'm aiming for[^.]*\./gi, '')
-        .replace(/I plan to provide[^.]*\./gi, '')
         .trim();
-
-    return cleaned;
 };
 
 
