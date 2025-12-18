@@ -253,7 +253,49 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
     const [copiedId, setCopiedId] = useState(null);
     const [error, setError] = useState(null);
     const [gallery, setGallery] = useState([]);
-    const [isPremium, setIsPremium] = useState(false); // Premium AI enhancement
+    const [isPremium, setIsPremium] = useState(false);
+    const [premiumAvailable, setPremiumAvailable] = useState(null); // null = checking, true/false = result
+    const [statusMessage, setStatusMessage] = useState('');
+
+    // Check Premium Availability on Mount
+    useEffect(() => {
+        const checkPremiumStatus = async () => {
+            try {
+                const response = await fetch('/api/gemini/image-status');
+                const data = await response.json();
+                setPremiumAvailable(data.available);
+
+                if (!data.available && isPremium) {
+                    // Auto-fallback to standard if premium selected but unavailable
+                    setIsPremium(false);
+                    setStatusMessage('Premium unavailable. Using Standard mode.');
+                    setTimeout(() => setStatusMessage(''), 3000);
+                }
+            } catch (error) {
+                console.warn('[Imagine] Status check failed:', error);
+                setPremiumAvailable(false);
+                if (isPremium) {
+                    setIsPremium(false);
+                    setStatusMessage('Server unavailable. Using Standard mode.');
+                    setTimeout(() => setStatusMessage(''), 3000);
+                }
+            }
+        };
+
+        if (isOpen) {
+            checkPremiumStatus();
+        }
+    }, [isOpen]);
+
+    // Handle Premium Toggle
+    const handlePremiumToggle = () => {
+        if (!isPremium && premiumAvailable === false) {
+            setStatusMessage('Premium requires GOOGLE_API_KEY. Add it to Vercel Environment Variables.');
+            setTimeout(() => setStatusMessage(''), 5000);
+            return;
+        }
+        setIsPremium(!isPremium);
+    };
 
     // Get aspect class
     const getAspectClass = (ratio) => {
@@ -388,18 +430,24 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                     <div className="flex items-center gap-2">
                         {/* Premium Toggle */}
                         <motion.button
-                            onClick={() => setIsPremium(!isPremium)}
+                            onClick={handlePremiumToggle}
+                            disabled={premiumAvailable === null}
                             className={cn(
                                 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border-2',
                                 isPremium
                                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500 shadow-lg shadow-purple-500/25'
-                                    : 'bg-background border-border text-muted-foreground hover:border-purple-500/50'
+                                    : premiumAvailable === false
+                                        ? 'bg-background border-border text-muted-foreground/50 cursor-not-allowed'
+                                        : 'bg-background border-border text-muted-foreground hover:border-purple-500/50'
                             )}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileHover={premiumAvailable !== false ? { scale: 1.05 } : {}}
+                            whileTap={premiumAvailable !== false ? { scale: 0.95 } : {}}
                         >
                             {isPremium ? <Crown className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
                             <span>{isPremium ? 'Premium AI' : 'Standard'}</span>
+                            {premiumAvailable === false && !isPremium && (
+                                <span className="text-[10px] opacity-60">(Setup Required)</span>
+                            )}
                         </motion.button>
 
                         {gallery.length > 0 && (
@@ -489,6 +537,20 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                             >
                                 <span>⚠️ {error}</span>
                                 <button onClick={() => setError(null)} className="ml-auto hover:text-red-400">
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </motion.div>
+                        )}
+
+                        {/* Status Message */}
+                        {statusMessage && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mb-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-600 dark:text-blue-400 text-sm flex items-center gap-2"
+                            >
+                                <span>ℹ️ {statusMessage}</span>
+                                <button onClick={() => setStatusMessage('')} className="ml-auto hover:text-blue-500">
                                     <X className="h-4 w-4" />
                                 </button>
                             </motion.div>

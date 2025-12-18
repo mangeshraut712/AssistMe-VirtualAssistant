@@ -28,6 +28,14 @@
       "destination": "/api/gemini/status.js"
     },
     {
+      "source": "/api/gemini/status",
+      "destination": "/api/gemini/status.js"
+    },
+    {
+      "source": "/api/gemini/image-status",
+      "destination": "/api/gemini/image-status.js"
+    },
+    {
       "source": "/api/xai/key",
       "destination": "/api/xai/key.js"
     },
