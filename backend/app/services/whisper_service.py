@@ -9,7 +9,7 @@ try:
     import whisper
 except ImportError:
     whisper = None
-    logger.warning("openai-whisper not installed. Speech-to-text features will be unavailable.")
+    logging.getLogger(__name__).warning("openai-whisper not installed. Speech-to-text features will be unavailable.")
 from starlette.concurrency import run_in_threadpool
 
 logger = logging.getLogger(__name__)

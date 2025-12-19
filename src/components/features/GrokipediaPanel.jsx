@@ -561,13 +561,13 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="grok-bold">$1</strong>');
 
         // Italic
-        html = html.replace(/\*([^\*]+?)\*/g, '<em class="grok-italic">$1</em>');
+        html = html.replace(/\*([^*]+?)\*/g, '<em class="grok-italic">$1</em>');
 
         // Citations
         html = html.replace(/\[(\d+)\]/g, '<sup class="grok-citation" title="Source $1">[$1]</sup>');
 
         // Lists
-        html = html.replace(/^[•\-\*]\s+(.+)$/gm, '<li class="grok-li">$1</li>');
+        html = html.replace(/^[•\-*]\s+(.+)$/gm, '<li class="grok-li">$1</li>');
         html = html.replace(/((?:<li class="grok-li">.*?<\/li>\s*)+)/g, '<ul class="grok-ul">$1</ul>');
 
         // Blockquotes  
