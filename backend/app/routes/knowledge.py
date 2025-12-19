@@ -111,7 +111,7 @@ async def grokipedia_stream(request: GrokipediaRequest):
                 search_depth=request.search_depth
             )
             logger.info(f"Found {len(search_results)} sources")
-            
+
             # 2. Yield metadata first so the frontend knows sources
             yield f"data: {json.dumps({'type': 'metadata', 'sources': search_results})}\n\n"
 
