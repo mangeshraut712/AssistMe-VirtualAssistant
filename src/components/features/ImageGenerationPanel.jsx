@@ -286,7 +286,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
         if (isOpen) {
             checkPremiumStatus();
         }
-    }, [isOpen]);
+    }, [isOpen, isPremium]);
 
     // Handle Premium Toggle
     const handlePremiumToggle = () => {

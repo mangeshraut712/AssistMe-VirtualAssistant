@@ -428,9 +428,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
     /**
      * Legacy single-chunk playback (for fallback/compatibility)
      */
-    const playPCMAudio = useCallback(async (base64Data) => {
-        return playPCMAudioChunks([base64Data]);
-    }, [playPCMAudioChunks]);
+
 
 
     const speak = useCallback(async (text) => {
@@ -626,7 +624,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                 }
             })().catch(reject);
         });
-    }, [playPCMAudio, speak]);
+    }, [playPCMAudioChunks, speak]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // PROCESSING
@@ -860,7 +858,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
             }, null, 2);
         } else {
             content = `Voice Conversation Export\nMode: ${isPremium ? 'Premium (Gemini Live)' : 'Standard'}\nDate: ${timestamp}\n\n`;
-            conversation.forEach((msg, i) => {
+            conversation.forEach((msg) => {
                 content += `${msg.role === 'user' ? 'You' : 'Gemini'}: ${msg.content}\n\n`;
             });
         }

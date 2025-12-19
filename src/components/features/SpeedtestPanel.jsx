@@ -8,7 +8,7 @@ import {
     Target, Waves, Zap as ZapIcon, Sparkles, Bot
 } from 'lucide-react';
 import {
-    AreaChart, Area, ResponsiveContainer, Tooltip, RadarChart, PolarGrid,
+    AreaChart, Area, ResponsiveContainer, RadarChart, PolarGrid,
     PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
 import { cn } from '@/lib/utils';
@@ -21,20 +21,6 @@ import { cn } from '@/lib/utils';
 // --- Advanced Engine Utilities ---
 
 // Simulates TCP Slow Start and Congestion Avoidance for realistic curves
-const calculateSpeedStep = (currentSpeed, targetSpeed, phase) => {
-    // Phase 0: Slow Start (Exponential growth)
-    if (phase === 'slow_start') {
-        return currentSpeed + (targetSpeed * 0.05) + (Math.random() * 2);
-    }
-    // Phase 1: Congestion Avoidance (Linear/Logarithmic approach)
-    if (phase === 'congestion') {
-        const diff = targetSpeed - currentSpeed;
-        return currentSpeed + (diff * 0.1) + (Math.random() - 0.5) * 5;
-    }
-    // Phase 2: Plateau/Stable (Small variance)
-    return currentSpeed + (Math.random() - 0.5) * 2;
-};
-
 
 
 // Storage
@@ -46,24 +32,6 @@ const saveTest = (r) => {
     } catch { return []; }
 };
 const getHistory = () => { try { return JSON.parse(localStorage.getItem('speedtest_v8') || '[]'); } catch { return []; } };
-
-// Utility Functions
-const getSpeedColor = (speed) => {
-    if (speed >= 100) return { gradient: 'from-emerald-500 to-green-600', text: 'text-emerald-500', hex: '#10b981' };
-    if (speed >= 50) return { gradient: 'from-green-500 to-teal-600', text: 'text-green-500', hex: '#22c55e' };
-    if (speed >= 25) return { gradient: 'from-yellow-500 to-amber-600', text: 'text-yellow-500', hex: '#eab308' };
-    if (speed >= 10) return { gradient: 'from-orange-500 to-red-500', text: 'text-orange-500', hex: '#f97316' };
-    return { gradient: 'from-red-500 to-rose-600', text: 'text-red-500', hex: '#ef4444' };
-};
-
-const getSpeedGrade = (speed) => {
-    if (speed >= 100) return 'A+';
-    if (speed >= 50) return 'A';
-    if (speed >= 25) return 'B';
-    if (speed >= 10) return 'C';
-    if (speed >= 5) return 'D';
-    return 'F';
-};
 
 const _getPingGrade = (ping) => {
     if (ping <= 20) return 'A+';
@@ -192,7 +160,7 @@ const SpeedGauge = ({ value, maxValue = 200, color, label, status }) => {
     );
 };
 
-const SpeedChart = ({ data, color, isActive }) => (
+const SpeedChart = ({ data, color }) => (
     <div className="relative h-[80px] sm:h-[100px] w-full">
         <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
@@ -274,7 +242,7 @@ const MetricCard = ({ icon: Icon, label, value, unit, subtext, color, trend }) =
 const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
     // --- State Management ---
     const [status, setStatus] = useState('idle'); // idle, pinging, download, upload, complete
-    const [isPaused, setIsPaused] = useState(false);
+
     const [progress, setProgress] = useState(0);
 
     // Core Metrics
@@ -324,7 +292,12 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                 })
                 .catch(e => console.error("IP Detect Failed", e));
         }
-        return () => { stopRef.current = true; if (timerRef.current) clearInterval(timerRef.current); };
+        return () => {
+            stopRef.current = true;
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+            const timer = timerRef.current;
+            if (timer) clearInterval(timer);
+        };
     }, [isOpen]);
 
     // Measure Real Latency (Best Effort)
@@ -388,7 +361,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
         setStatus('download');
         const dlPings = [];
         let downloadedBytes = 0;
-        let dlStartTime = performance.now();
+        const dlStartTime = performance.now();
         let lastReportTime = dlStartTime;
 
         try {
@@ -572,7 +545,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
         if (timerRef.current) clearInterval(timerRef.current);
         setStatus('idle');
         setProgress(0);
-        setIsPaused(false);
+
     };
 
     const getStats = useCallback((arr) => {

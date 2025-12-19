@@ -14,10 +14,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Search, BookOpen, Clock, ChevronUp, ChevronDown, ChevronRight,
-    ListOrdered, Tags, Zap, Copy, Check, Share2,
-    Sparkles, TrendingUp, History, Crown, Brain, Globe, ExternalLink,
-    Filter, Info, Layout, ArrowUp
+    X, Search, BookOpen, ChevronUp, ChevronRight,
+    Zap, Copy, Check, Share2,
+    Sparkles, TrendingUp, History, ExternalLink,
+    ArrowUp
 } from 'lucide-react';
 import { createApiClient } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
@@ -202,7 +202,6 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
     const [toc, setToc] = useState([]);
     const [activeSection, setActiveSection] = useState(null);
     const [activeParent, setActiveParent] = useState(null);
-    const [isTocExpanded, setIsTocExpanded] = useState(true);
     const [relatedTopics, setRelatedTopics] = useState([]);
     const [quickFacts, setQuickFacts] = useState(null);
     const [showScrollTop, setShowScrollTop] = useState(false);
@@ -210,7 +209,6 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
     const [searchHistory, setSearchHistory] = useState([]);
     const [showHistory, setShowHistory] = useState(false);
     const [isDeepSearch, setIsDeepSearch] = useLocalStorage('grokipedia_deep_search', true);
-    const [visibleSections, setVisibleSections] = useState(new Set());
     const [expandedSections, setExpandedSections] = useState([]);
 
     const contentRef = useRef(null);
@@ -375,7 +373,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
 
             if (urls.length > 0) {
                 // Try to get titles from the sources array
-                return urls.map((ref, i) => {
+                return urls.map((ref) => {
                     const matchingSource = sources.find(s => s.url && ref.url.includes(new URL(s.url).hostname));
                     return {
                         ...ref,
@@ -862,7 +860,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                             <TrendingUp className="h-4 w-4 text-blue-500" />
                                             <span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Explore Topics</span>
                                         </div>
-                                        {TRENDING_TOPICS.map((topic, i) => (
+                                        {TRENDING_TOPICS.map((topic) => (
                                             <motion.button
                                                 key={topic}
                                                 whileHover={{ y: -4, scale: 1.02 }}
@@ -1038,7 +1036,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                                     `History of ${article.title}`,
                                                     `${article.title} impact`,
                                                     `${article.title} overview`
-                                                ].filter(t => t && !t.includes('undefined'))).map((topic, i) => (
+                                                ].filter(t => t && !t.includes('undefined'))).map((topic) => (
                                                     <motion.button
                                                         key={topic}
                                                         whileHover={{ scale: 1.03 }}
