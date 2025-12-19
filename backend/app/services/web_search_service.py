@@ -392,15 +392,15 @@ Generate your comprehensive article now:"""
                     async for chunk in stream_generator:
                         if hasattr(chunk, 'delta') and chunk.delta:
                             yield chunk.delta
-                    
+
                     # If we get here without error, break the loop
                     return
-                    
+
                 except Exception as model_error:
                     last_error = model_error
                     logger.warning(f"Model {try_model} failed: {model_error}. Trying next...")
                     continue
-            
+
             # All models failed
             if last_error:
                 raise last_error
@@ -427,4 +427,3 @@ Generate your comprehensive article now:"""
 
 # Global instance
 web_search_service = WebSearchService()
-

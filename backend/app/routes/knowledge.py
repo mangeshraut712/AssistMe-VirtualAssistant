@@ -114,7 +114,7 @@ async def grokipedia_stream(request: GrokipediaRequest):
             
             # 2. Yield metadata first so the frontend knows sources
             yield f"data: {json.dumps({'type': 'metadata', 'sources': search_results})}\n\n"
-            
+
             # 3. Stream the answer
             async for chunk in web_search_service.stream_answer(
                 request.query,
@@ -122,7 +122,7 @@ async def grokipedia_stream(request: GrokipediaRequest):
             ):
                 if chunk:
                     yield f"data: {json.dumps({'type': 'content', 'delta': chunk})}\n\n"
-            
+
             yield "data: [DONE]\n\n"
         except Exception as e:
             logger.error(f"Grokipedia stream error: {e}")
@@ -131,7 +131,6 @@ async def grokipedia_stream(request: GrokipediaRequest):
 
     from fastapi.responses import StreamingResponse
     return StreamingResponse(stream_generator(), media_type="text/event-stream")
-
 
 
 @router.post("/grokipedia")

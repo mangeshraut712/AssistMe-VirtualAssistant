@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Response, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 import os
 import time
@@ -6,6 +6,7 @@ import logging
 
 router = APIRouter(prefix="/api/speedtest", tags=["Speedtest"])
 logger = logging.getLogger(__name__)
+
 
 @router.get("/download")
 async def download(size: int = 25 * 1024 * 1024):
@@ -26,7 +27,7 @@ async def download(size: int = 25 * 1024 * 1024):
             else:
                 yield chunk[:take]
             bytes_sent += take
-            
+
     return StreamingResponse(
         generate_random_bytes(),
         media_type="application/octet-stream",
@@ -36,6 +37,7 @@ async def download(size: int = 25 * 1024 * 1024):
             "X-Content-Length": str(size)
         }
     )
+
 
 @router.post("/upload")
 async def upload(request: Request):
@@ -47,15 +49,16 @@ async def upload(request: Request):
     start_time = time.time()
     async for chunk in request.stream():
         size += len(chunk)
-    
+
     duration = time.time() - start_time
     logger.info(f"Speedtest Upload: {size} bytes in {duration:.2f}s")
-    
+
     return {
         "size_received": size,
         "duration": duration,
         "status": "ok"
     }
+
 
 @router.get("/ping")
 async def ping():
