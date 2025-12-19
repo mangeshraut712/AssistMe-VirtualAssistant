@@ -5,7 +5,11 @@ import os
 import tempfile
 from typing import Any, Dict, Optional
 
-import whisper
+try:
+    import whisper
+except ImportError:
+    whisper = None
+    logger.warning("openai-whisper not installed. Speech-to-text features will be unavailable.")
 from starlette.concurrency import run_in_threadpool
 
 logger = logging.getLogger(__name__)
@@ -28,6 +32,9 @@ class WhisperService:
         """Load the model if not already loaded."""
         if self.model:
             return
+
+        if whisper is None:
+            raise RuntimeError("openai-whisper library is not installed. Please install it to use speech-to-text.")
 
         if self._is_loading:
             logger.warning("Whisper model is already loading...")
