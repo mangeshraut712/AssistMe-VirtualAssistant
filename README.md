@@ -1,16 +1,16 @@
-# 🤖 AssistMe V2.0 - Next-Gen AI Virtual Assistant
+# 🤖 AssistMe - Next-Gen AI Virtual Assistant
 
 <div align="center">
 
-![AssistMe V2.0 Banner](https://img.shields.io/badge/AssistMe-V2.0-blue?style=for-the-badge&logo=probot&logoColor=white)
+![AssistMe Banner](https://img.shields.io/badge/AssistMe-blue?style=for-the-badge&logo=probot&logoColor=white)
 
 **A production-ready, multi-modal AI platform featuring Advanced Voice Mode, Deep Research (Grokipedia), and Neural Speed Diagnostics.**
 
-[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black)](https://react.dev)
-[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://python.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 [Live Demo](https://assist-me-virtual-assistant.vercel.app/) • [Report Bug](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues) • [Request Feature](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues)
@@ -21,9 +21,9 @@
 
 ## 🌟 Overview
 
-**AssistMe** isn't just a chatbot; it's a comprehensive AI workspace designed for power users. Built on a modern **React + FastAPI** architecture, it integrates state-of-the-art LLMs (Gemini, Claude, GPT-4, Grok) with custom neural modules for specific tasks like deep research, image generation, and network diagnostics.
+**AssistMe** isn't just a chatbot; it's a comprehensive AI workspace designed for power users. Built on a modern **React + FastAPI** architecture, it integrates state-of-the-art LLMs (Gemini, Claude, GPT, Grok) with custom neural modules for specific tasks like deep research, image generation, and network diagnostics.
 
-The **V2.0** update introduces a massively reorganized codebase, enterprise-grade architecture, and powerful new "applets" within the assistant.
+The latest update introduces a massively reorganized codebase, enterprise-grade architecture, and powerful new "applets" within the assistant.
 
 ---
 
@@ -31,19 +31,19 @@ The **V2.0** update introduces a massively reorganized codebase, enterprise-grad
 
 ### 🧠 **Grokipedia (Deep Research)**
 A revolutionary "Search & Synthesis" engine that generates comprehensive, wiki-style articles on any topic.
-- **Deep Web Search:** Aggregates data from 10+ sources (Tavily, DuckDuckGo).
-- **AI Synthesis:** Generates 2500+ word deep-dive articles with citations.
+- **Deep Web Search:** Aggregates data from multiple sources.
+- **AI Synthesis:** Generates deep-dive articles with citations.
 - **Streaming Architecture:** Real-time content generation with visible thought process.
 
 ### 🎙️ **Advanced Voice Mode**
 Real-time, natural conversation with aggressively optimized latency.
-- **Gemini Live Integration:** Zero-latency turn-taking.
+- **Live Integration:** Zero-latency turn-taking.
 - **"Thinking" Filter:** Scrubbing of internal chain-of-thought for pure speech output.
-- **Visual Feedback:** Dynamic audio visualizers (Waveform, Orb, Bar) synchronized to speech.
+- **Visual Feedback:** Dynamic audio visualizers synchronized to speech.
 
 ### 🎨 **Imagine Studio**
 A complete generative art workstation built right into the chat.
-- **Multi-Model Support:** Flux 1.1, DALL-E 3, Stable Diffusion XL.
+- **Multi-Model Support:** Flux, DALL-E, Stable Diffusion.
 - **Style Presets:** One-click styles for Anime, Digital Art, Photorealism, and 3D Render.
 - **Smart Prompting:** Automatic prompt enhancement for better results.
 
@@ -63,7 +63,7 @@ First-class support for Indian languages.
 
 ## 🏗️ Architecture
 
-AssistMe V2.0 follows a clean, modular architecture designed for scalability.
+AssistMe follows a clean, modular architecture designed for scalability.
 
 ```mermaid
 graph TD
@@ -103,8 +103,8 @@ graph TD
 
 ### Prerequisites
 
-- **Node.js** (v18+)
-- **Python** (v3.10+)
+- **Node.js**
+- **Python**
 - **API Keys:** OpenRouter (Required), Google Gemini & Tavily (Recommended)
 
 ### Installation
@@ -154,16 +154,16 @@ python -m uvicorn app.main:app --reload --port 8000
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **Framework:** React 18, Vite 6
-- **Styling:** Tailwind CSS 3.4
-- **Animation:** Framer Motion 11
+- **Framework:** React, Vite
+- **Styling:** Tailwind CSS
+- **Animation:** Framer Motion
 - **Icons:** Lucide React
 - **State:** React Context + Hooks
 
 ### Backend
-- **Framework:** FastAPI 0.109
+- **Framework:** FastAPI
 - **Server:** Uvicorn (ASGI)
-- **Validation:** Pydantic V2
+- **Validation:** Pydantic
 - **Network:** httpx, aiohttp
 
 ---

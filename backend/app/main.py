@@ -117,7 +117,7 @@ VERCEL_ORIGIN_PATTERN = re.compile(
 # Enhanced FastAPI configuration for localhost development
 app = FastAPI(
     title="AssistMe API",
-    version="2.0.0",
+    version="v1",
     description="Next-generation AI virtual assistant API",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -540,7 +540,7 @@ def health(request: Request):
     payload = {
         "status": overall_status,
         "service": "assistme-api",
-        "version": "2.0.0",
+        "version": "v1",
         "timestamp": datetime.now().isoformat(),
         "components": {
             "database": {"status": db_status, "error": db_error},
@@ -576,7 +576,7 @@ def api_status(request: Request):
         content={
             "status": "operational",
             "service": "AssistMe API",
-            "version": "1.0.0",
+            "version": "v1",
             "timestamp": datetime.now().isoformat(),
             "chat_available": CHAT_CLIENT_AVAILABLE,
             "database_connected": bool(os.getenv("DATABASE_URL")),

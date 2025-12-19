@@ -17,7 +17,7 @@ import {
     X, Search, BookOpen, Clock, ChevronUp, ChevronDown, ChevronRight,
     ListOrdered, Tags, Zap, Copy, Check, Share2,
     Sparkles, TrendingUp, History, Crown, Brain, Globe, ExternalLink,
-    Filter, Info, Layout
+    Filter, Info, Layout, ArrowUp
 } from 'lucide-react';
 import { createApiClient } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,7 @@ import { useLocalStorage } from '@/lib/hooks';
 // Best free Gemini models for Wikipedia-style encyclopedic content
 const GROKIPEDIA_MODEL = {
     id: 'google/gemini-2.5-flash-preview-05-20',
-    name: 'Gemini 2.5 Flash',
+    name: 'Gemini Flash',
     fallback: 'google/gemini-2.0-flash-exp:free',
     fallback2: 'google/gemini-2.5-pro-exp-03-25:free'
 };
