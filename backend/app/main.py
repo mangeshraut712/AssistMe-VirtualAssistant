@@ -227,6 +227,13 @@ try:
 except Exception as e:
     logging.warning(f"Failed to register Gemini router: {e}")
 
+try:
+    from .routes import speedtest
+    app.include_router(speedtest.router)
+    logging.info("✓ Speedtest router registered")
+except Exception as e:
+    logging.warning(f"Failed to register Speedtest router: {e}")
+
 
 # Startup validation
 @app.on_event("startup")

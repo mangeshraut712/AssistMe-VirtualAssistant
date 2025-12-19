@@ -22,7 +22,7 @@ const MODELS = [
     // Default / Featured
     { id: 'x-ai/grok-4.1-fast:free', name: 'xAI: Grok 4.1 Fast (Free)', provider: 'xAI', free: true },
 
-    // Voice-Optimized with Gemini 2.5 Native Audio (December 2025)
+    // Voice-Optimized with Gemini Native Audio
     { id: 'google/gemini-2.5-flash', name: '🎤 Gemini 2.5 Flash (Native Audio)', provider: 'Google', free: false, voiceOptimized: true, nativeAudio: true },
     { id: 'google/gemini-2.0-flash-001:free', name: '🎤 Gemini 2.0 Flash (Free)', provider: 'Google', free: true, voiceOptimized: true },
 

@@ -271,7 +271,7 @@ const MetricCard = ({ icon: Icon, label, value, unit, subtext, color, trend }) =
     </GlassCard>
 );
 
-const SpeedtestPanel = ({ isOpen, onClose }) => {
+const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
     // --- State Management ---
     const [status, setStatus] = useState('idle'); // idle, pinging, download, upload, complete
     const [isPaused, setIsPaused] = useState(false);
@@ -350,147 +350,177 @@ const SpeedtestPanel = ({ isOpen, onClose }) => {
         setUploadChart(new Array(40).fill({ val: 0 }));
         setLatencyData({ unloaded: [], download: [], upload: [] });
 
-        // Use real downlink hint if available
-        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        const downlinkHint = connection ? connection.downlink * 8 : (100 + Math.random() * 100);
-
         setMetrics({ down: 0, downPeak: 0, up: 0, upPeak: 0, ping: 0, pingMin: 999, pingMax: 0, jitter: 0, loss: 0 });
 
-        // 1. Precise Latency Test (30 samples for better distribution)
-        const pings = [];
-        for (let i = 0; i < 30; i++) {
-            if (stopRef.current || isPaused) { await new Promise(r => setTimeout(r, 100)); i--; continue; }
+        const baseUrl = backendUrl || '';
 
+        // 1. Real Latency Test (RTT to Backend)
+        const pings = [];
+        for (let i = 0; i < 20; i++) {
+            if (stopRef.current) break;
             const start = performance.now();
             try {
-                // Real light HEAD request to measure actual RTT
-                await fetch('/favicon.ico', { method: 'HEAD', cache: 'no-store' });
+                await fetch(`${baseUrl}/api/speedtest/ping`, { cache: 'no-store' });
                 const end = performance.now();
-                const realPing = Math.round(end - start);
+                const rtt = end - start;
+                pings.push(rtt);
 
-                // Add some variance for realism
-                const p = Math.max(5, realPing + (Math.random() * 2 - 1));
-                pings.push(p);
+                const jitterVal = pings.length > 1
+                    ? Math.round(pings.reduce((sum, val, idx, arr) => idx === 0 ? 0 : sum + Math.abs(val - arr[idx - 1]), 0) / (pings.length - 1))
+                    : 0;
+
+                setMetrics(m => ({
+                    ...m,
+                    ping: Math.round(pings.reduce((a, b) => a + b, 0) / pings.length),
+                    pingMin: Math.min(...pings),
+                    pingMax: Math.max(...pings),
+                    jitter: jitterVal
+                }));
             } catch (e) {
-                // Simulation fallback if fetch fails
-                const basePing = 10 + (Math.random() * 15);
-                pings.push(Math.round(basePing));
+                console.error("Latency check failed", e);
             }
-
-            // Calculate Jitter (RFC 1889)
-            const jitterVal = pings.length > 1
-                ? Math.round(pings.reduce((sum, val, idx, arr) => idx === 0 ? 0 : sum + Math.abs(val - arr[idx - 1]), 0) / (pings.length - 1))
-                : 0;
-
-            setMetrics(m => ({
-                ...m,
-                ping: Math.round(pings.reduce((a, b) => a + b, 0) / pings.length),
-                pingMin: Math.min(...pings),
-                pingMax: Math.max(...pings),
-                jitter: jitterVal
-            }));
-
-            setProgress(Math.round((i / 30) * 15)); // 0-15%
-            await new Promise(r => setTimeout(r, 40));
+            setProgress(Math.round((i / 20) * 15));
+            await new Promise(r => setTimeout(r, 60));
         }
         setLatencyData(prev => ({ ...prev, unloaded: pings }));
 
-        // 2. Download Test (Simulating Multi-threaded Chunk Download)
+        // 2. Real Download Test (Streaming 25MB)
         setStatus('download');
-        let dSpeed = 0;
-        const targetDSpeed = downlinkHint * (0.9 + Math.random() * 0.2);
         const dlPings = [];
+        let downloadedBytes = 0;
+        let dlStartTime = performance.now();
+        let lastReportTime = dlStartTime;
 
-        await new Promise(resolve => {
-            let ticks = 0;
-            const maxTicks = 100; // Longer test for stability
+        try {
+            const response = await fetch(`${baseUrl}/api/speedtest/download?size=26214400`, { cache: 'no-store' });
+            if (!response.body) throw new Error("No body");
 
-            timerRef.current = setInterval(() => {
-                if (stopRef.current) { clearInterval(timerRef.current); resolve(); return; }
-                if (isPaused) return;
+            const reader = response.body.getReader();
 
-                ticks++;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done || stopRef.current) break;
 
-                // Multi-threaded TCP behavior simulation
-                let phase = 'slow_start';
-                if (ticks > 20) phase = 'congestion';
-                if (ticks > 60) phase = 'stable';
+                downloadedBytes += value.length;
+                const now = performance.now();
+                const totalElapsed = (now - dlStartTime) / 1000;
 
-                const variance = (Math.random() - 0.5) * (ticks > 60 ? 5 : 20);
-                dSpeed = calculateSpeedStep(dSpeed, targetDSpeed, phase) + variance;
-                dSpeed = Math.max(0, dSpeed);
+                if (now - lastReportTime > 150) { // Update UI every 150ms
+                    const avgMbps = (downloadedBytes * 8) / (totalElapsed * 1000000);
 
-                setMetrics(m => ({ ...m, down: dSpeed, downPeak: Math.max(m.downPeak, dSpeed) }));
-                setDownloadChart(prev => [...prev.slice(1), { val: dSpeed }]);
+                    setMetrics(m => ({
+                        ...m,
+                        down: Math.round(avgMbps * 10) / 10,
+                        downPeak: Math.max(m.downPeak, Math.round(avgMbps * 10) / 10)
+                    }));
+                    setDownloadChart(prev => [...prev.slice(1), { val: avgMbps }]);
+                    setProgress(15 + Math.min(40, (downloadedBytes / 26214400) * 40));
+                    lastReportTime = now;
 
-                // Real-time bufferbloat simulation
-                const loadPing = metrics.ping + (dSpeed / 10) + (Math.random() * 15);
-                dlPings.push(Math.round(loadPing));
-
-                setProgress(15 + Math.round((ticks / maxTicks) * 40)); // 15-55%
-
-                if (ticks >= maxTicks) { clearInterval(timerRef.current); resolve(); }
-            }, 50);
-        });
+                    // Sample latency under load
+                    const pStart = performance.now();
+                    fetch(`${baseUrl}/api/speedtest/ping`, { method: 'HEAD', cache: 'no-store' }).then(() => {
+                        dlPings.push(performance.now() - pStart);
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Download test failed", e);
+        }
         setLatencyData(prev => ({ ...prev, download: dlPings }));
 
-        // 3. Upload Test
+        // 3. Real Upload Test (10MB Payload)
         setStatus('upload');
-        let uSpeed = 0;
-        const targetUSpeed = targetDSpeed * (0.4 + Math.random() * 0.2);
         const ulPings = [];
+        const uploadSize = 10485760; // 10MB
+        const randomData = new Uint8Array(uploadSize);
+        window.crypto.getRandomValues(randomData);
+        const uploadBlob = new Blob([randomData], { type: 'application/octet-stream' });
 
-        await new Promise(resolve => {
-            let ticks = 0;
-            const maxTicks = 100;
+        const ulStartTime = performance.now();
+        try {
+            await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${baseUrl}/api/speedtest/upload`);
 
-            timerRef.current = setInterval(() => {
-                if (stopRef.current) { clearInterval(timerRef.current); resolve(); return; }
-                if (isPaused) return;
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable && !stopRef.current) {
+                        const now = performance.now();
+                        const elapsed = (now - ulStartTime) / 1000;
+                        const avgMbps = (e.loaded * 8) / (elapsed * 1000000);
 
-                ticks++;
+                        setMetrics(m => ({
+                            ...m,
+                            up: Math.round(avgMbps * 10) / 10,
+                            upPeak: Math.max(m.upPeak, Math.round(avgMbps * 10) / 10)
+                        }));
+                        setUploadChart(prev => [...prev.slice(1), { val: avgMbps }]);
+                        setProgress(55 + Math.round((e.loaded / e.total) * 45));
 
-                let phase = 'slow_start';
-                if (ticks > 20) phase = 'congestion';
-                if (ticks > 60) phase = 'stable';
+                        if (now - lastReportTime > 200) {
+                            const pStart = performance.now();
+                            fetch(`${baseUrl}/api/speedtest/ping`, { method: 'HEAD', cache: 'no-store' }).then(() => {
+                                ulPings.push(performance.now() - pStart);
+                            });
+                            lastReportTime = now;
+                        }
+                    }
+                };
 
-                const variance = (Math.random() - 0.5) * (ticks > 60 ? 2 : 10);
-                uSpeed = calculateSpeedStep(uSpeed, targetUSpeed, phase) + variance;
-                uSpeed = Math.max(0, uSpeed);
+                xhr.onload = () => resolve(xhr.response);
+                xhr.onerror = () => reject(new Error("Upload failed"));
+                xhr.onabort = () => resolve();
 
-                setMetrics(m => ({ ...m, up: uSpeed, upPeak: Math.max(m.upPeak, uSpeed) }));
-                setUploadChart(prev => [...prev.slice(1), { val: uSpeed }]);
+                // Add abort listener
+                const checkStop = setInterval(() => {
+                    if (stopRef.current) {
+                        xhr.abort();
+                        clearInterval(checkStop);
+                    }
+                }, 100);
 
-                const loadPing = metrics.ping + (uSpeed / 5) + (Math.random() * 10);
-                ulPings.push(Math.round(loadPing));
-
-                setProgress(55 + Math.round((ticks / maxTicks) * 45)); // 55-100%
-
-                if (ticks >= maxTicks) { clearInterval(timerRef.current); resolve(); }
-            }, 50);
-        });
+                xhr.send(uploadBlob);
+            });
+        } catch (e) {
+            console.error("Upload test failed", e);
+        }
         setLatencyData(prev => ({ ...prev, upload: ulPings }));
 
         // 4. Finalize
         setStatus('complete');
         setProgress(100);
 
-        // Advanced Bufferbloat Logic
-        const avgUnloaded = pings.reduce((a, b) => a + b, 0) / pings.length;
-        const avgLoaded = (dlPings.reduce((a, b) => a + b, 0) / dlPings.length + ulPings.reduce((a, b) => a + b, 0) / ulPings.length) / 2;
-        const bufferbloatScore = avgLoaded - avgUnloaded;
+        // Final Calculations
+        const finalDown = downloadedBytes > 0 ? (downloadedBytes * 8) / (((performance.now() - dlStartTime) / 1000) * 1000000) : 0;
+        const finalUp = metrics.up; // Upload uses XHR progress which is accurate
+        const finalPing = metrics.ping;
+
+        const avgUnloaded = pings.length > 0 ? pings.reduce((a, b) => a + b, 0) / pings.length : 0;
+        const avgLoaded = ((dlPings.length > 0 ? dlPings.reduce((a, b) => a + b, 0) / dlPings.length : avgUnloaded) +
+            (ulPings.length > 0 ? ulPings.reduce((a, b) => a + b, 0) / ulPings.length : avgUnloaded)) / 2;
+        const bufferbloatScore = Math.max(0, avgLoaded - avgUnloaded);
 
         let grade = 'A+';
-        if (bufferbloatScore > 3) grade = 'A';
-        if (bufferbloatScore > 10) grade = 'B';
-        if (bufferbloatScore > 25) grade = 'C';
-        if (bufferbloatScore > 50) grade = 'D';
-        if (bufferbloatScore > 90) grade = 'F';
+        if (bufferbloatScore > 5) grade = 'A';
+        if (bufferbloatScore > 15) grade = 'B';
+        if (bufferbloatScore > 35) grade = 'C';
+        if (bufferbloatScore > 70) grade = 'D';
 
         setBufferbloat({ grade });
 
-        // Generate AI Analysis
-        generateAIAnalysis(result);
+        const finalResults = {
+            id: Date.now(),
+            date: new Date().toISOString(),
+            down: Math.round(finalDown * 10) / 10,
+            up: Math.round(finalUp * 10) / 10,
+            ping: Math.round(finalPing),
+            jitter: Math.round(metrics.jitter),
+            grade: grade
+        };
+
+        setMetrics(m => ({ ...m, down: finalResults.down, up: finalResults.up }));
+        setHistory(saveTest(finalResults));
+        generateAIAnalysis(finalResults);
     };
 
     const generateAIAnalysis = (data) => {

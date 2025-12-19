@@ -1,18 +1,14 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * VOICE MODE 7.0 - Premium Redesign
+ * VOICE MODE - Premium AI Conversation
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * Features:
  * - Distinct Premium vs Standard visual experiences
  * - Premium: Immersive dark mode with neural orb animations
  * - Standard: Clean, fast, browser-based TTS
- * - Simplified settings (no language options)
  * - Clean conversation display (filters internal thoughts)
  * - Real-time audio visualization
- * 
- * @version 7.0.0
- * @date December 2025
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';

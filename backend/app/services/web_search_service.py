@@ -143,16 +143,37 @@ class WebSearchService:
                                 "content": data["Abstract"],
                                 "score": 0.9
                             })
+                        elif data.get("Heading"):
+                            # For disambiguation pages, use heading as context
+                            results.append({
+                                "title": data.get("Heading", "Summary"),
+                                "url": data.get("AbstractURL", ""),
+                                "content": f"Information about {data.get('Heading', 'this topic')}",
+                                "score": 0.6
+                            })
 
-                        # Add related topics
-                        for topic in data.get("RelatedTopics", [])[:max_results - 1]:
+                        # Add related topics - get more content from each
+                        for topic in data.get("RelatedTopics", [])[:max_results]:
                             if isinstance(topic, dict) and topic.get("Text"):
+                                # Extract text, removing HTML anchor tags
+                                text = topic.get("Text", "")
                                 results.append({
-                                    "title": topic.get("Text", "")[:100],
+                                    "title": text[:80] + "..." if len(text) > 80 else text,
                                     "url": topic.get("FirstURL", ""),
-                                    "content": topic.get("Text", ""),
+                                    "content": text,
                                     "score": 0.7
                                 })
+                            # Handle nested topics (categories)
+                            elif isinstance(topic, dict) and topic.get("Topics"):
+                                for subtopic in topic.get("Topics", [])[:3]:
+                                    if subtopic.get("Text"):
+                                        text = subtopic.get("Text", "")
+                                        results.append({
+                                            "title": text[:80] + "..." if len(text) > 80 else text,
+                                            "url": subtopic.get("FirstURL", ""),
+                                            "content": text,
+                                            "score": 0.6
+                                        })
 
                         if results:
                             logger.info(f"DuckDuckGo search returned {len(results)} results for: {query}")
@@ -173,90 +194,237 @@ class WebSearchService:
         return self._fallback_results(query)
 
     def _fallback_results(self, query: str) -> List[Dict[str, str]]:
-        """Fallback results when all search methods fail."""
+        """Fallback results when all search methods fail - use AI's own knowledge."""
+        logger.warning(f"Web search unavailable for '{query}'. AI will use its own knowledge.")
         return [{
-            "title": "Search Unavailable",
+            "title": "AI Knowledge Base",
             "url": "",
-            "content": f"I couldn't search the web for '{query}' at the moment. Please try again later or check your internet connection.",
-            "score": 0.0
+            "content": f"Use your extensive training knowledge to write a comprehensive article about: {query}. Include all factual information you know about this topic.",
+            "score": 0.5
         }]
 
-    async def get_answer(
+    async def stream_answer(
         self,
         query: str,
-        context_results: Optional[List[Dict[str, str]]] = None
-    ) -> str:
+        context_results: Optional[List[Dict[str, str]]] = None,
+        model: str = "google/gemini-2.5-flash-preview-05-20"
+    ):
         """
-        Generate a comprehensive answer using search results and OpenRouter LLM.
-
-        Args:
-            query: User's question
-            context_results: Pre-fetched search results (optional)
-
-        Returns:
-            AI-generated answer based on sources
+        Stream a comprehensive Wikipedia-style article using search results.
+        Designed to generate deep, insightful, well-researched content.
         """
         try:
             if not context_results:
-                context_results = await self.search_web(query, max_results=5)
+                context_results = await self.search_web(query, max_results=10)
 
-            if not context_results or (
-                    len(context_results) == 1 and context_results[0]["title"] == "Search Unavailable"):
-                return "I couldn't find any information about that. Please try rephrasing your question or check your internet connection."
+            # AI Knowledge Base is a valid fallback, so don't return an error
+            if not context_results:
+                yield "I couldn't find any information about that topic. Please try again later."
+                return
 
-            # Prepare context from search results
+            # Build rich context from search results
             context_text = ""
+            source_urls = []
             for i, result in enumerate(context_results, 1):
-                context_text += f"Source [{i}]: {result['title']}\nURL: {result['url']}\nContent: {result['content']}\n\n"
+                title = result.get('title', 'Unknown Source')
+                url = result.get('url', '')
+                content = result.get('content', '')
+                context_text += f"[Source {i}] {title}\nURL: {url}\nContent: {content}\n\n"
+                if url:
+                    source_urls.append(url)
 
-            # Construct prompt for Grok
+            # Ultra-comprehensive system prompt for deep research articles
+            system_prompt = """You are an expert encyclopedia writer with deep knowledge across all subjects. Your mission is to create comprehensive, insightful, and beautifully written articles that truly educate and benefit readers.
+
+## CRITICAL REQUIREMENTS:
+
+### 1. LENGTH & DEPTH (MANDATORY)
+- **Minimum 2500-4000 words** - This is NON-NEGOTIABLE
+- Every section must have substantial content (200-400 words each)
+- No placeholder text or thin paragraphs
+- Deep dive into every aspect of the subject
+
+### 2. ARTICLE STRUCTURE
+
+**LEAD SECTION (No heading)**
+Write 4-5 substantial paragraphs that provide:
+- Complete overview of the subject
+- Key significance and global impact
+- Timeline of major events/achievements
+- Why this topic matters to readers
+- Use **bold** for the subject's first mention and critical terms
+
+**## Overview** (400+ words)
+- Comprehensive introduction to the subject
+- Historical context and background
+- Core definition and scope
+- Global significance and relevance today
+
+**## Historical Background** (400+ words)
+- Origins and early development
+- Key milestones and turning points
+- Evolution over time
+- Important figures and their contributions
+
+**## Core Concepts / Key Features** (500+ words)
+- Detailed breakdown of main components
+- In-depth analysis of key aspects
+- Technical details where relevant
+- Real-world applications and examples
+
+**## Development & Evolution** (400+ words)
+- Chronological development
+- Major phases and transitions
+- Innovations and breakthroughs
+- Current state and modern developments
+
+**## Impact & Significance** (400+ words)
+- Global influence and reach
+- Economic, social, or cultural impact
+- Statistical data and measurable effects
+- Case studies and concrete examples
+
+**## Challenges & Controversies** (300+ words)
+- Key debates and disagreements
+- Criticisms and limitations
+- Ongoing challenges
+- Multiple perspectives presented fairly
+
+**## Future Outlook** (300+ words)
+- Emerging trends and predictions
+- Potential developments
+- Expert opinions on future direction
+- Opportunities and risks ahead
+
+**## See Also**
+- List 6-10 related topics as bullet points
+- Each should be a searchable concept
+
+**## References**
+- Numbered list of all source URLs
+- Format: 1. https://source-url.com/path
+
+### 3. WRITING QUALITY
+
+**Voice & Tone:**
+- Authoritative yet accessible
+- Engaging and educational
+- Professional encyclopedia quality
+- Avoid jargon without explanation
+
+**Content Standards:**
+- Every claim supported by evidence
+- Rich with specific facts, dates, numbers
+- Include expert quotes when available
+- Balance breadth with depth
+- Smooth transitions between sections
+
+**Citations:**
+- Use inline citations [1], [2], [3] throughout
+- Every paragraph should have 2-4 citations
+- Cluster citations for well-sourced facts: [1][3][5]
+
+### 4. READER VALUE
+Your article must:
+- Teach something new and valuable
+- Provide insights not obvious from a quick search
+- Connect ideas and show relationships
+- Give readers a complete understanding
+- Be worth their time to read fully
+
+### 5. ABSOLUTELY AVOID:
+- Short, superficial paragraphs
+- Generic filler content
+- Repeating the same information
+- Vague statements without specifics
+- Thin sections (every section must be substantial)
+- Ending abruptly without proper conclusion"""
+
+            user_prompt = f"""Write a comprehensive, deeply researched encyclopedia article about: **{query}**
+
+CRITICAL: This must be AT LEAST 2500 words with substantial, insightful content in every section.
+
+Use these research sources (cite them as [1], [2], etc.):
+
+{context_text}
+
+SOURCE URLS FOR REFERENCES SECTION:
+{chr(10).join(f'{i+1}. {url}' for i, url in enumerate(source_urls) if url)}
+
+REMEMBER:
+1. Write AT LEAST 2500-4000 words total
+2. Each major section needs 300-500 words minimum
+3. Include deep analysis and expert insights
+4. Cite sources throughout with [1], [2], [3] format
+5. End with ## See Also (bullet list) and ## References (numbered URLs)
+6. Make this article truly valuable and educational for readers
+7. Polish and refine - don't just output raw information
+
+Generate your comprehensive article now:"""
+
             messages = [
-                {
-                    "role": "system",
-                    "content": "You are Grokipedia, an advanced AI knowledge engine powered by xAI's Grok 4.1. Your goal is to generate a high-quality, Wikipedia-style article based on the provided search results.\n\nGuidelines:\n1. **Structure**: Use Markdown headers (##, ###) to organize the content logically (e.g., Early Life, Career, Impact).\n2. **Tone**: Maintain a neutral, encyclopedic, and professional tone.\n3. **Accuracy**: Stick strictly to the provided search results. Do not hallucinate information not present in the sources.\n4. **Citations**: Cite your sources inline using [1], [2], etc., corresponding to the provided source numbers.\n5. **Formatting**: Use bolding for key terms and lists where appropriate for readability."
-                },
-                {
-                    "role": "user",
-                    "content": f"Topic: {query}\n\nSearch Results:\n{context_text}\n\nPlease write a detailed Grokipedia article about '{query}' based ONLY on the above search results."
-                }
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
             ]
 
-            # Get provider and generate answer
             from ..providers import get_provider
             provider = get_provider()
 
-            # Use x-ai/grok-4.1-fast as requested
-            model = "x-ai/grok-4.1-fast"
+            # Models to try in order of preference (Gemini for best Wikipedia-style content)
+            models_to_try = [
+                model,
+                "google/gemini-2.0-flash-exp:free",
+                "google/gemini-2.5-pro-exp-03-25:free",
+                "meta-llama/llama-4-maverick:free"
+            ]
+            
+            last_error = None
+            for try_model in models_to_try:
+                try:
+                    logger.info(f"Generating comprehensive article with: {try_model}")
+                    stream_generator = await provider.chat_completion_stream(
+                        messages=messages,
+                        model=try_model,
+                        temperature=0.3,  # Lower for more focused, comprehensive output
+                        max_tokens=8000   # Allow for 2500-4000 word articles
+                    )
 
-            response = await provider.chat_completion(
-                messages=messages,
-                model=model,
-                temperature=0.3,  # Low temperature for factual accuracy
-                max_tokens=1500  # Increased for fuller articles
-            )
-
-            return response["response"]
+                    async for chunk in stream_generator:
+                        if hasattr(chunk, 'delta') and chunk.delta:
+                            yield chunk.delta
+                    
+                    # If we get here without error, break the loop
+                    return
+                    
+                except Exception as model_error:
+                    last_error = model_error
+                    logger.warning(f"Model {try_model} failed: {model_error}. Trying next...")
+                    continue
+            
+            # All models failed
+            if last_error:
+                raise last_error
 
         except Exception as e:
-            logger.error(f"Grokipedia answer generation failed: {e}")
-            # Fallback to simple formatting if LLM fails
-            return self._fallback_format_answer(context_results)
+            logger.error(f"Grokipedia streaming failed: {e}")
+            yield f"\n\n---\n\n⚠️ **Error generating article:** {str(e)}\n\nPlease try again later."
 
     def _fallback_format_answer(self, context_results: List[Dict[str, str]]) -> str:
         """Fallback formatting if LLM fails."""
         if not context_results:
             return "No results found."
 
-        answer_parts = ["**Search Results (AI generation unavailable):**\n"]
+        answer_parts = ["## Search Results\n\n*AI generation unavailable. Showing raw search results:*\n"]
         for i, result in enumerate(context_results, 1):
             if result["title"] != "AI Summary" and result["content"]:
-                answer_parts.append(f"{i}. **{result['title']}**")
+                answer_parts.append(f"### [{i}] {result['title']}")
                 if result["url"]:
-                    answer_parts.append(f"   {result['url']}")
-                answer_parts.append(f"   {result['content'][:200]}...\n")
+                    answer_parts.append(f"*Source: {result['url']}*")
+                answer_parts.append(f"\n{result['content']}\n")
 
         return "\n".join(answer_parts)
 
 
 # Global instance
 web_search_service = WebSearchService()
+

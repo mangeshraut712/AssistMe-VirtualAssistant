@@ -92,27 +92,65 @@ async def search_knowledge(request: SearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/grokipedia/stream")
+async def grokipedia_stream(request: GrokipediaRequest):
+    """
+    Streamed Grokipedia article with real-time web search integration.
+    """
+    import json
+    import logging
+    logger = logging.getLogger(__name__)
+
+    async def stream_generator():
+        try:
+            # 1. Search (First step is non-streamed for context gathering)
+            logger.info(f"Grokipedia search for: {request.query}")
+            search_results = await web_search_service.search_web(
+                request.query,
+                max_results=request.max_results,
+                search_depth=request.search_depth
+            )
+            logger.info(f"Found {len(search_results)} sources")
+            
+            # 2. Yield metadata first so the frontend knows sources
+            yield f"data: {json.dumps({'type': 'metadata', 'sources': search_results})}\n\n"
+            
+            # 3. Stream the answer
+            async for chunk in web_search_service.stream_answer(
+                request.query,
+                context_results=search_results
+            ):
+                if chunk:
+                    yield f"data: {json.dumps({'type': 'content', 'delta': chunk})}\n\n"
+            
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            logger.error(f"Grokipedia stream error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            yield "data: [DONE]\n\n"
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(stream_generator(), media_type="text/event-stream")
+
+
+
 @router.post("/grokipedia")
 async def grokipedia_search(request: GrokipediaRequest):
     """
     Grokipedia-style deep search with AI-generated answers.
-
-    This endpoint provides a comprehensive answer with sources,
-    similar to the real Grokipedia experience.
     """
     try:
-        # Perform web search
         search_results = await web_search_service.search_web(
             request.query,
             max_results=request.max_results,
             search_depth=request.search_depth
         )
 
-        # Generate comprehensive answer
-        answer = await web_search_service.get_answer(
-            request.query,
-            context_results=search_results
-        )
+        from ..services.web_search_service import web_search_service
+        # For non-streaming, we can use a helper or just await the stream to collect
+        answer = ""
+        async for chunk in web_search_service.stream_answer(request.query, context_results=search_results):
+            answer += chunk
 
         return {
             "success": True,

@@ -53,24 +53,55 @@
 
 ```
 AssistMe-VirtualAssistant/
+│
 ├── src/                        # ⚛️ React Frontend (Vite)
-│   ├── components/
-│   │   ├── features/           # Feature-specific modules (Voice, Speedtest, etc.)
-│   │   ├── layout/             # Core layout (Header, Sidebar)
-│   │   └── ui/                 # Reusable atomic UI components
-│   ├── hooks/                  # Custom application hooks
-│   ├── lib/                    # API clients and unified libraries
-│   └── styles/                 # global CSS and theme tokens
+│   ├── components/             # React components
+│   │   ├── features/           # Feature panels (Voice, Imagine, Knowledge, etc.)
+│   │   ├── layout/             # Layout components (Sidebar, Header, ChatArea)
+│   │   └── ui/                 # Reusable UI primitives (Button, Card, Input)
+│   ├── constants/              # App-wide constants (API, models, storage keys)
+│   ├── context/                # React contexts (Theme, Auth)
+│   ├── hooks/                  # Custom React hooks
+│   ├── lib/                    # Utility libraries (API client, helpers)
+│   ├── services/               # API service wrappers
+│   ├── config/                 # Configuration files
+│   ├── pages/                  # Page components
+│   ├── utils/                  # Animation utilities
+│   ├── App.jsx                 # Main app component
+│   ├── main.jsx                # Entry point
+│   └── index.css               # Global styles & design tokens
 │
 ├── backend/                    # 🐍 FastAPI Backend
 │   ├── app/
-│   │   ├── routes/             # REST/WebSocket API endpoints
-│   │   ├── services/           # Orchestration and business logic
-│   │   └── providers/          # AI Model provider integrations
-│   └── requirements.txt        # Backend dependencies
+│   │   ├── routes/             # API endpoint handlers
+│   │   ├── services/           # Business logic & external integrations
+│   │   ├── providers/          # LLM provider implementations
+│   │   ├── core/               # Security & utilities
+│   │   ├── main.py             # FastAPI app entry point
+│   │   ├── config.py           # Configuration
+│   │   ├── schemas.py          # Pydantic models
+│   │   └── models.py           # Database models
+│   ├── alembic/                # Database migrations
+│   └── requirements.txt        # Python dependencies
 │
-├── .github/workflows/          # Automated CI/CD pipelines
-└── config/                     # Shared configuration
+├── api/                        # ☁️ Vercel Serverless Functions
+│   ├── chat.js                 # Chat endpoint
+│   ├── health.js               # Health check
+│   ├── gemini/                 # Gemini endpoints
+│   └── images/                 # Image generation
+│
+├── public/                     # Static assets
+│   ├── assets/                 # Images, fonts
+│   └── manifest.json           # PWA manifest
+│
+├── scripts/                    # Build & utility scripts
+├── .github/workflows/          # CI/CD pipelines
+│
+├── index.html                  # HTML entry point
+├── vite.config.js              # Vite configuration
+├── tailwind.config.js          # Tailwind configuration
+├── package.json                # Node dependencies
+└── README.md                   # This file
 ```
 
 ---
@@ -113,6 +144,7 @@ VITE_BACKEND_URL=http://localhost:8001
 ```env
 OPENROUTER_API_KEY=your_key_here
 GOOGLE_API_KEY=your_gemini_key_here  # Optional for Premium Voice/Images
+TAVILY_API_KEY=your_tavily_key_here  # Optional for Grokipedia Deep Research
 ```
 
 ---

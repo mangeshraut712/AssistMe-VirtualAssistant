@@ -259,7 +259,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                         >
                             <div>
                                 <p className="font-semibold text-sm">AssistMe</p>
-                                <p className="text-xs text-muted-foreground">v3.0.0 • 2025 Edition</p>
+                                <p className="text-xs text-muted-foreground">AssistMe Virtual Assistant</p>
                             </div>
                             <motion.div
                                 className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold"
