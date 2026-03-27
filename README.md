@@ -1,193 +1,169 @@
-# 🤖 AssistMe - Next-Gen AI Virtual Assistant
+<a id="top"></a>
 
 <div align="center">
 
-![AssistMe Banner](https://img.shields.io/badge/AssistMe-blue?style=for-the-badge&logo=probot&logoColor=white)
+# AssistMe
 
-**A production-ready, multi-modal AI platform featuring Advanced Voice Mode, Deep Research (Grokipedia), and Neural Speed Diagnostics.**
+### _Multi-modal AI assistant with voice, research, image, and diagnostics tools_
 
-[![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)](https://react.dev)
-[![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+<img src="https://img.shields.io/badge/AssistMe-AI_Assistant-0EA5E9?style=for-the-badge&logo=probot&logoColor=white" alt="AssistMe badge" />
+<img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=000000" alt="React badge" />
+<img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite badge" />
+<img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI badge" />
+<img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python badge" />
+<img src="https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge" alt="MIT license badge" />
 
-[Live Demo](https://assist-me-virtual-assistant.vercel.app/) • [Report Bug](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues) • [Request Feature](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues)
+[Live Demo](https://assist-me-virtual-assistant.vercel.app/) • [Repository](https://github.com/mangeshraut712/AssistMe-VirtualAssistant) • [Issues](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues)
+
+**[About](#about) • [Features](#features) • [Tech Stack](#tech-stack) • [Quick Start](#quick-start) • [Project Structure](#project-structure) • [Scripts](#scripts) • [License](#license) • [Contact](#contact)**
 
 </div>
 
 ---
 
-## 🌟 Overview
+## 📖 Table of Contents
 
-**AssistMe** isn't just a chatbot; it's a comprehensive AI workspace designed for power users. Built on a modern **React + FastAPI** architecture, it integrates state-of-the-art LLMs (Gemini, Claude, GPT, Grok) with custom neural modules for specific tasks like deep research, image generation, and network diagnostics.
-
-The latest update introduces a massively reorganized codebase, enterprise-grade architecture, and powerful new "applets" within the assistant.
-
----
-
-## 🔥 Key Features
-
-### 🧠 **Grokipedia (Deep Research)**
-A revolutionary "Search & Synthesis" engine that generates comprehensive, wiki-style articles on any topic.
-- **Deep Web Search:** Aggregates data from multiple sources.
-- **AI Synthesis:** Generates deep-dive articles with citations.
-- **Streaming Architecture:** Real-time content generation with visible thought process.
-
-### 🎙️ **Advanced Voice Mode**
-Real-time, natural conversation with aggressively optimized latency.
-- **Live Integration:** Zero-latency turn-taking.
-- **"Thinking" Filter:** Scrubbing of internal chain-of-thought for pure speech output.
-- **Visual Feedback:** Dynamic audio visualizers synchronized to speech.
-
-### 🎨 **Imagine Studio**
-A complete generative art workstation built right into the chat.
-- **Multi-Model Support:** Flux, DALL-E, Stable Diffusion.
-- **Style Presets:** One-click styles for Anime, Digital Art, Photorealism, and 3D Render.
-- **Smart Prompting:** Automatic prompt enhancement for better results.
-
-### ⚡ **Speedtest Ultra**
-A professional-grade network diagnostic tool.
-- **Neural Diagnostics:** Analyzes connection quality for specific use cases (Gaming, 4K Streaming).
-- **Granular Metrics:** Measures Jitter, Bufferbloat, and Packet Loss alongside speed.
-- **Real-time Graphs:** Visualization of TCP stream stability.
-
-### 🇮🇳 **Native Multilingual Support**
-First-class support for Indian languages.
-- **22+ Languages:** Hindi, Marathi, Tamil, Telugu, Gujarati, and more.
-- **Script Handling:** Correct rendering of complex Indic scripts.
-- **Cultural Nuance:** Localized context understanding.
+- [About](#about)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [Scripts](#scripts)
+- [License](#license)
+- [Contact](#contact)
 
 ---
 
-## 🏗️ Architecture
+<a id="about"></a>
 
-AssistMe follows a clean, modular architecture designed for scalability.
+## About
 
-```mermaid
-graph TD
-    User[User] --> Frontend[React + Vite Frontend]
-    Frontend --> |REST/WS| Backend[FastAPI Backend]
-    
-    subgraph Frontend
-        Components[UI Components]
-        Services[Service Layer]
-        Context[State Management]
-    end
-    
-    subgraph Backend
-        Router[API Router]
-        ServiceLogic[Business Logic]
-        Providers[LLM Integrations]
-    end
-    
-    Backend --> OpenRouter[OpenRouter API]
-    Backend --> Gemini[Google Gemini API]
-    Backend --> Tavily[Tavily Search API]
-```
+AssistMe is a React + FastAPI workspace that brings chat, voice, research, image generation, and network diagnostics into one polished assistant. The codebase is split into a Vite frontend, a Python backend, and small API helpers so the experience stays fast locally and easy to deploy.
 
-### Directory Structure
+<div align="center">
 
-| Directory | Purpose |
-|-----------|---------|
-| `src/components/features` | Standalone feature modules (Voice, Speedtest, Grokipedia) |
-| `src/services` | centralized API wrappers and data fetching logic |
-| `src/context` | Global state management (Theme, Auth) |
-| `backend/app/routes` | API endpoint definitions |
-| `backend/app/providers` | LLM provider abstraction layer |
+| Voice Mode | Deep Research | Multimodal Tools | Diagnostics |
+| :-- | :-- | :-- | :-- |
+| Real-time voice conversations | Grokipedia-style research flow | Image, file, and utility panels | Speedtest and benchmark views |
 
----
+</div>
 
-## 🚀 Getting Started
+<a id="features"></a>
+
+## Features
+
+- Advanced Voice Mode with responsive interaction and audio-focused UI states.
+- Grokipedia research flows that combine search, synthesis, and citations.
+- Image generation, file upload, and assistant utility panels in a single shell.
+- Speedtest Ultra for network checks and performance-oriented diagnostics.
+- Multilingual support with a strong focus on Indian languages and scripts.
+
+<a id="tech-stack"></a>
+
+## Tech Stack
+
+**Frontend**
+
+- React 19
+- Vite 7
+- Tailwind CSS
+- Framer Motion
+- Radix UI primitives
+
+**Backend**
+
+- FastAPI
+- Uvicorn
+- Python 3
+- Pydantic
+- OpenRouter and Gemini integrations
+
+**Tooling**
+
+- ESLint
+- Prettier
+- npm-run-all
+- Vercel deployment
+- local validation scripts
+
+<a id="quick-start"></a>
+
+## Quick Start
 
 ### Prerequisites
 
-- **Node.js**
-- **Python**
-- **API Keys:** OpenRouter (Required), Google Gemini & Tavily (Recommended)
+- Node.js 20+
+- Python 3.11+ with `venv`
+- API keys for OpenRouter and any optional model providers you plan to use
 
-### Installation
+### Install
 
-1.  **Clone the repo**
-    ```bash
-    git clone https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git
-    cd AssistMe-VirtualAssistant
-    ```
-
-2.  **Install Frontend**
-    ```bash
-    npm install
-    ```
-
-3.  **Install Backend**
-    ```bash
-    cd backend
-    python -m venv venv
-    source venv/bin/activate  # Windows: venv\Scripts\activate
-    pip install -r requirements.txt
-    ```
-
-### Configuration
-
-Create a `.env` file in `backend/`:
-
-```env
-OPENROUTER_API_KEY=sk-or-v1-...
-GOOGLE_API_KEY=AIzaSy...      # For Voice & Imagine
-TAVILY_API_KEY=tvly-...       # For Grokipedia
+```bash
+git clone https://github.com/mangeshraut712/AssistMe-VirtualAssistant.git
+cd AssistMe-VirtualAssistant
+npm install
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### Running the App
+### Configure
 
-**Development Mode (Concurrent):**
+Create `backend/.env` from `.env.example` and set the provider keys you need.
+
+### Run
+
 ```bash
-# In Root
+# Frontend development server
 npm run dev
 
-# In Backend/
-python -m uvicorn app.main:app --reload --port 8000
+# Backend API
+cd backend
+source venv/bin/activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
----
+<a id="project-structure"></a>
 
-## 🛠️ Tech Stack
+## Project Structure
 
-### Frontend
-- **Framework:** React, Vite
-- **Styling:** Tailwind CSS
-- **Animation:** Framer Motion
-- **Icons:** Lucide React
-- **State:** React Context + Hooks
+```text
+AssistMe-VirtualAssistant/
+├── src/                # React app, pages, components, hooks, and context
+├── backend/            # FastAPI application, models, routes, and services
+├── api/                # Serverless helpers and provider endpoints
+├── public/             # Static assets and PWA manifest files
+├── scripts/            # Validation and maintenance utilities
+└── quick-start.sh      # Optional bootstrap helper
+```
 
-### Backend
-- **Framework:** FastAPI
-- **Server:** Uvicorn (ASGI)
-- **Validation:** Pydantic
-- **Network:** httpx, aiohttp
+<a id="scripts"></a>
 
----
+## Scripts
 
-## 🤝 Contributing
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the frontend Vite dev server |
+| `npm run build` | Build the frontend for production |
+| `npm run preview` | Preview the production build locally |
+| `npm run start` | Run frontend + backend helper servers in parallel |
+| `npm run backend:setup` | Create the backend virtual environment and install Python deps |
+| `npm run lint` | Lint the frontend source |
+| `npm run lint:fix` | Auto-fix lintable frontend issues |
+| `npm run validate-paths` | Verify key project paths |
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get started, our code of conduct, and submission guidelines.
+<a id="license"></a>
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+## License
 
----
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
-## 📄 License
+<a id="contact"></a>
 
-Distributed under the MIT License. See `LICENSE` for more information.
+## Contact
 
----
+- Live demo: [assist-me-virtual-assistant.vercel.app](https://assist-me-virtual-assistant.vercel.app/)
+- Repository issues: [mangeshraut712/AssistMe-VirtualAssistant/issues](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues)
 
-<p align="center">
-  <strong>Built with ❤️ by Mangesh Raut</strong><br>
-  <a href="https://github.com/mangeshraut712">GitHub Profile</a> • 
-  <a href="https://assist-me-virtual-assistant.vercel.app/">Live Demo</a>
-</p>
+[↑ Back to Top](#top)
