@@ -191,3 +191,20 @@ Distributed under the MIT License. See `LICENSE` for more information.
   <a href="https://github.com/mangeshraut712">GitHub Profile</a> • 
   <a href="https://assist-me-virtual-assistant.vercel.app/">Live Demo</a>
 </p>
+
+---
+
+<!-- codex:project-diagram:start -->
+
+## Project Diagram
+
+```mermaid
+flowchart LR
+    A["Browser"] --> B["Frontend App"]
+    B --> C["API / Serverless"]
+    C --> D["Deploy"]
+```
+
+_High-level flow of the deployed web experience and supporting services._
+
+<!-- codex:project-diagram:end -->
