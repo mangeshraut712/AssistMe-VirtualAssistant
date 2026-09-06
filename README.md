@@ -17,6 +17,18 @@
 
 </div>
 
+<p align="center">
+  <img src="docs/screenshots/01-home.png" alt="AssistMe home screen with chat workspace, feature sidebar, and prompt cards" width="900">
+  <br>
+  <em>Home — chat workspace with feature sidebar, prompt cards, and model picker (live GitHub Pages demo).</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/02-feature.png" alt="AssistMe Imagine Studio with a digital-art prompt ready to generate" width="900">
+  <br>
+  <em>Imagine Studio — style presets and a prompt ready to generate (live UI, Digital Art selected).</em>
+</p>
+
 ---
 
 ## 🌟 Overview
@@ -92,7 +104,7 @@ graph TD
 | Directory | Purpose |
 |-----------|---------|
 | `src/components/features` | Standalone feature modules (Voice, Speedtest, Grokipedia) |
-| `src/services` | centralized API wrappers and data fetching logic |
+| `src/services` | Centralized API wrappers and data fetching logic |
 | `src/context` | Global state management (Theme, Auth) |
 | `backend/app/routes` | API endpoint definitions |
 | `backend/app/providers` | LLM provider abstraction layer |
