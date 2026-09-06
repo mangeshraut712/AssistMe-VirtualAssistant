@@ -157,7 +157,7 @@ The **Vite frontend** is deployed to **free GitHub Pages** from GitHub Actions (
 
 https://mangeshraut712.github.io/AssistMe-VirtualAssistant/
 
-The old Vercel site (`https://assist-me-virtual-assistant.vercel.app/`) is paused and is no longer the production host.
+The old Vercel site (`https://assist-me-virtual-assistant.vercel.app/`) is paused/blocked and is no longer the production host. Vercel git deployments are disabled (`vercel.json`). If the Vercel GitHub App still posts a failing check, the `Ignore blocked Vercel status` workflow overwrites it. To stop those pings entirely, uninstall the Vercel GitHub App from this repository.
 
 GitHub Pages is **static only**. It does not run FastAPI, Node serverless functions, or environment secrets.
 
