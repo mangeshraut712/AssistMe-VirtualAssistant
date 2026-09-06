@@ -1,35 +1,23 @@
-# 📁 Vercel Serverless API Functions
+# API folder (legacy Vercel serverless)
 
-This directory contains serverless functions for Vercel deployment.
+This directory contains Node serverless functions that previously ran on Vercel.
 
-## 📂 Directory Overview
+**GitHub Pages does not run these files.** Production frontend hosting is static Pages only:
 
-```
-api/
-├── chat.js              # Chat endpoint (streaming)
-├── health.js            # Health check endpoint
-├── tts.js               # Text-to-speech endpoint
-│
-├── gemini/              # Gemini AI endpoints
-│   ├── route.js         # Main Gemini route
-│   └── ...
-│
-├── images/              # Image generation endpoints
-│   └── generate.js      # Image generation
-│
-└── xai/                 # xAI/Grok endpoints
-    └── ...
+https://mangeshraut712.github.io/AssistMe-VirtualAssistant/
+
+## What to run instead
+
+Use the FastAPI app in `backend/` for chat, health, TTS, images, and related routes:
+
+```bash
+cd backend
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## 🚀 Deployment
+See `backend/README.md` for dependencies and environment variables.
 
-These functions are automatically deployed when pushing to Vercel:
-
-1. Push to GitHub
-2. Vercel auto-deploys from `main` branch
-3. Functions available at `https://your-app.vercel.app/api/*`
-
-## 📡 Endpoints
+## Endpoints (FastAPI / this folder historically)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -39,14 +27,7 @@ These functions are automatically deployed when pushing to Vercel:
 | `/api/gemini` | POST | Gemini AI |
 | `/api/images/generate` | POST | Generate images |
 
-## 🔑 Environment Variables
+Required secrets belong on the **backend host**, not GitHub Pages:
 
-Required in Vercel:
-- `OPENROUTER_API_KEY` - OpenRouter API key
-- `GEMINI_API_KEY` - Google Gemini API key
-
-## 📝 Notes
-
-- These are edge functions optimized for Vercel's edge network
-- They mirror the FastAPI backend functionality for Vercel deployment
-- Use the FastAPI backend for local development
+- `OPENROUTER_API_KEY`
+- `GEMINI_API_KEY` (or `GOOGLE_API_KEY`)

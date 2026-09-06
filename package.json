@@ -17,7 +17,7 @@
     "start": "npm-run-all --parallel serve:*",
     "backend:setup": "cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt",
     "db:migrate": "cd backend && alembic upgrade head",
-    "vercel:build": "npm run build",
+    "pages:build": "npm run build",
     "typecheck": "tsc --noEmit 2>/dev/null || true",
     "clean": "rm -rf dist node_modules/.cache",
     "validate-paths": "node scripts/validate-paths.mjs"
@@ -36,9 +36,9 @@
     "frontend",
     "backend"
   ],
-  "author": "AssistMe Team",
+  "author": "Mangesh Raut <mbr63@drexel.edu>",
   "license": "MIT",
-  "homepage": "https://github.com/mangeshraut712/AssistMe-VirtualAssistant#readme",
+  "homepage": "https://mangeshraut712.github.io/AssistMe-VirtualAssistant/",
   "bugs": {
     "url": "https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues"
   },

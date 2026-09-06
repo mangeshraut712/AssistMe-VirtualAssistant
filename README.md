@@ -13,7 +13,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-[Live Demo](https://assist-me-virtual-assistant.vercel.app/) • [Report Bug](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues) • [Request Feature](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues)
+[Live Demo](https://mangeshraut712.github.io/AssistMe-VirtualAssistant/) • [Report Bug](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues) • [Request Feature](https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues)
 
 </div>
 
@@ -151,6 +151,27 @@ python -m uvicorn app.main:app --reload --port 8000
 
 ---
 
+## 🌐 Hosting
+
+The **Vite frontend** is deployed to **free GitHub Pages** from GitHub Actions (`Deploy GitHub Pages` workflow). Production URL:
+
+https://mangeshraut712.github.io/AssistMe-VirtualAssistant/
+
+The old Vercel site (`https://assist-me-virtual-assistant.vercel.app/`) is paused and is no longer the production host.
+
+GitHub Pages is **static only**. It does not run FastAPI, Node serverless functions, or environment secrets.
+
+### Backend (not on Pages)
+
+API features (chat, TTS, images, auth) require a separate process:
+
+- **Local / self-host:** FastAPI in `backend/` (`uvicorn app.main:app --port 8000`). See `backend/README.md`.
+- **Former Vercel serverless:** files under `api/` were for Vercel and are **not** served by GitHub Pages. See `api/README.md`.
+
+Point the frontend at a backend URL you control (for example via env / settings) if you host the API elsewhere. There is no paid hosting in this setup.
+
+---
+
 ## 🛠️ Tech Stack
 
 ### Frontend
@@ -189,7 +210,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <p align="center">
   <strong>Built with ❤️ by Mangesh Raut</strong><br>
   <a href="https://github.com/mangeshraut712">GitHub Profile</a> • 
-  <a href="https://assist-me-virtual-assistant.vercel.app/">Live Demo</a>
+  <a href="https://mangeshraut712.github.io/AssistMe-VirtualAssistant/">Live Demo</a>
 </p>
 
 ---

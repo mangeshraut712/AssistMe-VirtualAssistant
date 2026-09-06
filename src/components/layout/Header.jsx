@@ -82,7 +82,7 @@ const Header = ({ onOpenSidebar }) => {
                         whileTap={{ scale: 0.95 }}
                     >
                         <img
-                            src="/assets/logo.png"
+                            src={`${import.meta.env.BASE_URL}assets/logo.png`}
                             alt="AssistMe Logo"
                             className="h-full w-full object-cover bg-white dark:bg-black"
                         />
