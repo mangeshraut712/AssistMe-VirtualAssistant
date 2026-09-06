@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
     BarChart,
     Bar,
@@ -205,9 +206,9 @@ const BenchmarkPage = () => {
             <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-md">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <a href="/" className="p-2 hover:bg-accent rounded-lg transition-colors text-foreground">
+                        <Link to="/" className="p-2 hover:bg-accent rounded-lg transition-colors text-foreground">
                             <ArrowLeft className="h-5 w-5" />
-                        </a>
+                        </Link>
                         <div>
                             <h1 className="text-2xl font-bold flex items-center gap-2 text-foreground">
                                 <Activity className="h-6 w-6 text-blue-500" />

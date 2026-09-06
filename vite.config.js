@@ -1,13 +1,28 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { fileURLToPath } from 'url'
+import { copyFileSync, writeFileSync } from 'fs'
 import { dirname, resolve } from 'path'
+import { fileURLToPath } from 'url'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+function githubPagesStatic() {
+  return {
+    name: 'github-pages-static',
+    apply: 'build',
+    enforce: 'post',
+    closeBundle() {
+      const outDir = resolve(__dirname, 'dist')
+      copyFileSync(resolve(outDir, 'index.html'), resolve(outDir, '404.html'))
+      writeFileSync(resolve(outDir, '.nojekyll'), '')
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  base: '/AssistMe-VirtualAssistant/',
+  plugins: [react(), githubPagesStatic()],
   root: resolve(__dirname, '.'),
   resolve: {
     alias: {

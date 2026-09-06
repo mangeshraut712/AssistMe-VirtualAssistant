@@ -319,7 +319,7 @@ const Sidebar = ({
                             >
                                 <div className="relative">
                                     <img
-                                        src="/assets/logo.png"
+                                        src={`${import.meta.env.BASE_URL}assets/logo.png`}
                                         alt="AssistMe"
                                         className="h-10 w-10 rounded-xl shadow-lg object-cover ring-1 ring-black/5 dark:ring-white/10"
                                     />
