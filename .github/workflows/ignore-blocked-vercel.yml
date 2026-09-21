@@ -1,26 +1,54 @@
 # Vercel GitHub App still posts a failing "Vercel" commit status because
 # the Vercel account is blocked. Hosting is GitHub Pages; overwrite that
-# status so CI is not red. Safe: only runs on Vercel failures.
+# status so CI is not red.
+#
+# One job at a time (Dependabot bursts were queuing dozens of status
+# workflows, so commits stayed red until runners caught up).
 
 name: Ignore blocked Vercel status
 
 on:
+  push:
+    branches: [main]
   status:
+  workflow_dispatch:
+
+concurrency:
+  group: ignore-blocked-vercel
+  cancel-in-progress: true
 
 permissions:
+  contents: read
   statuses: write
 
 jobs:
   override:
-    if: github.event.context == 'Vercel' && github.event.state != 'success'
+    if: >
+      github.event_name != 'status' ||
+      (github.event.context == 'Vercel' && github.event.state != 'success')
     runs-on: ubuntu-latest
     steps:
-      - name: Mark Vercel status success (GitHub Pages is production)
+      - name: Checkout recent main history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+          ref: main
+
+      - name: Mark Vercel statuses success (GitHub Pages is production)
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_SHA: ${{ github.event.sha || github.sha }}
         run: |
-          gh api "repos/${{ github.repository }}/statuses/${{ github.event.sha }}" \
-            -f state=success \
-            -f context=Vercel \
-            -f description='Skipped: production is GitHub Pages (Vercel account blocked)' \
-            -f target_url='https://mangeshraut712.github.io/AssistMe-VirtualAssistant/'
+          set -euo pipefail
+          shas="$EVENT_SHA"
+          shas="$shas $(git rev-list -n 20 HEAD)"
+          # unique SHAs
+          echo "$shas" | tr ' ' '\n' | awk 'NF && !seen[$0]++' | while read -r sha; do
+            gh api "repos/${{ github.repository }}/statuses/${sha}" \
+              -f state=success \
+              -f context=Vercel \
+              -f description='Skipped: production is GitHub Pages (Vercel account blocked)' \
+              -f target_url='https://mangeshraut712.github.io/AssistMe-VirtualAssistant/' \
+              >/dev/null
+            echo "overrode $sha"
+          done
