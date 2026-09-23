@@ -511,10 +511,10 @@ def health(request: Request):
             db_status = "connected"
         elif engine is None:
             db_status = "failed"
-    except Exception as e:
+    except Exception:
         db_status = "error"
-        db_error = str(e)
-        logging.warning(f"Health check database error: {e}")
+        db_error = "unavailable"
+        logging.warning("Health check database error")
 
     # Check API key configuration
     api_key_configured = bool(os.getenv("OPENROUTER_API_KEY"))

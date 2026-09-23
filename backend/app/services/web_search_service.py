@@ -407,7 +407,7 @@ Generate your comprehensive article now:"""
 
         except Exception as e:
             logger.error(f"Grokipedia streaming failed: {e}")
-            yield f"\n\n---\n\n⚠️ **Error generating article:** {str(e)}\n\nPlease try again later."
+            yield "\n\n---\n\nError generating article. Please try again later."
 
     def _fallback_format_answer(self, context_results: List[Dict[str, str]]) -> str:
         """Fallback formatting if LLM fails."""

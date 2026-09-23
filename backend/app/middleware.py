@@ -11,6 +11,7 @@ Features:
 
 from __future__ import annotations
 
+import hashlib
 import time
 from typing import Callable
 from uuid import uuid4
@@ -135,16 +136,15 @@ class RateLimitContextMiddleware(BaseHTTPMiddleware):
 
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
-            # Hash the token for privacy
-            import hmac
             token = auth_header[7:]
-            client_id = "user:" + hmac.new(b"assistme-rate-limit", token.encode(), "sha256").hexdigest()[:16]
+            digest = hashlib.pbkdf2_hmac("sha256", token.encode(), b"assistme-rate-limit", 10000)
+            client_id = "user:" + digest.hex()[:16]
 
         if not client_id:
             api_key = request.headers.get("X-API-Key")
             if api_key:
-                import hmac
-                client_id = "key:" + hmac.new(b"assistme-rate-limit", api_key.encode(), "sha256").hexdigest()[:16]
+                digest = hashlib.pbkdf2_hmac("sha256", api_key.encode(), b"assistme-rate-limit", 10000)
+                client_id = "key:" + digest.hex()[:16]
 
         if not client_id:
             # Fall back to IP

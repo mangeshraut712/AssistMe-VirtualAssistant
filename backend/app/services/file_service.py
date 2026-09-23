@@ -51,8 +51,8 @@ class FileService:
             return text
         except ImportError:
             return "pypdf not installed. Cannot extract PDF text."
-        except Exception as e:
-            return f"Error extracting PDF: {str(e)}"
+        except Exception:
+            return "Error extracting PDF."
 
     async def _read_text(self, path: Path) -> str:
         async with aiofiles.open(path, 'r', encoding='utf-8', errors='ignore') as f:
