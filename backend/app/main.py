@@ -847,7 +847,7 @@ async def chat_text(
             status_code=exc.status_code,
         )
     except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        return JSONResponse(content={"error": "Request failed"}, status_code=500)
 
     current_conversation_id, payload_messages = _prepare_conversation_context(
         request, db
@@ -924,7 +924,7 @@ async def chat_text(
         await rate_limit_service.record_request(model, result.get("tokens", 0))
     except Exception as e:
         logging.error(f"Chat completion error: {e}")
-        return JSONResponse(content={"error": str(e)}, status_code=502)
+        return JSONResponse(content={"error": "Request failed"}, status_code=502)
 
     if "error" in result:
         return JSONResponse(content={"error": result["error"]}, status_code=502)
@@ -1040,7 +1040,7 @@ async def chat_text_stream(
             logging.error(f"Streaming error: {e}")
             yield _sse_event(
                 "error",
-                {"message": str(e), "conversation_id": current_conversation_id or 0},
+                {"message": "Request failed", "conversation_id": current_conversation_id or 0},
             )
             return
 
@@ -1116,7 +1116,7 @@ async def list_models():
     except Exception as e:
         logging.error(f"Error listing models: {e}")
         return JSONResponse(
-            content={"success": False, "error": str(e), "models": []},
+            content={"success": False, "error": "Request failed", "models": []},
             status_code=500,
         )
 
@@ -1150,7 +1150,7 @@ def provider_status():
         }
     except Exception as e:
         return JSONResponse(
-            content={"success": False, "configured": False, "error": str(e)},
+            content={"success": False, "configured": False, "error": "Request failed"},
             status_code=500,
         )
 
@@ -1164,7 +1164,7 @@ async def rate_limit_status(request: Request):
         return JSONResponse(content={"success": True, **status}, headers=headers)
     except Exception as e:
         return JSONResponse(
-            content={"success": False, "error": str(e)},
+            content={"success": False, "error": "Request failed"},
             status_code=500,
             headers=headers,
         )
@@ -1314,7 +1314,7 @@ async def voice_chat(websocket: WebSocket):
                     logging.error(f"Voice processing error: {e}")
                     await websocket.send_json({
                         "type": "error",
-                        "error": str(e),
+                        "error": "Request failed",
                         "success": False
                     })
 
@@ -1341,7 +1341,7 @@ async def voice_chat(websocket: WebSocket):
         try:
             await websocket.send_json({
                 "type": "error",
-                "error": str(e),
+                "error": "Request failed",
                 "success": False
             })
         except Exception:
@@ -1392,7 +1392,7 @@ async def translate_text(request: Request):
     except Exception as e:
         logging.error(f"Translation error: {e}")
         return JSONResponse(
-            content={"success": False, "error": str(e)},
+            content={"success": False, "error": "Request failed"},
             status_code=500,
             headers=headers,
         )
@@ -1421,7 +1421,7 @@ async def detect_language(request: Request):
     except Exception as e:
         logging.error(f"Language detection error: {e}")
         return JSONResponse(
-            content={"success": False, "error": str(e)},
+            content={"success": False, "error": "Request failed"},
             status_code=500,
             headers=headers,
         )
@@ -1454,7 +1454,7 @@ async def transliterate_text(request: Request):
     except Exception as e:
         logging.error(f"Transliteration error: {e}")
         return JSONResponse(
-            content={"success": False, "error": str(e)},
+            content={"success": False, "error": "Request failed"},
             status_code=500,
             headers=headers,
         )
@@ -1518,7 +1518,7 @@ async def debug_health_check(request: Request):
             status_code=500,
             content={
                 "status": "unhealthy",
-                "error": str(e),
+                "error": "Request failed",
                 "timestamp": datetime.utcnow().isoformat(),
             },
         )

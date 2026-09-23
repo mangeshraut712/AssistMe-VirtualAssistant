@@ -18,7 +18,7 @@ async def upload_file(file: UploadFile = File(...)):
 
         return {"success": True, "file": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Request failed")
 
 
 @router.post("/upload-multiple")
@@ -32,6 +32,6 @@ async def upload_multiple_files(files: List[UploadFile] = File(...)):
             res["extracted_text"] = text
             results.append(res)
         except Exception as e:
-            results.append({"filename": file.filename, "error": str(e)})
+            results.append({"filename": file.filename, "error": "Request failed"})
 
     return {"success": True, "files": results}

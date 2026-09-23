@@ -54,7 +54,7 @@ async def analyze_image(
 
     except Exception as e:
         logger.error(f"Vision analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Request failed")
 
 
 @router.post("/api/video/analyze")
@@ -102,7 +102,7 @@ async def analyze_video(
 
     except Exception as e:
         logger.error(f"Video analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Request failed")
 
 
 @router.post("/api/documents/extract")
@@ -148,4 +148,4 @@ async def extract_document(
 
     except Exception as e:
         logger.error(f"Document analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Request failed")

@@ -21,9 +21,7 @@ if not db_url:
     db_url = f"sqlite:///{sqlite_path}"
     logging.info(f"Using SQLite database at {sqlite_path}")
 else:
-    logging.info(
-        f"Using configured database: {db_url.split('@')[-1] if '@' in db_url else 'SQLite'}"
-    )
+    logging.info("Using configured database")
 
 Base = declarative_base()
 engine = None

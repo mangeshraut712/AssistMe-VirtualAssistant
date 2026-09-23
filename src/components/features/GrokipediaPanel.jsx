@@ -1,3 +1,12 @@
+function hostnameIs(value, host) {
+    try {
+        const name = new URL(value).hostname.toLowerCase();
+        return name === host || name.endsWith(`.${host}`);
+    } catch {
+        return false;
+    }
+}
+
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * KNOWLEDGE - AI-Powered Deep Research Encyclopedia
@@ -385,7 +394,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
 
         // Fallback: return sources that have valid URLs
         return sources
-            .filter(s => s.url && !s.url.includes('google.com') && !s.title?.toLowerCase().includes('ai knowledge'))
+            .filter(s => s.url && !hostnameIs(s.url, 'google.com') && !s.title?.toLowerCase().includes('ai knowledge'))
             .map(s => ({ url: s.url, title: s.title }));
     };
 
@@ -665,7 +674,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                             const url = source.url.toLowerCase();
                                             // Exclude generic/placeholder sources
                                             if (url === 'https://google.com' || url === 'http://google.com') return false;
-                                            if (url.includes('example.com')) return false;
+                                            if (hostnameIs(url, 'example.com')) return false;
                                             if (source.title?.toLowerCase().includes('ai knowledge base')) return false;
                                             if (source.title?.toLowerCase().includes('ai summary')) return false;
                                             return true;

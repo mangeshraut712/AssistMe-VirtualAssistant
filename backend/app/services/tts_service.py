@@ -76,7 +76,7 @@ class TextNormalizer:
         text = re.sub(r'https?://[^\s]+', 'link', text)
 
         # 4. Handle email addresses
-        text = re.sub(r'[\w.-]+@[\w.-]+\.\w+', lambda m: m.group().replace('@', ' at ').replace('.', ' dot '), text)
+        text = _speak_emails(text)
 
         # 5. Add prosody hints (commas for pauses)
         # Add pause after colons
@@ -629,3 +629,31 @@ Remember: Your response will be spoken aloud by Gemini TTS."""
 
 # Singleton
 tts_service = GeminiVoiceService()
+
+def _speak_emails(text: str) -> str:
+    """Replace email addresses without a backtracking expression."""
+    out = []
+    i = 0
+    while i < len(text):
+        at = text.find("@", i)
+        if at < 0:
+            out.append(text[i:])
+            break
+        start = at
+        while start > 0 and (text[start - 1].isalnum() or text[start - 1] in "._-"):
+            start -= 1
+        end = at + 1
+        while end < len(text) and (text[end].isalnum() or text[end] in "._-"):
+            end += 1
+        token = text[start:end]
+        if start < at and "." in token[at - start + 1 :]:
+            spoken = token.replace("@", " at ").replace(".", " dot ")
+            out.append(text[i:start])
+            out.append(spoken)
+            i = end
+        else:
+            out.append(text[i : at + 1])
+            i = at + 1
+    return "".join(out)
+
+

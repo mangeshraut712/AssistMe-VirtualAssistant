@@ -136,15 +136,15 @@ class RateLimitContextMiddleware(BaseHTTPMiddleware):
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             # Hash the token for privacy
-            import hashlib
+            import hmac
             token = auth_header[7:]
-            client_id = f"user:{hashlib.sha256(token.encode()).hexdigest()[:16]}"
+            client_id = "user:" + hmac.new(b"assistme-rate-limit", token.encode(), "sha256").hexdigest()[:16]
 
         if not client_id:
             api_key = request.headers.get("X-API-Key")
             if api_key:
-                import hashlib
-                client_id = f"key:{hashlib.sha256(api_key.encode()).hexdigest()[:16]}"
+                import hmac
+                client_id = "key:" + hmac.new(b"assistme-rate-limit", api_key.encode(), "sha256").hexdigest()[:16]
 
         if not client_id:
             # Fall back to IP

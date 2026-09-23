@@ -42,7 +42,7 @@ async def ingest_documents(request: IngestRequest):
             "message": "Knowledge base updated",
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Request failed")
 
 
 @router.post("/search")
@@ -89,7 +89,7 @@ async def search_knowledge(request: SearchRequest):
 
         return {"success": True, "results": results}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Request failed")
 
 
 @router.post("/grokipedia/stream")
@@ -126,7 +126,7 @@ async def grokipedia_stream(request: GrokipediaRequest):
             yield "data: [DONE]\n\n"
         except Exception as e:
             logger.error(f"Grokipedia stream error: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Request failed'})}\n\n"
             yield "data: [DONE]\n\n"
 
     from fastapi.responses import StreamingResponse
@@ -159,7 +159,7 @@ async def grokipedia_search(request: GrokipediaRequest):
             "search_depth": request.search_depth
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Request failed")
 
 
 @router.get("/stats")
