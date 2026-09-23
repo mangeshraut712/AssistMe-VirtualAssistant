@@ -846,7 +846,7 @@ async def chat_text(
             content={"error": exc.detail},
             status_code=exc.status_code,
         )
-    except Exception as e:
+    except Exception:
         return JSONResponse(content={"error": "Request failed"}, status_code=500)
 
     current_conversation_id, payload_messages = _prepare_conversation_context(
@@ -1148,7 +1148,7 @@ def provider_status():
             "available": provider.is_available(),
             "default_model": getattr(provider, "default_model", None),
         }
-    except Exception as e:
+    except Exception:
         return JSONResponse(
             content={"success": False, "configured": False, "error": "Request failed"},
             status_code=500,
@@ -1162,7 +1162,7 @@ async def rate_limit_status(request: Request):
     try:
         status = await rate_limit_service.get_status()
         return JSONResponse(content={"success": True, **status}, headers=headers)
-    except Exception as e:
+    except Exception:
         return JSONResponse(
             content={"success": False, "error": "Request failed"},
             status_code=500,

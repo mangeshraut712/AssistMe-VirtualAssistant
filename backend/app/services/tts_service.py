@@ -630,6 +630,7 @@ Remember: Your response will be spoken aloud by Gemini TTS."""
 # Singleton
 tts_service = GeminiVoiceService()
 
+
 def _speak_emails(text: str) -> str:
     """Replace email addresses without a backtracking expression."""
     out = []
@@ -655,5 +656,3 @@ def _speak_emails(text: str) -> str:
             out.append(text[i : at + 1])
             i = at + 1
     return "".join(out)
-
-

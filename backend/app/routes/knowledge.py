@@ -41,7 +41,7 @@ async def ingest_documents(request: IngestRequest):
             "count": len(request.documents),
             "message": "Knowledge base updated",
         }
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Request failed")
 
 
@@ -88,7 +88,7 @@ async def search_knowledge(request: SearchRequest):
         results = results[:request.top_k * 2]  # Return more results when combining sources
 
         return {"success": True, "results": results}
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Request failed")
 
 
@@ -158,7 +158,7 @@ async def grokipedia_search(request: GrokipediaRequest):
             "sources": search_results,
             "search_depth": request.search_depth
         }
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Request failed")
 
 

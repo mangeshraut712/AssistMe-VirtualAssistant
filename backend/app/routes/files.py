@@ -17,7 +17,7 @@ async def upload_file(file: UploadFile = File(...)):
         result["extracted_text"] = text_content
 
         return {"success": True, "file": result}
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Request failed")
 
 
@@ -31,7 +31,7 @@ async def upload_multiple_files(files: List[UploadFile] = File(...)):
             text = await file_service.extract_text(res["path"], res["content_type"])
             res["extracted_text"] = text
             results.append(res)
-        except Exception as e:
+        except Exception:
             results.append({"filename": file.filename, "error": "Request failed"})
 
     return {"success": True, "files": results}
