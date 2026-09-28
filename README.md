@@ -17,17 +17,21 @@
 
 </div>
 
-<p align="center">
-  <img src="docs/screenshots/01-home.png" alt="AssistMe home screen with chat workspace, feature sidebar, and prompt cards" width="900">
-  <br>
-  <em>Home — chat workspace with feature sidebar, prompt cards, and model picker (live GitHub Pages demo).</em>
-</p>
+## Screenshots
 
-<p align="center">
-  <img src="docs/screenshots/02-feature.png" alt="AssistMe Imagine Studio with a digital-art prompt ready to generate" width="900">
-  <br>
-  <em>Imagine Studio — style presets and a prompt ready to generate (live UI, Digital Art selected).</em>
-</p>
+Framed captures of the live app (current UI).
+
+<div align="center">
+
+<img src="docs/screenshots/01-home.webp" alt="AssistMe chat home with sidebar and prompt cards" width="720" />
+
+<img src="docs/screenshots/02-imagine.webp" alt="Imagine Studio with a digital art prompt" width="720" />
+
+<img src="docs/screenshots/03-knowledge.webp" alt="Grokipedia Deep Research topic explorer" width="720" />
+
+<img src="docs/screenshots/04-voice.webp" alt="Gemini Live Voice idle screen" width="720" />
+
+</div>
 
 ---
 
