@@ -1,13 +1,21 @@
-# Dependabot was scanning every package.json, including the Bun-based
-# Next.js sample under .agents/skills (no package-lock.json). That job
-# fails as misconfigured_tooling and is not the production Vite app.
+# Keep Dependabot off npm_and_yarn for the Bun Next.js skill template
+# (.agents/skills/... has bun.lock only). Security updates still discovered
+# that tree after directory: / was set, so exclude it and declare bun there.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
+    exclude-paths:
+      - ".agents/**"
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+
+  - package-ecosystem: bun
+    directory: /.agents/skills/app-store-screenshots/template
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
 
   - package-ecosystem: pip
     directory: /backend
