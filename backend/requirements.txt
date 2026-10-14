@@ -78,7 +78,7 @@ numpy>=1.26.0,<2.0.0          # NumPy 2.x compatibility
 # ============================================
 # Utilities
 # ============================================
-tenacity>=9.0.0,<10.0.0       # Retry logic with decorators
+tenacity>=9.2.1,<10.0.0       # Retry logic with decorators
 python-dateutil>=2.9.0        # Date parsing utilities
 
 # ============================================
