@@ -43,7 +43,7 @@
     "url": "https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues"
   },
   "devDependencies": {
-    "@vitejs/plugin-legacy": "^7.2.1",
+    "@vitejs/plugin-legacy": "^8.2.3",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.1",
     "eslint-plugin-react-hooks": "^7.1.1",
