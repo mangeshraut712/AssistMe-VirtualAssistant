@@ -299,7 +299,7 @@ export const Shimmer = ({ className, ...props }) => (
         {...props}
     >
         <motion.div
-            className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
+            className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent"
             animate={{ x: ['0%', '200%'] }}
             transition={{
                 duration: 1.5,

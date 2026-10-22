@@ -79,12 +79,12 @@ const GlassCard = ({ children, className, glow, active }) => (
 
 const GradeBadge = ({ grade, size = 'md' }) => {
     const colors = {
-        'A+': 'bg-gradient-to-br from-emerald-400 to-green-600 shadow-emerald-500/30',
-        'A': 'bg-gradient-to-br from-green-400 to-teal-600 shadow-green-500/30',
-        'B': 'bg-gradient-to-br from-yellow-400 to-amber-600 shadow-amber-500/30',
-        'C': 'bg-gradient-to-br from-orange-400 to-red-500 shadow-orange-500/30',
-        'D': 'bg-gradient-to-br from-red-500 to-rose-600 shadow-red-500/30',
-        'F': 'bg-gradient-to-br from-gray-600 to-gray-800 shadow-gray-500/30',
+        'A+': 'bg-linear-to-br from-emerald-400 to-green-600 shadow-emerald-500/30',
+        'A': 'bg-linear-to-br from-green-400 to-teal-600 shadow-green-500/30',
+        'B': 'bg-linear-to-br from-yellow-400 to-amber-600 shadow-amber-500/30',
+        'C': 'bg-linear-to-br from-orange-400 to-red-500 shadow-orange-500/30',
+        'D': 'bg-linear-to-br from-red-500 to-rose-600 shadow-red-500/30',
+        'F': 'bg-linear-to-br from-gray-600 to-gray-800 shadow-gray-500/30',
         '-': 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400'
     };
     const sizes = { sm: 'w-8 h-8 text-xs', md: 'w-12 h-12 text-lg', lg: 'w-16 h-16 text-2xl' };
@@ -107,7 +107,7 @@ const SpeedGauge = ({ value, maxValue = 200, color, label, status }) => {
 
     return (
         <div className="relative flex flex-col items-center justify-center">
-            <svg className="w-48 h-48 -rotate-[225deg]" viewBox="0 0 200 200">
+            <svg className="w-48 h-48 rotate-[-225deg]" viewBox="0 0 200 200">
                 {/* Background Track */}
                 <circle
                     cx="100"
@@ -142,7 +142,7 @@ const SpeedGauge = ({ value, maxValue = 200, color, label, status }) => {
                     strokeLinecap="round"
                     animate={{ rotate: (Math.min(value, maxValue) / maxValue) * 270 }}
                     style={{ originX: '100px', originY: '100px' }}
-                    className="drop-shadow-sm"
+                    className="drop-shadow-xs"
                 />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
@@ -581,14 +581,14 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] bg-[#f8f9fa] dark:bg-[#0a0a0a] overflow-y-auto font-sans"
+                className="fixed inset-0 z-100 bg-[#f8f9fa] dark:bg-[#0a0a0a] overflow-y-auto font-sans"
             >
 
                 {/* Navbar */}
                 <header className="sticky top-0 z-50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-neutral-200/50 dark:border-neutral-800/50">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="bg-gradient-to-tr from-indigo-500 to-purple-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-500/30">
+                            <div className="bg-linear-to-tr from-indigo-500 to-purple-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-500/30">
                                 <ZapIcon className="h-5 w-5" />
                             </div>
                             <div>
@@ -624,7 +624,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                     </div>
                     {status !== 'idle' && status !== 'complete' && (
                         <motion.div
-                            className="h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+                            className="h-1 bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500"
                             initial={{ width: 0 }}
                             animate={{ width: `${progress}%` }}
                             transition={{ ease: "linear" }}
@@ -637,7 +637,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                     {/* Hero Section - Central Gauge */}
                     <GlassCard className="p-6 md:p-8 flex flex-col items-center justify-center relative overflow-hidden min-h-[400px]">
                         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-[120px] rounded-full animate-pulse" />
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-linear-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-[120px] rounded-full animate-pulse" />
                         </div>
 
                         <div className="relative z-10 w-full flex flex-col items-center">
@@ -737,7 +737,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                         <div className="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-1">
                             <button
                                 onClick={status === 'idle' || status === 'complete' ? runTest : reset}
-                                className="w-full h-20 sm:h-22 md:h-24 flex items-center justify-center gap-2.5 font-bold text-base sm:text-lg px-6 py-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl active:scale-95"
+                                className="w-full h-20 sm:h-22 md:h-24 flex items-center justify-center gap-2.5 font-bold text-base sm:text-lg px-6 py-4 rounded-2xl bg-linear-to-br from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl active:scale-95"
                             >
                                 {status === 'idle' || status === 'complete' ? (
                                     <>
@@ -833,7 +833,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
 
                                         <div className="flex items-center justify-between mb-6">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white shadow-lg">
+                                                <div className="p-2.5 rounded-xl bg-linear-to-tr from-indigo-500 to-purple-600 text-white shadow-lg">
                                                     <Sparkles className="h-5 w-5" />
                                                 </div>
                                                 <div>
@@ -849,7 +849,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                         </div>
 
                                         <div className="flex gap-4 sm:gap-6">
-                                            <div className="hidden sm:flex flex-shrink-0 w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center text-indigo-500">
+                                            <div className="hidden sm:flex shrink-0 w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center text-indigo-500">
                                                 <Bot className="h-6 w-6" />
                                             </div>
                                             <div className="flex-1">
@@ -864,7 +864,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                                             {aiAnalysis?.summary}
                                                         </p>
                                                         <div className="flex items-start gap-2 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-xl border border-indigo-100/50 dark:border-indigo-500/10">
-                                                            <Target className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                                                            <Target className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
                                                             <p className="text-xs text-indigo-700 dark:text-indigo-300 leading-normal font-semibold italic">
                                                                 {aiAnalysis?.useCase}
                                                             </p>
@@ -905,7 +905,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                     className="grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700"
                                 />
                             </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-white/90 via-transparent to-transparent dark:from-black/80 pointer-events-none" />
+                            <div className="absolute inset-0 bg-linear-to-t from-white/90 via-transparent to-transparent dark:from-black/80 pointer-events-none" />
                             <div className="absolute bottom-6 left-6 right-6 z-10 flex justify-between items-end">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
@@ -952,7 +952,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                         className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-200/50 dark:border-neutral-700/30 group hover:border-indigo-500/30 transition-colors"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className={cn("p-1.5 rounded-lg bg-white dark:bg-neutral-800 shadow-sm", item.c)}>
+                                            <div className={cn("p-1.5 rounded-lg bg-white dark:bg-neutral-800 shadow-xs", item.c)}>
                                                 <item.i className="h-4 w-4" />
                                             </div>
                                             <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">{item.k}</span>

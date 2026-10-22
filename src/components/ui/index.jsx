@@ -32,13 +32,13 @@ export const LoadingOverlay = ({ message = 'Loading...', fullScreen = true }) =>
         className={cn(
             'flex flex-col items-center justify-center gap-4',
             fullScreen
-                ? 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50'
+                ? 'fixed inset-0 bg-background/80 backdrop-blur-xs z-50'
                 : 'absolute inset-0 bg-background/60 backdrop-blur-xs'
         )}
     >
         <div className="relative">
             {/* Outer glow ring */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 animate-ping-slow" />
+            <div className="absolute inset-0 rounded-full bg-linear-to-r from-primary/20 to-accent/20 animate-ping-slow" />
             {/* Main spinner container */}
             <div className="relative w-16 h-16 rounded-full bg-card border border-border flex items-center justify-center shadow-elevated">
                 <Spinner size="lg" />

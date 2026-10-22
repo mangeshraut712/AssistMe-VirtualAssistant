@@ -143,7 +143,7 @@ const MessageBubble = ({ message, renderContent, onRegenerate, isLoading = false
                     whileHover={{ scale: 1.01 }}
                 >
                     <div className="flex items-start gap-2">
-                        <div className="flex-1 text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words">
+                        <div className="flex-1 text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap wrap-break-word">
                             {message.content}
                         </div>
                     </div>
@@ -177,10 +177,10 @@ const MessageBubble = ({ message, renderContent, onRegenerate, isLoading = false
                     {/* AI Avatar */}
                     <motion.div
                         className={cn(
-                            'flex-shrink-0 h-8 w-8 rounded-xl',
-                            'bg-gradient-to-br from-primary/20 to-primary/10',
+                            'shrink-0 h-8 w-8 rounded-xl',
+                            'bg-linear-to-br from-primary/20 to-primary/10',
                             'flex items-center justify-center',
-                            'shadow-sm border border-primary/20'
+                            'shadow-xs border border-primary/20'
                         )}
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
@@ -210,7 +210,7 @@ const MessageBubble = ({ message, renderContent, onRegenerate, isLoading = false
                         transition={{ delay: 0.2 }}
                     >
                         {/* Actions */}
-                        <div className="flex items-center gap-0.5 p-1 rounded-lg bg-foreground/[0.03]">
+                        <div className="flex items-center gap-0.5 p-1 rounded-lg bg-foreground/3">
                             <ActionButton
                                 onClick={onRegenerate}
                                 icon={RefreshCw}

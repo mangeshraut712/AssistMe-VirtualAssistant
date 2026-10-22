@@ -167,7 +167,7 @@ const InputArea = ({
                                 className={cn(
                                     'flex items-center gap-2 px-3 py-2 rounded-xl text-sm',
                                     'bg-primary/10 border border-primary/20',
-                                    'shadow-sm'
+                                    'shadow-xs'
                                 )}
                             >
                                 <FileText className="h-4 w-4 text-primary" />
@@ -239,7 +239,7 @@ const InputArea = ({
                         }}
                         placeholder="Message AssistMe..."
                         className={cn(
-                            'w-full bg-transparent focus:outline-none resize-none',
+                            'w-full bg-transparent focus:outline-hidden resize-none',
                             'text-sm leading-relaxed',
                             'placeholder:text-muted-foreground/60'
                         )}
@@ -287,7 +287,7 @@ const InputArea = ({
                                         'appearance-none bg-foreground/5 hover:bg-foreground/10',
                                         'pl-8 pr-7 py-1.5 rounded-xl',
                                         'text-xs font-medium transition-colors',
-                                        'cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20',
+                                        'cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-primary/20',
                                         'max-w-[120px] sm:max-w-[140px] truncate'
                                     )}
                                 >

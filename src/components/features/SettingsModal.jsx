@@ -55,7 +55,7 @@ const SettingCard = ({ icon: Icon, title, description, children, index }) => (
         custom={index}
         className={cn(
             'p-5 rounded-2xl border border-border bg-card/50',
-            'backdrop-blur-sm space-y-4'
+            'backdrop-blur-xs space-y-4'
         )}
     >
         <div className="flex items-center gap-3">
@@ -112,7 +112,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
     const themes = [
         { id: 'light', label: 'Light', icon: Sun, swatch: 'bg-white text-black border border-neutral-200' },
         { id: 'dark', label: 'Dark', icon: Moon, swatch: 'bg-neutral-900 text-white border border-neutral-700' },
-        { id: 'system', label: 'System', icon: Monitor, swatch: 'bg-gradient-to-r from-white via-slate-300 to-neutral-900 text-black border' },
+        { id: 'system', label: 'System', icon: Monitor, swatch: 'bg-linear-to-r from-white via-slate-300 to-neutral-900 text-black border' },
     ];
 
     const languages = [
@@ -193,7 +193,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                                 className={cn(
                                     'h-11 w-full rounded-xl border border-input',
                                     'bg-background px-3 text-sm',
-                                    'focus:outline-none focus:ring-2 focus:ring-primary/20',
+                                    'focus:outline-hidden focus:ring-2 focus:ring-primary/20',
                                     'transition-all cursor-pointer'
                                 )}
                             >
@@ -239,7 +239,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                                 className={cn(
                                     'w-full rounded-xl border border-input',
                                     'bg-background px-4 py-3 text-sm',
-                                    'focus:outline-none focus:ring-2 focus:ring-primary/20',
+                                    'focus:outline-hidden focus:ring-2 focus:ring-primary/20',
                                     'transition-all placeholder:text-muted-foreground/50'
                                 )}
                                 autoComplete="off"

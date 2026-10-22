@@ -16,7 +16,7 @@ const Header = ({ onOpenSidebar }) => {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className={cn(
                 'fixed top-0 left-0 right-0 z-40 px-4 py-3 safe-area-top',
-                'bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60',
+                'bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/60',
                 'border-b border-border/50'
             )}
         >
