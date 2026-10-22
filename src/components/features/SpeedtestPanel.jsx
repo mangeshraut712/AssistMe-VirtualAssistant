@@ -261,7 +261,8 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
     const [downloadChart, setDownloadChart] = useState(new Array(40).fill({ val: 0 }));
     const [uploadChart, setUploadChart] = useState(new Array(40).fill({ val: 0 }));
     const [latencyData, setLatencyData] = useState({ unloaded: [], download: [], upload: [] });
-    const [history, setHistory] = useState([]);
+    const [history, setHistory] = useState(getHistory);
+    const [historyOpen, setHistoryOpen] = useState(isOpen);
     const [aiAnalysis, setAiAnalysis] = useState(null);
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
@@ -272,8 +273,13 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
     // --- Initialization ---
     useEffect(() => {
         if (isOpen) {
-            setHistory(getHistory());
-            measureRealLatency();
+            const start = performance.now();
+            fetch(window.location.href, { method: 'HEAD', cache: 'no-store' })
+                .then(() => {
+                    const realPing = Math.round(performance.now() - start);
+                    setMetrics(prev => ({ ...prev, ping: realPing, pingMin: realPing, pingMax: realPing }));
+                })
+                .catch(() => { });
 
             // Enhanced IP Detection
             fetch('https://ipapi.co/json/')
@@ -294,21 +300,61 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
         }
         return () => {
             stopRef.current = true;
+            // Interval id is assigned after this effect starts; read it at cleanup time.
             // eslint-disable-next-line react-hooks/exhaustive-deps
             const timer = timerRef.current;
             if (timer) clearInterval(timer);
         };
     }, [isOpen]);
 
-    // Measure Real Latency (Best Effort)
-    const measureRealLatency = async () => {
-        const start = performance.now();
-        try {
-            await fetch(window.location.href, { method: 'HEAD', cache: 'no-store' });
-            const end = performance.now();
-            const realPing = Math.round(end - start);
-            setMetrics(prev => ({ ...prev, ping: realPing, pingMin: realPing, pingMax: realPing }));
-        } catch (e) { }
+    if (isOpen !== historyOpen) {
+        setHistoryOpen(isOpen);
+        if (isOpen) setHistory(getHistory());
+    }
+
+    const generateAIAnalysis = (data) => {
+        setIsGeneratingAI(true);
+        // Realistic analysis logic that sounds like AI
+        setTimeout(() => {
+            const down = data.down;
+            const ping = data.ping;
+            const jitter = metrics.jitter;
+
+            let insight = "";
+            let recommendation = "";
+            let rating = "";
+
+            if (down > 150 && ping < 20) {
+                insight = "Your connection is exceptional, performing in the top 5% of global consumer networks.";
+                recommendation = "Ideal for competitive gaming, 4K multi-stream hosting, and large-scale cloud operations.";
+                rating = "Tier 1 - Ultra Performance";
+            } else if (down > 50 && ping < 40) {
+                insight = "Solid high-speed performance detected with healthy overhead for modern digital tasks.";
+                recommendation = "Perfectly handles simultaneous 4K streams and lag-free standard gaming.";
+                rating = "Tier 2 - High Performance";
+            } else if (down > 20) {
+                insight = "Your connection is stable and sufficient for standard professional use cases.";
+                recommendation = "Great for remote work, HD video calls, and typical streaming services.";
+                rating = "Tier 3 - Standard Reliability";
+            } else {
+                insight = "Network bandwidth is currently restricted, which may impact high-data activities.";
+                recommendation = "Consider checking for background updates or contacting your ISP for a line test.";
+                rating = "Tier 4 - Basic Connectivity";
+            }
+
+            if (ping > 60 || jitter > 15) {
+                insight += " However, detectable latency variance could affect real-time interaction quality.";
+            }
+
+            setAiAnalysis({
+                summary: insight,
+                useCase: recommendation,
+                tier: rating,
+                timestamp: new Date().toLocaleTimeString(),
+                ref: Math.random().toString(36).substring(7),
+            });
+            setIsGeneratingAI(false);
+        }, 800);
     };
 
     // --- Test Engine ---
@@ -494,50 +540,6 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
         setMetrics(m => ({ ...m, down: finalResults.down, up: finalResults.up }));
         setHistory(saveTest(finalResults));
         generateAIAnalysis(finalResults);
-    };
-
-    const generateAIAnalysis = (data) => {
-        setIsGeneratingAI(true);
-        // Realistic analysis logic that sounds like AI
-        setTimeout(() => {
-            const down = data.down;
-            const ping = data.ping;
-            const jitter = metrics.jitter;
-
-            let insight = "";
-            let recommendation = "";
-            let rating = "";
-
-            if (down > 150 && ping < 20) {
-                insight = "Your connection is exceptional, performing in the top 5% of global consumer networks.";
-                recommendation = "Ideal for competitive gaming, 4K multi-stream hosting, and large-scale cloud operations.";
-                rating = "Tier 1 - Ultra Performance";
-            } else if (down > 50 && ping < 40) {
-                insight = "Solid high-speed performance detected with healthy overhead for modern digital tasks.";
-                recommendation = "Perfectly handles simultaneous 4K streams and lag-free standard gaming.";
-                rating = "Tier 2 - High Performance";
-            } else if (down > 20) {
-                insight = "Your connection is stable and sufficient for standard professional use cases.";
-                recommendation = "Great for remote work, HD video calls, and typical streaming services.";
-                rating = "Tier 3 - Standard Reliability";
-            } else {
-                insight = "Network bandwidth is currently restricted, which may impact high-data activities.";
-                recommendation = "Consider checking for background updates or contacting your ISP for a line test.";
-                rating = "Tier 4 - Basic Connectivity";
-            }
-
-            if (ping > 60 || jitter > 15) {
-                insight += " However, detectable latency variance could affect real-time interaction quality.";
-            }
-
-            setAiAnalysis({
-                summary: insight,
-                useCase: recommendation,
-                tier: rating,
-                timestamp: new Date().toLocaleTimeString()
-            });
-            setIsGeneratingAI(false);
-        }, 800);
     };
 
     const reset = () => {
@@ -880,7 +882,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                                                     Evaluation Complete
                                                 </div>
-                                                <span className="uppercase">REF: {Math.random().toString(36).substring(7)} • {aiAnalysis.timestamp}</span>
+                                                <span className="uppercase">REF: {aiAnalysis.ref} • {aiAnalysis.timestamp}</span>
                                             </div>
                                         )}
                                     </GlassCard>

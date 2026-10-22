@@ -215,19 +215,20 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
     const [quickFacts, setQuickFacts] = useState(null);
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [copied, setCopied] = useState(false);
-    const [searchHistory, setSearchHistory] = useState([]);
+    const [searchHistory, setSearchHistory] = useState(() => {
+        try {
+            const saved = localStorage.getItem('grokipedia-history-v3');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
     const [showHistory, setShowHistory] = useState(false);
     const [isDeepSearch, setIsDeepSearch] = useLocalStorage('grokipedia_deep_search', true);
     const [expandedSections, setExpandedSections] = useState([]);
 
     const contentRef = useRef(null);
     const searchInputRef = useRef(null);
-
-    // Load search history
-    useEffect(() => {
-        const saved = localStorage.getItem('grokipedia-history-v3');
-        if (saved) setSearchHistory(JSON.parse(saved));
-    }, []);
 
     // Save search to history
     const saveToHistory = useCallback((term) => {

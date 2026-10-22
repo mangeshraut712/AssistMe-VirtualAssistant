@@ -2,7 +2,7 @@
  * Custom React Hooks for AssistMe Virtual Assistant
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { storage, debounce } from './utils';
 
 /**
@@ -74,12 +74,28 @@ export function useDebounce(value, delay = 300) {
  */
 export function useDebouncedCallback(callback, delay = 300) {
     const callbackRef = useRef(callback);
-    callbackRef.current = callback;
+    const delayRef = useRef(delay);
+    const debouncedRef = useRef(null);
 
-    return useMemo(
-        () => debounce((...args) => callbackRef.current(...args), delay),
-        [delay]
-    );
+    useLayoutEffect(() => {
+        callbackRef.current = callback;
+    });
+
+    useEffect(() => {
+        delayRef.current = delay;
+        debouncedRef.current = debounce((...args) => {
+            callbackRef.current(...args);
+        }, delay);
+    }, [delay]);
+
+    return useCallback((...args) => {
+        if (debouncedRef.current == null) {
+            debouncedRef.current = debounce((...innerArgs) => {
+                callbackRef.current(...innerArgs);
+            }, delayRef.current);
+        }
+        debouncedRef.current(...args);
+    }, []);
 }
 
 /**
@@ -121,14 +137,19 @@ export function useKeyPress(targetKey, callback) {
 }
 
 /**
- * usePrevious - Get the previous value of a state
+ * usePrevious - Previous distinct value.
+ * Undefined until `value` changes from the one seen on the first render.
  */
 export function usePrevious(value) {
-    const ref = useRef();
-    useEffect(() => {
-        ref.current = value;
-    }, [value]);
-    return ref.current;
+    const [current, setCurrent] = useState(value);
+    const [previous, setPrevious] = useState();
+
+    if (value !== current) {
+        setPrevious(current);
+        setCurrent(value);
+    }
+
+    return previous;
 }
 
 /**
@@ -146,9 +167,19 @@ export function useToggle(initialValue = false) {
  * useAsync - Handle async operations with loading and error states
  */
 export function useAsync(asyncFunction, immediate = true) {
-    const [status, setStatus] = useState('idle');
+    const [status, setStatus] = useState(immediate ? 'pending' : 'idle');
     const [value, setValue] = useState(null);
     const [error, setError] = useState(null);
+    const [tracked, setTracked] = useState({ asyncFunction, immediate });
+
+    if (asyncFunction !== tracked.asyncFunction || immediate !== tracked.immediate) {
+        setTracked({ asyncFunction, immediate });
+        if (immediate) {
+            setStatus('pending');
+            setValue(null);
+            setError(null);
+        }
+    }
 
     const execute = useCallback(
         async (...args) => {
@@ -171,10 +202,23 @@ export function useAsync(asyncFunction, immediate = true) {
     );
 
     useEffect(() => {
-        if (immediate) {
-            execute();
-        }
-    }, [execute, immediate]);
+        if (!immediate) return undefined;
+
+        Promise.resolve()
+            .then(() => asyncFunction())
+            .then(
+                (response) => {
+                    setValue(response);
+                    setStatus('success');
+                },
+                (err) => {
+                    setError(err);
+                    setStatus('error');
+                }
+            );
+
+        return undefined;
+    }, [asyncFunction, immediate]);
 
     return { execute, status, value, error, isLoading: status === 'pending' };
 }
@@ -234,29 +278,46 @@ export function useIntersectionObserver(
 export function useCountdown(initialSeconds, onComplete) {
     const [seconds, setSeconds] = useState(initialSeconds);
     const [isRunning, setIsRunning] = useState(false);
+    const [epoch, setEpoch] = useState(0);
+    const [completedEpoch, setCompletedEpoch] = useState(0);
+    const onCompleteRef = useRef(onComplete);
+    const handledEpoch = useRef(0);
 
-    const start = useCallback(() => setIsRunning(true), []);
+    const start = useCallback(() => {
+        setEpoch(current => current + 1);
+        setIsRunning(true);
+    }, []);
     const pause = useCallback(() => setIsRunning(false), []);
     const reset = useCallback(() => {
         setIsRunning(false);
         setSeconds(initialSeconds);
     }, [initialSeconds]);
 
-    useEffect(() => {
-        if (!isRunning) return;
+    if (isRunning && seconds <= 0) {
+        setIsRunning(false);
+        setCompletedEpoch(epoch);
+    }
 
-        if (seconds <= 0) {
-            setIsRunning(false);
-            onComplete?.();
-            return;
-        }
+    useEffect(() => {
+        onCompleteRef.current = onComplete;
+    });
+
+    useEffect(() => {
+        if (completedEpoch === 0 || handledEpoch.current === completedEpoch) return undefined;
+        handledEpoch.current = completedEpoch;
+        onCompleteRef.current?.();
+        return undefined;
+    }, [completedEpoch]);
+
+    useEffect(() => {
+        if (!isRunning || seconds <= 0) return undefined;
 
         const timer = setInterval(() => {
-            setSeconds(s => s - 1);
+            setSeconds(current => current - 1);
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [isRunning, seconds, onComplete]);
+    }, [isRunning, seconds]);
 
     return { seconds, isRunning, start, pause, reset };
 }

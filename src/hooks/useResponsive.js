@@ -3,26 +3,32 @@
  * Mobile, tablet, desktop detection and utilities
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+
+const canUseDOM = () => typeof window !== 'undefined';
+
+const readMediaQuery = (query) => {
+    if (!canUseDOM() || typeof window.matchMedia !== 'function') return false;
+    return window.matchMedia(query).matches;
+};
+
+const subscribeToMediaQuery = (query, onStoreChange) => {
+    if (!canUseDOM() || typeof window.matchMedia !== 'function') return () => {};
+    const media = window.matchMedia(query);
+    media.addEventListener('change', onStoreChange);
+    return () => media.removeEventListener('change', onStoreChange);
+};
 
 /**
  * useMediaQuery - Custom hook for responsive breakpoints
  */
 export const useMediaQuery = (query) => {
-    const [matches, setMatches] = useState(false);
-
-    useEffect(() => {
-        const media = window.matchMedia(query);
-        if (media.matches !== matches) {
-            setMatches(media.matches);
-        }
-
-        const listener = () => setMatches(media.matches);
-        media.addEventListener('change', listener);
-        return () => media.removeEventListener('change', listener);
-    }, [matches, query]);
-
-    return matches;
+    const subscribe = useCallback(
+        (onStoreChange) => subscribeToMediaQuery(query, onStoreChange),
+        [query]
+    );
+    const getSnapshot = useCallback(() => readMediaQuery(query), [query]);
+    return useSyncExternalStore(subscribe, getSnapshot, () => false);
 };
 
 /**
@@ -78,47 +84,43 @@ export const useOrientation = () => {
 /**
  * Touch device detection
  */
+const detectTouchDevice = () => {
+    if (!canUseDOM()) return false;
+    return (
+        'ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        navigator.msMaxTouchPoints > 0
+    );
+};
+
 export const useIsTouchDevice = () => {
-    const [isTouch, setIsTouch] = useState(false);
-
-    useEffect(() => {
-        setIsTouch(
-            'ontouchstart' in window ||
-            navigator.maxTouchPoints > 0 ||
-            navigator.msMaxTouchPoints > 0
-        );
-    }, []);
-
+    const [isTouch] = useState(detectTouchDevice);
     return isTouch;
 };
 
 /**
  * Safari detection
  */
+const detectSafari = () => {
+    if (typeof navigator === 'undefined') return false;
+    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+};
+
 export const useIsSafari = () => {
-    const [isSafari, setIsSafari] = useState(false);
-
-    useEffect(() => {
-        const ua = navigator.userAgent;
-        const isSafariBrowser = /^((?!chrome|android).)*safari/i.test(ua);
-        setIsSafari(isSafariBrowser);
-    }, []);
-
+    const [isSafari] = useState(detectSafari);
     return isSafari;
 };
 
 /**
  * iOS detection
  */
+const detectIOS = () => {
+    if (!canUseDOM() || typeof navigator === 'undefined') return false;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+};
+
 export const useIsIOS = () => {
-    const [isIOS, setIsIOS] = useState(false);
-
-    useEffect(() => {
-        setIsIOS(
-            /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
-        );
-    }, []);
-
+    const [isIOS] = useState(detectIOS);
     return isIOS;
 };
 
@@ -201,38 +203,12 @@ export const useOnlineStatus = () => {
 /**
  * Reduced motion preference
  */
-export const usePrefersReducedMotion = () => {
-    const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-    useEffect(() => {
-        const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-        setPrefersReducedMotion(mediaQuery.matches);
-
-        const listener = (e) => setPrefersReducedMotion(e.matches);
-        mediaQuery.addEventListener('change', listener);
-        return () => mediaQuery.removeEventListener('change', listener);
-    }, []);
-
-    return prefersReducedMotion;
-};
+export const usePrefersReducedMotion = () => useMediaQuery('(prefers-reduced-motion: reduce)');
 
 /**
  * Dark mode preference
  */
-export const usePrefersDarkMode = () => {
-    const [prefersDark, setPrefersDark] = useState(false);
-
-    useEffect(() => {
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        setPrefersDark(mediaQuery.matches);
-
-        const listener = (e) => setPrefersDark(e.matches);
-        mediaQuery.addEventListener('change', listener);
-        return () => mediaQuery.removeEventListener('change', listener);
-    }, []);
-
-    return prefersDark;
-};
+export const usePrefersDarkMode = () => useMediaQuery('(prefers-color-scheme: dark)');
 
 /**
  * Responsive columns (for grids)
