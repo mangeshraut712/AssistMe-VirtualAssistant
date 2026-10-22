@@ -154,3 +154,6 @@ Thumbs.db
 *.xlsx
 *.ppt
 *.pptx
+# Local agent tooling
+.agents/
+skills-lock.json
