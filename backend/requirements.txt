@@ -89,3 +89,5 @@ python-dateutil>=2.9.0        # Date parsing utilities
 # httpx[http2]>=0.28.0        # For async testing
 # ruff>=0.8.0                  # Fast Python linter
 # mypy>=1.13.0                 # Type checking
+# emSign CA advisory: require patched CA bundle
+certifi>=2026.10.19
