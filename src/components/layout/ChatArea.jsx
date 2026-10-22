@@ -60,7 +60,7 @@ const cardVariants = {
 const FloatingOrb = () => (
     <motion.div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <motion.div
-            className="w-[600px] h-[600px] rounded-full bg-gradient-to-br from-primary/30 via-purple-500/20 to-pink-500/10 blur-[120px] opacity-60"
+            className="w-[600px] h-[600px] rounded-full bg-linear-to-br from-primary/30 via-purple-500/20 to-pink-500/10 blur-[120px] opacity-60"
             animate={{ scale: [1, 1.1, 1], rotate: [0, 10, 0] }}
             transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -82,7 +82,7 @@ const QuickActionCard = ({ icon: Icon, title, description, onClick, index, gradi
         onClick={onClick}
         className={cn(
             'group relative flex flex-col items-start gap-2 p-3 rounded-xl text-left',
-            'bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/30',
+            'bg-card/50 backdrop-blur-xs border border-border/50 hover:border-primary/30',
             'hover:shadow-md hover:shadow-primary/5 transition-all duration-200 overflow-hidden'
         )}
         variants={cardVariants}
@@ -129,7 +129,7 @@ const TypingIndicator = () => (
         exit={{ opacity: 0, y: -10 }}
         className="flex items-center gap-3"
     >
-        <div className="h-8 w-8 rounded-xl flex items-center justify-center bg-primary/10 shadow-sm">
+        <div className="h-8 w-8 rounded-xl flex items-center justify-center bg-primary/10 shadow-xs">
             <Bot className="h-4 w-4 text-primary" />
         </div>
         <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-card border border-border/50">
@@ -157,10 +157,10 @@ const ScrollToBottomButton = ({ onClick, show }) => (
                 className={cn(
                     'absolute bottom-4 left-1/2 -translate-x-1/2 z-20',
                     'w-8 h-8 rounded-full',
-                    'bg-background/90 backdrop-blur-sm border border-border shadow-md',
+                    'bg-background/90 backdrop-blur-xs border border-border shadow-md',
                     'flex items-center justify-center',
                     'hover:bg-muted transition-colors',
-                    'focus:outline-none focus:ring-2 focus:ring-primary'
+                    'focus:outline-hidden focus:ring-2 focus:ring-primary'
                 )}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
@@ -205,12 +205,12 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
     // Welcome Screen (Homepage)
     if (showWelcome) {
         const quickActionCards = [
-            { icon: ImageIcon, title: 'Create an image', description: 'Generate stunning visuals with AI', action: { key: 'imageGen' }, gradient: 'bg-gradient-to-br from-pink-500/10 to-transparent' },
-            { icon: PenTool, title: 'Help me write', description: 'Essays, emails, stories & more', action: { text: 'Help me write...' }, gradient: 'bg-gradient-to-br from-blue-500/10 to-transparent' },
-            { icon: Code2, title: 'Write code', description: 'Debug, explain, or create code', action: { text: 'Write code for...' }, gradient: 'bg-gradient-to-br from-green-500/10 to-transparent' },
-            { icon: Lightbulb, title: 'Brainstorm ideas', description: 'Get creative suggestions', action: { text: 'I have an idea for...' }, gradient: 'bg-gradient-to-br from-yellow-500/10 to-transparent' },
-            { icon: Search, title: 'Research a topic', description: 'Deep dive into any subject', action: { text: 'Research about...' }, gradient: 'bg-gradient-to-br from-purple-500/10 to-transparent' },
-            { icon: FileText, title: 'Summarize content', description: 'Get key points quickly', action: { text: 'Summarize this:' }, gradient: 'bg-gradient-to-br from-orange-500/10 to-transparent' }
+            { icon: ImageIcon, title: 'Create an image', description: 'Generate stunning visuals with AI', action: { key: 'imageGen' }, gradient: 'bg-linear-to-br from-pink-500/10 to-transparent' },
+            { icon: PenTool, title: 'Help me write', description: 'Essays, emails, stories & more', action: { text: 'Help me write...' }, gradient: 'bg-linear-to-br from-blue-500/10 to-transparent' },
+            { icon: Code2, title: 'Write code', description: 'Debug, explain, or create code', action: { text: 'Write code for...' }, gradient: 'bg-linear-to-br from-green-500/10 to-transparent' },
+            { icon: Lightbulb, title: 'Brainstorm ideas', description: 'Get creative suggestions', action: { text: 'I have an idea for...' }, gradient: 'bg-linear-to-br from-yellow-500/10 to-transparent' },
+            { icon: Search, title: 'Research a topic', description: 'Deep dive into any subject', action: { text: 'Research about...' }, gradient: 'bg-linear-to-br from-purple-500/10 to-transparent' },
+            { icon: FileText, title: 'Summarize content', description: 'Get key points quickly', action: { text: 'Summarize this:' }, gradient: 'bg-linear-to-br from-orange-500/10 to-transparent' }
         ];
 
         const capabilities = [
@@ -229,7 +229,7 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
                     <div className="space-y-4 sm:space-y-5">
                         {/* Greeting Badge */}
                         <motion.div variants={itemVariants} initial="hidden" animate="visible">
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-card/80 backdrop-blur-sm border border-border/50 text-xs font-medium">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-card/80 backdrop-blur-xs border border-border/50 text-xs font-medium">
                                 <span>{greeting.emoji}</span>
                                 <span className="text-muted-foreground">{greeting.text}</span>
                             </div>
@@ -240,7 +240,7 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
                             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight leading-tight">
                                 <span className="text-foreground">What can I help with </span>
                                 <motion.span
-                                    className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-[length:200%_auto] bg-clip-text text-transparent"
+                                    className="bg-linear-to-r from-primary via-purple-500 to-pink-500 bg-size-[200%_auto] bg-clip-text text-transparent"
                                     animate={{ backgroundPosition: ['0%', '200%'] }}
                                     transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                                 >
@@ -271,7 +271,7 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
                 </div>
 
                 {/* Fixed Input - Compact */}
-                <div className="flex-shrink-0 border-t border-border/40 bg-background px-4 sm:px-6 py-3 safe-area-bottom">
+                <div className="shrink-0 border-t border-border/40 bg-background px-4 sm:px-6 py-3 safe-area-bottom">
                     <div className="max-w-3xl mx-auto">
                         {inputProps && <InputArea {...inputProps} variant="hero" />}
                     </div>
@@ -327,7 +327,7 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
 
             {/* FIXED INPUT AREA - Compact like ChatGPT */}
             <div className={cn(
-                'flex-shrink-0',
+                'shrink-0',
                 'border-t border-border/40',
                 'bg-background',
                 'px-4 sm:px-6 py-3',

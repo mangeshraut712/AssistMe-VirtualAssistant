@@ -55,7 +55,7 @@ class ErrorBoundary extends React.Component {
                     <div className="max-w-lg w-full bg-card border border-border rounded-2xl p-8 space-y-6 shadow-elevated scale-in">
                         {/* Error Icon with Animation */}
                         <div className="flex justify-center">
-                            <div className="w-20 h-20 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-full flex items-center justify-center animate-pulse-subtle">
+                            <div className="w-20 h-20 bg-linear-to-br from-red-500/20 to-orange-500/20 rounded-full flex items-center justify-center animate-pulse-subtle">
                                 <AlertTriangle className="w-10 h-10 text-red-500" />
                             </div>
                         </div>
@@ -118,14 +118,14 @@ class ErrorBoundary extends React.Component {
                                     <div className="space-y-3">
                                         <div>
                                             <h4 className="text-xs font-medium text-foreground mb-1">Error Message</h4>
-                                            <pre className="text-xs text-red-500 dark:text-red-400 whitespace-pre-wrap break-words font-mono bg-background/50 p-2 rounded">
+                                            <pre className="text-xs text-red-500 dark:text-red-400 whitespace-pre-wrap wrap-break-word font-mono bg-background/50 p-2 rounded">
                                                 {this.state.error.toString()}
                                             </pre>
                                         </div>
                                         {this.state.errorInfo?.componentStack && (
                                             <div>
                                                 <h4 className="text-xs font-medium text-foreground mb-1">Component Stack</h4>
-                                                <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words font-mono bg-background/50 p-2 rounded max-h-40 overflow-auto scrollbar-thin">
+                                                <pre className="text-xs text-muted-foreground whitespace-pre-wrap wrap-break-word font-mono bg-background/50 p-2 rounded max-h-40 overflow-auto scrollbar-thin">
                                                     {this.state.errorInfo.componentStack}
                                                 </pre>
                                             </div>

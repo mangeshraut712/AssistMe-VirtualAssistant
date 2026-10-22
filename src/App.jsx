@@ -47,7 +47,7 @@ const MODELS = [
 
 
 const LoadingOverlay = () => (
-    <div className="fixed inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-background/70 backdrop-blur-xs flex items-center justify-center z-50">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
     </div>
 );

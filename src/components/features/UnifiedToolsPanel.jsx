@@ -69,8 +69,8 @@ const SuiteButton = ({ active, onClick, icon: Icon, name, description, color }) 
             className={cn(
                 'w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all group',
                 active
-                    ? `${styles.active} font-semibold shadow-sm`
-                    : 'text-muted-foreground hover:bg-background hover:text-foreground hover:shadow-sm'
+                    ? `${styles.active} font-semibold shadow-xs`
+                    : 'text-muted-foreground hover:bg-background hover:text-foreground hover:shadow-xs'
             )}
             variants={sidebarItemVariants}
             initial="rest"
@@ -160,7 +160,7 @@ const UnifiedToolsPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                 {/* Header */}
                 <div className={cn(
                     'h-16 flex items-center px-6 border-b border-border/50',
-                    'bg-background/50 backdrop-blur-sm'
+                    'bg-background/50 backdrop-blur-xs'
                 )}>
                     <div className="flex items-center gap-3">
                         <motion.div
@@ -201,7 +201,7 @@ const UnifiedToolsPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                 </nav>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-border/50 bg-background/50 backdrop-blur-sm">
+                <div className="p-4 border-t border-border/50 bg-background/50 backdrop-blur-xs">
                     <motion.button
                         onClick={onClose}
                         className={cn(
@@ -209,7 +209,7 @@ const UnifiedToolsPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                             'border border-border text-sm font-medium',
                             'hover:bg-red-50 hover:text-red-600 hover:border-red-200',
                             'dark:hover:bg-red-900/10 dark:hover:border-red-900/30',
-                            'transition-all shadow-sm'
+                            'transition-all shadow-xs'
                         )}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -223,7 +223,7 @@ const UnifiedToolsPanel = ({ isOpen, onClose, backendUrl = '' }) => {
             {/* Mobile Header */}
             <motion.div
                 className={cn(
-                    'md:hidden fixed top-0 left-0 right-0 h-14 z-[60]',
+                    'md:hidden fixed top-0 left-0 right-0 h-14 z-60',
                     'bg-background/80 backdrop-blur-xl border-b border-border',
                     'flex items-center justify-between px-4'
                 )}
@@ -246,7 +246,7 @@ const UnifiedToolsPanel = ({ isOpen, onClose, backendUrl = '' }) => {
             {/* Mobile Tab Bar */}
             <motion.div
                 className={cn(
-                    'md:hidden fixed bottom-0 left-0 right-0 h-20 z-[60]',
+                    'md:hidden fixed bottom-0 left-0 right-0 h-20 z-60',
                     'bg-background/80 backdrop-blur-xl border-t border-border',
                     'flex items-center justify-around px-4 pb-safe'
                 )}

@@ -130,7 +130,7 @@ const ChatItem = ({
                     type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
+                    className="flex-1 bg-transparent text-sm focus:outline-hidden min-w-0"
                     autoFocus
                     autoComplete="off"
                     onKeyDown={(e) => {
@@ -166,7 +166,7 @@ const ChatItem = ({
             className={cn(
                 'group relative w-full text-left px-3 py-3 rounded-xl border transition-all cursor-pointer',
                 isActive
-                    ? 'border-primary/30 bg-primary/5 shadow-sm'
+                    ? 'border-primary/30 bg-primary/5 shadow-xs'
                     : 'border-transparent bg-card/50 hover:border-border hover:bg-foreground/5'
             )}
             whileHover={{ scale: 1.01 }}
@@ -293,7 +293,7 @@ const Sidebar = ({
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
+                        className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 md:hidden"
                         onClick={onClose}
                     />
 
@@ -376,7 +376,7 @@ const Sidebar = ({
                                     placeholder="Search chats..."
                                     className={cn(
                                         'w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl',
-                                        'text-sm focus:outline-none focus:ring-2 focus:ring-primary/20',
+                                        'text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20',
                                         'placeholder:text-muted-foreground/70 transition-all'
                                     )}
                                     autoComplete="off"
@@ -466,7 +466,7 @@ const Sidebar = ({
                             transition={{ delay: 0.2 }}
                         >
                             <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-sm font-bold text-primary shadow-inner">
+                                <div className="h-10 w-10 rounded-full bg-linear-to-br from-primary/20 to-primary/10 flex items-center justify-center text-sm font-bold text-primary shadow-inner">
                                     G
                                 </div>
                                 <div>

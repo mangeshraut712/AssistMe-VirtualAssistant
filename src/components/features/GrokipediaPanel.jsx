@@ -119,7 +119,7 @@ const TocItem = ({ item, index, isActive, isParentActive, onClick, activeSection
             >
                 {/* Active indicator dot */}
                 <span className={cn(
-                    'w-1.5 h-1.5 rounded-full mr-2.5 flex-shrink-0 transition-all',
+                    'w-1.5 h-1.5 rounded-full mr-2.5 shrink-0 transition-all',
                     isActive ? 'bg-blue-500' : hasActiveChild ? 'bg-blue-500/30' : 'bg-muted-foreground/20'
                 )} />
 
@@ -128,7 +128,7 @@ const TocItem = ({ item, index, isActive, isParentActive, onClick, activeSection
                 {/* Expand icon for sections with subsections */}
                 {hasSubItems && (
                     <ChevronRight className={cn(
-                        'h-3 w-3 text-muted-foreground/40 transition-transform flex-shrink-0',
+                        'h-3 w-3 text-muted-foreground/40 transition-transform shrink-0',
                         isExpanded && 'rotate-90'
                     )} />
                 )}
@@ -160,7 +160,7 @@ const TocItem = ({ item, index, isActive, isParentActive, onClick, activeSection
                                     )}
                                 >
                                     <span className={cn(
-                                        'w-1 h-1 rounded-full mr-2 flex-shrink-0',
+                                        'w-1 h-1 rounded-full mr-2 shrink-0',
                                         activeSection === sub.id ? 'bg-blue-500' : 'bg-muted-foreground/30'
                                     )} />
                                     <span className="truncate">{sub.title}</span>
@@ -778,7 +778,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                                 onFocus={() => setShowHistory(true)}
                                                 onBlur={() => setTimeout(() => setShowHistory(false), 200)}
                                                 placeholder="Search anything..."
-                                                className="w-full h-12 pl-12 pr-24 bg-background border border-border rounded-full text-base font-normal placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-foreground/10 focus:border-foreground/20 transition-all"
+                                                className="w-full h-12 pl-12 pr-24 bg-background border border-border rounded-full text-base font-normal placeholder:text-muted-foreground/40 focus:outline-hidden focus:ring-1 focus:ring-foreground/10 focus:border-foreground/20 transition-all"
                                             />
                                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                                 {/* Cmd+K shortcut hint - matching grokipedia.com */}
@@ -827,7 +827,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: 10 }}
-                                                className="absolute z-[100] top-full mt-4 w-full bg-card/95 backdrop-blur-2xl border border-border/80 rounded-2xl shadow-2xl overflow-hidden p-2"
+                                                className="absolute z-100 top-full mt-4 w-full bg-card/95 backdrop-blur-2xl border border-border/80 rounded-2xl shadow-2xl overflow-hidden p-2"
                                             >
                                                 <div className="px-4 py-2 flex items-center justify-between">
                                                     <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Recent Searches</span>
@@ -1000,7 +1000,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
 
                                                         return (
                                                             <div key={i} className="flex items-start gap-3 py-1.5 group">
-                                                                <span className="font-mono text-xs text-muted-foreground/60 w-6 flex-shrink-0 pt-0.5 text-right">{i + 1}.</span>
+                                                                <span className="font-mono text-xs text-muted-foreground/60 w-6 shrink-0 pt-0.5 text-right">{i + 1}.</span>
                                                                 <div className="flex-1 min-w-0">
                                                                     <a
                                                                         href={ref.url}
@@ -1009,7 +1009,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                                                         className="text-sm text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
                                                                     >
                                                                         <span className="truncate">{displayUrl}</span>
-                                                                        <ExternalLink className="h-3 w-3 opacity-50 flex-shrink-0" />
+                                                                        <ExternalLink className="h-3 w-3 opacity-50 shrink-0" />
                                                                     </a>
                                                                 </div>
                                                             </div>
@@ -1021,8 +1021,8 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                             // Show AI Knowledge notice when no references found
                                             <section className="mt-16 pt-8 border-t border-border/50">
                                                 <h2 className="text-2xl font-bold mb-6" style={{ fontFamily: "'Source Serif 4', serif" }}>References</h2>
-                                                <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
-                                                    <Sparkles className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                                                <div className="flex items-start gap-3 p-4 bg-linear-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
+                                                    <Sparkles className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
                                                     <div className="text-sm">
                                                         <span className="font-semibold text-blue-700 dark:text-blue-300 block">AI-Generated Content</span>
                                                         <span className="text-muted-foreground text-xs">
@@ -1073,7 +1073,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.8 }}
                             onClick={() => contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-                            className="fixed bottom-8 right-8 p-3 bg-foreground text-background rounded-full shadow-xl hover:bg-foreground/90 transition-all z-[100]"
+                            className="fixed bottom-8 right-8 p-3 bg-foreground text-background rounded-full shadow-xl hover:bg-foreground/90 transition-all z-100"
                         >
                             <ChevronUp className="h-5 w-5" />
                         </motion.button>

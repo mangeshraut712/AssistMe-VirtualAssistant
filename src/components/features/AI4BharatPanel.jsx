@@ -19,13 +19,13 @@ const AI4BharatPanel = ({ isOpen, onClose, isEmbedded = false, backendUrl = '' }
         <div className={containerClasses}>
             {/* Header */}
             {!isEmbedded && (
-                <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-background/95 backdrop-blur-xl sticky top-0 z-10 shadow-sm">
+                <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-background/95 backdrop-blur-xl sticky top-0 z-10 shadow-xs">
                     <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-orange-500/20">
+                        <div className="h-10 w-10 rounded-xl bg-linear-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-orange-500/20">
                             AI
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300">AI4Bharat</h2>
+                            <h2 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300">AI4Bharat</h2>
                             <p className="text-xs text-muted-foreground font-medium">Building AI for India</p>
                         </div>
                     </div>
@@ -39,9 +39,9 @@ const AI4BharatPanel = ({ isOpen, onClose, isEmbedded = false, backendUrl = '' }
 
             {/* Embedded Nav */}
             {isEmbedded && (
-                <div className="flex items-center gap-2 px-6 py-4 border-b border-border/50 bg-background/50 backdrop-blur-sm">
+                <div className="flex items-center gap-2 px-6 py-4 border-b border-border/50 bg-background/50 backdrop-blur-xs">
                     <div className="flex items-center gap-2 mr-4">
-                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                        <div className="h-8 w-8 rounded-lg bg-linear-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
                             AI
                         </div>
                         <span className="font-bold text-lg">AI4Bharat</span>
@@ -58,7 +58,7 @@ const AI4BharatPanel = ({ isOpen, onClose, isEmbedded = false, backendUrl = '' }
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize whitespace-nowrap ${activeTab === tab.id
-                                    ? 'bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    ? 'bg-background text-foreground shadow-xs ring-1 ring-black/5 dark:ring-white/10'
                                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                                     }`}
                             >
@@ -84,7 +84,7 @@ const AI4BharatPanel = ({ isOpen, onClose, isEmbedded = false, backendUrl = '' }
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all capitalize ${activeTab === tab.id
-                                    ? 'bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    ? 'bg-background text-foreground shadow-xs ring-1 ring-black/5 dark:ring-white/10'
                                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                                     }`}
                             >
@@ -175,7 +175,7 @@ const OverviewSection = ({ onTryDemo }) => {
                 </div>
                 <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-foreground">
                     Building AI <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-white to-green-500 dark:from-orange-400 dark:via-neutral-200 dark:to-green-400 animate-gradient">for India!</span>
+                    <span className="text-transparent bg-clip-text bg-linear-to-r from-orange-500 via-white to-green-500 dark:from-orange-400 dark:via-neutral-200 dark:to-green-400 animate-gradient">for India!</span>
                 </h1>
                 <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed px-4">
                     Experience the power of Indian Language AI. Translate, transliterate, and interact in 22+ languages with state-of-the-art models.
@@ -194,13 +194,13 @@ const OverviewSection = ({ onTryDemo }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {features.map((feature, idx) => (
                         <div key={idx} className={`p-6 rounded-3xl border transition-all hover:shadow-xl hover:-translate-y-1 duration-300 ${feature.bg} ${feature.border}`}>
-                            <div className={`h-14 w-14 rounded-2xl bg-white dark:bg-neutral-900 flex items-center justify-center mb-6 shadow-sm ${feature.color}`}>
+                            <div className={`h-14 w-14 rounded-2xl bg-white dark:bg-neutral-900 flex items-center justify-center mb-6 shadow-xs ${feature.color}`}>
                                 <feature.icon className="h-7 w-7" />
                             </div>
                             <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
                             <div className="flex flex-wrap gap-2 mb-4">
                                 {feature.models.map((m, i) => (
-                                    <span key={i} className="px-2.5 py-1 text-xs font-bold bg-white/60 dark:bg-black/20 rounded-lg border border-black/5 backdrop-blur-sm">
+                                    <span key={i} className="px-2.5 py-1 text-xs font-bold bg-white/60 dark:bg-black/20 rounded-lg border border-black/5 backdrop-blur-xs">
                                         {m}
                                     </span>
                                 ))}
@@ -307,7 +307,7 @@ const ToolSection = ({ tool, backendUrl = '' }) => {
                             <select
                                 value={sourceLanguage}
                                 onChange={(e) => setSourceLanguage(e.target.value)}
-                                className="bg-transparent text-sm font-medium px-2 py-1 focus:outline-none cursor-pointer"
+                                className="bg-transparent text-sm font-medium px-2 py-1 focus:outline-hidden cursor-pointer"
                             >
                                 {indianLanguages.map(lang => (
                                     <option key={lang.code} value={lang.code}>{lang.name}</option>
@@ -322,7 +322,7 @@ const ToolSection = ({ tool, backendUrl = '' }) => {
                         <select
                             value={targetLanguage}
                             onChange={(e) => setTargetLanguage(e.target.value)}
-                            className="bg-transparent text-sm font-medium px-2 py-1 focus:outline-none cursor-pointer"
+                            className="bg-transparent text-sm font-medium px-2 py-1 focus:outline-hidden cursor-pointer"
                         >
                             {indianLanguages.map(lang => (
                                 <option key={lang.code} value={lang.code}>{lang.name}</option>
@@ -339,7 +339,7 @@ const ToolSection = ({ tool, backendUrl = '' }) => {
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
                                 placeholder={tool === 'dictionary' ? "Enter a word to define..." : "Enter text here..."}
-                                className="w-full h-64 p-6 border border-border rounded-2xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none text-lg leading-relaxed transition-all shadow-sm group-hover:shadow-md"
+                                className="w-full h-64 p-6 border border-border rounded-2xl bg-background focus:outline-hidden focus:ring-2 focus:ring-primary/20 resize-none text-lg leading-relaxed transition-all shadow-xs group-hover:shadow-md"
                             />
                             {inputText && (
                                 <button
@@ -366,7 +366,7 @@ const ToolSection = ({ tool, backendUrl = '' }) => {
                                 <div className="absolute top-4 right-4 flex gap-2">
                                     <button
                                         onClick={handleCopy}
-                                        className="p-2 bg-background/80 backdrop-blur rounded-lg border border-border/50 shadow-sm hover:bg-background transition-all"
+                                        className="p-2 bg-background/80 backdrop-blur-sm rounded-lg border border-border/50 shadow-xs hover:bg-background transition-all"
                                         title="Copy"
                                     >
                                         {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
@@ -380,7 +380,7 @@ const ToolSection = ({ tool, backendUrl = '' }) => {
                 <button
                     onClick={handleAction}
                     disabled={isProcessing || !inputText.trim()}
-                    className="w-full mt-8 py-4 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-2xl hover:opacity-90 disabled:opacity-50 transition-all font-bold text-lg flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20 active:scale-[0.99]"
+                    className="w-full mt-8 py-4 bg-linear-to-r from-orange-600 to-orange-500 text-white rounded-2xl hover:opacity-90 disabled:opacity-50 transition-all font-bold text-lg flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20 active:scale-[0.99]"
                 >
                     {isProcessing ? (
                         <>

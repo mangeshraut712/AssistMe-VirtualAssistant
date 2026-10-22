@@ -951,7 +951,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                             }}
                             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
                         >
-                            <div className="w-full h-full rounded-full bg-gradient-to-br from-violet-500/30 via-indigo-500/20 to-transparent dark:from-violet-600/20 dark:via-indigo-600/15 dark:to-transparent" />
+                            <div className="w-full h-full rounded-full bg-linear-to-br from-violet-500/30 via-indigo-500/20 to-transparent dark:from-violet-600/20 dark:via-indigo-600/15 dark:to-transparent" />
                         </motion.div>
                         {/* Bottom-left blue glow */}
                         <motion.div
@@ -966,7 +966,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                             }}
                             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                         >
-                            <div className="w-full h-full rounded-full bg-gradient-to-tr from-blue-500/25 via-cyan-500/15 to-transparent dark:from-blue-600/15 dark:via-cyan-600/10 dark:to-transparent" />
+                            <div className="w-full h-full rounded-full bg-linear-to-tr from-blue-500/25 via-cyan-500/15 to-transparent dark:from-blue-600/15 dark:via-cyan-600/10 dark:to-transparent" />
                         </motion.div>
                         {/* Center shimmer effect */}
                         <motion.div
@@ -977,14 +977,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                             }}
                             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                         >
-                            <div className="w-full h-full rounded-full bg-gradient-to-r from-violet-400/20 via-pink-400/10 to-indigo-400/20 dark:from-violet-500/10 dark:via-pink-500/5 dark:to-indigo-500/10 blur-2xl" />
+                            <div className="w-full h-full rounded-full bg-linear-to-r from-violet-400/20 via-pink-400/10 to-indigo-400/20 dark:from-violet-500/10 dark:via-pink-500/5 dark:to-indigo-500/10 blur-2xl" />
                         </motion.div>
                     </div>
 
                     {/* Header */}
                     <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-6 border-b border-gray-100 dark:border-gray-900">
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-lg shadow-violet-500/25">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-linear-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-lg shadow-violet-500/25">
                                 <Sparkles className="w-4 h-4" />
                                 <span>Premium AI</span>
                             </div>
@@ -1054,7 +1054,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                     ═══════════════════════════════════════════════════════════════ */}
                     <div className="relative z-10 flex-1 overflow-y-auto">
                         {/* Gradient Background */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-violet-50/50 via-white to-indigo-50/50 dark:from-violet-950/20 dark:via-gray-950 dark:to-indigo-950/20" />
+                        <div className="absolute inset-0 bg-linear-to-b from-violet-50/50 via-white to-indigo-50/50 dark:from-violet-950/20 dark:via-gray-950 dark:to-indigo-950/20" />
 
                         <div className="relative px-4 py-6 sm:px-6 lg:px-8 max-w-3xl mx-auto">
                             {/* Welcome Hero - Shows when no conversation */}
@@ -1073,12 +1073,12 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                         }}
                                         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                                     >
-                                        <div className="absolute inset-0 w-28 h-28 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 blur-2xl opacity-30" />
-                                        <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-2xl">
+                                        <div className="absolute inset-0 w-28 h-28 rounded-full bg-linear-to-r from-violet-500 to-indigo-500 blur-2xl opacity-30" />
+                                        <div className="relative w-28 h-28 rounded-full bg-linear-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-2xl">
                                             <Brain className="w-14 h-14 text-white" />
                                         </div>
                                     </motion.div>
-                                    <h2 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400 bg-clip-text text-transparent mb-3">
+                                    <h2 className="text-3xl font-bold bg-linear-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400 bg-clip-text text-transparent mb-3">
                                         Gemini Live Voice
                                     </h2>
                                     <p className="text-gray-600 dark:text-gray-300 max-w-sm text-lg leading-relaxed">
@@ -1116,14 +1116,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                         {/* AI Avatar */}
                                         {msg.role === 'assistant' && (
                                             <motion.div
-                                                className="flex-shrink-0"
+                                                className="shrink-0"
                                                 initial={{ scale: 0 }}
                                                 animate={{ scale: 1 }}
                                                 transition={{ type: "spring", delay: 0.1 }}
                                             >
                                                 <div className="relative w-10 h-10">
-                                                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-full blur-md opacity-50" />
-                                                    <div className="relative w-full h-full bg-gradient-to-br from-violet-500 to-indigo-600 rounded-full flex items-center justify-center shadow-xl ring-2 ring-white/50 dark:ring-gray-800/50">
+                                                    <div className="absolute inset-0 bg-linear-to-br from-violet-500 to-indigo-600 rounded-full blur-md opacity-50" />
+                                                    <div className="relative w-full h-full bg-linear-to-br from-violet-500 to-indigo-600 rounded-full flex items-center justify-center shadow-xl ring-2 ring-white/50 dark:ring-gray-800/50">
                                                         <Sparkles className="w-5 h-5 text-white" />
                                                     </div>
                                                 </div>
@@ -1134,7 +1134,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                         <div className={cn(
                                             "relative max-w-[80%] sm:max-w-[70%] rounded-3xl shadow-xl",
                                             msg.role === 'user'
-                                                ? "bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 text-white px-6 py-4"
+                                                ? "bg-linear-to-br from-blue-500 via-blue-600 to-cyan-600 text-white px-6 py-4"
                                                 : "bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 px-6 py-4"
                                         )}>
                                             {/* AI Header */}
@@ -1163,14 +1163,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                         {/* User Avatar */}
                                         {msg.role === 'user' && (
                                             <motion.div
-                                                className="flex-shrink-0"
+                                                className="shrink-0"
                                                 initial={{ scale: 0 }}
                                                 animate={{ scale: 1 }}
                                                 transition={{ type: "spring", delay: 0.1 }}
                                             >
                                                 <div className="relative w-10 h-10">
-                                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full blur-md opacity-50" />
-                                                    <div className="relative w-full h-full bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-xl ring-2 ring-white/50 dark:ring-gray-800/50">
+                                                    <div className="absolute inset-0 bg-linear-to-br from-blue-500 to-cyan-500 rounded-full blur-md opacity-50" />
+                                                    <div className="relative w-full h-full bg-linear-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-xl ring-2 ring-white/50 dark:ring-gray-800/50">
                                                         <Mic className="w-5 h-5 text-white" />
                                                     </div>
                                                 </div>
@@ -1189,26 +1189,26 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                         className="flex items-end gap-3 justify-start"
                                     >
                                         <motion.div
-                                            className="flex-shrink-0"
+                                            className="shrink-0"
                                             animate={{ scale: [1, 1.15, 1] }}
                                             transition={{ repeat: Infinity, duration: 1.5 }}
                                         >
                                             <div className="relative w-10 h-10">
-                                                <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-full blur-lg opacity-70 animate-pulse" />
-                                                <div className="relative w-full h-full bg-gradient-to-br from-violet-500 to-indigo-600 rounded-full flex items-center justify-center shadow-2xl ring-2 ring-violet-300 dark:ring-violet-700">
+                                                <div className="absolute inset-0 bg-linear-to-br from-violet-500 to-indigo-600 rounded-full blur-lg opacity-70 animate-pulse" />
+                                                <div className="relative w-full h-full bg-linear-to-br from-violet-500 to-indigo-600 rounded-full flex items-center justify-center shadow-2xl ring-2 ring-violet-300 dark:ring-violet-700">
                                                     <Volume2 className="w-5 h-5 text-white" />
                                                 </div>
                                             </div>
                                         </motion.div>
 
-                                        <div className="relative max-w-[80%] sm:max-w-[70%] px-6 py-4 rounded-3xl bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/40 dark:to-indigo-900/40 border-2 border-violet-300 dark:border-violet-600 shadow-2xl backdrop-blur-xl">
+                                        <div className="relative max-w-[80%] sm:max-w-[70%] px-6 py-4 rounded-3xl bg-linear-to-br from-violet-100 to-indigo-100 dark:from-violet-900/40 dark:to-indigo-900/40 border-2 border-violet-300 dark:border-violet-600 shadow-2xl backdrop-blur-xl">
                                             {/* Speaking Header with Waveform */}
                                             <div className="flex items-center gap-3 mb-3">
                                                 <div className="flex items-center gap-0.5">
                                                     {[...Array(5)].map((_, i) => (
                                                         <motion.div
                                                             key={i}
-                                                            className="w-1 bg-gradient-to-t from-violet-500 to-indigo-500 rounded-full"
+                                                            className="w-1 bg-linear-to-t from-violet-500 to-indigo-500 rounded-full"
                                                             animate={{ height: [4, 20, 4] }}
                                                             transition={{
                                                                 duration: 0.5,
@@ -1219,7 +1219,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                                         />
                                                     ))}
                                                 </div>
-                                                <span className="text-xs font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400 bg-clip-text text-transparent uppercase tracking-wider">
+                                                <span className="text-xs font-bold bg-linear-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400 bg-clip-text text-transparent uppercase tracking-wider">
                                                     Gemini Speaking
                                                 </span>
                                             </div>
@@ -1246,7 +1246,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                         animate={{ opacity: 1, y: 0 }}
                                         className="flex items-end gap-3 justify-end"
                                     >
-                                        <div className="relative max-w-[80%] sm:max-w-[70%] px-6 py-4 rounded-3xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/40 dark:to-cyan-900/40 border-2 border-blue-300 dark:border-blue-600 shadow-2xl backdrop-blur-xl">
+                                        <div className="relative max-w-[80%] sm:max-w-[70%] px-6 py-4 rounded-3xl bg-linear-to-br from-blue-100 to-cyan-100 dark:from-blue-900/40 dark:to-cyan-900/40 border-2 border-blue-300 dark:border-blue-600 shadow-2xl backdrop-blur-xl">
                                             {/* Listening Header */}
                                             <div className="flex items-center gap-3 mb-3">
                                                 <div className="flex gap-1">
@@ -1266,7 +1266,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                                         transition={{ duration: 1, repeat: Infinity, delay: 0.3 }}
                                                     />
                                                 </div>
-                                                <span className="text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent uppercase tracking-wider">
+                                                <span className="text-xs font-bold bg-linear-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent uppercase tracking-wider">
                                                     Listening
                                                 </span>
                                             </div>
@@ -1278,13 +1278,13 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                         </div>
 
                                         <motion.div
-                                            className="flex-shrink-0"
+                                            className="shrink-0"
                                             animate={{ scale: [1, 1.15, 1] }}
                                             transition={{ repeat: Infinity, duration: 1 }}
                                         >
                                             <div className="relative w-10 h-10">
-                                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full blur-lg opacity-70 animate-pulse" />
-                                                <div className="relative w-full h-full bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-2xl ring-2 ring-blue-300 dark:ring-blue-700">
+                                                <div className="absolute inset-0 bg-linear-to-br from-blue-500 to-cyan-500 rounded-full blur-lg opacity-70 animate-pulse" />
+                                                <div className="relative w-full h-full bg-linear-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-2xl ring-2 ring-blue-300 dark:ring-blue-700">
                                                     <Mic className="w-5 h-5 text-white" />
                                                 </div>
                                             </div>
@@ -1322,7 +1322,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                             }}
                                             transition={{ duration: 2, repeat: Infinity }}
                                         >
-                                            <div className="w-full h-full rounded-full bg-gradient-to-r from-violet-500/40 via-indigo-500/30 to-blue-500/40" />
+                                            <div className="w-full h-full rounded-full bg-linear-to-r from-violet-500/40 via-indigo-500/30 to-blue-500/40" />
                                         </motion.div>
                                         <motion.div
                                             className="absolute inset-0 rounded-full"
@@ -1338,7 +1338,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                             }}
                                             transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
                                         >
-                                            <div className="w-full h-full rounded-full bg-gradient-to-r from-blue-500/30 via-cyan-500/20 to-teal-500/30" />
+                                            <div className="w-full h-full rounded-full bg-linear-to-r from-blue-500/30 via-cyan-500/20 to-teal-500/30" />
                                         </motion.div>
                                     </>
                                 )}
@@ -1348,12 +1348,12 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                     className={cn(
                                         "relative w-32 h-32 rounded-full flex items-center justify-center overflow-hidden shadow-2xl",
                                         status === 'listening'
-                                            ? "bg-gradient-to-br from-violet-500 via-indigo-500 to-blue-500"
+                                            ? "bg-linear-to-br from-violet-500 via-indigo-500 to-blue-500"
                                             : status === 'speaking'
-                                                ? "bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500"
+                                                ? "bg-linear-to-br from-emerald-500 via-teal-500 to-cyan-500"
                                                 : status === 'processing'
-                                                    ? "bg-gradient-to-br from-amber-500 via-orange-500 to-red-500"
-                                                    : "bg-gradient-to-br from-gray-400 via-gray-500 to-gray-600 dark:from-gray-600 dark:via-gray-700 dark:to-gray-800"
+                                                    ? "bg-linear-to-br from-amber-500 via-orange-500 to-red-500"
+                                                    : "bg-linear-to-br from-gray-400 via-gray-500 to-gray-600 dark:from-gray-600 dark:via-gray-700 dark:to-gray-800"
                                     )}
                                     style={{
                                         boxShadow: status === 'listening'
@@ -1427,7 +1427,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                         </div>
                         <button
                             onClick={() => setIsPremium(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:opacity-90 transition-opacity"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-linear-to-r from-violet-500 to-indigo-500 text-white hover:opacity-90 transition-opacity"
                         >
                             <Sparkles className="w-3 h-3" />
                             Upgrade to Premium
@@ -1493,7 +1493,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                 >
                                     {/* AI Avatar */}
                                     {msg.role === 'assistant' && (
-                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                        <div className="shrink-0 w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                                             <Sparkles className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                                         </div>
                                     )}
@@ -1511,7 +1511,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
 
                                     {/* User Avatar */}
                                     {msg.role === 'user' && (
-                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-900 dark:bg-white flex items-center justify-center">
+                                        <div className="shrink-0 w-8 h-8 rounded-full bg-gray-900 dark:bg-white flex items-center justify-center">
                                             <Mic className="w-4 h-4 text-white dark:text-gray-900" />
                                         </div>
                                     )}
@@ -1536,7 +1536,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                                         </div>
                                         <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">{transcript}</p>
                                     </div>
-                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center animate-pulse">
+                                    <div className="shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center animate-pulse">
                                         <Mic className="w-4 h-4 text-white" />
                                     </div>
                                 </motion.div>

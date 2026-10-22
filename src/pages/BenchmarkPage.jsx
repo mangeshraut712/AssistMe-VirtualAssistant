@@ -243,28 +243,28 @@ const BenchmarkPage = () => {
 
                     {/* KPI Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="p-5 bg-card border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                        <div className="p-5 bg-card border border-border rounded-xl shadow-xs hover:shadow-md transition-shadow">
                             <p className="text-sm text-muted-foreground mb-1">Total Requests (24h)</p>
                             <p className="text-3xl font-bold text-foreground">142,893</p>
                             <div className="flex items-center gap-1 text-xs text-green-500 mt-2">
                                 <TrendingUp className="h-3 w-3" /> +12.5% vs yesterday
                             </div>
                         </div>
-                        <div className="p-5 bg-card border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                        <div className="p-5 bg-card border border-border rounded-xl shadow-xs hover:shadow-md transition-shadow">
                             <p className="text-sm text-muted-foreground mb-1">Avg Latency</p>
                             <p className="text-3xl font-bold text-foreground">145<span className="text-lg text-muted-foreground font-normal">ms</span></p>
                             <div className="flex items-center gap-1 text-xs text-green-500 mt-2">
                                 <TrendingUp className="h-3 w-3" /> -5ms improvement
                             </div>
                         </div>
-                        <div className="p-5 bg-card border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                        <div className="p-5 bg-card border border-border rounded-xl shadow-xs hover:shadow-md transition-shadow">
                             <p className="text-sm text-muted-foreground mb-1">Error Rate</p>
                             <p className="text-3xl font-bold text-foreground">0.04%</p>
                             <div className="flex items-center gap-1 text-xs text-green-500 mt-2">
                                 <TrendingUp className="h-3 w-3" /> Stable
                             </div>
                         </div>
-                        <div className="p-5 bg-card border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                        <div className="p-5 bg-card border border-border rounded-xl shadow-xs hover:shadow-md transition-shadow">
                             <p className="text-sm text-muted-foreground mb-1">Active Users</p>
                             <p className="text-3xl font-bold text-foreground">3,402</p>
                             <div className="flex items-center gap-1 text-xs text-blue-500 mt-2">
@@ -275,7 +275,7 @@ const BenchmarkPage = () => {
 
                     {/* Traffic & Usage Charts */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 p-6 bg-card border border-border rounded-xl shadow-sm">
+                        <div className="lg:col-span-2 p-6 bg-card border border-border rounded-xl shadow-xs">
                             <h3 className="text-base font-semibold mb-4 text-foreground">Request Volume & Latency</h3>
                             <ResponsiveContainer width="100%" height={300}>
                                 <AreaChart data={API_TRAFFIC_DATA}>
@@ -303,7 +303,7 @@ const BenchmarkPage = () => {
                             </ResponsiveContainer>
                         </div>
 
-                        <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                        <div className="p-6 bg-card border border-border rounded-xl shadow-xs">
                             <h3 className="text-base font-semibold mb-4 text-foreground">Endpoint Usage</h3>
                             <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
@@ -336,7 +336,7 @@ const BenchmarkPage = () => {
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Global Map / Distribution */}
-                        <div className="lg:col-span-2 p-6 bg-card border border-border rounded-xl shadow-sm">
+                        <div className="lg:col-span-2 p-6 bg-card border border-border rounded-xl shadow-xs">
                             <h3 className="text-lg font-bold text-foreground mb-4">Global AI Leadership (Market Share)</h3>
                             <ResponsiveContainer width="100%" height={300}>
                                 <BarChart layout="vertical" data={GLOBAL_AI_DATA} margin={{ top: 0, right: 30, left: 40, bottom: 0 }}>
@@ -354,7 +354,7 @@ const BenchmarkPage = () => {
                         </div>
 
                         {/* Top Companies Leaderboard */}
-                        <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                        <div className="p-6 bg-card border border-border rounded-xl shadow-xs">
                             <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
                                 <Briefcase className="h-5 w-5 text-purple-500" />
                                 Top AI Companies
@@ -396,7 +396,7 @@ const BenchmarkPage = () => {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto bg-card border border-border rounded-xl shadow-sm">
+                    <div className="overflow-x-auto bg-card border border-border rounded-xl shadow-xs">
                         <table className="w-full text-sm text-left">
                             <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b border-border">
                                 <tr>
@@ -436,7 +436,7 @@ const BenchmarkPage = () => {
                 {/* --- Section 4: Advanced Analysis (Scatter & Radar) --- */}
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Quality vs Price Scatter */}
-                    <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                    <div className="p-6 bg-card border border-border rounded-xl shadow-xs">
                         <h3 className="text-base font-semibold mb-4 text-foreground flex items-center gap-2">
                             <BarChart2 className="h-5 w-5 text-indigo-500" />
                             Quality vs. Price Analysis
@@ -458,7 +458,7 @@ const BenchmarkPage = () => {
                     </div>
 
                     {/* Capabilities Radar */}
-                    <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                    <div className="p-6 bg-card border border-border rounded-xl shadow-xs">
                         <h3 className="text-base font-semibold mb-4 text-foreground flex items-center gap-2">
                             <Cpu className="h-5 w-5 text-orange-500" />
                             Model Capabilities Comparison
@@ -486,7 +486,7 @@ const BenchmarkPage = () => {
                 {/* --- Section 5: Cost, Reliability & Satisfaction --- */}
                 <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Cost Trend */}
-                    <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                    <div className="p-6 bg-card border border-border rounded-xl shadow-xs">
                         <h3 className="text-base font-semibold mb-4 text-foreground flex items-center gap-2">
                             <DollarSign className="h-5 w-5 text-emerald-500" />
                             Inference Cost Trend (per 1M tokens)
@@ -503,7 +503,7 @@ const BenchmarkPage = () => {
                     </div>
 
                     {/* Reliability */}
-                    <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                    <div className="p-6 bg-card border border-border rounded-xl shadow-xs">
                         <h3 className="text-base font-semibold mb-4 text-foreground flex items-center gap-2">
                             <Gauge className="h-5 w-5 text-green-500" />
                             Provider Uptime (90d)
@@ -520,7 +520,7 @@ const BenchmarkPage = () => {
                     </div>
 
                     {/* Satisfaction */}
-                    <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                    <div className="p-6 bg-card border border-border rounded-xl shadow-xs">
                         <h3 className="text-base font-semibold mb-4 text-foreground flex items-center gap-2">
                             <Users className="h-5 w-5 text-pink-500" />
                             User Satisfaction (NPS-style)
@@ -548,7 +548,7 @@ const BenchmarkPage = () => {
 
                     {/* Accuracy & Free/Paid */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="p-6 bg-card rounded-xl border border-border shadow-sm">
+                        <div className="p-6 bg-card rounded-xl border border-border shadow-xs">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
                                     <h3 className="text-lg font-bold text-foreground">Software Engineering Accuracy</h3>
@@ -570,7 +570,7 @@ const BenchmarkPage = () => {
                             </ResponsiveContainer>
                         </div>
 
-                        <div className="p-6 bg-card rounded-xl border border-border shadow-sm">
+                        <div className="p-6 bg-card rounded-xl border border-border shadow-xs">
                             <h3 className="text-lg font-bold mb-4 text-foreground">Free vs Paid Availability</h3>
                             <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
@@ -588,7 +588,7 @@ const BenchmarkPage = () => {
 
                     {/* Latency vs Cost & Component Latency */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="p-6 bg-card rounded-xl border border-border shadow-sm">
+                        <div className="p-6 bg-card rounded-xl border border-border shadow-xs">
                             <h3 className="text-lg font-bold mb-4 text-foreground">Latency vs Cost (Paid)</h3>
                             <ResponsiveContainer width="100%" height={300}>
                                 <ScatterChart>
@@ -605,7 +605,7 @@ const BenchmarkPage = () => {
                             </ResponsiveContainer>
                         </div>
 
-                        <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
+                        <div className="p-6 bg-card border border-border rounded-xl shadow-xs">
                             <h3 className="text-base font-semibold mb-4 text-foreground">Service Response Times</h3>
                             <div className="space-y-4">
                                 {SYSTEM_METRICS.map((metric, idx) => (
@@ -616,7 +616,7 @@ const BenchmarkPage = () => {
                                         </div>
                                         <div className="h-2 bg-secondary rounded-full overflow-hidden">
                                             <div
-                                                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500"
+                                                className="h-full rounded-full bg-linear-to-r from-blue-500 to-violet-500"
                                                 style={{ width: `${(metric.avg / 5) * 100}%` }}
                                             />
                                         </div>
@@ -635,7 +635,7 @@ const BenchmarkPage = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {AI_NEWS.map((news, idx) => (
-                            <div key={idx} className="p-4 bg-card border border-border rounded-xl shadow-sm hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedNews(news)}>
+                            <div key={idx} className="p-4 bg-card border border-border rounded-xl shadow-xs hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedNews(news)}>
                                 <p className="font-semibold text-foreground mb-1">{news.title}</p>
                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                                     <span>{news.source}</span>

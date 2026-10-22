@@ -12,10 +12,10 @@ const Input = React.forwardRef(({ className, type, ...props }, ref) => {
         <input
             type={type}
             className={cn(
-                'flex h-11 w-full rounded-xl border border-input bg-transparent px-4 py-2 text-sm shadow-sm transition-all duration-200',
+                'flex h-11 w-full rounded-xl border border-input bg-transparent px-4 py-2 text-sm shadow-xs transition-all duration-200',
                 'file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground',
                 'placeholder:text-muted-foreground',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:border-transparent',
+                'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:border-transparent',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 // Apple-style focus glow
                 'focus:shadow-[0_0_0_4px_rgba(var(--ring),0.1)]',
@@ -47,9 +47,9 @@ const MotionInput = React.forwardRef(({ className, type, ...props }, ref) => {
             <input
                 type={type}
                 className={cn(
-                    'flex h-11 w-full rounded-xl border border-input bg-transparent px-4 py-2 text-sm shadow-sm transition-all duration-200',
+                    'flex h-11 w-full rounded-xl border border-input bg-transparent px-4 py-2 text-sm shadow-xs transition-all duration-200',
                     'placeholder:text-muted-foreground',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                     'disabled:cursor-not-allowed disabled:opacity-50',
                     className
                 )}
@@ -68,9 +68,9 @@ const Textarea = React.forwardRef(({ className, ...props }, ref) => {
     return (
         <textarea
             className={cn(
-                'flex min-h-[120px] w-full rounded-xl border border-input bg-transparent px-4 py-3 text-sm shadow-sm transition-all duration-200',
+                'flex min-h-[120px] w-full rounded-xl border border-input bg-transparent px-4 py-3 text-sm shadow-xs transition-all duration-200',
                 'placeholder:text-muted-foreground',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 'resize-none',
                 className

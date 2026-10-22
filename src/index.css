@@ -1,9 +1,416 @@
 /* Google Fonts - must be at top */
-@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap')
+layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@plugin 'tailwindcss-animate';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, SF Pro Text, SF Pro Display, system-ui,
+    Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif, Apple Color Emoji,
+    Segoe UI Emoji;
+  --font-mono:
+    SF Mono, Monaco, Inconsolata, Fira Code, Consolas, Courier New, monospace;
+
+  --transition-duration-0: 0ms;
+  --transition-duration-150: 150ms;
+  --transition-duration-250: 250ms;
+  --transition-duration-350: 350ms;
+  --transition-duration-400: 400ms;
+  --transition-duration-500: 500ms;
+  --transition-duration-600: 600ms;
+  --transition-duration-700: 700ms;
+
+  --ease-apple-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-apple-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-apple-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-apple-in-out: cubic-bezier(0.4, 0, 0.6, 1);
+
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-minimal: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-elevated: 0 16px 48px rgba(0, 0, 0, 0.16);
+
+  --breakpoint-xs: 475px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  --animate-fade-in: fade-in 0.25s ease-out;
+  --animate-fade-up: fade-up 0.35s ease-out;
+  --animate-scale-in: scale-in 0.25s ease-out;
+  --animate-slide-in-bottom: slide-in-bottom 0.35s ease-out;
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  --z-index-modal: 50;
+  --z-index-dropdown: 40;
+  --z-index-overlay: 30;
+  --z-index-header: 20;
+  --z-index-default: 1;
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 1;
+  --text-6xl: 3.75rem;
+  --text-6xl--line-height: 1;
+
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes fade-up {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes scale-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes slide-in-bottom {
+    0% {
+      transform: translateY(100%);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility container {
+  /* Container - Mobile-first */
+  @apply mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16;
+}
+
+@utility card {
+  /* Card - Japanese Shibui (understated) */
+  @apply bg-card text-card-foreground rounded-xl shadow-subtle;
+  @apply transition-all duration-350 ease-apple-ease;
+
+  &:hover {
+    @apply shadow-soft;
+  }
+}
+
+@utility btn {
+  /* Button variants - Apple style */
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2;
+  @apply font-medium text-sm transition-all duration-250;
+  @apply focus-visible:outline-hidden focus-visible:ring-2;
+  @apply disabled:pointer-events-none disabled:opacity-50;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@utility btn-primary {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  @apply shadow-subtle hover:shadow-soft;
+}
+
+@utility btn-secondary {
+  @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+}
+
+@utility btn-ghost {
+  @apply hover:bg-accent hover:text-accent-foreground;
+}
+
+@utility input {
+  /* Input - Mobile optimized */
+  @apply flex h-10 w-full rounded-lg border border-input bg-background;
+  @apply px-3 py-2 text-sm;
+  @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring;
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
+  font-size: 16px; /* Prevents iOS zoom */
+}
+
+@utility modal-content {
+  /* Modal/Dialog - Full-screen on mobile */
+  @apply fixed inset-0 z-modal;
+  @apply bg-background;
+  @apply md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2;
+  @apply md:max-w-lg md:rounded-2xl md:shadow-elevated;
+}
+
+@utility grid-responsive {
+  /* Responsive grid */
+  @apply grid grid-cols-1 gap-4;
+  @apply sm:grid-cols-2 sm:gap-6;
+  @apply lg:grid-cols-3 lg:gap-8;
+}
+
+/* Safe area (notch support). Kept in the components layer so explicit
+   padding utilities (pt-*, pb-*) still win, matching Tailwind v3 behavior. */
+@layer components {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@utility header-offset {
+  /* Header offset - accounts for fixed header */
+  padding-top: 0;
+}
+
+@utility text-muted-foreground/70 {
+  /* Fix low contrast muted text - must be at least 70% opacity */
+  @apply text-muted-foreground; /* Use 100% instead of 70% for better contrast */
+
+  /* Section headers with uppercase - already bold, ensure good contrast */
+  &.text-xs.font-bold {
+    @apply text-muted-foreground; /* Full opacity for headers */
+  }
+  & p.text-xs.font-bold {
+    @apply text-muted-foreground; /* Full opacity for headers */
+  }
+}
+
+@utility text-muted-foreground/60 {
+  @apply text-muted-foreground; /* Override low opacity with full opacity */
+}
+
+@utility text-muted-foreground/50 {
+  @apply text-muted-foreground; /* Override low opacity with full opacity */
+}
+
+@utility bg-primary/20 {
+  /* Badge text - improve primary badge contrast */
+  &.text-primary {
+    @apply bg-primary/30; /* Darker background for better contrast */
+  }
+}
+
+@utility text-primary {
+  /* Badge text - improve primary badge contrast */
+  &.bg-primary\/20 {
+    @apply bg-primary/30; /* Darker background for better contrast */
+  }
+}
+
+@utility text-xs {
+  /* Section headers with uppercase - already bold, ensure good contrast */
+  &.font-bold.text-muted-foreground\/70 {
+    @apply text-muted-foreground; /* Full opacity for headers */
+  }
+  & p.font-bold.text-muted-foreground\/70 {
+    @apply text-muted-foreground; /* Full opacity for headers */
+  }
+}
+
+@utility font-bold {
+  /* Section headers with uppercase - already bold, ensure good contrast */
+  &.text-xs.text-muted-foreground\/70 {
+    @apply text-muted-foreground; /* Full opacity for headers */
+  }
+  & p.text-xs.text-muted-foreground\/70 {
+    @apply text-muted-foreground; /* Full opacity for headers */
+  }
+}
+
+@utility text-sm {
+  /* Fix any span with low contrast weight */
+  &span.font-semibold {
+    @apply font-bold; /* Weight 700 allows 3:1 for readability */
+  }
+}
+
+@utility font-semibold {
+  /* Fix any span with low contrast weight */
+  &span.text-sm {
+    @apply font-bold; /* Weight 700 allows 3:1 for readability */
+  }
+}
+
+@utility text-balance {
+  /* Text balance for headings */
+  text-wrap: balance;
+}
+
+@utility truncate-2 {
+  /* Truncate with ellipsis */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@utility truncate-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@utility glass {
+  /* Glass morphism (subtle) */
+  @apply bg-background/80 backdrop-blur-xl;
+}
+
+@utility gradient-text {
+  /* Smooth gradient text */
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(
+    135deg,
+    hsl(var(--primary)),
+    hsl(var(--accent))
+  );
+}
+
+@utility touch-manipulation {
+  /* Mobile touch */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@utility scrollbar-none {
+  /* Hide scrollbar but keep functionality */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility prose {
+  /* Prose mobile optimization - code blocks */
+  & pre {
+    @apply overflow-x-auto;
+    max-width: 100%;
+  }
+
+  & code {
+    @apply wrap-break-word;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  & pre code {
+    @apply break-normal;
+    white-space: pre;
+  }
+
+  /* Mobile-specific prose adjustments */
+  @media (max-width: 640px) {
+    @apply text-sm;
+
+    & pre {
+      @apply text-xs p-3;
+      max-width: calc(100vw - 4rem);
+    }
+
+    & code {
+      @apply text-xs;
+    }
+
+    & table {
+      @apply text-xs;
+      display: block;
+      overflow-x: auto;
+    }
+  }
+}
 
 /* ========================================
    DESIGN SYSTEM
@@ -194,7 +601,7 @@
 
   /* Focus states - Apple style */
   *:focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply outline-hidden ring-2 ring-ring ring-offset-2 ring-offset-background;
     transition: box-shadow 0.15s ease-out;
   }
 
@@ -242,98 +649,11 @@
   }
 }
 
-@layer components {
-  /* Container - Mobile-first */
-  .container {
-    @apply mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16;
-  }
-
-  /* Card - Japanese Shibui (understated) */
-  .card {
-    @apply bg-card text-card-foreground rounded-xl shadow-subtle;
-    @apply transition-all duration-350 ease-apple-ease;
-  }
-
-  .card:hover {
-    @apply shadow-soft;
-  }
-
-  /* Button variants - Apple style */
-  .btn {
-    @apply inline-flex items-center justify-center rounded-xl px-4 py-2;
-    @apply font-medium text-sm transition-all duration-250;
-    @apply focus-visible:outline-none focus-visible:ring-2;
-    @apply disabled:pointer-events-none disabled:opacity-50;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90;
-    @apply shadow-subtle hover:shadow-soft;
-  }
-
-  .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
-  }
-
-  .btn-ghost {
-    @apply hover:bg-accent hover:text-accent-foreground;
-  }
-
-  /* Input - Mobile optimized */
-  .input {
-    @apply flex h-10 w-full rounded-lg border border-input bg-background;
-    @apply px-3 py-2 text-sm;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
-    @apply disabled:cursor-not-allowed disabled:opacity-50;
-    font-size: 16px; /* Prevents iOS zoom */
-  }
-
-  /* Modal/Dialog - Full-screen on mobile */
-  .modal-content {
-    @apply fixed inset-0 z-modal;
-    @apply bg-background;
-    @apply md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2;
-    @apply md:max-w-lg md:rounded-2xl md:shadow-elevated;
-  }
-
-  /* Responsive grid */
-  .grid-responsive {
-    @apply grid grid-cols-1 gap-4;
-    @apply sm:grid-cols-2 sm:gap-6;
-    @apply lg:grid-cols-3 lg:gap-8;
-  }
-
-  /* Safe area (notch support) */
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top);
-  }
-
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  /* Header offset - accounts for fixed header */
-  .header-offset {
-    padding-top: 0;
-  }
-}
-
 /* ========================================
    ACCESSIBILITY IMPROVEMENTS
    WCAG AA Compliance (4.5:1 contrast)
    ======================================== */
 @layer components {
-  /* Fix low contrast muted text - must be at least 70% opacity */
-  .text-muted-foreground\/70 {
-    @apply text-muted-foreground;  /* Use 100% instead of 70% for better contrast */
-  }
-
-  .text-muted-foreground\/60,
-  .text-muted-foreground\/50 {
-    @apply text-muted-foreground;  /* Override low opacity with full opacity */
-  }
-
   /* Keyboard shortcuts - improve contrast from bg-foreground/5 (2.02) to /15 (4.5+) */
   kbd {
     @apply bg-foreground/15;  /* Improved from /5 for better contrast */
@@ -344,112 +664,6 @@
   #placeholder {
     opacity: 1 !important;  /* Don't reduce opacity */
     @apply text-muted-foreground;
-  }
-
-  /* Badge text - improve primary badge contrast */
-  .bg-primary\/20.text-primary {
-    @apply bg-primary/30;  /* Darker background for better contrast */
-  }
-
-  /* Section headers with uppercase - already bold, ensure good contrast */
-  .text-xs.font-bold.text-muted-foreground\/70,
-  p.text-xs.font-bold.text-muted-foreground\/70 {
-    @apply text-muted-foreground;  /* Full opacity for headers */
-  }
-
-  /* Fix any span with low contrast weight */
-  span.text-sm.font-semibold {
-    @apply font-bold;  /* Weight 700 allows 3:1 for readability */
-  }
-}
-
-@layer utilities {
-  /* Text balance for headings */
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  /* Truncate with ellipsis */
-  .truncate-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .truncate-3 {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  /* Glass morphism (subtle) */
-  .glass {
-    @apply bg-background/80 backdrop-blur-xl;
-  }
-
-  /* Smooth gradient text */
-  .gradient-text {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
-  }
-
-  /* Mobile touch */
-  .touch-manipulation {
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* Hide scrollbar but keep functionality */
-  .scrollbar-none {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  
-  .scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Prose mobile optimization - code blocks */
-  .prose pre {
-    @apply overflow-x-auto;
-    max-width: 100%;
-  }
-
-  .prose code {
-    @apply break-words;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  .prose pre code {
-    @apply break-normal;
-    white-space: pre;
-  }
-
-  /* Mobile-specific prose adjustments */
-  @media (max-width: 640px) {
-    .prose {
-      @apply text-sm;
-    }
-
-    .prose pre {
-      @apply text-xs p-3;
-      max-width: calc(100vw - 4rem);
-    }
-
-    .prose code {
-      @apply text-xs;
-    }
-
-    .prose table {
-      @apply text-xs;
-      display: block;
-      overflow-x: auto;
-    }
   }
 }
 

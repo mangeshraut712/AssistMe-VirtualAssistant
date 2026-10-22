@@ -52,9 +52,9 @@ const STYLE_PRESETS = [
 // Aspect Ratios
 const ASPECT_RATIOS = [
     { id: '1:1', label: 'Square', size: '1024x1024', class: 'aspect-square' },
-    { id: '16:9', label: 'Landscape', size: '1792x1024', class: 'aspect-[16/9]' },
-    { id: '9:16', label: 'Portrait', size: '1024x1792', class: 'aspect-[9/16]' },
-    { id: '4:3', label: 'Standard', size: '1536x1152', class: 'aspect-[4/3]' },
+    { id: '16:9', label: 'Landscape', size: '1792x1024', class: 'aspect-video' },
+    { id: '9:16', label: 'Portrait', size: '1024x1792', class: 'aspect-9/16' },
+    { id: '4:3', label: 'Standard', size: '1536x1152', class: 'aspect-4/3' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -84,7 +84,7 @@ const imageVariants = {
 const ImageSkeleton = ({ aspect = 'aspect-square' }) => (
     <div className={cn('relative rounded-xl overflow-hidden bg-muted', aspect)}>
         <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+            className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent"
             animate={{ x: ['-100%', '100%'] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
         />
@@ -119,7 +119,7 @@ const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete
             {isLoading && !hasError && (
                 <div className="absolute inset-0 bg-muted flex items-center justify-center">
                     <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                        className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent"
                         animate={{ x: ['-100%', '100%'] }}
                         transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
                     />
@@ -160,7 +160,7 @@ const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete
 
             {/* Hover Overlay */}
             <motion.div
-                className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity"
             >
                 {/* Prompt */}
                 {item.prompt && (
@@ -212,7 +212,7 @@ const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete
                 <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute top-3 right-3 px-2.5 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-xs font-bold rounded-full text-white shadow-lg"
+                    className="absolute top-3 right-3 px-2.5 py-1 bg-linear-to-r from-purple-500 to-pink-500 text-xs font-bold rounded-full text-white shadow-lg"
                 >
                     NEW
                 </motion.span>
@@ -432,7 +432,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                 >
                     <div className="flex items-center gap-3">
                         <motion.div
-                            className="p-2 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20"
+                            className="p-2 rounded-xl bg-linear-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20"
                             animate={{ rotate: [0, 5, -5, 0] }}
                             transition={{ duration: 4, repeat: Infinity }}
                         >
@@ -452,7 +452,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                             className={cn(
                                 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border-2',
                                 isPremium
-                                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500 shadow-lg shadow-purple-500/25'
+                                    ? 'bg-linear-to-r from-purple-500 to-pink-500 text-white border-purple-500 shadow-lg shadow-purple-500/25'
                                     : premiumAvailable === false
                                         ? 'bg-background border-border text-muted-foreground/50 cursor-not-allowed'
                                         : 'bg-background border-border text-muted-foreground hover:border-purple-500/50'
@@ -495,7 +495,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                             <motion.div
                                 animate={{ y: [0, -10, 0] }}
                                 transition={{ duration: 2, repeat: Infinity }}
-                                className="p-6 rounded-3xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 mb-6"
+                                className="p-6 rounded-3xl bg-linear-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 mb-6"
                             >
                                 <Sparkles className="h-12 w-12 text-purple-500" />
                             </motion.div>
@@ -588,7 +588,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                         {/* Input Row */}
                         <div className="flex items-center gap-3">
                             <motion.div
-                                className="p-2.5 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full"
+                                className="p-2.5 bg-linear-to-br from-purple-500/20 to-pink-500/20 rounded-full"
                                 animate={isGenerating ? { rotate: 360 } : {}}
                                 transition={{ duration: 2, repeat: isGenerating ? Infinity : 0, ease: 'linear' }}
                             >
@@ -605,7 +605,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                 onChange={(e) => setPrompt(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
                                 placeholder="Describe your imagination..."
-                                className="flex-1 bg-transparent border-none placeholder:text-muted-foreground/60 focus:outline-none h-12 text-base"
+                                className="flex-1 bg-transparent border-none placeholder:text-muted-foreground/60 focus:outline-hidden h-12 text-base"
                                 disabled={isGenerating}
                                 autoFocus
                             />
@@ -616,7 +616,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                 className={cn(
                                     'p-3 rounded-xl transition-all',
                                     prompt.trim()
-                                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25'
+                                        ? 'bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25'
                                         : 'bg-muted text-muted-foreground'
                                 )}
                                 whileHover={prompt.trim() ? { scale: 1.05 } : {}}
