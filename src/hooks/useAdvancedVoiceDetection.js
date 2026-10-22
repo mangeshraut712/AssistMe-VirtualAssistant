@@ -46,12 +46,27 @@ export const useAdvancedVoiceDetection = ({
     // STATE
     // ─────────────────────────────────────────────────────────────────────────
     const [isListening, setIsListening] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
+    const shouldAutoMute = muteMode === 'auto' && VOICE_CONFIG.pushToTalk.muteWhileSpeaking;
+    const [isMuted, setIsMuted] = useState(() => (shouldAutoMute ? isSpeaking : false));
+    const [autoMuteSnapshot, setAutoMuteSnapshot] = useState({
+        shouldAutoMute,
+        isSpeaking,
+    });
     const [transcript, setTranscript] = useState('');
     const [interimText, setInterimText] = useState('');
     const [audioLevel, setAudioLevel] = useState(0);
     const [isSpeechDetected, setIsSpeechDetected] = useState(false);
     const [confidence, setConfidence] = useState(1.0);
+
+    if (
+        autoMuteSnapshot.shouldAutoMute !== shouldAutoMute ||
+        autoMuteSnapshot.isSpeaking !== isSpeaking
+    ) {
+        setAutoMuteSnapshot({ shouldAutoMute, isSpeaking });
+        if (shouldAutoMute) {
+            setIsMuted(isSpeaking);
+        }
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // REFS
@@ -64,15 +79,6 @@ export const useAdvancedVoiceDetection = ({
     const analyserRef = useRef(null);
     const animationFrameRef = useRef(null);
     const smoothedLevelRef = useRef(0);
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // AUTO-MUTE WHEN AI IS SPEAKING
-    // ─────────────────────────────────────────────────────────────────────────
-    useEffect(() => {
-        if (muteMode === 'auto' && VOICE_CONFIG.pushToTalk.muteWhileSpeaking) {
-            setIsMuted(isSpeaking);
-        }
-    }, [isSpeaking, muteMode]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // AUDIO LEVEL MONITORING

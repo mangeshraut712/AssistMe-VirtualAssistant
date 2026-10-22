@@ -138,6 +138,17 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
     const [isPremium, setIsPremium] = useState(true);
     const [errorMessage, setErrorMessage] = useState('');
     const [audioLevel, setAudioLevel] = useState(0);
+    const [openSnapshot, setOpenSnapshot] = useState(isOpen);
+
+    if (isOpen !== openSnapshot) {
+        setOpenSnapshot(isOpen);
+        if (isOpen) {
+            setStatus('idle');
+            setConversation([]);
+            setTranscript('');
+            setErrorMessage('');
+        }
+    }
 
     // Refs
     const recognitionRef = useRef(null);
@@ -814,12 +825,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
     }, [conversation, isOpen]);
 
     useEffect(() => {
-        if (!isOpen) return;
-
-        setStatus('idle');
-        setConversation([]);
-        setTranscript('');
-        setErrorMessage('');
+        if (!isOpen) return undefined;
 
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') onClose();

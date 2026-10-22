@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
     X, Wand2, Copy, Check, Sparkles,
     RefreshCw, Languages,
@@ -47,13 +47,14 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
     const [isProcessing, setIsProcessing] = useState(false);
     const [copied, setCopied] = useState(false);
     const [viewMode, setViewMode] = useState('split'); // split, focus
+    const [prevTool, setPrevTool] = useState(activeTool);
 
-    // Reset state when tool changes
-    useEffect(() => {
+    if (activeTool !== prevTool) {
+        setPrevTool(activeTool);
         setOutputText('');
         if (activeTool === 'paraphrase') setActiveMode('standard');
         if (activeTool === 'summarize') setActiveMode('paragraph');
-    }, [activeTool]);
+    }
 
     if (!isOpen && !isEmbedded) return null;
 
