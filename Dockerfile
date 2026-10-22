@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     curl \
     ffmpeg \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -23,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 
 # Install Python dependencies
+RUN pip install --no-cache-dir --upgrade 'pip>=26.2.2' 'certifi>=2026.10.19'
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the backend application
