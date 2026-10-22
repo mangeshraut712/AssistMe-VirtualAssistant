@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx --report-unused-disable-directives --max-warnings 150",
+    "test": "vitest run",
     "lint:fix": "eslint src --ext .js,.jsx --fix --max-warnings 150",
     "format": "prettier --write \"src/**/*.{js,jsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,css,json}\"",
@@ -43,15 +44,18 @@
     "url": "https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.3",
     "@vitejs/plugin-legacy": "^7.2.1",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "http-server": "^14.1.1",
+    "jsdom": "^26.1.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.9.10",
     "terser": "^5.51.2",
-    "vite": "^7.3.6"
+    "vite": "^7.3.6",
+    "vitest": "^3.2.7"
   },
   "repository": {
     "type": "git",

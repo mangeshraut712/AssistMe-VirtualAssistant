@@ -17,7 +17,9 @@ exclude_paths:
   - "backend/venv/**"
   - "backend/.venv/**"
   - "**/*.test.js"
+  - "**/*.test.jsx"
   - "**/*.spec.js"
+  - "**/*.spec.jsx"
   - "test_*.html"
 
 # Languages to analyze

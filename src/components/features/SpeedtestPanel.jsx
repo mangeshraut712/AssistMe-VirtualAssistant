@@ -33,6 +33,8 @@ const saveTest = (r) => {
 };
 const getHistory = () => { try { return JSON.parse(localStorage.getItem('speedtest_v8') || '[]'); } catch { return []; } };
 
+const createAnalysisRef = () => crypto.randomUUID().replaceAll('-', '').slice(0, 10);
+
 const _getPingGrade = (ping) => {
     if (ping <= 20) return 'A+';
     if (ping <= 50) return 'A';
@@ -351,7 +353,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                 useCase: recommendation,
                 tier: rating,
                 timestamp: new Date().toLocaleTimeString(),
-                ref: Math.random().toString(36).substring(7),
+                ref: createAnalysisRef(),
             });
             setIsGeneratingAI(false);
         }, 800);
