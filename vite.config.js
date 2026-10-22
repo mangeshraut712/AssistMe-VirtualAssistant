@@ -43,9 +43,12 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html')
       },
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'marked', 'highlight.js'],
-          motion: ['framer-motion'],
+        // Vite 8 (Rolldown) only accepts a function here.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          if (/node_modules\/framer-motion\//.test(id)) return 'motion'
+          if (/node_modules\/(react|react-dom|scheduler|marked|highlight\.js)\//.test(id)) return 'vendor'
+          return undefined
         },
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
@@ -86,10 +89,6 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'marked', 'highlight.js', 'framer-motion'],
     exclude: ['katex']
-  },
-  esbuild: {
-    drop: ['console', 'debugger'],
-    legalComments: 'none'
   }
 })
 
