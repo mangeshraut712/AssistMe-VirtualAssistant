@@ -1,4 +1,5 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
+import { createInitialChatState, trimForRegenerate } from './lib/conversations';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
@@ -56,20 +57,20 @@ function App() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // State Management
-    const [conversations, setConversations] = useState(() => {
-        const saved = localStorage.getItem('conversations');
-        return saved ? JSON.parse(saved) : [{ id: Date.now(), title: 'New Chat', messages: [] }];
-    });
-    const [currentChatId, setCurrentChatId] = useState(() => {
-        const saved = localStorage.getItem('currentChatId');
-        return saved ? Number(saved) : (conversations && conversations.length > 0 ? conversations[0].id : Date.now());
-    });
+    // Read storage once so a corrupt value cannot crash the first render
+    // and the fallback chat id stays consistent across both pieces of state.
+    const [chatSeed] = useState(createInitialChatState);
+    const [conversations, setConversations] = useState(chatSeed.conversations);
+    const [currentChatId, setCurrentChatId] = useState(chatSeed.currentChatId);
 
     // Save to localStorage
     useEffect(() => {
-        localStorage.setItem('conversations', JSON.stringify(conversations));
-        localStorage.setItem('currentChatId', currentChatId);
+        try {
+            localStorage.setItem('conversations', JSON.stringify(conversations));
+            localStorage.setItem('currentChatId', currentChatId);
+        } catch (error) {
+            console.warn('Unable to save conversations:', error);
+        }
     }, [conversations, currentChatId]);
 
     const [input, setInput] = useState('');
@@ -82,8 +83,9 @@ function App() {
 
     // Derived state for current messages
     const currentConversation = conversations.find(c => c.id === currentChatId) || conversations[0];
-    const messages = currentConversation.messages;
+    const messages = currentConversation?.messages || [];
 
+    const [pendingUploads, setPendingUploads] = useState([]);
     const [settings, setSettings] = useState({
         language: 'en',
         theme: 'light',
@@ -188,21 +190,11 @@ function App() {
     };
 
     // Send Message (Streaming Implementation)
-    const sendMessage = async (text = input) => {
-        if (!text.trim()) return;
-
-        const userMsg = { role: 'user', content: text };
-        const updatedMessages = [...messages, userMsg];
-
-        // Optimistically update UI with user message
-        updateCurrentChatMessages(updatedMessages);
-        setInput('');
-        setIsLoading(true);
-
-        // Create a placeholder for the assistant's response
+    const streamAssistantReply = async (history) => {
         const assistantMsg = { role: 'assistant', content: '' };
-        const messagesWithPlaceholder = [...updatedMessages, assistantMsg];
+        const messagesWithPlaceholder = [...history, assistantMsg];
         updateCurrentChatMessages(messagesWithPlaceholder);
+        setIsLoading(true);
 
         try {
             const response = await fetch(`${settings.backendUrl}/api/chat/stream`, {
@@ -210,8 +202,8 @@ function App() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    messages: updatedMessages.map(msg => ({ role: msg.role, content: msg.content })),
+                    body: JSON.stringify({
+                    messages: history.map(msg => ({ role: msg.role, content: msg.content })),
                     model: selectedModel,
                     preferred_language: settings.language
                 })
@@ -253,7 +245,7 @@ function App() {
                                 assistantContent += data.content;
                                 // Update the UI with the accumulated content
                                 updateCurrentChatMessages([
-                                    ...updatedMessages,
+                                    ...history,
                                     {
                                         ...assistantMsg,
                                         content: assistantContent,
@@ -267,7 +259,7 @@ function App() {
                             } else if (data.metadata) {
                                 metadata = data.metadata;
                                 updateCurrentChatMessages([
-                                    ...updatedMessages,
+                                    ...history,
                                     {
                                         ...assistantMsg,
                                         content: assistantContent,
@@ -290,12 +282,30 @@ function App() {
         } catch (error) {
             console.error('Chat error:', error);
             updateCurrentChatMessages([
-                ...updatedMessages,
+                ...history,
                 { role: 'assistant', content: `Error: ${error.message}. Please try again.` }
             ]);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const sendMessage = async (text = input) => {
+        if (!text.trim() || isLoading) return;
+
+        const userMsg = { role: 'user', content: text };
+        const updatedMessages = [...messages, userMsg];
+        updateCurrentChatMessages(updatedMessages);
+        setInput('');
+        await streamAssistantReply(updatedMessages);
+    };
+
+    const regenerateFrom = async (index) => {
+        if (isLoading) return;
+        const history = trimForRegenerate(messages, index);
+        if (!history) return;
+        updateCurrentChatMessages(history);
+        await streamAssistantReply(history);
     };
 
     // Render Markdown Content
@@ -348,12 +358,18 @@ function App() {
                                     renderContent={renderContent}
                                     showWelcome={messages.length === 0}
                                     onQuickAction={handleQuickAction}
+                                    onRegenerate={regenerateFrom}
                                     inputProps={{
                                         input,
                                         setInput,
                                         isLoading,
                                         sendMessage,
-                                        onFileUpload: () => navigate(featureRoutes.fileUpload),
+                                        onFileUpload: (files) => {
+                                            if (Array.isArray(files) && files.length > 0) {
+                                                setPendingUploads(files);
+                                            }
+                                            navigate(featureRoutes.fileUpload);
+                                        },
                                         onVoiceTranscription: (text) => setInput(text),
                                         onOpenVoiceMode: () => navigate(featureRoutes.voiceMode),
                                         models: MODELS,
@@ -417,6 +433,7 @@ function App() {
                                     <FileUploadPanel
                                         isOpen={true}
                                         onClose={() => navigate('/')}
+                                        initialFiles={pendingUploads}
                                         onFileProcess={(results) => console.log('Files processed:', results)}
                                     />
                                 </Suspense>

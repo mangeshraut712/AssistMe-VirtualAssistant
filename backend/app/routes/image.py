@@ -28,5 +28,5 @@ async def generate_image(request: ImageGenRequest):
             "success": True,
             "data": [{"url": image_url}]
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Image generation failed")

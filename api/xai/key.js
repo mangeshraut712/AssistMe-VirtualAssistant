@@ -1,39 +1,37 @@
 /**
  * xAI Grok Voice API Edge Function
- * 
- * Provides access to xAI's Grok Voice Agent API
- * Supports real-time voice conversations with Grok
- * 
+ *
  * Endpoint: GET /api/xai/key
- * 
- * @see https://docs.x.ai/docs/guides/voice
+ *
+ * The key is returned only to allowlisted origins. A wildcard CORS header
+ * would let any website read XAI_API_KEY.
  */
+
+import { corsHeaders } from '../cors.js';
 
 export const config = {
     runtime: 'edge',
 };
 
 export default async function handler(req) {
-    const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Cache-Control': 'no-store, max-age=0',
-    };
+    const { allowedOrigin, headers } = corsHeaders(req, 'GET, OPTIONS');
+    const jsonHeaders = { ...headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' };
 
     if (req.method === 'OPTIONS') {
-        return new Response(null, {
-            status: 204,
-            headers: corsHeaders
-        });
+        return new Response(null, { status: allowedOrigin ? 204 : 403, headers });
     }
 
     if (req.method !== 'GET') {
-        return new Response(JSON.stringify({
-            error: 'Method not allowed'
-        }), {
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
             status: 405,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: jsonHeaders,
+        });
+    }
+
+    if (req.headers.get('origin') && !allowedOrigin) {
+        return new Response(JSON.stringify({ error: 'Origin not allowed' }), {
+            status: 403,
+            headers: jsonHeaders,
         });
     }
 
@@ -42,15 +40,13 @@ export default async function handler(req) {
     if (!apiKey) {
         return new Response(JSON.stringify({
             error: 'xAI API key not configured',
-            message: 'Please add XAI_API_KEY to your Vercel Environment Variables.',
-            docs: 'https://docs.x.ai/docs/guides/voice'
+            message: 'Please add XAI_API_KEY to your environment.',
         }), {
             status: 503,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: jsonHeaders,
         });
     }
 
-    // Return API key and configuration
     return new Response(JSON.stringify({
         apiKey,
         model: 'grok-voice-alpha',
@@ -65,6 +61,6 @@ export default async function handler(req) {
         docs: 'https://x.ai/news/grok-voice-agent-api'
     }), {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: jsonHeaders,
     });
 }

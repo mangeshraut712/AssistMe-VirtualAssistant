@@ -152,11 +152,11 @@ async def get_current_user(token: RequiredToken) -> dict:
             )
         return {"username": username, "user_id": payload.get("user_id")}
 
-    except JWTError as e:
+    except JWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token validation failed: {e}",
-        )
+            detail="Token validation failed",
+        ) from exc
 
 
 CurrentUser = Annotated[dict, Depends(get_current_user)]

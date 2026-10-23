@@ -1,9 +1,24 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { useAsync, useCountdown, useDebouncedCallback, usePrevious } from '../lib/hooks';
+import { useAsync, useCountdown, useDebouncedCallback, useLocalStorage, usePrevious } from '../lib/hooks';
 
 afterEach(() => {
     vi.useRealTimers();
+});
+
+describe('useLocalStorage', () => {
+    it('applies successive functional updates against the latest value', () => {
+        localStorage.clear();
+        const { result } = renderHook(() => useLocalStorage('count', 0));
+
+        act(() => {
+            result.current[1]((value) => value + 1);
+            result.current[1]((value) => value + 1);
+        });
+
+        expect(result.current[0]).toBe(2);
+        expect(localStorage.getItem('count')).toBe('2');
+    });
 });
 
 describe('usePrevious', () => {

@@ -10,6 +10,24 @@ from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
+_MIN_IMAGE_EDGE = 64
+_MAX_IMAGE_EDGE = 2048
+
+
+def parse_image_size(size: Optional[str]) -> tuple[int, int]:
+    """Clamp a WxH size so a client cannot request an unbounded image."""
+    width, height = 1024, 1024
+    if size and "x" in size.lower():
+        width_text, _, height_text = size.lower().partition("x")
+        try:
+            width = int(width_text)
+            height = int(height_text)
+        except ValueError:
+            width, height = 1024, 1024
+    width = min(max(width, _MIN_IMAGE_EDGE), _MAX_IMAGE_EDGE)
+    height = min(max(height, _MIN_IMAGE_EDGE), _MAX_IMAGE_EDGE)
+    return width, height
+
 
 class ImageService:
     """Service for generating images using AI models."""
@@ -100,13 +118,7 @@ class ImageService:
 
     async def _generate_pollinations(self, prompt: str, model: str, size: str, style: Optional[str]) -> str:
         """Generate image using Pollinations.ai (Free)."""
-        # Parse size
-        width, height = 1024, 1024
-        try:
-            w, h = size.split('x')
-            width, height = int(w), int(h)
-        except Exception:
-            pass
+        width, height = parse_image_size(size)
 
         # Apply style
         final_prompt = prompt

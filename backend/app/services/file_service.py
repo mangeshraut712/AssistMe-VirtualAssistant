@@ -1,3 +1,6 @@
+"""Save uploads inside a fixed directory and reject unsafe files."""
+
+import re
 import uuid
 from pathlib import Path
 
@@ -7,25 +10,111 @@ from fastapi import UploadFile
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_AUDIO_BYTES = 25 * 1024 * 1024
+
+ALLOWED_EXTENSIONS = {
+    ".txt",
+    ".md",
+    ".pdf",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".doc",
+    ".docx",
+    ".wav",
+    ".mp3",
+    ".m4a",
+    ".webm",
+    ".mp4",
+    ".mov",
+}
+
+_MIME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9!#$&^_.+-]{0,126}/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$")
+
+
+class UploadRejected(ValueError):
+    """The upload failed a safety check and should be a 400 response."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def upload_client_detail(code: str) -> str:
+    """Map a rejection code to a fixed message with no exception text."""
+    if code == "type":
+        return "Unsupported file type"
+    if code == "empty":
+        return "Empty file"
+    if code == "size":
+        return "File exceeds the upload size limit"
+    return "Upload rejected"
+
+
+def safe_upload_name(filename: str | None) -> str:
+    """Drop directory components so a client filename cannot leave the upload dir."""
+    raw = (filename or "upload").replace("\\", "/").split("/")[-1]
+    raw = raw.replace("\x00", "").strip()
+    if raw in {"", ".", ".."}:
+        return "upload"
+    return raw[:255]
+
+
+def safe_mime(content_type: str | None, fallback: str) -> str:
+    """Keep only a single type/subtype so a content type cannot break a data URL."""
+    raw = (content_type or fallback).split(";")[0].strip().lower()
+    if _MIME_PATTERN.fullmatch(raw):
+        return raw
+    return fallback
+
+
+async def read_limited(file: UploadFile, limit: int = MAX_UPLOAD_BYTES) -> bytes:
+    """Read an upload, refusing empty files and files over the byte limit."""
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > limit:
+            raise UploadRejected("size")
+        chunks.append(chunk)
+    if total == 0:
+        raise UploadRejected("empty")
+    return b"".join(chunks)
+
+
+def public_file_record(record: dict) -> dict:
+    """Remove the server path before a file record is returned to a client."""
+    return {key: value for key, value in record.items() if key != "path"}
+
 
 class FileService:
     async def save_file(self, file: UploadFile) -> dict:
         """Save an uploaded file and return its metadata."""
-        file_ext = Path(file.filename).suffix
+        original_name = safe_upload_name(file.filename)
+        file_ext = Path(original_name).suffix.lower()
+        if file_ext not in ALLOWED_EXTENSIONS:
+            raise UploadRejected("type")
+
+        content = await read_limited(file, MAX_UPLOAD_BYTES)
         file_id = str(uuid.uuid4())
         filename = f"{file_id}{file_ext}"
         file_path = UPLOAD_DIR / filename
 
-        async with aiofiles.open(file_path, 'wb') as out_file:
-            content = await file.read()
+        async with aiofiles.open(file_path, "wb") as out_file:
             await out_file.write(content)
 
         return {
             "id": file_id,
-            "filename": file.filename,
+            "filename": original_name,
             "path": str(file_path),
-            "content_type": file.content_type,
-            "size": len(content)
+            "content_type": safe_mime(file.content_type, "application/octet-stream"),
+            "size": len(content),
         }
 
     async def extract_text(self, file_path: str, content_type: str) -> str:
@@ -34,12 +123,15 @@ class FileService:
         if not path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        if content_type == "application/pdf":
+        media_type = safe_mime(content_type, "")
+        if media_type == "application/pdf":
             return self._extract_pdf(path)
-        elif content_type.startswith("text/"):
+        if media_type.startswith("text/") or media_type in {
+            "application/json",
+            "application/xml",
+        }:
             return await self._read_text(path)
-        else:
-            return "Text extraction not supported for this file type."
+        return "Text extraction not supported for this file type."
 
     def _extract_pdf(self, path: Path) -> str:
         try:

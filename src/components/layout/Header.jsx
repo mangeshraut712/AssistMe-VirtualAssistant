@@ -72,21 +72,18 @@ const Header = ({ onOpenSidebar }) => {
                     </motion.div>
 
                     {/* Logo Button */}
-                    <motion.button
+                    <div
                         className={cn(
                             'h-9 w-9 rounded-full overflow-hidden',
-                            'ring-2 ring-background shadow-lg',
-                            'hover:ring-primary/50 transition-all'
+                            'ring-2 ring-background shadow-lg'
                         )}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
                     >
                         <img
                             src={`${import.meta.env.BASE_URL}assets/logo.png`}
-                            alt="AssistMe Logo"
+                            alt="AssistMe"
                             className="h-full w-full object-cover bg-white dark:bg-black"
                         />
-                    </motion.button>
+                    </div>
                 </div>
             </div>
         </motion.header>

@@ -6,7 +6,6 @@ stay unused. Existing bcrypt hashes still verify, and a successful login
 replaces them with Argon2.
 """
 
-import os
 from datetime import datetime, timedelta
 from typing import Any, Optional, Tuple, Union
 
@@ -15,11 +14,10 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
 from jose import jwt
 
+from .signing_key import get_secret_key
+
 _argon2 = PasswordHasher()
 
-SECRET_KEY = os.getenv(
-    "SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -126,5 +124,5 @@ def create_access_token(
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode = {"sub": str(subject), "exp": expire}
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, get_secret_key(), algorithm=ALGORITHM)
     return encoded_jwt

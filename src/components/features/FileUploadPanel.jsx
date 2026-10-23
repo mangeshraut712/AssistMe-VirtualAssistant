@@ -1,11 +1,20 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Upload, File, Image as ImageIcon, Video, FileText, X } from 'lucide-react';
 
-const FileUploadPanel = ({ isOpen, onClose, onFileProcess }) => {
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) => {
     const [files, setFiles] = useState([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [results, setResults] = useState([]);
     const fileInputRef = useRef(null);
+    const seededUploads = useRef(false);
+
+    useEffect(() => {
+        if (seededUploads.current || initialFiles.length === 0) return;
+        seededUploads.current = true;
+        setFiles(initialFiles);
+    }, [initialFiles]);
 
     const handleFileSelect = (event) => {
         const selectedFiles = Array.from(event.target.files);
@@ -24,20 +33,31 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess }) => {
 
     const processFiles = async () => {
         setIsProcessing(true);
-        setResults([]);
+        const nextResults = [];
 
         for (const file of files) {
+            if (file.size > MAX_UPLOAD_BYTES) {
+                nextResults.push({
+                    fileName: file.name,
+                    fileType: file.type,
+                    error: 'File exceeds the 10 MB limit',
+                    success: false
+                });
+                continue;
+            }
+
             try {
                 const formData = new FormData();
                 formData.append('file', file);
 
                 // Determine the processing endpoint based on file type
-                let endpoint = '/api/files/process';
-                if (file.type.startsWith('image/')) {
+                const kind = file.type || '';
+                let endpoint = '/api/files/upload';
+                if (kind.startsWith('image/')) {
                     endpoint = '/api/vision/analyze';
-                } else if (file.type.startsWith('video/')) {
+                } else if (kind.startsWith('video/')) {
                     endpoint = '/api/video/analyze';
-                } else if (file.type === 'application/pdf' || file.type.includes('document')) {
+                } else if (kind === 'application/pdf' || kind.includes('document') || kind.startsWith('text/')) {
                     endpoint = '/api/documents/extract';
                 }
 
@@ -46,34 +66,43 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess }) => {
                     body: formData
                 });
 
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    nextResults.push({
+                        fileName: file.name,
+                        fileType: file.type,
+                        error: data.detail || data.error || `Upload failed (${response.status})`,
+                        success: false
+                    });
+                    continue;
+                }
 
-                setResults(prev => [...prev, {
+                nextResults.push({
                     fileName: file.name,
                     fileType: file.type,
-                    result: data,
-                    success: response.ok
-                }]);
+                    result: data.file ? { ...data.file, text: data.file.extracted_text, description: data.file.extracted_text } : data,
+                    success: true
+                });
             } catch (error) {
-                setResults(prev => [...prev, {
+                nextResults.push({
                     fileName: file.name,
                     fileType: file.type,
                     error: error.message,
                     success: false
-                }]);
+                });
             }
         }
 
+        setResults(nextResults);
         setIsProcessing(false);
-        if (onFileProcess) {
-            onFileProcess(results);
-        }
+        onFileProcess?.(nextResults);
     };
 
-    const getFileIcon = (type) => {
-        if (type.startsWith('image/')) return <ImageIcon className="h-5 w-5" />;
-        if (type.startsWith('video/')) return <Video className="h-5 w-5" />;
-        if (type.includes('pdf') || type.includes('document')) return <FileText className="h-5 w-5" />;
+    const getFileIcon = (type = '') => {
+        const kind = type || '';
+        if (kind.startsWith('image/')) return <ImageIcon className="h-5 w-5" />;
+        if (kind.startsWith('video/')) return <Video className="h-5 w-5" />;
+        if (kind.includes('pdf') || kind.includes('document') || kind.startsWith('text/')) return <FileText className="h-5 w-5" />;
         return <File className="h-5 w-5" />;
     };
 
@@ -93,7 +122,7 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess }) => {
                             Upload images, videos, documents, and more for AI processing
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg transition-colors">
+                    <button type="button" onClick={onClose} aria-label="Close file upload" className="p-2 hover:bg-accent rounded-lg transition-colors">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
@@ -104,6 +133,15 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess }) => {
                         onDrop={handleDrop}
                         onDragOver={(e) => e.preventDefault()}
                         onClick={() => fileInputRef.current?.click()}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                fileInputRef.current?.click();
+                            }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Upload files"
                         className="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary transition-colors bg-muted/20"
                     >
                         <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -148,7 +186,9 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess }) => {
                                             </p>
                                         </div>
                                         <button
+                                            type="button"
                                             onClick={() => removeFile(idx)}
+                                            aria-label={`Remove ${file.name}`}
                                             className="p-1 hover:bg-background rounded transition-colors"
                                         >
                                             <X className="h-4 w-4" />

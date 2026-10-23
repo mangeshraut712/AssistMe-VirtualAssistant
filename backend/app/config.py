@@ -18,6 +18,8 @@ from typing import Any, Literal
 from pydantic import Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .core.signing_key import get_secret_key
+
 
 class DatabaseSettings(BaseSettings):
     """Database configuration."""
@@ -125,7 +127,7 @@ class SecuritySettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 
     secret_key: str = Field(
-        default="dev-secret-key-change-in-production",
+        default_factory=get_secret_key,
         alias="SECRET_KEY",
         min_length=16,
     )
@@ -208,7 +210,7 @@ class AppSettings(BaseSettings):
     def validate_production_settings(self) -> "AppSettings":
         """Validate that production has proper configuration."""
         if self.is_production:
-            if self.security.secret_key == "dev-secret-key-change-in-production":
+            if not os.getenv("SECRET_KEY", "").strip():
                 raise ValueError("Production requires a proper SECRET_KEY")
             if not self.ai.is_configured:
                 # Warning instead of error - can run without AI

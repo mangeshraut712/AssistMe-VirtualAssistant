@@ -23,7 +23,7 @@ import {
     Zap,
     Bot
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, copyToClipboard } from '@/lib/utils';
 
 // Animation variants
 const messageVariants = {
@@ -65,7 +65,9 @@ const ActionButton = ({ onClick, icon: Icon, title, isActive, activeColor = 'tex
         initial="rest"
         whileHover="hover"
         whileTap="tap"
+        type="button"
         title={title}
+        aria-label={title}
     >
         <Icon className="h-4 w-4" />
     </motion.button>
@@ -107,22 +109,25 @@ const MessageBubble = ({ message, renderContent, onRegenerate, isLoading = false
     const [copied, setCopied] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(message.content);
+    const handleCopy = async () => {
+        const ok = await copyToClipboard(message.content || '');
+        if (!ok) return;
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
     const handleSpeak = () => {
+        if (!window.speechSynthesis || typeof message.content !== 'string') return;
         if (isSpeaking) {
             window.speechSynthesis.cancel();
             setIsSpeaking(false);
-        } else {
-            const utterance = new SpeechSynthesisUtterance(message.content);
-            utterance.onend = () => setIsSpeaking(false);
-            window.speechSynthesis.speak(utterance);
-            setIsSpeaking(true);
+            return;
         }
+        const utterance = new SpeechSynthesisUtterance(message.content);
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(utterance);
+        setIsSpeaking(true);
     };
 
     // User message
@@ -211,11 +216,13 @@ const MessageBubble = ({ message, renderContent, onRegenerate, isLoading = false
                     >
                         {/* Actions */}
                         <div className="flex items-center gap-0.5 p-1 rounded-lg bg-foreground/3">
-                            <ActionButton
-                                onClick={onRegenerate}
-                                icon={RefreshCw}
-                                title="Regenerate"
-                            />
+                            {onRegenerate && (
+                                <ActionButton
+                                    onClick={onRegenerate}
+                                    icon={RefreshCw}
+                                    title="Regenerate"
+                                />
+                            )}
                             <ActionButton
                                 onClick={handleSpeak}
                                 icon={isSpeaking ? StopCircle : Volume2}

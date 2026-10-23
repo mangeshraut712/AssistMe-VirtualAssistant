@@ -11,7 +11,6 @@ Features:
 
 from __future__ import annotations
 
-import hashlib
 import time
 from typing import Callable
 from uuid import uuid4
@@ -19,6 +18,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from .client_identity import resolve_client_id
 from .logging_config import (
     logger,
     log_request,
@@ -130,31 +130,10 @@ class RateLimitContextMiddleware(BaseHTTPMiddleware):
     """Middleware to prepare rate limiting context."""
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        # Extract client identifier for rate limiting
-        # Priority: Auth token > API key > IP address
-        client_id = None
-
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-            digest = hashlib.pbkdf2_hmac("sha256", token.encode(), b"assistme-rate-limit", 10000)
-            client_id = "user:" + digest.hex()[:16]
-
-        if not client_id:
-            api_key = request.headers.get("X-API-Key")
-            if api_key:
-                digest = hashlib.pbkdf2_hmac("sha256", api_key.encode(), b"assistme-rate-limit", 10000)
-                client_id = "key:" + digest.hex()[:16]
-
-        if not client_id:
-            # Fall back to IP
-            forwarded = request.headers.get("X-Forwarded-For")
-            if forwarded:
-                client_id = f"ip:{forwarded.split(',')[0].strip()}"
-            else:
-                client_id = f"ip:{request.client.host if request.client else 'unknown'}"
-
-        request.state.client_id = client_id
+        request.state.client_id = resolve_client_id(
+            request.headers,
+            request.client.host if request.client else None,
+        )
 
         return await call_next(request)
 

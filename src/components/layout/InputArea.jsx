@@ -137,9 +137,12 @@ const InputArea = ({
     };
 
     const handleSubmit = () => {
-        if (input.trim() || uploadedFiles.length > 0) {
-            sendMessage();
-            setUploadedFiles([]);
+        if (input.trim()) {
+            sendMessage(input);
+            return;
+        }
+        if (uploadedFiles.length > 0) {
+            onFileUpload?.(uploadedFiles);
         }
     };
 
@@ -175,7 +178,9 @@ const InputArea = ({
                                     {file.name}
                                 </span>
                                 <motion.button
+                                    type="button"
                                     onClick={() => removeFile(index)}
+                                    aria-label={`Remove ${file.name}`}
                                     className="p-0.5 hover:bg-primary/20 rounded-full transition-colors"
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
@@ -238,6 +243,7 @@ const InputArea = ({
                             }
                         }}
                         placeholder="Message AssistMe..."
+                        aria-label="Message"
                         className={cn(
                             'w-full bg-transparent focus:outline-hidden resize-none',
                             'text-sm leading-relaxed',
@@ -256,6 +262,7 @@ const InputArea = ({
                     <div className="flex items-center gap-2">
                         {/* File Upload */}
                         <motion.label
+                            aria-label="Attach files"
                             className={cn(
                                 'p-2 rounded-xl cursor-pointer transition-colors',
                                 'text-muted-foreground hover:text-foreground',
@@ -283,6 +290,7 @@ const InputArea = ({
                                 <select
                                     value={selectedModel}
                                     onChange={onModelChange}
+                                    aria-label="Model"
                                     className={cn(
                                         'appearance-none bg-foreground/5 hover:bg-foreground/10',
                                         'pl-8 pr-7 py-1.5 rounded-xl',
@@ -322,7 +330,9 @@ const InputArea = ({
                             )}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
+                            type="button"
                             title="Advanced Voice Mode"
+                            aria-label="Advanced Voice Mode"
                         >
                             <AudioLines className="h-5 w-5" />
                         </motion.button>
@@ -342,7 +352,9 @@ const InputArea = ({
                             whileTap={{ scale: 0.95 }}
                             animate={isListening ? { scale: [1, 1.05, 1] } : {}}
                             transition={{ duration: 1, repeat: isListening ? Infinity : 0 }}
+                            type="button"
                             title={isListening ? 'Stop Dictation' : 'Start Dictation'}
+                            aria-label={isListening ? 'Stop Dictation' : 'Start Dictation'}
                         >
                             <Mic className={cn('h-5 w-5', isListening && 'fill-current')} />
                         </motion.button>
@@ -358,6 +370,8 @@ const InputArea = ({
                                     ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl'
                                     : 'bg-muted text-muted-foreground cursor-not-allowed'
                             )}
+                            type="button"
+                            aria-label="Send message"
                             whileHover={input.trim() ? { scale: 1.05 } : {}}
                             whileTap={input.trim() ? { scale: 0.95 } : {}}
                         >

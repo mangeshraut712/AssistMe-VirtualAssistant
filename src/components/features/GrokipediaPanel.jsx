@@ -20,7 +20,7 @@ function hostnameIs(value, host) {
  * - Source attribution and citation tracking
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Search, BookOpen, ChevronUp, ChevronRight,
@@ -29,7 +29,10 @@ import {
     ArrowUp
 } from 'lucide-react';
 import { createApiClient } from '@/lib/apiClient';
-import { cn } from '@/lib/utils';
+import { renderGrokipediaMarkdown } from '@/lib/grokipediaMarkdown';
+import { createSseReader } from '@/lib/sse';
+import { isSafeHttpUrl, joinApiUrl } from '@/lib/urls';
+import { cn, copyToClipboard } from '@/lib/utils';
 import { useLocalStorage } from '@/lib/hooks';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -175,9 +178,10 @@ const TocItem = ({ item, index, isActive, isParentActive, onClick, activeSection
 };
 
 const SourceCard = ({ source, index }) => {
+    if (!isSafeHttpUrl(source?.url)) return null;
     let hostname = 'source';
     try {
-        hostname = new URL(source.url || 'https://google.com').hostname.replace('www.', '');
+        hostname = new URL(source.url).hostname.replace('www.', '');
     } catch (e) { }
 
     return (
@@ -229,6 +233,12 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
 
     const contentRef = useRef(null);
     const searchInputRef = useRef(null);
+    const searchGeneration = useRef(0);
+    const searchAbort = useRef(null);
+
+    useEffect(() => () => {
+        searchAbort.current?.abort();
+    }, []);
 
     // Save search to history
     const saveToHistory = useCallback((term) => {
@@ -375,16 +385,26 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
             let match;
 
             while ((match = urlPattern.exec(refsMatch[0])) !== null) {
-                urls.push({
-                    url: match[1].replace(/[.,;:'")\]]*$/, ''), // Clean trailing punctuation
-                    title: null
-                });
+                const url = match[1].replace(/[.,;:'")\]]*$/, '');
+                if (isSafeHttpUrl(url)) {
+                    urls.push({
+                        url,
+                        title: null
+                    });
+                }
             }
 
             if (urls.length > 0) {
                 // Try to get titles from the sources array
                 return urls.map((ref) => {
-                    const matchingSource = sources.find(s => s.url && ref.url.includes(new URL(s.url).hostname));
+                    const matchingSource = sources.find((source) => {
+                        if (!isSafeHttpUrl(source.url)) return false;
+                        try {
+                            return ref.url.includes(new URL(source.url).hostname);
+                        } catch {
+                            return false;
+                        }
+                    });
                     return {
                         ...ref,
                         title: matchingSource?.title || null
@@ -395,7 +415,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
 
         // Fallback: return sources that have valid URLs
         return sources
-            .filter(s => s.url && !hostnameIs(s.url, 'google.com') && !s.title?.toLowerCase().includes('ai knowledge'))
+            .filter(s => isSafeHttpUrl(s.url) && !hostnameIs(s.url, 'google.com') && !s.title?.toLowerCase().includes('ai knowledge'))
             .map(s => ({ url: s.url, title: s.title }));
     };
 
@@ -415,6 +435,12 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
         const term = searchQuery.trim();
         if (!term) return;
 
+        const generation = searchGeneration.current + 1;
+        searchGeneration.current = generation;
+        searchAbort.current?.abort();
+        const controller = new AbortController();
+        searchAbort.current = controller;
+
         setIsSearching(true);
         setArticle(null);
         setToc([]);
@@ -422,6 +448,8 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
         setQuickFacts(null);
         saveToHistory(term);
         setShowHistory(false);
+
+        const stillCurrent = () => generation === searchGeneration.current;
 
         try {
             setArticle({
@@ -434,15 +462,18 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                 model: GROKIPEDIA_MODEL.name
             });
 
+            let finalContent = '';
+
             if (isDeepSearch) {
-                const response = await fetch(`${backendUrl}/api/knowledge/grokipedia/stream`, {
+                const response = await fetch(joinApiUrl(backendUrl, '/api/knowledge/grokipedia/stream'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         query: term,
                         max_results: 8,
                         search_depth: 'advanced'
-                    })
+                    }),
+                    signal: controller.signal,
                 });
 
                 if (!response.ok) {
@@ -451,38 +482,36 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                 if (!response.body) throw new Error("Connection failed");
 
                 const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let accumulated = "";
+                const sse = createSseReader();
+                let accumulated = '';
+                let finished = false;
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const dataStr = line.slice(6).trim();
-                            if (dataStr === '[DONE]') break;
-                            try {
-                                const data = JSON.parse(dataStr);
-                                if (data.type === 'metadata') {
-                                    setArticle(prev => ({ ...prev, sources: data.sources }));
-                                } else if (data.type === 'content') {
-                                    accumulated += data.delta;
-                                    setArticle(prev => ({ ...prev, content: accumulated }));
-                                } else if (data.type === 'error') {
-                                    throw new Error(data.message || 'Article generation failed');
-                                }
-                            } catch (e) {
-                                if (e.message && !e.message.includes('JSON')) {
-                                    throw e;
-                                }
-                            }
+                const applyEvents = (events) => {
+                    for (const data of events) {
+                        if (!stillCurrent() || finished) return;
+                        if (data.type === 'done') {
+                            finished = true;
+                            return;
+                        }
+                        if (data.type === 'metadata') {
+                            const sources = Array.isArray(data.sources) ? data.sources : [];
+                            setArticle(prev => ({ ...prev, sources }));
+                        } else if (data.type === 'content') {
+                            accumulated += data.delta || '';
+                            setArticle(prev => ({ ...prev, content: accumulated }));
+                        } else if (data.type === 'error') {
+                            throw new Error(data.message || 'Article generation failed');
                         }
                     }
+                };
+
+                while (!finished) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    applyEvents(sse.push(value));
                 }
+                if (!finished) applyEvents(sse.finish());
+                finalContent = accumulated;
 
             } else {
                 // Non-deep search: Direct LLM generation without web search
@@ -494,31 +523,30 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                         { role: 'system', content: 'You are Grokipedia. Write a high-quality, Wikipedia-style encyclopedia article.' },
                         { role: 'user', content: `Write a detailed article about: ${term}` }
                     ],
+                    signal: controller.signal,
                     onDelta: (delta) => {
+                        if (!stillCurrent()) return;
                         accumulatedContent += delta;
                         setArticle(prev => ({ ...prev, content: accumulatedContent }));
                     }
                 });
+                finalContent = accumulatedContent;
             }
 
-
-            // Sync metrics after streaming completes
-            setArticle(prev => {
-                const content = prev?.content || "";
-                setToc(parseToc(content));
-                setRelatedTopics(parseRelatedTopics(content));
-                extractQuickFacts(term, content);
-                return prev;
-            });
+            if (!stillCurrent()) return;
+            setToc(parseToc(finalContent));
+            setRelatedTopics(parseRelatedTopics(finalContent));
+            extractQuickFacts(term, finalContent);
 
         } catch (error) {
+            if (error?.name === 'AbortError' || !stillCurrent()) return;
             console.error('Search failed:', error);
             setArticle(prev => ({
                 ...prev,
                 content: (prev?.content || "") + '\n\n> ⚠️ **DeepSearch Offline:** Unable to reach research servers. Please try again later.'
             }));
         } finally {
-            setIsSearching(false);
+            if (stillCurrent()) setIsSearching(false);
         }
     };
 
@@ -541,58 +569,11 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
     };
 
 
-    const renderMarkdown = (content) => {
-        if (!content) return '';
+    const articleHtml = useMemo(
+        () => renderGrokipediaMarkdown(article?.content || ''),
+        [article?.content]
+    );
 
-        let html = content;
-
-        // Remove AI-generated References/See Also sections (we render our own)
-        // This prevents duplicate sections
-        html = html.replace(/## References[\s\S]*?(?=## |$)/gi, '');
-        html = html.replace(/## See Also[\s\S]*?(?=## |$)/gi, '');
-        html = html.replace(/## Sources[\s\S]*?(?=## |$)/gi, '');
-        html = html.replace(/## Citations[\s\S]*?(?=## |$)/gi, '');
-
-        // H2 headings with IDs
-        html = html.replace(/^## (.+)$/gm, (match, p1) => {
-            const id = p1.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            return `<h2 id="${id}" class="grok-h2">${p1}</h2>`;
-        });
-
-        // H3 headings with IDs
-        html = html.replace(/^### (.+)$/gm, (match, p1) => {
-            const id = p1.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            return `<h3 id="${id}" class="grok-h3">${p1}</h3>`;
-        });
-
-        // Bold
-        html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="grok-bold">$1</strong>');
-
-        // Italic
-        html = html.replace(/\*([^*]+?)\*/g, '<em class="grok-italic">$1</em>');
-
-        // Citations
-        html = html.replace(/\[(\d+)\]/g, '<sup class="grok-citation" title="Source $1">[$1]</sup>');
-
-        // Lists
-        html = html.replace(/^[•\-*]\s+(.+)$/gm, '<li class="grok-li">$1</li>');
-        html = html.replace(/((?:<li class="grok-li">.*?<\/li>\s*)+)/g, '<ul class="grok-ul">$1</ul>');
-
-        // Blockquotes  
-        html = html.replace(/^> (.+)$/gm, '<blockquote class="grok-quote">$1</blockquote>');
-
-        // Paragraphs
-        html = html.split('\n\n').map(para => {
-            para = para.trim();
-            if (!para) return '';
-            if (para.startsWith('<h') || para.startsWith('<ul') || para.startsWith('<blockquote')) {
-                return para;
-            }
-            return `<p class="grok-p">${para}</p>`;
-        }).join('\n');
-
-        return html;
-    };
     if (!isOpen) return null;
 
     return (
@@ -627,6 +608,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
 
                         <motion.button
                             onClick={onClose}
+                            aria-label="Close knowledge"
                             className="p-2.5 hover:bg-muted rounded-2xl transition-all border border-transparent hover:border-border"
                             whileHover={{ scale: 1.05 }}
                         >
@@ -675,6 +657,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                             const url = source.url.toLowerCase();
                                             // Exclude generic/placeholder sources
                                             if (url === 'https://google.com' || url === 'http://google.com') return false;
+                                            if (!isSafeHttpUrl(source.url)) return false;
                                             if (hostnameIs(url, 'example.com')) return false;
                                             if (source.title?.toLowerCase().includes('ai knowledge base')) return false;
                                             if (source.title?.toLowerCase().includes('ai summary')) return false;
@@ -774,6 +757,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                                 ref={searchInputRef}
                                                 type="text"
                                                 value={searchTerm}
+                                                aria-label="Search knowledge"
                                                 onChange={(e) => setSearchTerm(e.target.value)}
                                                 onKeyDown={handleKeySearch}
                                                 onFocus={() => setShowHistory(true)}
@@ -792,8 +776,10 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                                     <div className="h-4 w-4 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
                                                 )}
                                                 <button
+                                                    type="button"
                                                     onClick={() => handleSearch()}
                                                     disabled={isSearching || !searchTerm.trim()}
+                                                    aria-label="Search"
                                                     className="p-1.5 bg-foreground text-background rounded-full hover:bg-foreground/90 transition-all disabled:opacity-50"
                                                 >
                                                     <ArrowUp className="h-4 w-4" />
@@ -804,7 +790,9 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                         {/* Engine Toggle */}
                                         <div className="flex items-center justify-center gap-6 px-2">
                                             <button
+                                                type="button"
                                                 onClick={() => setIsDeepSearch(!isDeepSearch)}
+                                                aria-pressed={isDeepSearch}
                                                 className={cn(
                                                     "flex items-center gap-2 text-[10px] font-bold tracking-widest transition-all uppercase",
                                                     isDeepSearch
@@ -940,11 +928,30 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                         </div>
 
                                         <div className="flex gap-2 pt-4">
-                                            <button onClick={async () => { await navigator.clipboard.writeText(article.content); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="px-3 py-1.5 bg-muted/50 hover:bg-muted rounded-lg transition-all text-xs font-medium flex items-center gap-2">
+                                            <button type="button" onClick={async () => {
+                                                const ok = await copyToClipboard(article.content || '');
+                                                if (!ok) return;
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }} className="px-3 py-1.5 bg-muted/50 hover:bg-muted rounded-lg transition-all text-xs font-medium flex items-center gap-2">
                                                 {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
                                                 {copied ? 'Copied!' : 'Copy'}
                                             </button>
-                                            <button className="px-3 py-1.5 bg-muted/50 hover:bg-muted rounded-lg transition-all text-xs font-medium flex items-center gap-2">
+                                            <button type="button" onClick={async () => {
+                                                const payload = { title: article.title, text: article.content || '' };
+                                                if (navigator.share) {
+                                                    try {
+                                                        await navigator.share(payload);
+                                                        return;
+                                                    } catch (error) {
+                                                        if (error?.name === 'AbortError') return;
+                                                    }
+                                                }
+                                                const ok = await copyToClipboard(`${article.title}\n\n${article.content || ''}`);
+                                                if (!ok) return;
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }} className="px-3 py-1.5 bg-muted/50 hover:bg-muted rounded-lg transition-all text-xs font-medium flex items-center gap-2">
                                                 <Share2 className="h-3.5 w-3.5" />
                                                 Share
                                             </button>
@@ -953,7 +960,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
 
                                     <div
                                         className="grokipedia-article"
-                                        dangerouslySetInnerHTML={{ __html: renderMarkdown(article.content) }}
+                                        dangerouslySetInnerHTML={{ __html: articleHtml }}
                                     />
 
                                     {/* References Section - grokipedia style */}
@@ -978,6 +985,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                                         // Combine and deduplicate
                                         const allRefs = inlineRefs.length > 0 ? inlineRefs : refs;
                                         const uniqueRefs = allRefs.reduce((acc, ref) => {
+                                            if (!isSafeHttpUrl(ref.url)) return acc;
                                             if (!acc.find(r => r.url === ref.url)) {
                                                 acc.push(ref);
                                             }
@@ -1074,6 +1082,7 @@ const GrokipediaPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.8 }}
                             onClick={() => contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+                            aria-label="Back to top"
                             className="fixed bottom-8 right-8 p-3 bg-foreground text-background rounded-full shadow-xl hover:bg-foreground/90 transition-all z-100"
                         >
                             <ChevronUp className="h-5 w-5" />

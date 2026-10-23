@@ -128,6 +128,8 @@ const TypingIndicator = () => (
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
         className="flex items-center gap-3"
+        role="status"
+        aria-label="Assistant is responding"
     >
         <div className="h-8 w-8 rounded-xl flex items-center justify-center bg-primary/10 shadow-xs">
             <Bot className="h-4 w-4 text-primary" />
@@ -164,6 +166,7 @@ const ScrollToBottomButton = ({ onClick, show }) => (
                 )}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
+                aria-label="Scroll to latest messages"
             >
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </motion.button>
@@ -171,7 +174,7 @@ const ScrollToBottomButton = ({ onClick, show }) => (
     </AnimatePresence>
 );
 
-const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickAction, inputProps }) => {
+const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickAction, onRegenerate, inputProps }) => {
     const messagesEndRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const [greeting] = useState(getGreeting());
@@ -308,7 +311,11 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
                                         exit={{ opacity: 0, y: -20 }}
                                         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                                     >
-                                        <MessageBubble message={msg} renderContent={renderContent} />
+                                        <MessageBubble
+                                            message={msg}
+                                            renderContent={renderContent}
+                                            onRegenerate={msg.role === 'assistant' ? () => onRegenerate?.(idx) : undefined}
+                                        />
                                     </motion.div>
                                 ))}
                             </AnimatePresence>

@@ -7,6 +7,7 @@ from .models import Message as MessageModel
 from .models import Conversation
 from .database import get_db
 from .ai4bharat import ai4bharat_client
+from .origins import allowed_origins_list, origin_is_allowed, strict_transport_security
 from .schemas import ChatMessage, TextChatRequest
 from sqlalchemy.orm import Session as SessionType  # type: ignore[import-not-found]
 from fastapi.responses import (  # type: ignore[import-not-found]
@@ -29,7 +30,6 @@ import hashlib
 import json
 import logging
 import os
-import re
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
@@ -72,47 +72,7 @@ except ImportError:
     logging.warning("api_analytics module not found. Analytics disabled.")
 
 
-def _normalise_origin(value: Optional[str]) -> Optional[str]:
-    if not value:
-        return None
-    origin = value.strip().rstrip("/")
-    if not origin:
-        return None
-    if not origin.startswith(("http://", "https://")):
-        origin = f"https://{origin}"
-    return origin
-
-
-def _env_configured_origins() -> List[str]:
-    configured: List[str] = []
-    for env_name in ("APP_URL", "VERCEL_URL"):
-        normalised = _normalise_origin(os.getenv(env_name))
-        if normalised:
-            configured.append(normalised)
-
-    raw_custom = os.getenv("CORS_ALLOW_ORIGINS", "")
-    if raw_custom:
-        for entry in raw_custom.split(","):
-            normalised = _normalise_origin(entry)
-            if normalised:
-                configured.append(normalised)
-    return configured
-
-
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-    "https://assist-me-virtual-assistant.vercel.app",
-    "https://assistme-virtualassistant-production.up.railway.app",
-]
-
-ALLOWED_ORIGINS.extend(_env_configured_origins())
-ALLOWED_ORIGINS = sorted({origin for origin in ALLOWED_ORIGINS if origin})
-VERCEL_ORIGIN_PATTERN = re.compile(
-    r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app"
-)
+ALLOWED_ORIGINS = allowed_origins_list()
 
 # Enhanced FastAPI configuration for localhost development
 app = FastAPI(
@@ -344,17 +304,18 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = (
-        "max-age=31536000; includeSubDomains"
+    hsts = strict_transport_security(
+        request.url.scheme,
+        request.headers.get("x-forwarded-proto"),
     )
+    if hsts:
+        response.headers["Strict-Transport-Security"] = hsts
     return response
 
 
 def _resolve_origin(request: Request) -> Optional[str]:
     origin = request.headers.get("origin")
-    if not origin:
-        return None
-    if origin in ALLOWED_ORIGINS or VERCEL_ORIGIN_PATTERN.fullmatch(origin):
+    if origin and origin_is_allowed(origin):
         return origin
     return None
 

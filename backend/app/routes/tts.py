@@ -22,6 +22,8 @@ from pydantic import BaseModel, Field
 
 from ..services.tts_service import tts_service, EmotionDetector
 
+_REQUEST_FAILURES = (OSError, RuntimeError, TypeError, KeyError)
+
 
 class TTSRequest(BaseModel):
     """Text-to-speech request with emotion support."""
@@ -65,8 +67,10 @@ async def synthesize(req: TTSRequest):
         return {"success": True, **result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except _REQUEST_FAILURES as exc:
+        raise HTTPException(
+            status_code=500, detail="Speech synthesis failed"
+        ) from exc
 
 
 @router.post("/voice-response")
@@ -94,8 +98,10 @@ async def voice_response(req: VoiceConversationRequest):
         return {"success": True, **result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except _REQUEST_FAILURES as exc:
+        raise HTTPException(
+            status_code=500, detail="Voice response failed"
+        ) from exc
 
 
 @router.get("/emotions")
