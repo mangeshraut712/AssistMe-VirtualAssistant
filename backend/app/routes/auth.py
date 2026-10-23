@@ -1,16 +1,12 @@
-from datetime import timedelta
+"""Authentication routes backed by the shared account helpers."""
+
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from ..core.security import (
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    create_access_token,
-    get_password_hash,
-    verify_password,
-)
+from ..core.accounts import issue_bearer_token, login_user, register_user
 from ..database import get_db
 from ..models import User
 from ..schemas import Token, UserCreate
@@ -23,48 +19,32 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
     """
     Register a new user.
     """
-    user = db.query(User).filter(User.email == user_in.email).first()
-    if user:
+    existing = db.query(User).filter(User.email == user_in.email).first()
+    if existing:
         raise HTTPException(
             status_code=400,
             detail="The user with this email already exists in the system.",
         )
-    user = db.query(User).filter(User.username == user_in.username).first()
-    if user:
+    existing = db.query(User).filter(User.username == user_in.username).first()
+    if existing:
         raise HTTPException(
             status_code=400,
             detail="The user with this username already exists in the system.",
         )
 
-    user = User(
-        email=user_in.email,
-        username=user_in.username,
-        hashed_password=get_password_hash(user_in.password),
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        subject=user.username, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+    created = register_user(db, user_in.email, user_in.username, user_in.password)
+    return issue_bearer_token(created.username)
 
 
 @router.post("/login", response_model=Token)
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
 ) -> Any:
     """
     OAuth2 compatible token login, get an access token for future requests.
     """
-    user = db.query(User).filter(User.username == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    authenticated = login_user(db, form_data.username, form_data.password)
+    if authenticated is None:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        subject=user.username, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return issue_bearer_token(authenticated.username)

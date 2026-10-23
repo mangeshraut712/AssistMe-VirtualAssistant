@@ -115,28 +115,43 @@ class WhisperService:
             tmp_path = tmp.name
 
         try:
-
-            def _do_detect():
-                # Load audio and detect language
-                import torch
-                # Get device from model if available, otherwise use CPU
-                device = self.model.device if hasattr(self.model, 'device') else 'cpu'
-                if isinstance(device, str) and device == 'cpu':
-                    device = torch.device('cpu')
-
-                audio = whisper.load_audio(tmp_path)
-                audio = whisper.pad_or_trim(audio)
-                mel = whisper.log_mel_spectrogram(audio).to(device)
-                _, probs = self.model.detect_language(mel)
-                return max(probs, key=probs.get)
-
-            return await run_in_threadpool(_do_detect)
+            return await run_in_threadpool(self._detect_language_file, tmp_path)
         except Exception as e:
             logger.error(f"Language detection error: {e}")
             raise
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
+
+    def _log_mel_spectrogram(self, audio: Any) -> Any:
+        """Build a log-mel spectrogram with the loaded model's mel bin count.
+
+        openai-whisper 20240930+ uses 128 mel bins for large-v3 and turbo.
+        The historical default of 80 only matches the smaller models, so
+        language detection must follow model.dims.n_mels.
+        """
+        if whisper is None:
+            raise RuntimeError(
+                "openai-whisper library is not installed. Please install it to use speech-to-text."
+            )
+
+        n_mels = 80
+        dims = getattr(self.model, "dims", None)
+        model_mels = getattr(dims, "n_mels", None)
+        if model_mels in (80, 128):
+            n_mels = model_mels
+
+        mel = whisper.log_mel_spectrogram(audio, n_mels=n_mels)
+        device = getattr(self.model, "device", "cpu")
+        return mel.to(device)
+
+    def _detect_language_file(self, tmp_path: str) -> str:
+        """Detect the spoken language of an audio file already on disk."""
+        audio = whisper.load_audio(tmp_path)
+        audio = whisper.pad_or_trim(audio)
+        mel = self._log_mel_spectrogram(audio)
+        _, probs = self.model.detect_language(mel)
+        return max(probs, key=probs.get)
 
 
 # Global instance
