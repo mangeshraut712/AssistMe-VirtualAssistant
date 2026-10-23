@@ -33,7 +33,7 @@ structlog>=24.4.0,<25.0.0
 tenacity>=9.2.1,<10.0.0
 
 # Serialization
-orjson>=3.10.11,<4.0.0
+orjson>=3.13.0,<4.0.0
 
 # Linting (installed in CI step)
 # flake8 and mypy are installed separately in the workflow
