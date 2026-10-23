@@ -63,7 +63,10 @@ def origin_is_allowed(origin: str) -> bool:
     return VERCEL_ORIGIN_PATTERN.fullmatch(origin) is not None
 
 
-def strict_transport_security(scheme: Optional[str], forwarded_proto: Optional[str]) -> Optional[str]:
+def strict_transport_security(
+    scheme: Optional[str],
+    forwarded_proto: Optional[str],
+) -> Optional[str]:
     """Return an HSTS header only for HTTPS responses.
 
     Sending HSTS on plain HTTP, including local development, makes browsers

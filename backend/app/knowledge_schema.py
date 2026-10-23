@@ -1,5 +1,8 @@
 """Request limits for unauthenticated knowledge endpoints."""
 
+# These models only declare fields. Pylint's method count does not apply.
+# pylint: disable=too-few-public-methods
+
 from __future__ import annotations
 
 from typing import Annotated, Literal

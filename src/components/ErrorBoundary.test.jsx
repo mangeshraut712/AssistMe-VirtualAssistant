@@ -6,5 +6,7 @@ describe('appHomeHref', () => {
         expect(appHomeHref('/AssistMe-VirtualAssistant')).toBe('/AssistMe-VirtualAssistant/');
         expect(appHomeHref('/AssistMe-VirtualAssistant/')).toBe('/AssistMe-VirtualAssistant/');
         expect(appHomeHref('')).toBe('/');
+        expect(appHomeHref('https://evil.example')).toBe('/');
+        expect(appHomeHref('//evil.example')).toBe('/');
     });
 });

@@ -1,7 +1,13 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException
 from typing import List
 
-from ..services.file_service import UploadRejected, file_service, public_file_record, safe_upload_name
+from ..services.file_service import (
+    UploadRejected,
+    file_service,
+    public_file_record,
+    safe_upload_name,
+    upload_client_detail,
+)
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
@@ -19,9 +25,9 @@ async def upload_file(file: UploadFile = File(...)):
 
         return {"success": True, "file": public}
     except UploadRejected as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Request failed")
+        raise HTTPException(status_code=400, detail=upload_client_detail(exc.code)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Request failed") from exc
 
 
 @router.post("/upload-multiple")
@@ -36,7 +42,10 @@ async def upload_multiple_files(files: List[UploadFile] = File(...)):
             public["extracted_text"] = text
             results.append(public)
         except UploadRejected as exc:
-            results.append({"filename": safe_upload_name(file.filename), "error": str(exc)})
+            results.append({
+                "filename": safe_upload_name(file.filename),
+                "error": upload_client_detail(exc.code),
+            })
         except Exception:
             results.append({"filename": safe_upload_name(file.filename), "error": "Request failed"})
 

@@ -9,6 +9,7 @@ from ..services.file_service import (
     file_service,
     read_limited,
     safe_mime,
+    upload_client_detail,
 )
 
 router = APIRouter(tags=["multimodal"])
@@ -60,7 +61,10 @@ async def analyze_image(
         }
 
     except UploadRejected as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=400,
+            detail=upload_client_detail(exc.code),
+        ) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -114,7 +118,10 @@ async def analyze_video(
         }
 
     except UploadRejected as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=400,
+            detail=upload_client_detail(exc.code),
+        ) from exc
     except HTTPException:
         raise
     except Exception as e:
@@ -164,7 +171,10 @@ async def extract_document(
         }
 
     except UploadRejected as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=400,
+            detail=upload_client_detail(exc.code),
+        ) from exc
     except Exception as e:
         logger.error(f"Document analysis failed: {e}")
         raise HTTPException(status_code=500, detail="Request failed")

@@ -12,7 +12,7 @@ MIN_DOWNLOAD_BYTES = 1024
 
 
 def clamp_download_size(size: int) -> int:
-    """Keep a download probe inside a fixed window so the handler cannot stream arbitrarily large bodies."""
+    """Keep a download probe inside a fixed window."""
     if size < MIN_DOWNLOAD_BYTES:
         return MIN_DOWNLOAD_BYTES
     if size > MAX_DOWNLOAD_BYTES:

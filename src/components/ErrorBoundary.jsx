@@ -2,7 +2,8 @@ import React from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
 
 export function appHomeHref(base = import.meta.env.BASE_URL || '/') {
-    if (!base) return '/';
+    if (typeof base !== 'string' || !base.startsWith('/') || base.startsWith('//')) return '/';
+    if (base.includes('://') || base.includes('\\')) return '/';
     return base.endsWith('/') ? base : `${base}/`;
 }
 
@@ -50,7 +51,10 @@ class ErrorBoundary extends React.Component {
     };
 
     handleGoHome = () => {
-        window.location.href = appHomeHref();
+        const target = appHomeHref();
+        if (target.startsWith('/') && !target.startsWith('//')) {
+            window.location.assign(target);
+        }
     };
 
     render() {

@@ -65,8 +65,8 @@ async def synthesize(req: TTSRequest):
         return {"success": True, **result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Speech synthesis failed")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Speech synthesis failed") from exc
 
 
 @router.post("/voice-response")
@@ -94,8 +94,8 @@ async def voice_response(req: VoiceConversationRequest):
         return {"success": True, **result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Voice response failed")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Voice response failed") from exc
 
 
 @router.get("/emotions")
