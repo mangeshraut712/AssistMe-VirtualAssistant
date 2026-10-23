@@ -30,8 +30,8 @@ const AI4BharatPanel = ({ isOpen, onClose, isEmbedded = false, backendUrl = '' }
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors">
-                            <X className="h-6 w-6" />
+                        <button type="button" onClick={onClose} aria-label="Close AI4Bharat" className="p-2 hover:bg-muted rounded-full transition-colors">
+                            <X className="h-6 w-6" aria-hidden="true" />
                         </button>
                     </div>
                 </header>

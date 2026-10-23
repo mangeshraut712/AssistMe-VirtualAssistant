@@ -473,12 +473,14 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                             </span>
                         )}
                         <motion.button
+                            type="button"
                             onClick={onClose}
+                            aria-label="Close image generation"
                             className="p-2.5 hover:bg-muted rounded-xl transition-colors"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            <X className="h-5 w-5" />
+                            <X className="h-5 w-5" aria-hidden="true" />
                         </motion.button>
                     </div>
                 </motion.header>
@@ -553,8 +555,8 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                 className="mb-3 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-center gap-2"
                             >
                                 <span>⚠️ {error}</span>
-                                <button onClick={() => setError(null)} className="ml-auto hover:text-red-400">
-                                    <X className="h-4 w-4" />
+                                <button type="button" onClick={() => setError(null)} aria-label="Dismiss error" className="ml-auto hover:text-red-400">
+                                    <X className="h-4 w-4" aria-hidden="true" />
                                 </button>
                             </motion.div>
                         )}
@@ -567,8 +569,8 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                 className="mb-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-600 dark:text-blue-400 text-sm flex items-center gap-2"
                             >
                                 <span>ℹ️ {statusMessage}</span>
-                                <button onClick={() => setStatusMessage('')} className="ml-auto hover:text-blue-500">
-                                    <X className="h-4 w-4" />
+                                <button type="button" onClick={() => setStatusMessage('')} aria-label="Dismiss status" className="ml-auto hover:text-blue-500">
+                                    <X className="h-4 w-4" aria-hidden="true" />
                                 </button>
                             </motion.div>
                         )}

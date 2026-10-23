@@ -126,3 +126,12 @@ def create_access_token(
     to_encode = {"sub": str(subject), "exp": expire}
     encoded_jwt = jwt.encode(to_encode, get_secret_key(), algorithm=ALGORITHM)
     return encoded_jwt
+
+
+def decode_access_token(token: str) -> dict:
+    """Verify a token with the HS256 key that issued it.
+
+    The algorithm list is fixed. A configurable ``JWT_ALGORITHM``, including
+    ``none``, must not decide how a bearer token is checked.
+    """
+    return jwt.decode(token, get_secret_key(), algorithms=[ALGORITHM])

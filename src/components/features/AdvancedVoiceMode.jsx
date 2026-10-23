@@ -1005,8 +1005,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
                         <div className="flex items-center gap-2">
                             <motion.button
+                                type="button"
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => setIsMuted(!isMuted)}
+                                aria-label={isMuted ? 'Unmute' : 'Mute'}
                                 className={cn(
                                     "p-3 rounded-full transition-all",
                                     isMuted
@@ -1015,7 +1017,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                 )}
                                 title={isMuted ? 'Unmute' : 'Mute'}
                             >
-                                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                                {isMuted ? <VolumeX className="w-5 h-5" aria-hidden="true" /> : <Volume2 className="w-5 h-5" aria-hidden="true" />}
                             </motion.button>
                             {conversation.length > 0 && (
                                 <>
@@ -1036,22 +1038,26 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                         <Download className="w-5 h-5" />
                                     </motion.button>
                                     <motion.button
+                                        type="button"
                                         whileTap={{ scale: 0.95 }}
                                         onClick={clearConversation}
+                                        aria-label="Clear conversation"
                                         className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-all border border-gray-200 dark:border-gray-700"
                                         title="Clear conversation"
                                     >
-                                        <Trash2 className="w-5 h-5" />
+                                        <Trash2 className="w-5 h-5" aria-hidden="true" />
                                     </motion.button>
                                 </>
                             )}
                             <motion.button
+                                type="button"
                                 whileTap={{ scale: 0.95 }}
                                 onClick={onClose}
+                                aria-label="Close voice mode"
                                 className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
                                 title="Close"
                             >
-                                <X className="w-5 h-5" />
+                                <X className="w-5 h-5" aria-hidden="true" />
                             </motion.button>
                         </div>
                     </header>
@@ -1443,8 +1449,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
                     <div className="flex items-center gap-2">
                         <motion.button
+                            type="button"
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setIsMuted(!isMuted)}
+                            aria-label={isMuted ? 'Unmute' : 'Mute'}
                             className={cn(
                                 "p-3 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center",
                                 isMuted
@@ -1452,23 +1460,27 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                     : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
                             )}
                         >
-                            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                            {isMuted ? <VolumeX className="w-5 h-5" aria-hidden="true" /> : <Volume2 className="w-5 h-5" aria-hidden="true" />}
                         </motion.button>
                         {conversation.length > 0 && (
                             <motion.button
+                                type="button"
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => setConversation([])}
+                                aria-label="Clear conversation"
                                 className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                             >
-                                <Trash2 className="w-5 h-5" />
+                                <Trash2 className="w-5 h-5" aria-hidden="true" />
                             </motion.button>
                         )}
                         <motion.button
+                            type="button"
                             whileTap={{ scale: 0.95 }}
                             onClick={onClose}
+                            aria-label="Close voice mode"
                             className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-5 h-5" aria-hidden="true" />
                         </motion.button>
                     </div>
                 </header>

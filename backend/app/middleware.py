@@ -11,6 +11,7 @@ Features:
 
 from __future__ import annotations
 
+import os
 import time
 from typing import Callable
 from uuid import uuid4
@@ -130,9 +131,16 @@ class RateLimitContextMiddleware(BaseHTTPMiddleware):
     """Middleware to prepare rate limiting context."""
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        trust_proxy = os.getenv("TRUST_PROXY", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
         request.state.client_id = resolve_client_id(
             request.headers,
             request.client.host if request.client else None,
+            trust_proxy=trust_proxy,
         )
 
         return await call_next(request)
