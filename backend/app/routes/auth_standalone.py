@@ -4,7 +4,6 @@ Standalone authentication routes - no dependencies on embedding services.
 
 import os
 import sys
-from datetime import timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,12 +11,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
-from ..core.security import (
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    authenticate_and_upgrade,
-    create_access_token,
-    get_password_hash,
-)
+from ..core.accounts import issue_bearer_token, login_user, register_user
 from ..database import get_db
 from ..models import User
 
@@ -40,30 +34,21 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=Token)
-def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
+def register(
+    user_in: UserCreate,
+    db: Session = Depends(get_db),
+) -> Any:
     """Register a new user."""
-    user = db.query(User).filter(User.email == user_in.email).first()
-    if user:
+    by_email = db.query(User).filter(User.email == user_in.email).first()
+    if by_email is not None:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    user = db.query(User).filter(User.username == user_in.username).first()
-    if user:
+    by_name = db.query(User).filter(User.username == user_in.username).first()
+    if by_name is not None:
         raise HTTPException(status_code=400, detail="Username already taken")
 
-    user = User(
-        email=user_in.email,
-        username=user_in.username,
-        hashed_password=get_password_hash(user_in.password),
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        subject=user.username, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+    created = register_user(db, user_in.email, user_in.username, user_in.password)
+    return issue_bearer_token(created.username)
 
 
 @router.post("/login", response_model=Token)
@@ -71,12 +56,7 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ) -> Any:
     """OAuth2 compatible token login."""
-    user = db.query(User).filter(User.username == form_data.username).first()
-    if not authenticate_and_upgrade(user, form_data.password, db):
+    authenticated = login_user(db, form_data.username, form_data.password)
+    if authenticated is None:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        subject=user.username, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return issue_bearer_token(authenticated.username)
