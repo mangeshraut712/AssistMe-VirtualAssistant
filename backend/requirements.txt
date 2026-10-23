@@ -71,7 +71,7 @@ gtts>=2.5.0,<3.0.0
 # RAG / Vector Embeddings / ML
 # ============================================
 sentence-transformers>=3.3.0,<4.0.0
-faiss-cpu>=1.9.0,<2.0.0
+faiss-cpu>=1.15.1,<2.0.0
 pypdf>=5.1.0,<6.0.0
 numpy>=2.5.4,<3.0.0          # NumPy 2.x compatibility
 
