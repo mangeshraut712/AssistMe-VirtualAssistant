@@ -1,6 +1,5 @@
-# Keep Dependabot off npm_and_yarn for the Bun Next.js skill template
-# (.agents/skills/... has bun.lock only). Security updates still discovered
-# that tree after directory: / was set, so exclude it and declare bun there.
+# Production app is Vite at repo root plus FastAPI in backend/.
+# Ignore .agents in case a nested package.json appears again.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -10,12 +9,6 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
-
-  - package-ecosystem: bun
-    directory: /.agents/skills/app-store-screenshots/template
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
 
   - package-ecosystem: pip
     directory: /backend
