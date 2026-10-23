@@ -8,5 +8,7 @@ describe('appHomeHref', () => {
         expect(appHomeHref('')).toBe('/');
         expect(appHomeHref('https://evil.example')).toBe('/');
         expect(appHomeHref('//evil.example')).toBe('/');
+        expect(appHomeHref('javascript:alert(1)')).toBe('/');
+        expect(appHomeHref('/ok\n/next')).toBe('/');
     });
 });

@@ -14,21 +14,12 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
 from jose import jwt
 
-from ..config import get_settings
+from .signing_key import get_secret_key
 
 _argon2 = PasswordHasher()
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-
-def get_secret_key() -> str:
-    """Return the JWT signing key from application settings.
-
-    Settings and this helper share one source, including the development
-    fallback, so a token issued at login verifies on protected routes.
-    """
-    return get_settings().security.secret_key
 
 
 def _as_hash_text(hashed_password: Union[str, bytes]) -> str:

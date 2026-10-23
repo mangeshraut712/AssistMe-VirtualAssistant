@@ -1,24 +1,36 @@
-"""Stable client identifiers for rate limiting."""
+"""Stable client identifiers for rate limiting.
+
+Bearer tokens are high-entropy JWTs, so a short SHA-256 prefix only has to
+hide the raw token. API keys are password-class credentials: a fast hash
+would let a leaked bucket id be guessed offline, so those use PBKDF2.
+"""
 
 from __future__ import annotations
 
 import hashlib
 from typing import Mapping, Optional
 
-_IDENTIFIER_SALT = b"assistme-rate-limit"
+# Enough work to stop casual offline guessing, and still one request.
+# This runs before the rate limiter can shed load.
+_KDF_ROUNDS = 10000
 
 
 def hash_identifier(value: str) -> str:
-    """Return a short digest that does not reveal the original credential.
+    """Return a short SHA-256 digest of a high-entropy bearer token."""
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
 
-    One PBKDF2 iteration is enough to bucket a request. This is not stored
-    password hashing, but it avoids a bare fast hash of a bearer token.
+
+def hash_api_key(api_key: str) -> str:
+    """Return a short PBKDF2 digest of an API key.
+
+    SHA-256 is not a password hash. PBKDF2 is slow on purpose so a copied
+    rate-limit bucket cannot be used to recover a low-entropy key.
     """
     digest = hashlib.pbkdf2_hmac(
         "sha256",
-        value.encode("utf-8"),
-        _IDENTIFIER_SALT,
-        1,
+        api_key.encode("utf-8"),
+        b"assistme-rate-limit",
+        _KDF_ROUNDS,
     )
     return digest.hex()[:16]
 
@@ -31,9 +43,9 @@ def resolve_client_id(headers: Mapping[str, str], client_host: Optional[str]) ->
         if token:
             return "user:" + hash_identifier(token)
 
-    api_key = headers.get("X-API-Key") or headers.get("x-api-key")
-    if api_key:
-        return "key:" + hash_identifier(api_key)
+    supplied_key = headers.get("X-API-Key") or headers.get("x-api-key")
+    if supplied_key:
+        return "key:" + hash_api_key(supplied_key)
 
     forwarded = headers.get("X-Forwarded-For") or headers.get("x-forwarded-for")
     if forwarded:

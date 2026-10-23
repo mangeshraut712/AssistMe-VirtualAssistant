@@ -12,10 +12,11 @@ from jose import jwt
 from pydantic import ValidationError
 from starlette.datastructures import Headers, UploadFile
 
-from app.client_identity import hash_identifier, resolve_client_id
+from app.client_identity import hash_api_key, hash_identifier, resolve_client_id
 from app.config import get_settings
 from app.core.security import create_access_token, get_secret_key
-from app.knowledge_schema import GrokipediaRequest, IngestRequest
+from app.core.signing_key import clear_ephemeral_secret_key
+from app.knowledge_schema import GrokipediaRequest, IngestRequest, SearchRequest
 from app.origins import origin_is_allowed, strict_transport_security
 from app.routes.gemini import router as gemini_router
 from app.routes.speedtest import clamp_download_size
@@ -31,6 +32,7 @@ from tests.support import expect
 def test_default_jwt_secret_matches_settings(monkeypatch):
     """Login signs with the same key get_current_user uses to verify."""
     monkeypatch.delenv("SECRET_KEY", raising=False)
+    clear_ephemeral_secret_key()
     get_settings.cache_clear()
     try:
         signing_key = get_secret_key()
@@ -38,10 +40,29 @@ def test_default_jwt_secret_matches_settings(monkeypatch):
             signing_key == get_settings().security.secret_key,
             "signing and verification keys differ",
         )
+        expect(len(signing_key) >= 32, "an unset key should still be long")
+        expect(get_secret_key() == signing_key, "the process key should stay stable")
         token = create_access_token("ada")
         payload = jwt.decode(token, signing_key, algorithms=["HS256"])
-        expect(payload["sub"] == "ada", "the settings secret should verify a newly issued token")
+        expect(payload["sub"] == "ada", "the process key should verify a new token")
     finally:
+        clear_ephemeral_secret_key()
+        get_settings.cache_clear()
+
+
+def test_production_rejects_a_missing_signing_key(monkeypatch):
+    """Production must not boot with a generated, unshared signing key."""
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    get_settings.cache_clear()
+    try:
+        try:
+            get_settings()
+        except ValidationError:
+            return
+        raise AssertionError("production without SECRET_KEY should be rejected")
+    finally:
+        clear_ephemeral_secret_key()
         get_settings.cache_clear()
 
 
@@ -67,11 +88,22 @@ def test_rate_limit_identity_stays_cheap():
     started = time.perf_counter()
     for index in range(1000):
         resolve_client_id({"Authorization": f"Bearer token-{index}"}, "127.0.0.1")
-    expect(time.perf_counter() - started < 1, "identity hashing should stay cheap")
-    expect(
-        resolve_client_id({"X-Forwarded-For": "203.0.113.8, 10.0.0.1"}, None) == "ip:203.0.113.8",
-        "the first forwarded address is the client bucket",
+    expect(time.perf_counter() - started < 1, "token hashing should stay cheap")
+    forwarded = resolve_client_id(
+        {"X-Forwarded-For": "203.0.113.8, 10.0.0.1"}, None
     )
+    expect(forwarded == "ip:203.0.113.8", "the first forwarded address is the bucket")
+
+    supplied = "user-supplied-key"
+    bucket = resolve_client_id({"X-API-Key": supplied}, "127.0.0.1")
+    again = resolve_client_id({"x-api-key": supplied}, "127.0.0.1")
+    expect(bucket == again, "header case should not change the api-key bucket")
+    expect(supplied not in bucket, "the bucket should not echo the api key")
+    expect(
+        bucket != "key:" + hash_identifier(supplied),
+        "api keys must not use the fast token hash",
+    )
+    expect(bucket == "key:" + hash_api_key(supplied), "the bucket uses the key KDF")
 
 
 def test_browser_origins_and_hsts():
@@ -130,7 +162,16 @@ def test_image_size_is_clamped():
 
 def test_knowledge_requests_reject_unbounded_input():
     """Search and ingest payloads have explicit limits."""
-    GrokipediaRequest(query="drexel", max_results=8, search_depth="advanced")
+    article = GrokipediaRequest(
+        query="  drexel  ", max_results=8, search_depth="advanced"
+    )
+    expect(article.normalized_query() == "drexel", "the query view is trimmed")
+    expect(article.uses_advanced_search() is True, "advanced search is visible")
+    search = SearchRequest(query="drexel", top_k=4)
+    expect(search.result_window() == 4, "the result window is the requested top_k")
+    ingest = IngestRequest(documents=["alpha", "beta"])
+    expect(ingest.document_count() == 2, "document_count matches the payload")
+    expect(ingest.longest_document() == 5, "longest_document uses character length")
     try:
         GrokipediaRequest(query="x" * 4001, max_results=100, search_depth="everything")
     except ValidationError:

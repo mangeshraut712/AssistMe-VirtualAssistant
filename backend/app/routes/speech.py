@@ -22,6 +22,8 @@ from ..services.whisper_service import whisper_service
 
 router = APIRouter(prefix="/api/speech", tags=["speech"])
 
+_REQUEST_FAILURES = (OSError, RuntimeError, ValueError, TypeError, KeyError)
+
 
 @router.post("/transcribe")
 async def transcribe_audio(
@@ -54,7 +56,7 @@ async def transcribe_audio(
             status_code=400,
             detail=upload_client_detail(exc.code),
         ) from exc
-    except Exception as exc:
+    except _REQUEST_FAILURES as exc:
         raise HTTPException(status_code=500, detail="Transcription failed") from exc
 
 
@@ -101,9 +103,11 @@ async def transcribe_stream(websocket: WebSocket):
                 break
     except WebSocketDisconnect:
         return
-    except Exception:  # pylint: disable=broad-exception-caught
+    except _REQUEST_FAILURES:
         try:
-            await websocket.send_json({"success": False, "error": "Transcription failed"})
+            await websocket.send_json(
+                {"success": False, "error": "Transcription failed"}
+            )
             await websocket.close(code=1011)
         finally:
             return
@@ -132,7 +136,7 @@ async def detect_language(file: UploadFile = File(...)):
             status_code=400,
             detail=upload_client_detail(exc.code),
         ) from exc
-    except Exception as exc:
+    except _REQUEST_FAILURES as exc:
         raise HTTPException(
             status_code=500,
             detail="Language detection failed",

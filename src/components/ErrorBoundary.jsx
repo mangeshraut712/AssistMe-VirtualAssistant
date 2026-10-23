@@ -1,10 +1,25 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
 
+// Keep this aligned with `base` in vite.config.js. The home action assigns
+// this literal so a caller-supplied path cannot move the window.
+export const APP_HOME_PATH = '/AssistMe-VirtualAssistant/';
+
+function hasControlCharacter(value) {
+    for (let index = 0; index < value.length; index += 1) {
+        const code = value.charCodeAt(index);
+        if (code <= 31 || code === 127) return true;
+    }
+    return false;
+}
+
 export function appHomeHref(base = import.meta.env.BASE_URL || '/') {
-    if (typeof base !== 'string' || !base.startsWith('/') || base.startsWith('//')) return '/';
-    if (base.includes('://') || base.includes('\\')) return '/';
-    return base.endsWith('/') ? base : `${base}/`;
+    if (typeof base !== 'string') return '/';
+    const path = base.trim();
+    if (!path.startsWith('/') || path.startsWith('//')) return '/';
+    if (path.includes('://') || path.includes('\\') || path.includes(':')) return '/';
+    if (hasControlCharacter(path)) return '/';
+    return path.endsWith('/') ? path : `${path}/`;
 }
 
 /**
@@ -51,10 +66,7 @@ class ErrorBoundary extends React.Component {
     };
 
     handleGoHome = () => {
-        const target = appHomeHref();
-        if (target.startsWith('/') && !target.startsWith('//')) {
-            window.location.assign(target);
-        }
+        window.location.assign(APP_HOME_PATH);
     };
 
     render() {

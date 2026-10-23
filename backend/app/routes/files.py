@@ -11,6 +11,8 @@ from ..services.file_service import (
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
+_REQUEST_FAILURES = (OSError, RuntimeError, ValueError, TypeError, KeyError)
+
 
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -26,7 +28,7 @@ async def upload_file(file: UploadFile = File(...)):
         return {"success": True, "file": public}
     except UploadRejected as exc:
         raise HTTPException(status_code=400, detail=upload_client_detail(exc.code)) from exc
-    except Exception as exc:
+    except _REQUEST_FAILURES as exc:
         raise HTTPException(status_code=500, detail="Request failed") from exc
 
 
@@ -46,7 +48,12 @@ async def upload_multiple_files(files: List[UploadFile] = File(...)):
                 "filename": safe_upload_name(file.filename),
                 "error": upload_client_detail(exc.code),
             })
-        except Exception:
-            results.append({"filename": safe_upload_name(file.filename), "error": "Request failed"})
+        except _REQUEST_FAILURES:
+            results.append(
+                {
+                    "filename": safe_upload_name(file.filename),
+                    "error": "Request failed",
+                }
+            )
 
     return {"success": True, "files": results}
