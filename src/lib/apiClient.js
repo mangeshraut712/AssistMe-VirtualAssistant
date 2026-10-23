@@ -1,10 +1,11 @@
+import { joinApiUrl } from './urls';
+
+export { joinApiUrl };
+
 export function createApiClient({ baseUrl = '' } = {}) {
     const base = String(baseUrl || '').replace(/\/+$/, '');
 
-    const buildUrl = (path) => {
-        if (!path.startsWith('/')) return `${base}/${path}`;
-        return `${base}${path}`;
-    };
+    const buildUrl = (path) => joinApiUrl(base, path);
 
     const parseErrorMessage = (payload) => {
         if (!payload) return 'Request failed';

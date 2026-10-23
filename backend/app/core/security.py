@@ -17,11 +17,17 @@ from jose import jwt
 
 _argon2 = PasswordHasher()
 
-SECRET_KEY = os.getenv(
-    "SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-)
+# Same fallback as SecuritySettings. The previous hardcoded tutorial secret
+# signed tokens that get_current_user could not verify, and it is public.
+_DEV_SECRET_KEY = "dev-secret-key-change-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
+def get_secret_key() -> str:
+    """Return the JWT signing key, matching the settings default when unset."""
+    configured = os.getenv("SECRET_KEY", "").strip()
+    return configured or _DEV_SECRET_KEY
 
 
 def _as_hash_text(hashed_password: Union[str, bytes]) -> str:
@@ -126,5 +132,5 @@ def create_access_token(
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode = {"sub": str(subject), "exp": expire}
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, get_secret_key(), algorithm=ALGORITHM)
     return encoded_jwt

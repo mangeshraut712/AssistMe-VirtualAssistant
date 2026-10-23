@@ -12,14 +12,16 @@ export function useLocalStorage(key, initialValue) {
     const [storedValue, setStoredValue] = useState(() => {
         return storage.get(key, initialValue);
     });
+    const storedRef = useRef(storedValue);
 
     const setValue = useCallback(
         value => {
-            const valueToStore = value instanceof Function ? value(storedValue) : value;
+            const valueToStore = value instanceof Function ? value(storedRef.current) : value;
+            storedRef.current = valueToStore;
             setStoredValue(valueToStore);
             storage.set(key, valueToStore);
         },
-        [key, storedValue]
+        [key]
     );
 
     return [storedValue, setValue];

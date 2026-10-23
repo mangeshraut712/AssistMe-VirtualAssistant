@@ -7,21 +7,35 @@ import logging
 router = APIRouter(prefix="/api/speedtest", tags=["Speedtest"])
 logger = logging.getLogger(__name__)
 
+MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
+MIN_DOWNLOAD_BYTES = 1024
+
+
+def clamp_download_size(size: int) -> int:
+    """Keep a download probe inside a fixed window so the handler cannot stream arbitrarily large bodies."""
+    if size < MIN_DOWNLOAD_BYTES:
+        return MIN_DOWNLOAD_BYTES
+    if size > MAX_DOWNLOAD_BYTES:
+        return MAX_DOWNLOAD_BYTES
+    return size
+
 
 @router.get("/download")
-async def download(size: int = 25 * 1024 * 1024):
+async def download(size: int = MAX_DOWNLOAD_BYTES):
     """
     Real download test endpoint.
     Returns a stream of random bytes of the specified size.
     Default size is 25MB for accurate high-speed testing.
     """
+    payload_size = clamp_download_size(size)
+
     def generate_random_bytes():
         # Using a pre-generated chunk for performance (don't want CPU to bottleneck the network)
         chunk_size = 512 * 1024  # 512KB chunks
         chunk = os.urandom(chunk_size)
         bytes_sent = 0
-        while bytes_sent < size:
-            take = min(chunk_size, size - bytes_sent)
+        while bytes_sent < payload_size:
+            take = min(chunk_size, payload_size - bytes_sent)
             if take == chunk_size:
                 yield chunk
             else:
@@ -34,7 +48,7 @@ async def download(size: int = 25 * 1024 * 1024):
         headers={
             "Content-Disposition": "attachment; filename=speedtest.bin",
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-            "X-Content-Length": str(size)
+            "X-Content-Length": str(payload_size)
         }
     )
 

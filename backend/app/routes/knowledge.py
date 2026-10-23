@@ -1,30 +1,17 @@
 """Knowledge Base and Web Search API endpoints (Grokipedia)."""
 
-from typing import List
+import json
+import logging
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
 
+from ..knowledge_schema import GrokipediaRequest, IngestRequest, SearchRequest
 from ..services.embedding_service import embedding_service
 from ..services.web_search_service import web_search_service
 
 router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
-
-
-class IngestRequest(BaseModel):
-    documents: List[str]
-
-
-class SearchRequest(BaseModel):
-    query: str
-    top_k: int = 3
-    use_web_search: bool = True  # Enable web search by default
-
-
-class GrokipediaRequest(BaseModel):
-    query: str
-    max_results: int = 5
-    search_depth: str = "advanced"  # "basic" or "advanced"
+logger = logging.getLogger(__name__)
 
 
 @router.post("/ingest")
@@ -97,10 +84,6 @@ async def grokipedia_stream(request: GrokipediaRequest):
     """
     Streamed Grokipedia article with real-time web search integration.
     """
-    import json
-    import logging
-    logger = logging.getLogger(__name__)
-
     async def stream_generator():
         try:
             # 1. Search (First step is non-streamed for context gathering)
@@ -129,7 +112,6 @@ async def grokipedia_stream(request: GrokipediaRequest):
             yield f"data: {json.dumps({'type': 'error', 'message': 'Request failed'})}\n\n"
             yield "data: [DONE]\n\n"
 
-    from fastapi.responses import StreamingResponse
     return StreamingResponse(stream_generator(), media_type="text/event-stream")
 
 
@@ -145,8 +127,7 @@ async def grokipedia_search(request: GrokipediaRequest):
             search_depth=request.search_depth
         )
 
-        from ..services.web_search_service import web_search_service
-        # For non-streaming, we can use a helper or just await the stream to collect
+        # For non-streaming, collect the streamed answer.
         answer = ""
         async for chunk in web_search_service.stream_answer(request.query, context_results=search_results):
             answer += chunk

@@ -1,6 +1,11 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
 
+export function appHomeHref(base = import.meta.env.BASE_URL || '/') {
+    if (!base) return '/';
+    return base.endsWith('/') ? base : `${base}/`;
+}
+
 /**
  * Enhanced Error Boundary Component
  * Catches JavaScript errors anywhere in the child component tree,
@@ -45,7 +50,7 @@ class ErrorBoundary extends React.Component {
     };
 
     handleGoHome = () => {
-        window.location.href = '/';
+        window.location.href = appHomeHref();
     };
 
     render() {

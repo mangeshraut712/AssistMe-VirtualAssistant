@@ -11,7 +11,9 @@ Endpoints:
 """
 
 import os
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+
+from ..origins import origin_is_allowed
 
 router = APIRouter(prefix="/api/gemini", tags=["gemini"])
 
@@ -31,17 +33,20 @@ LIVE_MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
 
 
 @router.get("/key")
-async def get_gemini_key():
+async def get_gemini_key(request: Request):
     """Get Gemini API key for Live API WebSocket connection.
 
-    Security Notes:
-    - In production, consider short-lived tokens
-    - Or use server-side WebSocket proxy
-    - Or implement OAuth2 with Vertex AI
+    The key has to reach the browser for the Gemini Live WebSocket, so this
+    refuses cross-origin reads from sites that are not on the allowlist.
+    Same-origin requests do not send an Origin header and are allowed.
 
     Returns:
         JSON with apiKey field
     """
+    origin = request.headers.get("origin")
+    if origin and not origin_is_allowed(origin):
+        raise HTTPException(status_code=403, detail="Origin not allowed")
+
     api_key = os.getenv("GOOGLE_API_KEY")
 
     if not api_key:

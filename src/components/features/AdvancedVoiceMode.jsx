@@ -17,6 +17,7 @@ import {
     X, Mic, MicOff, Volume2, VolumeX, Trash2,
     Sparkles, Zap, Brain, AudioWaveform, Copy, Download
 } from 'lucide-react';
+import { joinApiUrl } from '@/lib/urls';
 import { cn } from '@/lib/utils';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -128,7 +129,7 @@ const cleanResponseText = (text) => {
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export default function AdvancedVoiceMode({ isOpen, onClose }) {
+export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) {
     // State
     const [status, setStatus] = useState('idle');
     const [conversation, setConversation] = useState([]);
@@ -470,7 +471,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
         return new Promise((resolve, reject) => {
             (async () => {
                 try {
-                    const keyResponse = await fetch('/api/gemini/key');
+                    const keyResponse = await fetch(joinApiUrl(backendUrl, '/api/gemini/key'));
                     if (!keyResponse.ok) throw new Error('Failed to get API key');
                     const { apiKey } = await keyResponse.json();
                     if (!apiKey) throw new Error('API key not configured');
@@ -635,7 +636,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                 }
             })().catch(reject);
         });
-    }, [playPCMAudioChunks, speak]);
+    }, [playPCMAudioChunks, speak, backendUrl]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // PROCESSING
@@ -661,7 +662,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s max
 
             try {
-                const chatResponse = await fetch('/api/chat', {
+                const chatResponse = await fetch(joinApiUrl(backendUrl, '/api/chat'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     signal: controller.signal,
@@ -708,7 +709,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                 const fallbackController = new AbortController();
                 const fallbackTimeout = setTimeout(() => fallbackController.abort(), 10000);
 
-                const fallbackResponse = await fetch('/api/chat', {
+                const fallbackResponse = await fetch(joinApiUrl(backendUrl, '/api/chat'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     signal: fallbackController.signal,
@@ -740,7 +741,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
                 throw fallbackErr;
             }
         }
-    }, [conversation, speak]);
+    }, [conversation, speak, backendUrl]);
 
 
     const processPremium = useCallback(async (text) => {
@@ -750,7 +751,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
             const timeoutId = setTimeout(() => controller.abort(), 5000);
 
             try {
-                const statusRes = await fetch('/api/gemini/status', {
+                const statusRes = await fetch(joinApiUrl(backendUrl, '/api/gemini/status'), {
                     signal: controller.signal
                 });
                 clearTimeout(timeoutId);
@@ -784,7 +785,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose }) {
             setTimeout(() => setErrorMessage(''), 3000);
             await processStandard(text);
         }
-    }, [processStandard, connectToGeminiLive]);
+    }, [processStandard, connectToGeminiLive, backendUrl]);
 
 
     const processUserInput = useCallback(async (text) => {

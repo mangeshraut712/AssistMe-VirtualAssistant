@@ -12,6 +12,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 
+from ..services.file_service import MAX_AUDIO_BYTES, UploadRejected, read_limited
 from ..services.whisper_service import whisper_service
 
 router = APIRouter(prefix="/api/speech", tags=["speech"])
@@ -32,8 +33,7 @@ async def transcribe_audio(
         Transcription result
     """
     try:
-        # Read file
-        audio_bytes = await file.read()
+        audio_bytes = await read_limited(file, MAX_AUDIO_BYTES)
 
         # Transcribe
         result = await whisper_service.transcribe(audio_bytes, language)
@@ -44,8 +44,10 @@ async def transcribe_audio(
             "language": result["language"],
             "segments": result["segments"],
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except UploadRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Transcription failed")
 
 
 @router.websocket("/transcribe-stream")
@@ -61,7 +63,11 @@ async def transcribe_stream(websocket: WebSocket):
         while True:
             message = await websocket.receive()
             if "bytes" in message and message["bytes"] is not None:
-                buffer.extend(message["bytes"])
+                incoming = message["bytes"]
+                if len(buffer) + len(incoming) > MAX_AUDIO_BYTES:
+                    await websocket.close(code=1009)
+                    break
+                buffer.extend(incoming)
             elif "text" in message:
                 text = (message["text"] or "").strip().lower()
                 if text == "end":
@@ -87,9 +93,9 @@ async def transcribe_stream(websocket: WebSocket):
                 break
     except WebSocketDisconnect:
         return
-    except Exception as e:
+    except Exception:
         try:
-            await websocket.send_json({"success": False, "error": str(e)})
+            await websocket.send_json({"success": False, "error": "Transcription failed"})
             await websocket.close(code=1011)
         finally:
             return
@@ -106,15 +112,17 @@ async def detect_language(file: UploadFile = File(...)):
         Detected language code
     """
     try:
-        audio_bytes = await file.read()
+        audio_bytes = await read_limited(file, MAX_AUDIO_BYTES)
         language = await whisper_service.detect_language(audio_bytes)
 
         return {
             "success": True,
             "language": language,
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except UploadRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Language detection failed")
 
 
 @router.get("/languages")

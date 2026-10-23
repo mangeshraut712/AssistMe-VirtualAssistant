@@ -3,7 +3,13 @@ from typing import Optional
 import base64
 import logging
 from ..providers import get_provider
-from ..services.file_service import file_service
+from ..services.file_service import (
+    MAX_UPLOAD_BYTES,
+    UploadRejected,
+    file_service,
+    read_limited,
+    safe_mime,
+)
 
 router = APIRouter(tags=["multimodal"])
 logger = logging.getLogger(__name__)
@@ -19,10 +25,11 @@ async def analyze_image(
 ):
     """Analyze an uploaded image using Gemini 2.0 Flash."""
     try:
-        # Read and encode image
-        contents = await file.read()
+        contents = await read_limited(file, MAX_UPLOAD_BYTES)
+        mime_type = safe_mime(file.content_type, "image/jpeg")
+        if not mime_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Unsupported file type")
         base64_image = base64.b64encode(contents).decode("utf-8")
-        mime_type = file.content_type or "image/jpeg"
 
         # Construct message for OpenRouter/Gemini
         messages = [
@@ -52,6 +59,10 @@ async def analyze_image(
             "model": response.get("model", MULTIMODAL_MODEL)
         }
 
+    except UploadRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Vision analysis failed: {e}")
         raise HTTPException(status_code=500, detail="Request failed")
@@ -68,9 +79,11 @@ async def analyze_video(
         # For larger videos, we would need to upload to a storage service first.
         # Gemini 2.0 Flash supports video input.
 
-        contents = await file.read()
+        contents = await read_limited(file, MAX_UPLOAD_BYTES)
+        mime_type = safe_mime(file.content_type, "video/mp4")
+        if not mime_type.startswith("video/"):
+            raise HTTPException(status_code=400, detail="Unsupported file type")
         base64_video = base64.b64encode(contents).decode("utf-8")
-        mime_type = file.content_type or "video/mp4"
 
         # Construct message
         messages = [
@@ -100,6 +113,10 @@ async def analyze_video(
             "model": response.get("model", MULTIMODAL_MODEL)
         }
 
+    except UploadRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Video analysis failed: {e}")
         raise HTTPException(status_code=500, detail="Request failed")
@@ -146,6 +163,8 @@ async def extract_document(
             "model": response.get("model", MULTIMODAL_MODEL)
         }
 
+    except UploadRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as e:
         logger.error(f"Document analysis failed: {e}")
         raise HTTPException(status_code=500, detail="Request failed")

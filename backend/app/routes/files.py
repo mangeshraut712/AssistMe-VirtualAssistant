@@ -1,7 +1,7 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException
 from typing import List
 
-from ..services.file_service import file_service
+from ..services.file_service import UploadRejected, file_service, public_file_record, safe_upload_name
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
@@ -14,9 +14,12 @@ async def upload_file(file: UploadFile = File(...)):
 
         # Extract text if possible
         text_content = await file_service.extract_text(result["path"], result["content_type"])
-        result["extracted_text"] = text_content
+        public = public_file_record(result)
+        public["extracted_text"] = text_content
 
-        return {"success": True, "file": result}
+        return {"success": True, "file": public}
+    except UploadRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except Exception:
         raise HTTPException(status_code=500, detail="Request failed")
 
@@ -29,9 +32,12 @@ async def upload_multiple_files(files: List[UploadFile] = File(...)):
         try:
             res = await file_service.save_file(file)
             text = await file_service.extract_text(res["path"], res["content_type"])
-            res["extracted_text"] = text
-            results.append(res)
+            public = public_file_record(res)
+            public["extracted_text"] = text
+            results.append(public)
+        except UploadRejected as exc:
+            results.append({"filename": safe_upload_name(file.filename), "error": str(exc)})
         except Exception:
-            results.append({"filename": file.filename, "error": "Request failed"})
+            results.append({"filename": safe_upload_name(file.filename), "error": "Request failed"})
 
     return {"success": True, "files": results}
