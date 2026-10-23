@@ -44,7 +44,7 @@ python-multipart>=0.0.17      # Form/file uploads
 # ============================================
 python-jose[cryptography]>=3.3.0,<4.0.0
 passlib[bcrypt]>=1.7.4,<2.0.0
-argon2-cffi>=23.1.0,<24.0.0   # Modern password hashing
+argon2-cffi>=25.1.0,<26.0.0   # Modern password hashing
 
 # ============================================
 # Observability & Monitoring
