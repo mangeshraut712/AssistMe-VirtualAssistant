@@ -2,13 +2,13 @@
 
 import os
 import sys
+import tempfile
 import types
 from pathlib import Path
 
 import app
 
-_data_dir = Path("/tmp/assistme-pytest-data")
-_data_dir.mkdir(parents=True, exist_ok=True)
+_data_dir = Path(tempfile.mkdtemp(prefix="assistme-pytest-"))
 os.environ.setdefault("DATA_DIR", str(_data_dir))
 os.environ.setdefault("RAILWAY_PROJECT_ID", "pytest")
 

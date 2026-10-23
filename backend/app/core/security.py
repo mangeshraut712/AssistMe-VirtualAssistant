@@ -99,6 +99,24 @@ def authenticate_password(
     return True, get_password_hash(plain_password)
 
 
+def authenticate_and_upgrade(user: Any, plain_password: str, db: Any) -> bool:
+    """Verify a user's password and store a current Argon2 hash when needed.
+
+    Returns False when the user is missing or the password does not match.
+    On success, a legacy or stale hash is replaced and committed when a
+    database session is present.
+    """
+    if user is None:
+        return False
+    valid, upgraded = authenticate_password(plain_password, user.hashed_password)
+    if not valid:
+        return False
+    if upgraded and db is not None:
+        user.hashed_password = upgraded
+        db.commit()
+    return True
+
+
 def create_access_token(
     subject: Union[str, Any], expires_delta: Optional[timedelta] = None
 ) -> str:

@@ -1,25 +1,56 @@
 """Whisper language detection follows the 20250625 mel-bin contract."""
 
 import importlib
-import tempfile
 from types import SimpleNamespace
 
 import anyio
 import pytest
 
 from app.services.whisper_service import WhisperService
+from tests.support import expect
 
 whisper_module = importlib.import_module("app.services.whisper_service")
 
 
 class _Mel:
+    """Stand-in for the log-mel tensor whisper returns."""
+
     def __init__(self, n_mels):
         self.n_mels = n_mels
         self.device = None
 
     def to(self, device):
+        """Record the device and return this spectrogram."""
         self.device = device
         return self
+
+    def describe(self):
+        """Return the mel bin count and the device this spectrogram was moved to."""
+        return self.n_mels, self.device
+
+
+class _AudioFile:
+    """Stand-in for NamedTemporaryFile that records audio on disk."""
+
+    def __init__(self, path):
+        self.name = str(path)
+        self._path = path
+
+    def write(self, data):
+        """Store audio bytes where the service expects the temporary file."""
+        self._path.write_bytes(data)
+        self.flush()
+        return len(data)
+
+    def flush(self):
+        """Finish the write so later reads see the audio bytes."""
+        return None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
 
 
 def _install_whisper(monkeypatch, n_mels_seen):
@@ -40,7 +71,16 @@ def _install_whisper(monkeypatch, n_mels_seen):
     return fake
 
 
+def _use_audio_file(monkeypatch, path):
+    monkeypatch.setattr(
+        whisper_module.tempfile,
+        "NamedTemporaryFile",
+        lambda *_args, **_kwargs: _AudioFile(path),
+    )
+
+
 def test_large_v3_language_detection_requests_128_mel_bins(monkeypatch):
+    """large-v3 language detection asks whisper for 128 mel bins."""
     seen = {}
     _install_whisper(monkeypatch, seen)
     detected = {}
@@ -56,17 +96,18 @@ def test_large_v3_language_detection_requests_128_mel_bins(monkeypatch):
         detect_language=detect_language,
     )
 
-    with tempfile.NamedTemporaryFile(suffix=".wav") as handle:
-        language = service._detect_language_file(handle.name)
+    language = anyio.run(service.detect_language, b"RIFFdata")
+    n_mels, device = detected["mel"].describe()
 
-    assert language == "hi"
-    assert seen["n_mels"] == 128
-    assert seen["audio"].startswith("trimmed:pcm:")
-    assert detected["mel"].n_mels == 128
-    assert detected["mel"].device == "cpu"
+    expect(language == "hi", "highest probability language should win")
+    expect(seen["n_mels"] == 128, "large-v3 should request 128 mel bins")
+    expect(str(seen["audio"]).startswith("trimmed:pcm:"), "audio should be trimmed pcm")
+    expect(n_mels == 128, "spectrogram should keep 128 bins")
+    expect(device == "cpu", "spectrogram should move to the model device")
 
 
 def test_base_model_keeps_80_mel_bins(monkeypatch):
+    """The base model keeps the historical 80 mel bin setting."""
     seen = {}
     _install_whisper(monkeypatch, seen)
     service = WhisperService(model_size="base")
@@ -76,33 +117,17 @@ def test_base_model_keeps_80_mel_bins(monkeypatch):
         detect_language=lambda mel: (None, {"en": 1.0}),
     )
 
-    with tempfile.NamedTemporaryFile(suffix=".wav") as handle:
-        assert service._detect_language_file(handle.name) == "en"
+    language = anyio.run(service.detect_language, b"RIFFdata")
 
-    assert seen["n_mels"] == 80
+    expect(language == "en", "base model should detect english")
+    expect(seen["n_mels"] == 80, "base model should request 80 mel bins")
 
 
 def test_transcribe_strips_text_and_deletes_the_temp_file(monkeypatch, tmp_path):
+    """Transcription trims text and removes the temporary audio file."""
     audio_path = tmp_path / "clip.wav"
     captured = {}
-
-    class _TempFile:
-        name = str(audio_path)
-
-        def write(self, data):
-            audio_path.write_bytes(data)
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_args):
-            return False
-
-    monkeypatch.setattr(
-        whisper_module.tempfile,
-        "NamedTemporaryFile",
-        lambda *args, **kwargs: _TempFile(),
-    )
+    _use_audio_file(monkeypatch, audio_path)
 
     def transcribe(path, language=None, task=None, fp16=None):
         captured.update(path=path, language=language, task=task, fp16=fp16)
@@ -113,40 +138,27 @@ def test_transcribe_strips_text_and_deletes_the_temp_file(monkeypatch, tmp_path)
 
     result = anyio.run(service.transcribe, b"RIFFdata", "en")
 
-    assert result == {
-        "text": "hello world",
-        "language": "en",
-        "segments": [{"id": 0}],
-    }
-    assert captured == {
-        "path": str(audio_path),
-        "language": "en",
-        "task": "transcribe",
-        "fp16": False,
-    }
-    assert audio_path.exists() is False
+    expect(
+        result == {"text": "hello world", "language": "en", "segments": [{"id": 0}]},
+        "transcription should strip surrounding whitespace",
+    )
+    expect(
+        captured
+        == {
+            "path": str(audio_path),
+            "language": "en",
+            "task": "transcribe",
+            "fp16": False,
+        },
+        "whisper should be called with the temp path and CPU-safe settings",
+    )
+    expect(audio_path.exists() is False, "temp audio should be deleted after success")
 
 
 def test_transcribe_deletes_the_temp_file_when_decoding_fails(monkeypatch, tmp_path):
+    """A decode error still removes the temporary audio file."""
     audio_path = tmp_path / "clip.wav"
-
-    class _TempFile:
-        name = str(audio_path)
-
-        def write(self, data):
-            audio_path.write_bytes(data)
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_args):
-            return False
-
-    monkeypatch.setattr(
-        whisper_module.tempfile,
-        "NamedTemporaryFile",
-        lambda *args, **kwargs: _TempFile(),
-    )
+    _use_audio_file(monkeypatch, audio_path)
 
     def fail_decode(*_args, **_kwargs):
         raise RuntimeError("decode failed")
@@ -157,12 +169,13 @@ def test_transcribe_deletes_the_temp_file_when_decoding_fails(monkeypatch, tmp_p
     with pytest.raises(RuntimeError, match="decode failed"):
         anyio.run(service.transcribe, b"RIFFdata")
 
-    assert audio_path.exists() is False
+    expect(audio_path.exists() is False, "temp audio should be deleted after failure")
 
 
 def test_missing_whisper_library_is_reported(monkeypatch):
+    """Transcription reports a clear error when whisper is not installed."""
     monkeypatch.setattr(whisper_module, "whisper", None)
     service = WhisperService()
 
     with pytest.raises(RuntimeError, match="not installed"):
-        service._load_model()
+        anyio.run(service.transcribe, b"RIFFdata")

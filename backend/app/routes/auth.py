@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    authenticate_password,
+    authenticate_and_upgrade,
     create_access_token,
     get_password_hash,
 )
@@ -60,16 +60,8 @@ def login(
     OAuth2 compatible token login, get an access token for future requests.
     """
     user = db.query(User).filter(User.username == form_data.username).first()
-    valid, upgraded = (
-        authenticate_password(form_data.password, user.hashed_password)
-        if user is not None
-        else (False, None)
-    )
-    if not valid:
+    if not authenticate_and_upgrade(user, form_data.password, db):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-    if upgraded and db is not None:
-        user.hashed_password = upgraded
-        db.commit()
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
