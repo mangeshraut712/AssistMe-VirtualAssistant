@@ -2,6 +2,7 @@
 
 import importlib
 import os
+import secrets
 import time
 from io import BytesIO
 
@@ -152,7 +153,8 @@ def test_gemini_key_is_not_readable_from_an_unlisted_origin(monkeypatch):
 
 def test_access_tokens_only_verify_as_hs256(monkeypatch):
     """Verification stays on HS256 even if JWT_ALGORITHM is changed."""
-    monkeypatch.setenv("SECRET_KEY", "unit-test-secret-key-value")
+    signing_key = secrets.token_urlsafe(32)
+    monkeypatch.setenv("SECRET_KEY", signing_key)
     monkeypatch.setenv("JWT_ALGORITHM", "none")
     get_settings.cache_clear()
     try:
@@ -161,7 +163,7 @@ def test_access_tokens_only_verify_as_hs256(monkeypatch):
         expect(payload["sub"] == "ada", "an HS256 token should verify")
         other = jwt.encode(
             {"sub": "ada"},
-            "unit-test-secret-key-value",
+            signing_key,
             algorithm="HS512",
         )
         try:
