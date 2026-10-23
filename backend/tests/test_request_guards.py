@@ -8,18 +8,19 @@ from io import BytesIO
 import anyio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jose import jwt
+from jose import JWTError, jwt
 from pydantic import ValidationError
 from starlette.datastructures import Headers, UploadFile
 
 from app.client_identity import hash_api_key, hash_identifier, resolve_client_id
 from app.config import get_settings
-from app.core.security import create_access_token, get_secret_key
+from app.core.security import create_access_token, decode_access_token, get_secret_key
 from app.core.signing_key import clear_ephemeral_secret_key
 from app.knowledge_schema import GrokipediaRequest, IngestRequest, SearchRequest
 from app.origins import origin_is_allowed, strict_transport_security
 from app.routes.gemini import router as gemini_router
 from app.routes.speedtest import clamp_download_size
+from app.routes.speedtest import router as speedtest_router
 from app.services.file_service import (
     MAX_UPLOAD_BYTES,
     UploadRejected,
@@ -89,10 +90,17 @@ def test_rate_limit_identity_stays_cheap():
     for index in range(1000):
         resolve_client_id({"Authorization": f"Bearer token-{index}"}, "127.0.0.1")
     expect(time.perf_counter() - started < 1, "token hashing should stay cheap")
-    forwarded = resolve_client_id(
-        {"X-Forwarded-For": "203.0.113.8, 10.0.0.1"}, None
+    spoofed = resolve_client_id(
+        {"X-Forwarded-For": "203.0.113.8, 10.0.0.1"},
+        "192.0.2.10",
     )
-    expect(forwarded == "ip:203.0.113.8", "the first forwarded address is the bucket")
+    expect(spoofed == "ip:192.0.2.10", "a client-supplied forward header is ignored")
+    trusted = resolve_client_id(
+        {"X-Forwarded-For": "203.0.113.8, 10.0.0.1"},
+        "192.0.2.10",
+        trust_proxy=True,
+    )
+    expect(trusted == "ip:10.0.0.1", "the proxy-appended hop is the client bucket")
 
     supplied = "user-supplied-key"
     bucket = resolve_client_id({"X-API-Key": supplied}, "127.0.0.1")
@@ -140,6 +148,46 @@ def test_gemini_key_is_not_readable_from_an_unlisted_origin(monkeypatch):
 
     same_origin = client.get("/api/gemini/key")
     expect(same_origin.status_code == 200, "a request without Origin is same-origin")
+
+
+def test_access_tokens_only_verify_as_hs256(monkeypatch):
+    """Verification stays on HS256 even if JWT_ALGORITHM is changed."""
+    monkeypatch.setenv("SECRET_KEY", "unit-test-secret-key-value")
+    monkeypatch.setenv("JWT_ALGORITHM", "none")
+    get_settings.cache_clear()
+    try:
+        token = create_access_token("ada")
+        payload = decode_access_token(token)
+        expect(payload["sub"] == "ada", "an HS256 token should verify")
+        other = jwt.encode(
+            {"sub": "ada"},
+            "unit-test-secret-key-value",
+            algorithm="HS512",
+        )
+        try:
+            decode_access_token(other)
+        except JWTError:
+            return
+        raise AssertionError("an HS512 token must not verify")
+    finally:
+        get_settings.cache_clear()
+
+
+def test_speedtest_upload_stops_at_the_cap(monkeypatch):
+    """Upload probes cannot stream an unbounded body into the process."""
+    speedtest_module = importlib.import_module("app.routes.speedtest")
+    monkeypatch.setattr(speedtest_module, "MAX_UPLOAD_BYTES", 32)
+    app = FastAPI()
+    app.include_router(speedtest_router)
+    client = TestClient(app)
+
+    small = client.post("/api/speedtest/upload", content=b"x" * 16)
+    expect(small.status_code == 200, "a small upload should be accepted")
+    expect(small.json()["size_received"] == 16, "the received size should match")
+
+    huge = client.post("/api/speedtest/upload", content=b"x" * 64)
+    expect(huge.status_code == 413, "an upload over the cap should be rejected")
+    expect("25 MB" in huge.json()["detail"], "the error should name the limit")
 
 
 def test_download_size_is_clamped():

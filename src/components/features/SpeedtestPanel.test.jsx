@@ -50,6 +50,7 @@ describe('SpeedtestPanel', () => {
         render(<SpeedtestPanel isOpen onClose={vi.fn()} />);
 
         expect(screen.getByText('Speedtest Ultra')).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Close speed test' })).toBeTruthy();
         expect(screen.getByText('123.4')).toBeTruthy();
         expect(screen.getByText('45.6')).toBeTruthy();
         expect(screen.getByText('A+')).toBeTruthy();

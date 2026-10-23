@@ -35,7 +35,23 @@ def hash_api_key(api_key: str) -> str:
     return digest.hex()[:16]
 
 
-def resolve_client_id(headers: Mapping[str, str], client_host: Optional[str]) -> str:
+def _proxy_client_address(forwarded: str) -> str:
+    """Return the address appended by the nearest proxy.
+
+    Clients can prepend fake hops. The rightmost hop is the one the trusted
+    proxy observed.
+    """
+    parts = [part.strip() for part in forwarded.split(",") if part.strip()]
+    if not parts:
+        return ""
+    return parts[-1]
+
+
+def resolve_client_id(
+    headers: Mapping[str, str],
+    client_host: Optional[str],
+    trust_proxy: bool = False,
+) -> str:
     """Choose a rate-limit bucket from the auth token, API key, or client IP."""
     auth_header = headers.get("Authorization", "") or headers.get("authorization", "")
     if auth_header.startswith("Bearer "):
@@ -47,7 +63,10 @@ def resolve_client_id(headers: Mapping[str, str], client_host: Optional[str]) ->
     if supplied_key:
         return "key:" + hash_api_key(supplied_key)
 
-    forwarded = headers.get("X-Forwarded-For") or headers.get("x-forwarded-for")
-    if forwarded:
-        return f"ip:{forwarded.split(',')[0].strip()}"
+    if trust_proxy:
+        forwarded = headers.get("X-Forwarded-For") or headers.get("x-forwarded-for")
+        if forwarded:
+            hop = _proxy_client_address(forwarded)
+            if hop:
+                return f"ip:{hop}"
     return f"ip:{client_host or 'unknown'}"

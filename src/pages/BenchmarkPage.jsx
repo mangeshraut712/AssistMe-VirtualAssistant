@@ -655,8 +655,8 @@ const BenchmarkPage = () => {
                         <div className="p-6">
                             <div className="flex justify-between items-start mb-4">
                                 <h3 className="text-xl font-bold text-foreground pr-4">{selectedNews.title}</h3>
-                                <button onClick={() => setSelectedNews(null)} className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-accent transition-colors">
-                                    <X className="h-5 w-5" />
+                                <button type="button" onClick={() => setSelectedNews(null)} aria-label="Close news" className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-accent transition-colors">
+                                    <X className="h-5 w-5" aria-hidden="true" />
                                 </button>
                             </div>
                             <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">

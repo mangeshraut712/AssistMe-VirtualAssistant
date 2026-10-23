@@ -157,15 +157,17 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
                 </div>
                 <div className="flex items-center gap-2">
                     <button
+                        type="button"
                         onClick={() => setViewMode(viewMode === 'split' ? 'focus' : 'split')}
                         className="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 transition-colors hidden md:block"
+                        aria-label={viewMode === 'split' ? "Focus Mode" : "Split View"}
                         title={viewMode === 'split' ? "Focus Mode" : "Split View"}
                     >
                         {viewMode === 'split' ? <Maximize2 className="h-4 w-4" /> : <SplitSquareHorizontal className="h-4 w-4" />}
                     </button>
                     {!isEmbedded && (
-                        <button onClick={onClose} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-colors">
-                            <X className="h-5 w-5" />
+                        <button type="button" onClick={onClose} aria-label="Close writing tools" className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-colors">
+                            <X className="h-5 w-5" aria-hidden="true" />
                         </button>
                     )}
                 </div>

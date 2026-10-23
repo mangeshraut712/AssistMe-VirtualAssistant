@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 import os
 import time
@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 MIN_DOWNLOAD_BYTES = 1024
+MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
 
 def clamp_download_size(size: int) -> int:
@@ -63,9 +64,14 @@ async def upload(request: Request):
     start_time = time.time()
     async for chunk in request.stream():
         size += len(chunk)
+        if size > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="Upload exceeds the 25 MB limit",
+            )
 
     duration = time.time() - start_time
-    logger.info(f"Speedtest Upload: {size} bytes in {duration:.2f}s")
+    logger.info("Speedtest Upload: %s bytes in %.2fs", size, duration)
 
     return {
         "size_received": size,

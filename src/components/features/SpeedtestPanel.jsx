@@ -621,8 +621,8 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                     <span className={cn(status === 'upload' ? "text-purple-500 font-bold" : "text-neutral-400")}>UP</span>
                                 </div>
                             )}
-                            <button onClick={onClose} className="p-2.5 sm:p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center">
-                                <X className="h-5 w-5 text-neutral-500" />
+                            <button type="button" onClick={onClose} aria-label="Close speed test" className="p-2.5 sm:p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center">
+                                <X className="h-5 w-5 text-neutral-500" aria-hidden="true" />
                             </button>
                         </div>
                     </div>

@@ -18,8 +18,10 @@ from functools import lru_cache
 from typing import Annotated, AsyncGenerator
 
 from fastapi import Depends, Header, HTTPException, Request, status
+from jose import JWTError
 
 from .config import get_settings, AppSettings
+from .core.security import decode_access_token
 from .logging_config import logger
 
 
@@ -133,17 +135,8 @@ async def get_current_user(token: RequiredToken) -> dict:
     Raises:
         HTTPException: If token is invalid
     """
-    # Import here to avoid circular imports
     try:
-        from jose import JWTError, jwt
-        from .config import get_settings
-
-        settings = get_settings()
-        payload = jwt.decode(
-            token,
-            settings.security.secret_key,
-            algorithms=[settings.security.algorithm],
-        )
+        payload = decode_access_token(token)
         username: str | None = payload.get("sub")
         if username is None:
             raise HTTPException(
