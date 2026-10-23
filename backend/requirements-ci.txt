@@ -4,7 +4,7 @@
 # Core Framework (minimum for syntax check and import validation)
 fastapi>=0.115.0,<0.116.0
 uvicorn>=0.54.0,<0.55.0
-pydantic>=2.10.0,<3.0.0
+pydantic>=2.14.1,<3.0.0
 pydantic-settings>=2.6.0,<3.0.0
 email-validator>=2.3.0
 
