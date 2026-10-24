@@ -30,7 +30,7 @@ class OpenRouterProvider(BaseProvider):
     ]
 
     DEFAULT_MODELS = [
-        # Gemini 2.5 Flash Native Audio (December 2025 - via Google AI Studio BYOK)
+        # Gemini voice / BYOK (voice path only — not used as text paid fallback)
         {"id": "gemini-2.5-flash-native-audio-preview-12-2025",
          "name": "Gemini 2.5 Flash Native Audio (Dec 2025)",
          "priority": 0,
@@ -43,35 +43,24 @@ class OpenRouterProvider(BaseProvider):
          "name": "Google: Gemini 2.5 Flash Lite Preview",
          "priority": 0,
          "voice_optimized": True},
-        {"id": "google/gemini-2.0-flash-exp:free",
-         "name": "Google: Gemini 2.0 Flash Experimental (free)",
-         "priority": 1,
-         "voice_optimized": True},
-        {"id": "google/gemini-2.0-flash-001:free",
-         "name": "Google: Gemini 2.0 Flash (Free)",
-         "priority": 1,
-         "voice_optimized": True},
-        {"id": "google/gemini-2.0-flash-lite-001",
-         "name": "Google: Gemini 2.0 Flash Lite",
-         "priority": 1,
-         "voice_optimized": True},
 
-        # Free Models (Working and Verified)
-        {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Meta Llama 3.3 70B Instruct (Free)", "priority": 2},
-        {"id": "nvidia/nemotron-nano-9b-v2:free", "name": "NVIDIA Nemotron Nano 9B V2 (Free)", "priority": 2},
-        {"id": "google/gemma-3-27b-it:free", "name": "Google: Gemma 3 27B IT (Free)", "priority": 2},
-        {"id": "nvidia/nemotron-nano-12b-v2-vl:free", "name": "NVIDIA: Nemotron Nano 12B V2 VL (Free)", "priority": 2},
-        {"id": "meituan/longcat-flash-chat:free", "name": "Meituan: LongCat Flash Chat (Free)", "priority": 2},
-        {"id": "alibaba/tongyi-deepresearch-30b-a3b:free",
-            "name": "Alibaba: Tongyi DeepResearch 30B A3B (Free)", "priority": 2},
+        # Free text models (catalog-verified Oct 2026). Paid models are NOT auto-fallback.
+        {"id": "openrouter/free", "name": "OpenRouter Free Router", "priority": 1},
+        {"id": "nvidia/nemotron-3-ultra-550b-a55b:free", "name": "NVIDIA Nemotron 3 Ultra (Free)", "priority": 1},
+        {"id": "google/gemma-4-26b-a4b-it:free", "name": "Google Gemma 4 26B A4B (Free)", "priority": 1},
+        {"id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+         "name": "NVIDIA Nemotron 3 Nano Omni (Free)", "priority": 1},
+        {"id": "nvidia/nemotron-3-super-120b-a12b:free", "name": "NVIDIA Nemotron 3 Super (Free)", "priority": 1},
+        {"id": "google/gemma-4-31b-it:free", "name": "Google Gemma 4 31B (Free)", "priority": 1},
+    ]
 
-        # Premium Models (Fallback)
-        {"id": "google/gemini-2.5-pro", "name": "Google: Gemini 2.5 Pro", "priority": 3},
-        {"id": "x-ai/grok-code-fast-1", "name": "xAI: Grok Code Fast 1", "priority": 3},
-        {"id": "x-ai/grok-4.1-fast", "name": "xAI: Grok 4.1 Fast", "priority": 3},
-        {"id": "perplexity/sonar", "name": "Perplexity: Sonar", "priority": 3},
-        {"id": "anthropic/claude-3-haiku", "name": "Anthropic Claude 3 Haiku", "priority": 3},
-        {"id": "openai/gpt-4o-mini", "name": "OpenAI GPT-4o Mini", "priority": 3},
+    FREE_TEXT_MODELS = [
+        "openrouter/free",
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "google/gemma-4-26b-a4b-it:free",
+        "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+        "nvidia/nemotron-3-super-120b-a12b:free",
+        "google/gemma-4-31b-it:free",
     ]
 
     def __init__(self):
@@ -80,12 +69,12 @@ class OpenRouterProvider(BaseProvider):
             "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
         ).rstrip("/")
         self.default_model = os.getenv(
-            "OPENROUTER_DEFAULT_MODEL", "meta-llama/llama-3.3-70b-instruct:free"
+            "OPENROUTER_DEFAULT_MODEL", "openrouter/free"
         )
         self.site_url = os.getenv(
             "APP_URL", "https://assist-me-virtual-assistant.vercel.app"
         )
-        self.app_name = os.getenv("APP_NAME", "AssistMe Virtual Assistant")
+        self.app_name = os.getenv("APP_NAME", "AssistMe AI Assistant")
         self.dev_mode = os.getenv("DEV_MODE", "false").lower() == "true"
 
     def _headers(self) -> Dict[str, str]:
@@ -133,10 +122,19 @@ class OpenRouterProvider(BaseProvider):
                 if voice_model not in models_to_try:
                     models_to_try.append(voice_model)
         else:
-            # Standard fallback behavior for text chat
-            for fallback_model in available_models:
-                if fallback_model["id"] not in [m if isinstance(m, str) else m for m in models_to_try]:
-                    models_to_try.append(fallback_model["id"])
+            # Text chat: free-only fallbacks (never cascade into paid models).
+            allow_paid = os.getenv("OPENROUTER_ALLOW_PAID_FALLBACK", "false").lower() == "true"
+            if model and not (model == "openrouter/free" or model.endswith(":free")) and not allow_paid:
+                logger.warning("Dropping paid requested model %s; free-first policy", model)
+                models_to_try = [m for m in models_to_try if m == "openrouter/free" or str(m).endswith(":free")]
+            for free_id in self.FREE_TEXT_MODELS:
+                if free_id not in models_to_try:
+                    models_to_try.append(free_id)
+            if allow_paid:
+                for fallback_model in available_models:
+                    mid = fallback_model["id"]
+                    if mid not in models_to_try:
+                        models_to_try.append(mid)
 
         last_error = None
 
@@ -160,7 +158,10 @@ class OpenRouterProvider(BaseProvider):
                     "temperature": temperature,
                     "max_tokens": max_tokens,
                     "stream": False,
+                    "provider": {"sort": "price"},
                 }
+                if attempt_model == "openrouter/free":
+                    payload["models"] = [m for m in self.FREE_TEXT_MODELS if m != "openrouter/free"]
 
                 result = await self._unary_response(url, payload)
                 # If successful, record usage and return
@@ -209,6 +210,12 @@ class OpenRouterProvider(BaseProvider):
                 error_msg = error_data.get("error", {}).get("message", response.text)
             except Exception:
                 error_msg = response.text
+            if response.status_code == 402:
+                raise Exception(
+                    "OpenRouter credits empty/negative (HTTP 402). "
+                    "Add credits at https://openrouter.ai/settings/credits — "
+                    f"balance must be > $0 even for free models. Upstream: {error_msg}"
+                )
             raise Exception(f"OpenRouter API Error {response.status_code}: {error_msg}")
 
         data = response.json()

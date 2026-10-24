@@ -11,11 +11,28 @@ export const config = {
     runtime: 'edge',
 };
 
+// Free-only fallbacks (live OpenRouter catalog, Oct 2026).
+// Never list paid models here — OpenRouter bills paid fallbacks even after a :free miss,
+// and a negative credit balance can 402 even free models.
 const FALLBACK_MODELS = [
-    'google/gemini-2.0-flash-exp:free',   // Best for multilingual & voice
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'google/gemma-3-27b-it:free',
+    'openrouter/free',
+    'nvidia/nemotron-3-ultra-550b-a55b:free',
+    'google/gemma-4-26b-a4b-it:free',
+    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+    'nvidia/nemotron-3-super-120b-a12b:free',
+    'google/gemma-4-31b-it:free',
 ];
+
+function isFreeModelId(id) {
+    const v = String(id || '').trim();
+    return v === 'openrouter/free' || v.endsWith(':free');
+}
+
+function isCreditError(status, bodyText) {
+    if (status === 402) return true;
+    const t = String(bodyText || '').toLowerCase();
+    return t.includes('insufficient') || t.includes('negative') || t.includes('credit') && (t.includes('balance') || t.includes('limit'));
+}
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
@@ -175,15 +192,20 @@ export default async function handler(req) {
         }
 
         const requestedModel = (model || process.env.OPENROUTER_DEFAULT_MODEL || FALLBACK_MODELS[0]).trim();
-        const modelsToTry = uniqueStrings([requestedModel, ...FALLBACK_MODELS]);
+        // Free-first only: drop any paid/non-free requested model so negative credits cannot dig deeper.
+        const modelsToTry = uniqueStrings([
+            ...(isFreeModelId(requestedModel) ? [requestedModel] : []),
+            ...FALLBACK_MODELS,
+        ]).filter(isFreeModelId);
 
         let response = null;
-        let selectedModel = requestedModel;
+        let selectedModel = modelsToTry[0] || requestedModel;
         let lastStatus = 500;
         let lastErrorText = '';
+        let hitCreditError = false;
 
-        // Try models with fallback
-        for (const attemptModel of modelsToTry.slice(0, 3)) {
+        // Try free models only (cap attempts)
+        for (const attemptModel of modelsToTry.slice(0, 5)) {
             selectedModel = attemptModel;
             try {
                 response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -192,7 +214,7 @@ export default async function handler(req) {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${apiKey}`,
                         'HTTP-Referer': 'https://assist-me-virtual-assistant.vercel.app',
-                        'X-Title': 'AssistMe Virtual Assistant',
+                        'X-Title': 'AssistMe Cloudflare Edge',
                     },
                     body: JSON.stringify({
                         model: attemptModel,
@@ -200,6 +222,9 @@ export default async function handler(req) {
                         stream: stream,
                         temperature: temperature || 0.7,
                         max_tokens: max_tokens || 2048,
+                        provider: { sort: 'price' },
+                        // When using openrouter/free, keep fallbacks free-only via models list.
+                        ...(attemptModel === 'openrouter/free' ? { models: FALLBACK_MODELS.filter((m) => m !== 'openrouter/free') } : {}),
                     }),
                 });
             } catch (e) {
@@ -214,6 +239,12 @@ export default async function handler(req) {
             lastStatus = response.status;
             lastErrorText = await response.text().catch(() => response.statusText);
 
+            if (isCreditError(response.status, lastErrorText)) {
+                hitCreditError = true;
+                // Negative/insufficient credits can fail all free models — stop early with a clear error.
+                break;
+            }
+
             if (shouldRetryStatus(response.status)) {
                 response = null;
                 continue;
@@ -223,8 +254,12 @@ export default async function handler(req) {
         }
 
         if (!response || !response.ok) {
-            return new Response(JSON.stringify({ error: `API error: ${lastErrorText || 'Request failed'}` }), {
-                status: lastStatus,
+            const creditMsg = 'OpenRouter credits are empty or negative. Add credits at https://openrouter.ai/settings/credits (balance must be > $0 even for free models), then retry.';
+            return new Response(JSON.stringify({
+                error: hitCreditError ? creditMsg : `API error: ${lastErrorText || 'Request failed'}`,
+                code: hitCreditError ? 'openrouter_credits' : undefined,
+            }), {
+                status: hitCreditError ? 402 : lastStatus,
                 headers: { ...corsBaseHeaders, 'Content-Type': 'application/json' },
             });
         }
