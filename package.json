@@ -69,7 +69,7 @@
     "@radix-ui/react-separator": "^1.2.0",
     "@radix-ui/react-slot": "^1.5.0",
     "@radix-ui/react-switch": "^1.4.1",
-    "@radix-ui/react-tooltip": "^1.2.8",
+    "@radix-ui/react-tooltip": "^1.4.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@vitejs/plugin-react": "^5.2.0",
     "chart.js": "^4.5.1",
