@@ -4,7 +4,7 @@
  * Checks all imports, paths, and module connections
  */
 
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, dirname, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -122,7 +122,8 @@ function checkFile(filePath) {
 console.log('🔍 Validating project paths and imports...\n');
 
 const srcFiles = getAllFiles(join(projectRoot, 'src'));
-const moduleFiles = getAllFiles(join(projectRoot, 'modules'));
+const modulesDir = join(projectRoot, 'modules');
+const moduleFiles = existsSync(modulesDir) ? getAllFiles(modulesDir) : [];
 
 console.log(`Checking ${srcFiles.length} source files...`);
 srcFiles.forEach(checkFile);

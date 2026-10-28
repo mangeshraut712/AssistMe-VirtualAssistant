@@ -153,6 +153,31 @@ export function createApiClient({ baseUrl = '' } = {}) {
             }
         };
 
+        const processLine = (rawLine) => {
+            const line = rawLine.trimEnd();
+            if (!line.trim()) {
+                currentEvent = null;
+                return;
+            }
+
+            if (line.startsWith('event:')) {
+                currentEvent = line.slice('event:'.length).trim();
+                return;
+            }
+
+            if (line.startsWith('data:')) {
+                const jsonText = line.slice('data:'.length).trim();
+                if (!jsonText || jsonText === '[DONE]') return;
+
+                try {
+                    const data = JSON.parse(jsonText);
+                    handleData(currentEvent, data);
+                } catch {
+                    return;
+                }
+            }
+        };
+
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -162,28 +187,14 @@ export function createApiClient({ baseUrl = '' } = {}) {
             buffer = lines.pop() || '';
 
             for (const rawLine of lines) {
-                const line = rawLine.trimEnd();
-                if (!line.trim()) {
-                    currentEvent = null;
-                    continue;
-                }
+                processLine(rawLine);
+            }
+        }
 
-                if (line.startsWith('event:')) {
-                    currentEvent = line.slice('event:'.length).trim();
-                    continue;
-                }
-
-                if (line.startsWith('data:')) {
-                    const jsonText = line.slice('data:'.length).trim();
-                    if (!jsonText || jsonText === '[DONE]') continue;
-
-                    try {
-                        const data = JSON.parse(jsonText);
-                        handleData(currentEvent, data);
-                    } catch {
-                        continue;
-                    }
-                }
+        buffer += decoder.decode();
+        if (buffer) {
+            for (const rawLine of buffer.split('\n')) {
+                processLine(rawLine);
             }
         }
     };
