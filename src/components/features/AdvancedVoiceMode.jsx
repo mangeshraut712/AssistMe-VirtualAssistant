@@ -2,7 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * VOICE MODE - Premium AI Conversation
  * ═══════════════════════════════════════════════════════════════════════════════
- * 
+ *
  * Features:
  * - Distinct Premium vs Standard visual experiences
  * - Premium: Immersive dark mode with neural orb animations
@@ -14,8 +14,18 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Mic, MicOff, Volume2, VolumeX, Trash2,
-    Sparkles, Zap, Brain, AudioWaveform, Copy, Download
+    X,
+    Mic,
+    MicOff,
+    Volume2,
+    VolumeX,
+    Trash2,
+    Sparkles,
+    Zap,
+    Brain,
+    AudioWaveform,
+    Copy,
+    Download,
 } from 'lucide-react';
 import { joinApiUrl } from '@/lib/urls';
 import { cn } from '@/lib/utils';
@@ -29,7 +39,7 @@ const CONFIG = {
     MIN_TRANSCRIPT_LENGTH: 2, // Reduced from 3 for faster detection
 
     // Models for Standard Mode (via OpenRouter)
-    STANDARD_MODEL: 'x-ai/grok-3-mini-beta',  // Fast, conversational
+    STANDARD_MODEL: 'x-ai/grok-3-mini-beta', // Fast, conversational
     STANDARD_FALLBACK: 'google/gemini-2.0-flash-001',
 
     // Models for Premium Mode (via Gemini Live API - native audio)
@@ -39,13 +49,14 @@ const CONFIG = {
     AUDIO_OUTPUT: {
         sampleRate: 24000,
         channels: 1,
-        bitDepth: 16
+        bitDepth: 16,
     },
 
     // Endpoints
     CHAT_ENDPOINT: '/api/chat',
     TTS_ENDPOINT: '/api/tts/synthesize',
-    GEMINI_WS_URL: 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent',
+    GEMINI_WS_URL:
+        'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent',
 
     // Voice-specific system prompts
     PREMIUM_SYSTEM_PROMPT: `You are Gemini, a friendly AI voice assistant. Respond directly and naturally like a friend.
@@ -68,7 +79,7 @@ RULES:
 - Answer immediately - no thinking out loud
 - Keep responses under 3 sentences
 - Be friendly but efficient
-- Never describe what you're about to do`
+- Never describe what you're about to do`,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -78,23 +89,48 @@ RULES:
 /**
  * Clean response text by removing internal thought markers and AI meta-commentary
  */
-const cleanResponseText = (text) => {
+const cleanResponseText = text => {
     if (!text) return '';
 
     const lowerText = text.toLowerCase();
 
     // VERY aggressive - any of these words indicate internal thinking
     const thinkingKeywords = [
-        "i've determined", "i've settled", "i've crafted", "i've formulated",
-        "i've checked", "i've begun", "i've processed", "i've tackled",
-        "i'm crafting", "i'm aiming", "i'm focusing", "i'm wrestling",
-        "i'm processing", "i'm zeroing", "i'm breaking down", "i'm currently",
-        "my aim", "my focus", "my approach", "my response will",
-        "the exact wording", "along the lines of", "this fits",
-        "directly addressing", "reciprocating", "maintains a",
-        "conversational tone", "friendly approach", "concise, natural",
-        "positive inquiry", "settled on a response", "will be along",
-        "let me", "i plan to", "i will try"
+        "i've determined",
+        "i've settled",
+        "i've crafted",
+        "i've formulated",
+        "i've checked",
+        "i've begun",
+        "i've processed",
+        "i've tackled",
+        "i'm crafting",
+        "i'm aiming",
+        "i'm focusing",
+        "i'm wrestling",
+        "i'm processing",
+        "i'm zeroing",
+        "i'm breaking down",
+        "i'm currently",
+        'my aim',
+        'my focus',
+        'my approach',
+        'my response will',
+        'the exact wording',
+        'along the lines of',
+        'this fits',
+        'directly addressing',
+        'reciprocating',
+        'maintains a',
+        'conversational tone',
+        'friendly approach',
+        'concise, natural',
+        'positive inquiry',
+        'settled on a response',
+        'will be along',
+        'let me',
+        'i plan to',
+        'i will try',
     ];
 
     // If ANY thinking keyword exists, the whole text is thinking
@@ -119,11 +155,8 @@ const cleanResponseText = (text) => {
     }
 
     // For normal text, just clean up formatting
-    return text
-        .replace(/\*\*[^*]+\*\*\s*/g, '')
-        .trim();
+    return text.replace(/\*\*[^*]+\*\*\s*/g, '').trim();
 };
-
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
@@ -181,12 +214,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         // IMPROVED: Better recognition settings for accuracy
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.maxAlternatives = 3;  // Get multiple alternatives for better accuracy
+        recognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
         recognition.lang = 'en-US';
 
         // Enhanced language hints for better recognition
         if (recognition.grammars) {
-            const speechRecognitionList = new (window.SpeechGrammarList || window.webkitSpeechGrammarList)();
+            const speechRecognitionList = new (
+                window.SpeechGrammarList || window.webkitSpeechGrammarList
+            )();
             recognition.grammars = speechRecognitionList;
         }
 
@@ -202,8 +237,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                         echoCancellation: true,
                         noiseSuppression: true,
                         autoGainControl: true,
-                        sampleRate: 48000  // Higher sample rate for better quality
-                    }
+                        sampleRate: 48000, // Higher sample rate for better quality
+                    },
                 });
                 streamRef.current = stream;
 
@@ -235,7 +270,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
         let accumulatedFinalTranscript = '';
 
-        recognition.onresult = (event) => {
+        recognition.onresult = event => {
             let interimTranscript = '';
 
             // Process all results to get the most accurate transcript
@@ -282,7 +317,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
             }
         };
 
-        recognition.onerror = (event) => {
+        recognition.onerror = event => {
             console.error('[Voice] Recognition error:', event.error);
             if (event.error === 'no-speech') {
                 setErrorMessage('No speech detected. Please try again.');
@@ -334,8 +369,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     const getAudioContext = useCallback(() => {
         if (!playbackContextRef.current || playbackContextRef.current.state === 'closed') {
             playbackContextRef.current = new (window.AudioContext || window.webkitAudioContext)({
-                sampleRate: 24000,  // Match Gemini's output
-                latencyHint: 'interactive'  // Low latency for real-time feel
+                sampleRate: 24000, // Match Gemini's output
+                latencyHint: 'interactive', // Low latency for real-time feel
             });
         }
         // Resume if suspended (happens on mobile)
@@ -349,466 +384,496 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
      * Play multiple PCM audio chunks smoothly by concatenating them
      * This eliminates gaps between chunks for natural-sounding speech
      */
-    const playPCMAudioChunks = useCallback(async (chunks) => {
-        if (!chunks || chunks.length === 0 || isMuted) return;
+    const playPCMAudioChunks = useCallback(
+        async chunks => {
+            if (!chunks || chunks.length === 0 || isMuted) return;
 
-        try {
-            const audioCtx = getAudioContext();
+            try {
+                const audioCtx = getAudioContext();
 
-            // Decode all chunks first
-            const decodedChunks = [];
-            let totalSamples = 0;
+                // Decode all chunks first
+                const decodedChunks = [];
+                let totalSamples = 0;
 
-            for (const base64Data of chunks) {
-                try {
-                    const binaryString = atob(base64Data);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
+                for (const base64Data of chunks) {
+                    try {
+                        const binaryString = atob(base64Data);
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+
+                        // Convert int16 PCM to float32
+                        const int16Array = new Int16Array(bytes.buffer);
+                        const float32Array = new Float32Array(int16Array.length);
+                        for (let i = 0; i < int16Array.length; i++) {
+                            // Normalize and apply slight gain for clarity
+                            float32Array[i] = Math.max(
+                                -1,
+                                Math.min(1, (int16Array[i] / 32768.0) * 1.1)
+                            );
+                        }
+
+                        decodedChunks.push(float32Array);
+                        totalSamples += float32Array.length;
+                    } catch (err) {
+                        console.warn('[Voice] Failed to decode chunk:', err);
                     }
-
-                    // Convert int16 PCM to float32
-                    const int16Array = new Int16Array(bytes.buffer);
-                    const float32Array = new Float32Array(int16Array.length);
-                    for (let i = 0; i < int16Array.length; i++) {
-                        // Normalize and apply slight gain for clarity
-                        float32Array[i] = Math.max(-1, Math.min(1, int16Array[i] / 32768.0 * 1.1));
-                    }
-
-                    decodedChunks.push(float32Array);
-                    totalSamples += float32Array.length;
-                } catch (err) {
-                    console.warn('[Voice] Failed to decode chunk:', err);
                 }
+
+                if (decodedChunks.length === 0 || totalSamples === 0) {
+                    console.warn('[Voice] No valid audio chunks to play');
+                    return;
+                }
+
+                // Concatenate all chunks into a single buffer for smooth playback
+                const concatenated = new Float32Array(totalSamples);
+                let offset = 0;
+                for (const chunk of decodedChunks) {
+                    concatenated.set(chunk, offset);
+                    offset += chunk.length;
+                }
+
+                // Create audio buffer
+                const audioBuffer = audioCtx.createBuffer(
+                    1, // Mono
+                    concatenated.length,
+                    24000 // Gemini's native sample rate
+                );
+                audioBuffer.getChannelData(0).set(concatenated);
+
+                // Create and configure source
+                const source = audioCtx.createBufferSource();
+                source.buffer = audioBuffer;
+
+                // Add gain node for volume control and dynamic range
+                const gainNode = audioCtx.createGain();
+                gainNode.gain.value = 1.0;
+
+                // Optional: Add compression for better dynamics
+                const compressor = audioCtx.createDynamicsCompressor();
+                compressor.threshold.value = -24;
+                compressor.knee.value = 30;
+                compressor.ratio.value = 12;
+                compressor.attack.value = 0.003;
+                compressor.release.value = 0.25;
+
+                // Connect: source -> compressor -> gain -> destination
+                source.connect(compressor);
+                compressor.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                // Play and return promise
+                return new Promise(resolve => {
+                    source.onended = () => {
+                        // Don't close context, reuse it
+                        resolve();
+                    };
+                    source.start(0);
+                });
+            } catch (error) {
+                console.error('[Voice] PCM audio playback error:', error);
             }
-
-            if (decodedChunks.length === 0 || totalSamples === 0) {
-                console.warn('[Voice] No valid audio chunks to play');
-                return;
-            }
-
-            // Concatenate all chunks into a single buffer for smooth playback
-            const concatenated = new Float32Array(totalSamples);
-            let offset = 0;
-            for (const chunk of decodedChunks) {
-                concatenated.set(chunk, offset);
-                offset += chunk.length;
-            }
-
-            // Create audio buffer
-            const audioBuffer = audioCtx.createBuffer(
-                1,  // Mono
-                concatenated.length,
-                24000  // Gemini's native sample rate
-            );
-            audioBuffer.getChannelData(0).set(concatenated);
-
-            // Create and configure source
-            const source = audioCtx.createBufferSource();
-            source.buffer = audioBuffer;
-
-            // Add gain node for volume control and dynamic range
-            const gainNode = audioCtx.createGain();
-            gainNode.gain.value = 1.0;
-
-            // Optional: Add compression for better dynamics
-            const compressor = audioCtx.createDynamicsCompressor();
-            compressor.threshold.value = -24;
-            compressor.knee.value = 30;
-            compressor.ratio.value = 12;
-            compressor.attack.value = 0.003;
-            compressor.release.value = 0.25;
-
-            // Connect: source -> compressor -> gain -> destination
-            source.connect(compressor);
-            compressor.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            // Play and return promise
-            return new Promise((resolve) => {
-                source.onended = () => {
-                    // Don't close context, reuse it
-                    resolve();
-                };
-                source.start(0);
-            });
-        } catch (error) {
-            console.error('[Voice] PCM audio playback error:', error);
-        }
-    }, [isMuted, getAudioContext]);
+        },
+        [isMuted, getAudioContext]
+    );
 
     /**
      * Legacy single-chunk playback (for fallback/compatibility)
      */
 
+    const speak = useCallback(
+        async text => {
+            if (!text || isMuted) return;
 
+            if (!window.speechSynthesis) return;
+            window.speechSynthesis.cancel();
 
-    const speak = useCallback(async (text) => {
-        if (!text || isMuted) return;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
 
-        if (!window.speechSynthesis) return;
-        window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US';
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-
-        window.speechSynthesis.speak(utterance);
-
-        await new Promise((resolve) => {
-            utterance.onend = resolve;
-            utterance.onerror = resolve;
-            setTimeout(resolve, 15000);
-        });
-    }, [isMuted]);
+            await new Promise(resolve => {
+                utterance.onend = resolve;
+                utterance.onerror = resolve;
+                setTimeout(resolve, 15000);
+            });
+        },
+        [isMuted]
+    );
 
     // ─────────────────────────────────────────────────────────────────────────
     // GEMINI LIVE API (PREMIUM)
     // ─────────────────────────────────────────────────────────────────────────
 
-    const connectToGeminiLive = useCallback((text) => {
-        return new Promise((resolve, reject) => {
-            (async () => {
-                try {
-                    const keyResponse = await fetch(joinApiUrl(backendUrl, '/api/gemini/key'));
-                    if (!keyResponse.ok) throw new Error('Failed to get API key');
-                    const { apiKey } = await keyResponse.json();
-                    if (!apiKey) throw new Error('API key not configured');
+    const connectToGeminiLive = useCallback(
+        text => {
+            return new Promise((resolve, reject) => {
+                (async () => {
+                    try {
+                        const keyResponse = await fetch(joinApiUrl(backendUrl, '/api/gemini/key'));
+                        if (!keyResponse.ok) throw new Error('Failed to get API key');
+                        const { apiKey } = await keyResponse.json();
+                        if (!apiKey) throw new Error('API key not configured');
 
-                    const wsUrl = `${CONFIG.GEMINI_WS_URL}?key=${apiKey}`;
-                    const ws = new WebSocket(wsUrl);
-                    wsRef.current = ws;
+                        const wsUrl = `${CONFIG.GEMINI_WS_URL}?key=${apiKey}`;
+                        const ws = new WebSocket(wsUrl);
+                        wsRef.current = ws;
 
-                    let isSetupComplete = false;
-                    let accumulatedText = '';
-                    const audioChunks = [];
-                    let timeoutId = null;
+                        let isSetupComplete = false;
+                        let accumulatedText = '';
+                        const audioChunks = [];
+                        let timeoutId = null;
 
-                    const cleanup = () => {
-                        if (timeoutId) clearTimeout(timeoutId);
-                        if (ws.readyState === WebSocket.OPEN) ws.close();
-                        wsRef.current = null;
-                    };
+                        const cleanup = () => {
+                            if (timeoutId) clearTimeout(timeoutId);
+                            if (ws.readyState === WebSocket.OPEN) ws.close();
+                            wsRef.current = null;
+                        };
 
-                    timeoutId = setTimeout(() => {
-                        cleanup();
-                        reject(new Error('Response timeout'));
-                    }, 45000);
+                        timeoutId = setTimeout(() => {
+                            cleanup();
+                            reject(new Error('Response timeout'));
+                        }, 45000);
 
-                    ws.onopen = () => {
-                        ws.send(JSON.stringify({
-                            setup: {
-                                model: `models/${CONFIG.PREMIUM_MODEL}`,
-                                generation_config: {
-                                    response_modalities: ['AUDIO'],
-                                    speech_config: {
-                                        voice_config: {
-                                            prebuilt_voice_config: {
-                                                voice_name: 'Kore'
+                        ws.onopen = () => {
+                            ws.send(
+                                JSON.stringify({
+                                    setup: {
+                                        model: `models/${CONFIG.PREMIUM_MODEL}`,
+                                        generation_config: {
+                                            response_modalities: ['AUDIO'],
+                                            speech_config: {
+                                                voice_config: {
+                                                    prebuilt_voice_config: {
+                                                        voice_name: 'Kore',
+                                                    },
+                                                },
+                                            },
+                                        },
+                                        // Request transcription of what AI actually says
+                                        output_audio_transcription: {},
+                                        system_instruction: {
+                                            parts: [{ text: CONFIG.PREMIUM_SYSTEM_PROMPT }],
+                                        },
+                                    },
+                                })
+                            );
+                        };
+
+                        ws.onmessage = async event => {
+                            try {
+                                let textData;
+                                if (event.data instanceof Blob) {
+                                    textData = await event.data.text();
+                                } else {
+                                    textData = event.data;
+                                }
+
+                                const data = JSON.parse(textData);
+
+                                if (data.setupComplete) {
+                                    isSetupComplete = true;
+                                    ws.send(
+                                        JSON.stringify({
+                                            clientContent: {
+                                                turns: [{ role: 'user', parts: [{ text }] }],
+                                                turnComplete: true,
+                                            },
+                                        })
+                                    );
+                                    return;
+                                }
+
+                                if (data.serverContent) {
+                                    const serverContent = data.serverContent;
+
+                                    if (serverContent.interrupted) {
+                                        audioChunks.length = 0;
+                                        return;
+                                    }
+
+                                    // Collect audio data
+                                    if (serverContent.modelTurn?.parts) {
+                                        for (const part of serverContent.modelTurn.parts) {
+                                            if (part.inlineData?.data) {
+                                                audioChunks.push(part.inlineData.data);
+                                            }
+                                            // Collect text but DON'T show it yet (it's mostly thinking)
+                                            if (part.text) {
+                                                accumulatedText += part.text;
                                             }
                                         }
                                     }
-                                },
-                                // Request transcription of what AI actually says
-                                output_audio_transcription: {},
-                                system_instruction: {
-                                    parts: [{ text: CONFIG.PREMIUM_SYSTEM_PROMPT }]
-                                }
-                            }
-                        }));
-                    };
 
-                    ws.onmessage = async (event) => {
-                        try {
-                            let textData;
-                            if (event.data instanceof Blob) {
-                                textData = await event.data.text();
-                            } else {
-                                textData = event.data;
-                            }
-
-                            const data = JSON.parse(textData);
-
-                            if (data.setupComplete) {
-                                isSetupComplete = true;
-                                ws.send(JSON.stringify({
-                                    clientContent: {
-                                        turns: [{ role: 'user', parts: [{ text }] }],
-                                        turnComplete: true
+                                    // If we have audio transcription, use that instead
+                                    if (serverContent.outputAudioTranscription?.text) {
+                                        // This is the actual spoken text - much better
+                                        accumulatedText =
+                                            serverContent.outputAudioTranscription.text;
+                                        setAiStreamingText(accumulatedText);
                                     }
-                                }));
-                                return;
-                            }
 
-                            if (data.serverContent) {
-                                const serverContent = data.serverContent;
+                                    if (serverContent.turnComplete) {
+                                        if (timeoutId) clearTimeout(timeoutId);
 
-                                if (serverContent.interrupted) {
-                                    audioChunks.length = 0;
-                                    return;
-                                }
+                                        // Apply aggressive filtering to get ONLY the actual response
+                                        // Remove all internal thinking, planning, meta-commentary
+                                        let finalText = cleanResponseText(accumulatedText.trim());
 
-                                // Collect audio data
-                                if (serverContent.modelTurn?.parts) {
-                                    for (const part of serverContent.modelTurn.parts) {
-                                        if (part.inlineData?.data) {
-                                            audioChunks.push(part.inlineData.data);
+                                        // If filter removed everything, try extracting the last sentence
+                                        if (!finalText && accumulatedText.length > 50) {
+                                            const sentences = accumulatedText
+                                                .split(/[.!?]+/)
+                                                .filter(s => s.trim());
+                                            // Take last 1-2 sentences as they're usually the actual response
+                                            finalText = sentences.slice(-2).join('. ').trim();
+                                            if (finalText) finalText += '.';
                                         }
-                                        // Collect text but DON'T show it yet (it's mostly thinking)
-                                        if (part.text) {
-                                            accumulatedText += part.text;
+
+                                        if (finalText) {
+                                            setConversation(prev => [
+                                                ...prev,
+                                                {
+                                                    role: 'assistant',
+                                                    content: finalText,
+                                                },
+                                            ]);
                                         }
+
+                                        // Clear streaming text after adding to conversation
+                                        setAiStreamingText('');
+
+                                        // Play all audio chunks at once for smooth, fast playback
+                                        if (audioChunks.length > 0) {
+                                            setStatus('speaking');
+                                            await playPCMAudioChunks(audioChunks);
+                                        } else if (finalText) {
+                                            setStatus('speaking');
+                                            await speak(finalText);
+                                        }
+
+                                        cleanup();
+                                        resolve({
+                                            text: finalText,
+                                            audioCount: audioChunks.length,
+                                        });
+                                        return;
                                     }
                                 }
 
-                                // If we have audio transcription, use that instead
-                                if (serverContent.outputAudioTranscription?.text) {
-                                    // This is the actual spoken text - much better
-                                    accumulatedText = serverContent.outputAudioTranscription.text;
-                                    setAiStreamingText(accumulatedText);
-                                }
-
-                                if (serverContent.turnComplete) {
-                                    if (timeoutId) clearTimeout(timeoutId);
-
-                                    // Apply aggressive filtering to get ONLY the actual response
-                                    // Remove all internal thinking, planning, meta-commentary
-                                    let finalText = cleanResponseText(accumulatedText.trim());
-
-                                    // If filter removed everything, try extracting the last sentence
-                                    if (!finalText && accumulatedText.length > 50) {
-                                        const sentences = accumulatedText.split(/[.!?]+/).filter(s => s.trim());
-                                        // Take last 1-2 sentences as they're usually the actual response
-                                        finalText = sentences.slice(-2).join('. ').trim();
-                                        if (finalText) finalText += '.';
-                                    }
-
-                                    if (finalText) {
-                                        setConversation(prev => [...prev, {
-                                            role: 'assistant',
-                                            content: finalText
-                                        }]);
-                                    }
-
-                                    // Clear streaming text after adding to conversation
-                                    setAiStreamingText('');
-
-                                    // Play all audio chunks at once for smooth, fast playback
-                                    if (audioChunks.length > 0) {
-                                        setStatus('speaking');
-                                        await playPCMAudioChunks(audioChunks);
-                                    } else if (finalText) {
-                                        setStatus('speaking');
-                                        await speak(finalText);
-                                    }
-
+                                if (data.error) {
                                     cleanup();
-                                    resolve({ text: finalText, audioCount: audioChunks.length });
-                                    return;
+                                    reject(new Error(data.error.message || 'API error'));
                                 }
+                            } catch (parseError) {
+                                console.error('[Voice] Parse error:', parseError);
                             }
+                        };
 
-                            if (data.error) {
-                                cleanup();
-                                reject(new Error(data.error.message || 'API error'));
+                        ws.onerror = () => {
+                            cleanup();
+                            reject(new Error('Connection failed'));
+                        };
+
+                        ws.onclose = event => {
+                            if (event.code === 1011) {
+                                const msg = event.reason || 'Server error';
+                                reject(new Error(msg.includes('quota') ? 'Quota exceeded' : msg));
+                            } else if (!isSetupComplete && event.code !== 1000) {
+                                reject(new Error('Connection closed'));
                             }
-                        } catch (parseError) {
-                            console.error('[Voice] Parse error:', parseError);
-                        }
-                    };
-
-                    ws.onerror = () => {
-                        cleanup();
-                        reject(new Error('Connection failed'));
-                    };
-
-                    ws.onclose = (event) => {
-                        if (event.code === 1011) {
-                            const msg = event.reason || 'Server error';
-                            reject(new Error(msg.includes('quota') ? 'Quota exceeded' : msg));
-                        } else if (!isSetupComplete && event.code !== 1000) {
-                            reject(new Error('Connection closed'));
-                        }
-                    };
-                } catch (error) {
-                    reject(error);
-                }
-            })().catch(reject);
-        });
-    }, [playPCMAudioChunks, speak, backendUrl]);
+                        };
+                    } catch (error) {
+                        reject(error);
+                    }
+                })().catch(reject);
+            });
+        },
+        [playPCMAudioChunks, speak, backendUrl]
+    );
 
     // ─────────────────────────────────────────────────────────────────────────
     // PROCESSING
     // ─────────────────────────────────────────────────────────────────────────
 
-    const processStandard = useCallback(async (text) => {
-        // Build conversation history for context
-        const conversationHistory = conversation.map(msg => ({
-            role: msg.role,
-            content: msg.content
-        }));
+    const processStandard = useCallback(
+        async text => {
+            // Build conversation history for context
+            const conversationHistory = conversation.map(msg => ({
+                role: msg.role,
+                content: msg.content,
+            }));
 
-        // Add system message for voice-optimized responses
-        const messagesWithSystem = [
-            { role: 'system', content: CONFIG.STANDARD_SYSTEM_PROMPT },
-            ...conversationHistory,
-            { role: 'user', content: text }
-        ];
-
-        try {
-            // Add timeout protection
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s max
+            // Add system message for voice-optimized responses
+            const messagesWithSystem = [
+                { role: 'system', content: CONFIG.STANDARD_SYSTEM_PROMPT },
+                ...conversationHistory,
+                { role: 'user', content: text },
+            ];
 
             try {
-                const chatResponse = await fetch(joinApiUrl(backendUrl, '/api/chat'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    signal: controller.signal,
-                    body: JSON.stringify({
-                        messages: messagesWithSystem,
-                        model: CONFIG.STANDARD_MODEL,
-                        stream: false,  // CRITICAL: Voice mode needs complete response
-                        temperature: 0.7,
-                        max_tokens: 150  // Shorter for faster voice response
-                    }),
-                });
+                // Add timeout protection
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s max
 
-                clearTimeout(timeoutId);
+                try {
+                    const chatResponse = await fetch(joinApiUrl(backendUrl, '/api/chat'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        signal: controller.signal,
+                        body: JSON.stringify({
+                            messages: messagesWithSystem,
+                            model: CONFIG.STANDARD_MODEL,
+                            stream: false, // CRITICAL: Voice mode needs complete response
+                            temperature: 0.7,
+                            max_tokens: 150, // Shorter for faster voice response
+                        }),
+                    });
 
-                if (!chatResponse.ok) {
-                    throw new Error(`API error: ${chatResponse.status}`);
-                }
+                    clearTimeout(timeoutId);
 
-                const data = await chatResponse.json();
-
-                if (data.response) {
-                    const cleanText = cleanResponseText(data.response);
-                    if (cleanText) {
-                        setConversation(p => [...p, { role: 'assistant', content: cleanText }]);
-                        setStatus('speaking');
-                        await speak(cleanText);
-                    } else {
-                        throw new Error('Empty response');
+                    if (!chatResponse.ok) {
+                        throw new Error(`API error: ${chatResponse.status}`);
                     }
-                } else if (data.error) {
-                    throw new Error(data.error);
-                } else {
-                    throw new Error('Invalid response format');
+
+                    const data = await chatResponse.json();
+
+                    if (data.response) {
+                        const cleanText = cleanResponseText(data.response);
+                        if (cleanText) {
+                            setConversation(p => [...p, { role: 'assistant', content: cleanText }]);
+                            setStatus('speaking');
+                            await speak(cleanText);
+                        } else {
+                            throw new Error('Empty response');
+                        }
+                    } else if (data.error) {
+                        throw new Error(data.error);
+                    } else {
+                        throw new Error('Invalid response format');
+                    }
+                } catch (fetchErr) {
+                    clearTimeout(timeoutId);
+                    throw fetchErr;
                 }
-            } catch (fetchErr) {
-                clearTimeout(timeoutId);
-                throw fetchErr;
+            } catch (err) {
+                console.error('[Voice] Standard mode error:', err);
+
+                // Try fallback model with same non-streaming approach
+                try {
+                    const fallbackController = new AbortController();
+                    const fallbackTimeout = setTimeout(() => fallbackController.abort(), 10000);
+
+                    const fallbackResponse = await fetch(joinApiUrl(backendUrl, '/api/chat'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        signal: fallbackController.signal,
+                        body: JSON.stringify({
+                            messages: messagesWithSystem,
+                            model: CONFIG.STANDARD_FALLBACK,
+                            stream: false,
+                            temperature: 0.7,
+                            max_tokens: 150,
+                        }),
+                    });
+
+                    clearTimeout(fallbackTimeout);
+
+                    const fallbackData = await fallbackResponse.json();
+                    if (fallbackData.response) {
+                        const cleanText = cleanResponseText(fallbackData.response);
+                        if (cleanText) {
+                            setConversation(p => [...p, { role: 'assistant', content: cleanText }]);
+                            setStatus('speaking');
+                            await speak(cleanText);
+                            return;
+                        }
+                    }
+                    throw new Error('Fallback failed');
+                } catch (fallbackErr) {
+                    console.error('[Voice] Fallback error:', fallbackErr);
+                    setErrorMessage('Unable to connect. Please try again.');
+                    throw fallbackErr;
+                }
             }
-        } catch (err) {
-            console.error('[Voice] Standard mode error:', err);
+        },
+        [conversation, speak, backendUrl]
+    );
 
-            // Try fallback model with same non-streaming approach
+    const processPremium = useCallback(
+        async text => {
             try {
-                const fallbackController = new AbortController();
-                const fallbackTimeout = setTimeout(() => fallbackController.abort(), 10000);
+                // Add timeout to prevent hanging
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-                const fallbackResponse = await fetch(joinApiUrl(backendUrl, '/api/chat'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    signal: fallbackController.signal,
-                    body: JSON.stringify({
-                        messages: messagesWithSystem,
-                        model: CONFIG.STANDARD_FALLBACK,
-                        stream: false,
-                        temperature: 0.7,
-                        max_tokens: 150
-                    }),
-                });
+                try {
+                    const statusRes = await fetch(joinApiUrl(backendUrl, '/api/gemini/status'), {
+                        signal: controller.signal,
+                    });
+                    clearTimeout(timeoutId);
 
-                clearTimeout(fallbackTimeout);
+                    if (!statusRes.ok) {
+                        throw new Error(`Status check failed: ${statusRes.status}`);
+                    }
 
-                const fallbackData = await fallbackResponse.json();
-                if (fallbackData.response) {
-                    const cleanText = cleanResponseText(fallbackData.response);
-                    if (cleanText) {
-                        setConversation(p => [...p, { role: 'assistant', content: cleanText }]);
-                        setStatus('speaking');
-                        await speak(cleanText);
+                    const statusData = await statusRes.json();
+
+                    if (!statusData.available) {
+                        setErrorMessage('Premium unavailable. Using standard mode.');
+                        setTimeout(() => setErrorMessage(''), 3000);
+                        await processStandard(text);
                         return;
                     }
-                }
-                throw new Error('Fallback failed');
-            } catch (fallbackErr) {
-                console.error('[Voice] Fallback error:', fallbackErr);
-                setErrorMessage('Unable to connect. Please try again.');
-                throw fallbackErr;
-            }
-        }
-    }, [conversation, speak, backendUrl]);
-
-
-    const processPremium = useCallback(async (text) => {
-        try {
-            // Add timeout to prevent hanging
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-            try {
-                const statusRes = await fetch(joinApiUrl(backendUrl, '/api/gemini/status'), {
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                if (!statusRes.ok) {
-                    throw new Error(`Status check failed: ${statusRes.status}`);
-                }
-
-                const statusData = await statusRes.json();
-
-                if (!statusData.available) {
-                    setErrorMessage('Premium unavailable. Using standard mode.');
+                } catch (fetchErr) {
+                    clearTimeout(timeoutId);
+                    console.error('[Voice] Status check failed:', fetchErr.message);
+                    // If status check fails, fall back to standard mode
+                    setErrorMessage('Server unavailable. Using browser voice.');
                     setTimeout(() => setErrorMessage(''), 3000);
                     await processStandard(text);
                     return;
                 }
-            } catch (fetchErr) {
-                clearTimeout(timeoutId);
-                console.error('[Voice] Status check failed:', fetchErr.message);
-                // If status check fails, fall back to standard mode
-                setErrorMessage('Server unavailable. Using browser voice.');
+
+                await connectToGeminiLive(text);
+            } catch (err) {
+                console.error('[Voice] Premium error:', err.message);
+                setErrorMessage('Falling back to standard mode.');
                 setTimeout(() => setErrorMessage(''), 3000);
                 await processStandard(text);
-                return;
             }
+        },
+        [processStandard, connectToGeminiLive, backendUrl]
+    );
 
-            await connectToGeminiLive(text);
-        } catch (err) {
-            console.error('[Voice] Premium error:', err.message);
-            setErrorMessage('Falling back to standard mode.');
-            setTimeout(() => setErrorMessage(''), 3000);
-            await processStandard(text);
-        }
-    }, [processStandard, connectToGeminiLive, backendUrl]);
+    const processUserInput = useCallback(
+        async text => {
+            if (!text || isProcessingRef.current) return;
+            isProcessingRef.current = true;
+            setStatus('processing');
+            setConversation(p => [...p, { role: 'user', content: text }]);
+            setTranscript('');
 
-
-    const processUserInput = useCallback(async (text) => {
-        if (!text || isProcessingRef.current) return;
-        isProcessingRef.current = true;
-        setStatus('processing');
-        setConversation(p => [...p, { role: 'user', content: text }]);
-        setTranscript('');
-
-        try {
-            if (isPremium) await processPremium(text);
-            else await processStandard(text);
-        } catch (error) {
-            setErrorMessage(error.message);
-            setStatus('error');
-        } finally {
-            isProcessingRef.current = false;
-            setStatus('idle');
-            setTimeout(() => {
-                if (status !== 'error') startListening();
-            }, 500);
-        }
-    }, [isPremium, startListening, status, processPremium, processStandard]);
+            try {
+                if (isPremium) await processPremium(text);
+                else await processStandard(text);
+            } catch (error) {
+                setErrorMessage(error.message);
+                setStatus('error');
+            } finally {
+                isProcessingRef.current = false;
+                setStatus('idle');
+                setTimeout(() => {
+                    if (status !== 'error') startListening();
+                }, 500);
+            }
+        },
+        [isPremium, startListening, status, processPremium, processStandard]
+    );
 
     useEffect(() => {
         processRef.current = processUserInput;
@@ -828,7 +893,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     useEffect(() => {
         if (!isOpen) return undefined;
 
-        const handleKeyDown = (e) => {
+        const handleKeyDown = e => {
             if (e.key === 'Escape') onClose();
             if (e.key === 'm' && e.ctrlKey) setIsMuted(prev => !prev);
         };
@@ -858,19 +923,25 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
         const timestamp = new Date().toLocaleString();
 
         if (format === 'json') {
-            content = JSON.stringify({
-                exported: timestamp,
-                mode: isPremium ? 'Premium (Gemini Live)' : 'Standard',
-                messages: conversation
-            }, null, 2);
+            content = JSON.stringify(
+                {
+                    exported: timestamp,
+                    mode: isPremium ? 'Premium (Gemini Live)' : 'Standard',
+                    messages: conversation,
+                },
+                null,
+                2
+            );
         } else {
             content = `Voice Conversation Export\nMode: ${isPremium ? 'Premium (Gemini Live)' : 'Standard'}\nDate: ${timestamp}\n\n`;
-            conversation.forEach((msg) => {
+            conversation.forEach(msg => {
                 content += `${msg.role === 'user' ? 'You' : 'Gemini'}: ${msg.content}\n\n`;
             });
         }
 
-        const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/plain' });
+        const blob = new Blob([content], {
+            type: format === 'json' ? 'application/json' : 'text/plain',
+        });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -882,9 +953,9 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
     const copyConversation = async () => {
         if (conversation.length === 0) return;
 
-        const text = conversation.map(msg =>
-            `${msg.role === 'user' ? 'You' : 'AI'}: ${msg.content}`
-        ).join('\n\n');
+        const text = conversation
+            .map(msg => `${msg.role === 'user' ? 'You' : 'AI'}: ${msg.content}`)
+            .join('\n\n');
 
         try {
             await navigator.clipboard.writeText(text);
@@ -922,11 +993,16 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
     const getStatusText = () => {
         switch (status) {
-            case 'listening': return 'Listening...';
-            case 'processing': return isPremium ? 'Neural Processing...' : 'Thinking...';
-            case 'speaking': return isPremium ? 'Speaking with Gemini' : 'Responding...';
-            case 'error': return errorMessage || 'Error occurred';
-            default: return isPremium ? 'Tap to activate' : 'Tap to speak';
+            case 'listening':
+                return 'Listening...';
+            case 'processing':
+                return isPremium ? 'Neural Processing...' : 'Thinking...';
+            case 'speaking':
+                return isPremium ? 'Speaking with Gemini' : 'Responding...';
+            case 'error':
+                return errorMessage || 'Error occurred';
+            default:
+                return isPremium ? 'Tap to activate' : 'Tap to speak';
         }
     };
 
@@ -956,7 +1032,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                 scale: [1, 1.15, 1],
                                 opacity: [0.08, 0.12, 0.08],
                             }}
-                            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
                         >
                             <div className="w-full h-full rounded-full bg-linear-to-br from-violet-500/30 via-indigo-500/20 to-transparent dark:from-violet-600/20 dark:via-indigo-600/15 dark:to-transparent" />
                         </motion.div>
@@ -971,7 +1047,12 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                 scale: [1.1, 1, 1.1],
                                 opacity: [0.06, 0.1, 0.06],
                             }}
-                            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                            transition={{
+                                duration: 10,
+                                repeat: Infinity,
+                                ease: 'easeInOut',
+                                delay: 1,
+                            }}
                         >
                             <div className="w-full h-full rounded-full bg-linear-to-tr from-blue-500/25 via-cyan-500/15 to-transparent dark:from-blue-600/15 dark:via-cyan-600/10 dark:to-transparent" />
                         </motion.div>
@@ -982,7 +1063,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                 scale: [0.9, 1.1, 0.9],
                                 opacity: [0.02, 0.05, 0.02],
                             }}
-                            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
                         >
                             <div className="w-full h-full rounded-full bg-linear-to-r from-violet-400/20 via-pink-400/10 to-indigo-400/20 dark:from-violet-500/10 dark:via-pink-500/5 dark:to-indigo-500/10 blur-2xl" />
                         </motion.div>
@@ -1010,14 +1091,18 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                 onClick={() => setIsMuted(!isMuted)}
                                 aria-label={isMuted ? 'Unmute' : 'Mute'}
                                 className={cn(
-                                    "p-3 rounded-full transition-all",
+                                    'p-3 rounded-full transition-all',
                                     isMuted
-                                        ? "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30"
-                                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+                                        ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
                                 )}
                                 title={isMuted ? 'Unmute' : 'Mute'}
                             >
-                                {isMuted ? <VolumeX className="w-5 h-5" aria-hidden="true" /> : <Volume2 className="w-5 h-5" aria-hidden="true" />}
+                                {isMuted ? (
+                                    <VolumeX className="w-5 h-5" aria-hidden="true" />
+                                ) : (
+                                    <Volume2 className="w-5 h-5" aria-hidden="true" />
+                                )}
                             </motion.button>
                             {conversation.length > 0 && (
                                 <>
@@ -1076,15 +1161,19 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                     className="flex flex-col items-center justify-center min-h-[50vh] text-center"
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ type: "spring", stiffness: 200 }}
+                                    transition={{ type: 'spring', stiffness: 200 }}
                                 >
                                     <motion.div
                                         className="relative mb-8"
                                         animate={{
                                             y: [0, -10, 0],
-                                            rotateZ: [0, 5, -5, 0]
+                                            rotateZ: [0, 5, -5, 0],
                                         }}
-                                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                                        transition={{
+                                            duration: 4,
+                                            repeat: Infinity,
+                                            ease: 'easeInOut',
+                                        }}
                                     >
                                         <div className="absolute inset-0 w-28 h-28 rounded-full bg-linear-to-r from-violet-500 to-indigo-500 blur-2xl opacity-30" />
                                         <div className="relative w-28 h-28 rounded-full bg-linear-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-2xl">
@@ -1095,7 +1184,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                         Gemini Live Voice
                                     </h2>
                                     <p className="text-gray-600 dark:text-gray-300 max-w-sm text-lg leading-relaxed">
-                                        Experience natural AI conversation with real-time audio synthesis
+                                        Experience natural AI conversation with real-time audio
+                                        synthesis
                                     </p>
                                     <motion.p
                                         className="mt-4 text-violet-600 dark:text-violet-400 font-semibold"
@@ -1116,14 +1206,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                         initial={{ opacity: 0, y: 30, scale: 0.9 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         transition={{
-                                            type: "spring",
+                                            type: 'spring',
                                             stiffness: 300,
                                             damping: 25,
-                                            delay: i * 0.05
+                                            delay: i * 0.05,
                                         }}
                                         className={cn(
-                                            "flex items-end gap-3",
-                                            msg.role === 'user' ? "justify-end" : "justify-start"
+                                            'flex items-end gap-3',
+                                            msg.role === 'user' ? 'justify-end' : 'justify-start'
                                         )}
                                     >
                                         {/* AI Avatar */}
@@ -1132,7 +1222,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                                 className="shrink-0"
                                                 initial={{ scale: 0 }}
                                                 animate={{ scale: 1 }}
-                                                transition={{ type: "spring", delay: 0.1 }}
+                                                transition={{ type: 'spring', delay: 0.1 }}
                                             >
                                                 <div className="relative w-10 h-10">
                                                     <div className="absolute inset-0 bg-linear-to-br from-violet-500 to-indigo-600 rounded-full blur-md opacity-50" />
@@ -1144,12 +1234,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                         )}
 
                                         {/* Message Bubble */}
-                                        <div className={cn(
-                                            "relative max-w-[80%] sm:max-w-[70%] rounded-3xl shadow-xl",
-                                            msg.role === 'user'
-                                                ? "bg-linear-to-br from-blue-500 via-blue-600 to-cyan-600 text-white px-6 py-4"
-                                                : "bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 px-6 py-4"
-                                        )}>
+                                        <div
+                                            className={cn(
+                                                'relative max-w-[80%] sm:max-w-[70%] rounded-3xl shadow-xl',
+                                                msg.role === 'user'
+                                                    ? 'bg-linear-to-br from-blue-500 via-blue-600 to-cyan-600 text-white px-6 py-4'
+                                                    : 'bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 px-6 py-4'
+                                            )}
+                                        >
                                             {/* AI Header */}
                                             {msg.role === 'assistant' && (
                                                 <div className="flex items-center gap-2 mb-2">
@@ -1165,10 +1257,14 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                             )}
 
                                             {/* Message Text */}
-                                            <p className={cn(
-                                                "text-[15px] leading-relaxed font-medium",
-                                                msg.role === 'user' ? "text-white" : "text-gray-800 dark:text-gray-100"
-                                            )}>
+                                            <p
+                                                className={cn(
+                                                    'text-[15px] leading-relaxed font-medium',
+                                                    msg.role === 'user'
+                                                        ? 'text-white'
+                                                        : 'text-gray-800 dark:text-gray-100'
+                                                )}
+                                            >
                                                 {msg.content}
                                             </p>
                                         </div>
@@ -1179,7 +1275,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                                 className="shrink-0"
                                                 initial={{ scale: 0 }}
                                                 animate={{ scale: 1 }}
-                                                transition={{ type: "spring", delay: 0.1 }}
+                                                transition={{ type: 'spring', delay: 0.1 }}
                                             >
                                                 <div className="relative w-10 h-10">
                                                     <div className="absolute inset-0 bg-linear-to-br from-blue-500 to-cyan-500 rounded-full blur-md opacity-50" />
@@ -1227,7 +1323,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                                                 duration: 0.5,
                                                                 repeat: Infinity,
                                                                 delay: i * 0.08,
-                                                                ease: "easeInOut"
+                                                                ease: 'easeInOut',
                                                             }}
                                                         />
                                                     ))}
@@ -1265,18 +1361,38 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                                 <div className="flex gap-1">
                                                     <motion.div
                                                         className="w-2 h-2 bg-blue-500 rounded-full"
-                                                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                                                        transition={{ duration: 1, repeat: Infinity }}
+                                                        animate={{
+                                                            scale: [1, 1.5, 1],
+                                                            opacity: [1, 0.5, 1],
+                                                        }}
+                                                        transition={{
+                                                            duration: 1,
+                                                            repeat: Infinity,
+                                                        }}
                                                     />
                                                     <motion.div
                                                         className="w-2 h-2 bg-blue-500 rounded-full"
-                                                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                                                        transition={{ duration: 1, repeat: Infinity, delay: 0.15 }}
+                                                        animate={{
+                                                            scale: [1, 1.5, 1],
+                                                            opacity: [1, 0.5, 1],
+                                                        }}
+                                                        transition={{
+                                                            duration: 1,
+                                                            repeat: Infinity,
+                                                            delay: 0.15,
+                                                        }}
                                                     />
                                                     <motion.div
                                                         className="w-2 h-2 bg-blue-500 rounded-full"
-                                                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                                                        transition={{ duration: 1, repeat: Infinity, delay: 0.3 }}
+                                                        animate={{
+                                                            scale: [1, 1.5, 1],
+                                                            opacity: [1, 0.5, 1],
+                                                        }}
+                                                        transition={{
+                                                            duration: 1,
+                                                            repeat: Infinity,
+                                                            delay: 0.3,
+                                                        }}
                                                     />
                                                 </div>
                                                 <span className="text-xs font-bold bg-linear-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent uppercase tracking-wider">
@@ -1349,7 +1465,11 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                                 scale: [1.2, 1, 1.2],
                                                 opacity: [0.3, 0.5, 0.3],
                                             }}
-                                            transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
+                                            transition={{
+                                                duration: 3,
+                                                repeat: Infinity,
+                                                delay: 0.5,
+                                            }}
                                         >
                                             <div className="w-full h-full rounded-full bg-linear-to-r from-blue-500/30 via-cyan-500/20 to-teal-500/30" />
                                         </motion.div>
@@ -1359,31 +1479,33 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                 {/* Main Orb */}
                                 <motion.div
                                     className={cn(
-                                        "relative w-32 h-32 rounded-full flex items-center justify-center overflow-hidden shadow-2xl",
+                                        'relative w-32 h-32 rounded-full flex items-center justify-center overflow-hidden shadow-2xl',
                                         status === 'listening'
-                                            ? "bg-linear-to-br from-violet-500 via-indigo-500 to-blue-500"
+                                            ? 'bg-linear-to-br from-violet-500 via-indigo-500 to-blue-500'
                                             : status === 'speaking'
-                                                ? "bg-linear-to-br from-emerald-500 via-teal-500 to-cyan-500"
-                                                : status === 'processing'
-                                                    ? "bg-linear-to-br from-amber-500 via-orange-500 to-red-500"
-                                                    : "bg-linear-to-br from-gray-400 via-gray-500 to-gray-600 dark:from-gray-600 dark:via-gray-700 dark:to-gray-800"
+                                              ? 'bg-linear-to-br from-emerald-500 via-teal-500 to-cyan-500'
+                                              : status === 'processing'
+                                                ? 'bg-linear-to-br from-amber-500 via-orange-500 to-red-500'
+                                                : 'bg-linear-to-br from-gray-400 via-gray-500 to-gray-600 dark:from-gray-600 dark:via-gray-700 dark:to-gray-800'
                                     )}
                                     style={{
-                                        boxShadow: status === 'listening'
-                                            ? '0 0 60px rgba(139,92,246,0.4), 0 0 100px rgba(99,102,241,0.2)'
-                                            : status === 'speaking'
-                                                ? '0 0 60px rgba(16,185,129,0.4), 0 0 100px rgba(20,184,166,0.2)'
-                                                : '0 10px 40px rgba(0,0,0,0.15)',
+                                        boxShadow:
+                                            status === 'listening'
+                                                ? '0 0 60px rgba(139,92,246,0.4), 0 0 100px rgba(99,102,241,0.2)'
+                                                : status === 'speaking'
+                                                  ? '0 0 60px rgba(16,185,129,0.4), 0 0 100px rgba(20,184,166,0.2)'
+                                                  : '0 10px 40px rgba(0,0,0,0.15)',
                                     }}
                                     animate={{
-                                        scale: status === 'listening' ? (1 + audioLevel * 0.3) : 1,
+                                        scale: status === 'listening' ? 1 + audioLevel * 0.3 : 1,
                                     }}
                                 >
                                     {/* Inner gradient overlay */}
                                     <div
                                         className="absolute inset-0 rounded-full opacity-50"
                                         style={{
-                                            background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, transparent 60%)',
+                                            background:
+                                                'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, transparent 60%)',
                                         }}
                                     />
 
@@ -1395,7 +1517,11 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                     ) : status === 'processing' ? (
                                         <motion.div
                                             animate={{ rotate: 360 }}
-                                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                            transition={{
+                                                duration: 2,
+                                                repeat: Infinity,
+                                                ease: 'linear',
+                                            }}
                                         >
                                             <Zap className="w-14 h-14 text-white relative z-10" />
                                         </motion.div>
@@ -1407,15 +1533,19 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
                             {/* Status */}
                             <div className="text-center">
-                                <p className="text-xl font-semibold text-gray-900 dark:text-white">{getStatusText()}</p>
+                                <p className="text-xl font-semibold text-gray-900 dark:text-white">
+                                    {getStatusText()}
+                                </p>
                                 {status === 'listening' && (
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Speak naturally...</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                        Speak naturally...
+                                    </p>
                                 )}
                             </div>
                         </div>
-                    </div >
-                </motion.div >
-            </AnimatePresence >
+                    </div>
+                </motion.div>
+            </AnimatePresence>
         );
     }
 
@@ -1454,13 +1584,17 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                             onClick={() => setIsMuted(!isMuted)}
                             aria-label={isMuted ? 'Unmute' : 'Mute'}
                             className={cn(
-                                "p-3 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center",
+                                'p-3 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center',
                                 isMuted
-                                    ? "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                                    : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+                                    ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'
+                                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
                             )}
                         >
-                            {isMuted ? <VolumeX className="w-5 h-5" aria-hidden="true" /> : <Volume2 className="w-5 h-5" aria-hidden="true" />}
+                            {isMuted ? (
+                                <VolumeX className="w-5 h-5" aria-hidden="true" />
+                            ) : (
+                                <Volume2 className="w-5 h-5" aria-hidden="true" />
+                            )}
                         </motion.button>
                         {conversation.length > 0 && (
                             <motion.button
@@ -1497,7 +1631,8 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                     Standard Voice Mode
                                 </h2>
                                 <p className="text-gray-500 dark:text-gray-400 max-w-md">
-                                    Fast, browser-based voice interaction. Tap the button below to start.
+                                    Fast, browser-based voice interaction. Tap the button below to
+                                    start.
                                 </p>
                             </div>
                         )}
@@ -1508,7 +1643,10 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                     key={i}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className={cn("flex items-end gap-3", msg.role === 'user' ? "justify-end" : "justify-start")}
+                                    className={cn(
+                                        'flex items-end gap-3',
+                                        msg.role === 'user' ? 'justify-end' : 'justify-start'
+                                    )}
                                 >
                                     {/* AI Avatar */}
                                     {msg.role === 'assistant' && (
@@ -1519,13 +1657,15 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
                                     <div
                                         className={cn(
-                                            "max-w-[75%] sm:max-w-[65%] px-4 py-3 rounded-2xl",
+                                            'max-w-[75%] sm:max-w-[65%] px-4 py-3 rounded-2xl',
                                             msg.role === 'user'
-                                                ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
-                                                : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
+                                                ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
                                         )}
                                     >
-                                        <p className="text-sm sm:text-base leading-relaxed">{msg.content}</p>
+                                        <p className="text-sm sm:text-base leading-relaxed">
+                                            {msg.content}
+                                        </p>
                                     </div>
 
                                     {/* User Avatar */}
@@ -1547,13 +1687,26 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                                     <div className="max-w-[75%] sm:max-w-[65%] px-4 py-3 rounded-2xl bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-400 dark:border-blue-500">
                                         <div className="flex items-center gap-2 mb-1">
                                             <div className="flex gap-1">
-                                                <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                                <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                                <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                <span
+                                                    className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+                                                    style={{ animationDelay: '0ms' }}
+                                                />
+                                                <span
+                                                    className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+                                                    style={{ animationDelay: '150ms' }}
+                                                />
+                                                <span
+                                                    className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+                                                    style={{ animationDelay: '300ms' }}
+                                                />
                                             </div>
-                                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">Listening</span>
+                                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">
+                                                Listening
+                                            </span>
                                         </div>
-                                        <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">{transcript}</p>
+                                        <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">
+                                            {transcript}
+                                        </p>
                                     </div>
                                     <div className="shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center animate-pulse">
                                         <Mic className="w-4 h-4 text-white" />
@@ -1589,17 +1742,17 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
 
                             <motion.div
                                 className={cn(
-                                    "w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center shadow-xl",
+                                    'w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center shadow-xl',
                                     status === 'listening'
-                                        ? "bg-blue-500"
+                                        ? 'bg-blue-500'
                                         : status === 'speaking'
-                                            ? "bg-green-500"
-                                            : status === 'processing'
-                                                ? "bg-amber-500"
-                                                : "bg-gray-400 dark:bg-gray-600"
+                                          ? 'bg-green-500'
+                                          : status === 'processing'
+                                            ? 'bg-amber-500'
+                                            : 'bg-gray-400 dark:bg-gray-600'
                                 )}
                                 animate={{
-                                    scale: status === 'listening' ? (1 + audioLevel * 0.2) : 1,
+                                    scale: status === 'listening' ? 1 + audioLevel * 0.2 : 1,
                                 }}
                             >
                                 {status === 'listening' ? (

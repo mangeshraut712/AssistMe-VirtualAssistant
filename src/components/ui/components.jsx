@@ -1,17 +1,26 @@
 /**
  * shadcn/ui Component Exports
- * 
+ *
  * Design Philosophy:
  * - Apple: Smooth animations, spring physics, attention to detail
  * - Japanese: Kanso (simplicity), Ma (space), Wabi-sabi (beauty in imperfection)
- * 
+ *
  * @example
  * import { Button, Card, Dialog, Badge } from '@/components/ui';
  */
 
 // Core Components
 export { Button, MotionButton, buttonVariants } from './button';
-export { Card, MotionCard, GlassCard, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card';
+export {
+    Card,
+    MotionCard,
+    GlassCard,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+    CardContent,
+    CardFooter,
+} from './card';
 export { Input, MotionInput, Textarea } from './input';
 export { Badge, badgeVariants } from './badge';
 export { Avatar, AvatarImage, AvatarFallback } from './avatar';

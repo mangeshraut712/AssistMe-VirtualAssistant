@@ -9,150 +9,148 @@ layer(base);
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
+    --color-border: hsl(var(--border));
+    --color-input: hsl(var(--input));
+    --color-ring: hsl(var(--ring));
+    --color-background: hsl(var(--background));
+    --color-foreground: hsl(var(--foreground));
 
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
+    --color-primary: hsl(var(--primary));
+    --color-primary-foreground: hsl(var(--primary-foreground));
 
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
+    --color-secondary: hsl(var(--secondary));
+    --color-secondary-foreground: hsl(var(--secondary-foreground));
 
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
+    --color-destructive: hsl(var(--destructive));
+    --color-destructive-foreground: hsl(var(--destructive-foreground));
 
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
+    --color-muted: hsl(var(--muted));
+    --color-muted-foreground: hsl(var(--muted-foreground));
 
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
+    --color-accent: hsl(var(--accent));
+    --color-accent-foreground: hsl(var(--accent-foreground));
 
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
+    --color-popover: hsl(var(--popover));
+    --color-popover-foreground: hsl(var(--popover-foreground));
 
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
+    --color-card: hsl(var(--card));
+    --color-card-foreground: hsl(var(--card-foreground));
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
-  --radius-3xl: 2rem;
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-3xl: 2rem;
 
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, SF Pro Text, SF Pro Display, system-ui,
-    Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif, Apple Color Emoji,
-    Segoe UI Emoji;
-  --font-mono:
-    SF Mono, Monaco, Inconsolata, Fira Code, Consolas, Courier New, monospace;
+    --font-sans:
+        -apple-system, BlinkMacSystemFont, SF Pro Text, SF Pro Display, system-ui, Segoe UI, Roboto,
+        Helvetica Neue, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
+    --font-mono: SF Mono, Monaco, Inconsolata, Fira Code, Consolas, Courier New, monospace;
 
-  --transition-duration-0: 0ms;
-  --transition-duration-150: 150ms;
-  --transition-duration-250: 250ms;
-  --transition-duration-350: 350ms;
-  --transition-duration-400: 400ms;
-  --transition-duration-500: 500ms;
-  --transition-duration-600: 600ms;
-  --transition-duration-700: 700ms;
+    --transition-duration-0: 0ms;
+    --transition-duration-150: 150ms;
+    --transition-duration-250: 250ms;
+    --transition-duration-350: 350ms;
+    --transition-duration-400: 400ms;
+    --transition-duration-500: 500ms;
+    --transition-duration-600: 600ms;
+    --transition-duration-700: 700ms;
 
-  --ease-apple-ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-apple-in: cubic-bezier(0.4, 0, 1, 1);
-  --ease-apple-out: cubic-bezier(0, 0, 0.2, 1);
-  --ease-apple-in-out: cubic-bezier(0.4, 0, 0.6, 1);
+    --ease-apple-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-apple-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-apple-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-apple-in-out: cubic-bezier(0.4, 0, 0.6, 1);
 
-  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-minimal: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-elevated: 0 16px 48px rgba(0, 0, 0, 0.16);
+    --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-minimal: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --shadow-elevated: 0 16px 48px rgba(0, 0, 0, 0.16);
 
-  --breakpoint-xs: 475px;
-  --breakpoint-sm: 640px;
-  --breakpoint-md: 768px;
-  --breakpoint-lg: 1024px;
-  --breakpoint-xl: 1280px;
-  --breakpoint-2xl: 1536px;
+    --breakpoint-xs: 475px;
+    --breakpoint-sm: 640px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-2xl: 1536px;
 
-  --animate-fade-in: fade-in 0.25s ease-out;
-  --animate-fade-up: fade-up 0.35s ease-out;
-  --animate-scale-in: scale-in 0.25s ease-out;
-  --animate-slide-in-bottom: slide-in-bottom 0.35s ease-out;
-  --animate-shimmer: shimmer 2s linear infinite;
+    --animate-fade-in: fade-in 0.25s ease-out;
+    --animate-fade-up: fade-up 0.35s ease-out;
+    --animate-scale-in: scale-in 0.25s ease-out;
+    --animate-slide-in-bottom: slide-in-bottom 0.35s ease-out;
+    --animate-shimmer: shimmer 2s linear infinite;
 
-  --z-index-modal: 50;
-  --z-index-dropdown: 40;
-  --z-index-overlay: 30;
-  --z-index-header: 20;
-  --z-index-default: 1;
+    --z-index-modal: 50;
+    --z-index-dropdown: 40;
+    --z-index-overlay: 30;
+    --z-index-header: 20;
+    --z-index-default: 1;
 
-  --text-xs: 0.75rem;
-  --text-xs--line-height: 1rem;
-  --text-sm: 0.875rem;
-  --text-sm--line-height: 1.25rem;
-  --text-base: 1rem;
-  --text-base--line-height: 1.5rem;
-  --text-lg: 1.125rem;
-  --text-lg--line-height: 1.75rem;
-  --text-xl: 1.25rem;
-  --text-xl--line-height: 1.75rem;
-  --text-2xl: 1.5rem;
-  --text-2xl--line-height: 2rem;
-  --text-3xl: 1.875rem;
-  --text-3xl--line-height: 2.25rem;
-  --text-4xl: 2.25rem;
-  --text-4xl--line-height: 2.5rem;
-  --text-5xl: 3rem;
-  --text-5xl--line-height: 1;
-  --text-6xl: 3.75rem;
-  --text-6xl--line-height: 1;
+    --text-xs: 0.75rem;
+    --text-xs--line-height: 1rem;
+    --text-sm: 0.875rem;
+    --text-sm--line-height: 1.25rem;
+    --text-base: 1rem;
+    --text-base--line-height: 1.5rem;
+    --text-lg: 1.125rem;
+    --text-lg--line-height: 1.75rem;
+    --text-xl: 1.25rem;
+    --text-xl--line-height: 1.75rem;
+    --text-2xl: 1.5rem;
+    --text-2xl--line-height: 2rem;
+    --text-3xl: 1.875rem;
+    --text-3xl--line-height: 2.25rem;
+    --text-4xl: 2.25rem;
+    --text-4xl--line-height: 2.5rem;
+    --text-5xl: 3rem;
+    --text-5xl--line-height: 1;
+    --text-6xl: 3.75rem;
+    --text-6xl--line-height: 1;
 
-  @keyframes fade-in {
-    0% {
-      opacity: 0;
+    @keyframes fade-in {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 1;
+        }
     }
-    100% {
-      opacity: 1;
+    @keyframes fade-up {
+        0% {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
-  }
-  @keyframes fade-up {
-    0% {
-      opacity: 0;
-      transform: translateY(10px);
+    @keyframes scale-in {
+        0% {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
     }
-    100% {
-      opacity: 1;
-      transform: translateY(0);
+    @keyframes slide-in-bottom {
+        0% {
+            transform: translateY(100%);
+        }
+        100% {
+            transform: translateY(0);
+        }
     }
-  }
-  @keyframes scale-in {
-    0% {
-      opacity: 0;
-      transform: scale(0.95);
+    @keyframes shimmer {
+        0% {
+            background-position: -200% 0;
+        }
+        100% {
+            background-position: 200% 0;
+        }
     }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-  @keyframes slide-in-bottom {
-    0% {
-      transform: translateY(100%);
-    }
-    100% {
-      transform: translateY(0);
-    }
-  }
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
-  }
 }
 
 /*
@@ -164,224 +162,220 @@ layer(base);
   color utility to any element that depends on these defaults.
 */
 @layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
-  }
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentcolor);
+    }
 }
 
 @utility container {
-  /* Container - Mobile-first */
-  @apply mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16;
+    /* Container - Mobile-first */
+    @apply mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16;
 }
 
 @utility card {
-  /* Card - Japanese Shibui (understated) */
-  @apply bg-card text-card-foreground rounded-xl shadow-subtle;
-  @apply transition-all duration-350 ease-apple-ease;
+    /* Card - Japanese Shibui (understated) */
+    @apply bg-card text-card-foreground rounded-xl shadow-subtle;
+    @apply transition-all duration-350 ease-apple-ease;
 
-  &:hover {
-    @apply shadow-soft;
-  }
+    &:hover {
+        @apply shadow-soft;
+    }
 }
 
 @utility btn {
-  /* Button variants - Apple style */
-  @apply inline-flex items-center justify-center rounded-xl px-4 py-2;
-  @apply font-medium text-sm transition-all duration-250;
-  @apply focus-visible:outline-hidden focus-visible:ring-2;
-  @apply disabled:pointer-events-none disabled:opacity-50;
-  -webkit-tap-highlight-color: transparent;
+    /* Button variants - Apple style */
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2;
+    @apply font-medium text-sm transition-all duration-250;
+    @apply focus-visible:outline-hidden focus-visible:ring-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+    -webkit-tap-highlight-color: transparent;
 }
 
 @utility btn-primary {
-  @apply bg-primary text-primary-foreground hover:bg-primary/90;
-  @apply shadow-subtle hover:shadow-soft;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+    @apply shadow-subtle hover:shadow-soft;
 }
 
 @utility btn-secondary {
-  @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
 }
 
 @utility btn-ghost {
-  @apply hover:bg-accent hover:text-accent-foreground;
+    @apply hover:bg-accent hover:text-accent-foreground;
 }
 
 @utility input {
-  /* Input - Mobile optimized */
-  @apply flex h-10 w-full rounded-lg border border-input bg-background;
-  @apply px-3 py-2 text-sm;
-  @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring;
-  @apply disabled:cursor-not-allowed disabled:opacity-50;
-  font-size: 16px; /* Prevents iOS zoom */
+    /* Input - Mobile optimized */
+    @apply flex h-10 w-full rounded-lg border border-input bg-background;
+    @apply px-3 py-2 text-sm;
+    @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    font-size: 16px; /* Prevents iOS zoom */
 }
 
 @utility modal-content {
-  /* Modal/Dialog - Full-screen on mobile */
-  @apply fixed inset-0 z-modal;
-  @apply bg-background;
-  @apply md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2;
-  @apply md:max-w-lg md:rounded-2xl md:shadow-elevated;
+    /* Modal/Dialog - Full-screen on mobile */
+    @apply fixed inset-0 z-modal;
+    @apply bg-background;
+    @apply md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2;
+    @apply md:max-w-lg md:rounded-2xl md:shadow-elevated;
 }
 
 @utility grid-responsive {
-  /* Responsive grid */
-  @apply grid grid-cols-1 gap-4;
-  @apply sm:grid-cols-2 sm:gap-6;
-  @apply lg:grid-cols-3 lg:gap-8;
+    /* Responsive grid */
+    @apply grid grid-cols-1 gap-4;
+    @apply sm:grid-cols-2 sm:gap-6;
+    @apply lg:grid-cols-3 lg:gap-8;
 }
 
 /* Safe area (notch support). Kept in the components layer so explicit
    padding utilities (pt-*, pb-*) still win, matching Tailwind v3 behavior. */
 @layer components {
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top);
-  }
+    .safe-area-top {
+        padding-top: env(safe-area-inset-top);
+    }
 
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+    .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
 }
 
 @utility header-offset {
-  /* Header offset - accounts for fixed header */
-  padding-top: 0;
+    /* Header offset - accounts for fixed header */
+    padding-top: 0;
 }
 
 @utility text-muted-foreground/70 {
-  /* Fix low contrast muted text - must be at least 70% opacity */
-  @apply text-muted-foreground; /* Use 100% instead of 70% for better contrast */
+    /* Fix low contrast muted text - must be at least 70% opacity */
+    @apply text-muted-foreground; /* Use 100% instead of 70% for better contrast */
 
-  /* Section headers with uppercase - already bold, ensure good contrast */
-  &.text-xs.font-bold {
-    @apply text-muted-foreground; /* Full opacity for headers */
-  }
-  & p.text-xs.font-bold {
-    @apply text-muted-foreground; /* Full opacity for headers */
-  }
+    /* Section headers with uppercase - already bold, ensure good contrast */
+    &.text-xs.font-bold {
+        @apply text-muted-foreground; /* Full opacity for headers */
+    }
+    & p.text-xs.font-bold {
+        @apply text-muted-foreground; /* Full opacity for headers */
+    }
 }
 
 @utility text-muted-foreground/60 {
-  @apply text-muted-foreground; /* Override low opacity with full opacity */
+    @apply text-muted-foreground; /* Override low opacity with full opacity */
 }
 
 @utility text-muted-foreground/50 {
-  @apply text-muted-foreground; /* Override low opacity with full opacity */
+    @apply text-muted-foreground; /* Override low opacity with full opacity */
 }
 
 @utility text-xs {
-  /* Section headers with uppercase - already bold, ensure good contrast */
-  &.font-bold.text-muted-foreground\/70 {
-    @apply text-muted-foreground; /* Full opacity for headers */
-  }
-  & p.font-bold.text-muted-foreground\/70 {
-    @apply text-muted-foreground; /* Full opacity for headers */
-  }
+    /* Section headers with uppercase - already bold, ensure good contrast */
+    &.font-bold.text-muted-foreground\/70 {
+        @apply text-muted-foreground; /* Full opacity for headers */
+    }
+    & p.font-bold.text-muted-foreground\/70 {
+        @apply text-muted-foreground; /* Full opacity for headers */
+    }
 }
 
 @utility font-bold {
-  /* Section headers with uppercase - already bold, ensure good contrast */
-  &.text-xs.text-muted-foreground\/70 {
-    @apply text-muted-foreground; /* Full opacity for headers */
-  }
-  & p.text-xs.text-muted-foreground\/70 {
-    @apply text-muted-foreground; /* Full opacity for headers */
-  }
+    /* Section headers with uppercase - already bold, ensure good contrast */
+    &.text-xs.text-muted-foreground\/70 {
+        @apply text-muted-foreground; /* Full opacity for headers */
+    }
+    & p.text-xs.text-muted-foreground\/70 {
+        @apply text-muted-foreground; /* Full opacity for headers */
+    }
 }
 
 @utility text-balance {
-  /* Text balance for headings */
-  text-wrap: balance;
+    /* Text balance for headings */
+    text-wrap: balance;
 }
 
 @utility truncate-2 {
-  /* Truncate with ellipsis */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+    /* Truncate with ellipsis */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 @utility truncate-3 {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 @utility glass {
-  /* Glass morphism (subtle) */
-  @apply bg-background/80 backdrop-blur-xl;
+    /* Glass morphism (subtle) */
+    @apply bg-background/80 backdrop-blur-xl;
 }
 
 @utility gradient-text {
-  /* Smooth gradient text */
-  @apply bg-clip-text text-transparent;
-  background-image: linear-gradient(
-    135deg,
-    hsl(var(--primary)),
-    hsl(var(--accent))
-  );
+    /* Smooth gradient text */
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
 }
 
 @utility touch-manipulation {
-  /* Mobile touch */
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+    /* Mobile touch */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 @utility scrollbar-none {
-  /* Hide scrollbar but keep functionality */
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+    /* Hide scrollbar but keep functionality */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 
-  &::-webkit-scrollbar {
-    display: none;
-  }
+    &::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 @utility prose {
-  /* Prose mobile optimization - code blocks */
-  & pre {
-    @apply overflow-x-auto;
-    max-width: 100%;
-  }
-
-  & code {
-    @apply wrap-break-word;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  & pre code {
-    @apply break-normal;
-    white-space: pre;
-  }
-
-  /* Mobile-specific prose adjustments */
-  @media (max-width: 640px) {
-    @apply text-sm;
-
+    /* Prose mobile optimization - code blocks */
     & pre {
-      @apply text-xs p-3;
-      max-width: calc(100vw - 4rem);
+        @apply overflow-x-auto;
+        max-width: 100%;
     }
 
     & code {
-      @apply text-xs;
+        @apply wrap-break-word;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
 
-    & table {
-      @apply text-xs;
-      display: block;
-      overflow-x: auto;
+    & pre code {
+        @apply break-normal;
+        white-space: pre;
     }
-  }
+
+    /* Mobile-specific prose adjustments */
+    @media (max-width: 640px) {
+        @apply text-sm;
+
+        & pre {
+            @apply text-xs p-3;
+            max-width: calc(100vw - 4rem);
+        }
+
+        & code {
+            @apply text-xs;
+        }
+
+        & table {
+            @apply text-xs;
+            display: block;
+            overflow-x: auto;
+        }
+    }
 }
 
 /* ========================================
@@ -396,229 +390,232 @@ layer(base);
    PERFORMANCE OPTIMIZATIONS (60+ FPS)
    ======================================== */
 @layer base {
-  /* Enable GPU acceleration globally */
-  *,
-  *::before,
-  *::after {
-    /* Force GPU compositing for smoother animations */
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-  }
-
-  /* Optimize animations for 60+ FPS */
-  @media (prefers-reduced-motion: no-preference) {
-    html {
-      scroll-behavior: smooth;
-    }
-    
-    /* GPU-accelerated properties for animations */
-    .animate-gpu {
-      transform: translateZ(0);
-      will-change: transform, opacity;
-    }
-  }
-
-  /* Respect reduced motion preferences */
-  @media (prefers-reduced-motion: reduce) {
+    /* Enable GPU acceleration globally */
     *,
     *::before,
     *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
+        /* Force GPU compositing for smoother animations */
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
     }
-  }
 
-  :root {
-    /* LIGHT MODE - Pure White Background (Kanso) */
-    --background: 0 0% 100%;           /* #FFFFFF */
-    --foreground: 0 0% 0%;             /* #000000 */
-    
-    --card: 0 0% 97%;                  /* Subtle gray for elevation */
-    --card-foreground: 0 0% 0%;
-    
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
-    
-    --primary: 210 100% 50%;           /* Apple Blue #007AFF */
-    --primary-foreground: 0 0% 100%;
-    
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 0%;
-    
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 35%;      /* Improved from 40% for 4.62:1 contrast */
-    
-    --accent: 210 100% 50%;
-    --accent-foreground: 0 0% 100%;
-    
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    
-    --border: 0 0% 92%;                /* Minimal borders */
-    --input: 0 0% 92%;
-    --ring: 210 100% 50%;
-    
-    --radius: 0.75rem;                 /* Apple-style rounded */
-  }
+    /* Optimize animations for 60+ FPS */
+    @media (prefers-reduced-motion: no-preference) {
+        html {
+            scroll-behavior: smooth;
+        }
 
-  .dark {
-    /* DARK MODE - Pure Black Background (Ma) */
-    --background: 0 0% 0%;             /* #000000 */
-    --foreground: 0 0% 100%;           /* #FFFFFF */
-    
-    --card: 0 0% 4%;                   /* Subtle elevation */
-    --card-foreground: 0 0% 100%;
-    
-    --popover: 0 0% 0%;
-    --popover-foreground: 0 0% 100%;
-    
-    --primary: 210 100% 52%;           /* Apple Blue Dark #0A84FF */
-    --primary-foreground: 0 0% 0%;
-    
-    --secondary: 0 0% 8%;
-    --secondary-foreground: 0 0% 100%;
-    
-    --muted: 0 0% 8%;
-    --muted-foreground: 0 0% 70%;      /* Improved from 60% for 5.14:1 contrast */
-    
-    --accent: 210 100% 52%;
-    --accent-foreground: 0 0% 0%;
-    
-    --destructive: 0 64% 55%;
-    --destructive-foreground: 0 0% 100%;
-    
-    --border: 0 0% 12%;                /* Subtle borders */
-    --input: 0 0% 12%;
-    --ring: 210 100% 52%;
-  }
+        /* GPU-accelerated properties for animations */
+        .animate-gpu {
+            transform: translateZ(0);
+            will-change: transform, opacity;
+        }
+    }
+
+    /* Respect reduced motion preferences */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+
+    :root {
+        /* LIGHT MODE - Pure White Background (Kanso) */
+        --background: 0 0% 100%; /* #FFFFFF */
+        --foreground: 0 0% 0%; /* #000000 */
+
+        --card: 0 0% 97%; /* Subtle gray for elevation */
+        --card-foreground: 0 0% 0%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 0 0% 0%;
+
+        --primary: 210 100% 50%; /* Apple Blue #007AFF */
+        --primary-foreground: 0 0% 100%;
+
+        --secondary: 0 0% 96%;
+        --secondary-foreground: 0 0% 0%;
+
+        --muted: 0 0% 96%;
+        --muted-foreground: 0 0% 35%; /* Improved from 40% for 4.62:1 contrast */
+
+        --accent: 210 100% 50%;
+        --accent-foreground: 0 0% 100%;
+
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 0 0% 100%;
+
+        --border: 0 0% 92%; /* Minimal borders */
+        --input: 0 0% 92%;
+        --ring: 210 100% 50%;
+
+        --radius: 0.75rem; /* Apple-style rounded */
+    }
+
+    .dark {
+        /* DARK MODE - Pure Black Background (Ma) */
+        --background: 0 0% 0%; /* #000000 */
+        --foreground: 0 0% 100%; /* #FFFFFF */
+
+        --card: 0 0% 4%; /* Subtle elevation */
+        --card-foreground: 0 0% 100%;
+
+        --popover: 0 0% 0%;
+        --popover-foreground: 0 0% 100%;
+
+        --primary: 210 100% 52%; /* Apple Blue Dark #0A84FF */
+        --primary-foreground: 0 0% 0%;
+
+        --secondary: 0 0% 8%;
+        --secondary-foreground: 0 0% 100%;
+
+        --muted: 0 0% 8%;
+        --muted-foreground: 0 0% 70%; /* Improved from 60% for 5.14:1 contrast */
+
+        --accent: 210 100% 52%;
+        --accent-foreground: 0 0% 0%;
+
+        --destructive: 0 64% 55%;
+        --destructive-foreground: 0 0% 100%;
+
+        --border: 0 0% 12%; /* Subtle borders */
+        --input: 0 0% 12%;
+        --ring: 210 100% 52%;
+    }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: 'cv11', 'ss01', 'ss03';
-    /* Safari smooth scrolling */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-  }
-
-  /* SF Pro fallback and system fonts */
-  @font-face {
-    font-family: 'SF Pro Display';
-    font-weight: 100 900;
-    font-display: swap;
-    src: local('SF Pro Display'),
-         local('-apple-system'),
-         local('BlinkMacSystemFont');
-  }
-
-  /* Mobile-first responsive text */
-  html {
-    font-size: 16px;
-    scroll-behavior: smooth;
-    height: 100%;
-  }
-
-  body {
-    height: 100%;
-    min-height: 100%;
-  }
-
-  #root {
-    height: 100%;
-    min-height: 100%;
-  }
-
-  @media (min-width: 768px) {
-    html {
-      font-size: 17px; /* Slightly larger on tablets */
+    * {
+        @apply border-border;
     }
-  }
 
-  @media (min-width: 1024px) {
-    html {
-      font-size: 18px; /* Even larger on desktop */
+    body {
+        @apply bg-background text-foreground antialiased;
+        font-feature-settings: 'cv11', 'ss01', 'ss03';
+        /* Safari smooth scrolling */
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
     }
-  }
 
-  /* Headings - Apple typography scale */
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight;
-    text-wrap: balance;
-  }
+    /* SF Pro fallback and system fonts */
+    @font-face {
+        font-family: 'SF Pro Display';
+        font-weight: 100 900;
+        font-display: swap;
+        src: local('SF Pro Display'), local('-apple-system'), local('BlinkMacSystemFont');
+    }
 
-  h1 {
-    @apply text-3xl md:text-4xl lg:text-5xl;
-  }
+    /* Mobile-first responsive text */
+    html {
+        font-size: 16px;
+        scroll-behavior: smooth;
+        height: 100%;
+    }
 
-  h2 {
-    @apply text-2xl md:text-3xl lg:text-4xl;
-  }
+    body {
+        height: 100%;
+        min-height: 100%;
+    }
 
-  h3 {
-    @apply text-xl md:text-2xl lg:text-3xl;
-  }
+    #root {
+        height: 100%;
+        min-height: 100%;
+    }
 
-  /* Links */
-  a {
-    @apply transition-colors duration-250;
-  }
+    @media (min-width: 768px) {
+        html {
+            font-size: 17px; /* Slightly larger on tablets */
+        }
+    }
 
-  /* Focus states - Apple style */
-  *:focus-visible {
-    @apply outline-hidden ring-2 ring-ring ring-offset-2 ring-offset-background;
-    transition: box-shadow 0.15s ease-out;
-  }
+    @media (min-width: 1024px) {
+        html {
+            font-size: 18px; /* Even larger on desktop */
+        }
+    }
 
-  /* Buttons - Haptic feedback ready */
-  button {
-    @apply transition-all duration-250 ease-apple-ease;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
+    /* Headings - Apple typography scale */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        @apply font-semibold tracking-tight;
+        text-wrap: balance;
+    }
 
-  button:active {
-    @apply scale-95;
-  }
+    h1 {
+        @apply text-3xl md:text-4xl lg:text-5xl;
+    }
 
-  /* Inputs - Mobile optimized */
-  input,
-  textarea,
-  select {
-    @apply transition-all duration-250;
-    font-size: 16px; /* Prevents zoom on iOS */
-  }
+    h2 {
+        @apply text-2xl md:text-3xl lg:text-4xl;
+    }
 
-  /* Scrollbar - Minimal  (Ma principle) */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
+    h3 {
+        @apply text-xl md:text-2xl lg:text-3xl;
+    }
 
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
+    /* Links */
+    a {
+        @apply transition-colors duration-250;
+    }
 
-  ::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full;
-    transition: background 0.25s;
-  }
+    /* Focus states - Apple style */
+    *:focus-visible {
+        @apply outline-hidden ring-2 ring-ring ring-offset-2 ring-offset-background;
+        transition: box-shadow 0.15s ease-out;
+    }
 
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/20;
-  }
+    /* Buttons - Haptic feedback ready */
+    button {
+        @apply transition-all duration-250 ease-apple-ease;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
 
-  /* Selection */
-  ::selection {
-    @apply bg-primary/20;
-  }
+    button:active {
+        @apply scale-95;
+    }
+
+    /* Inputs - Mobile optimized */
+    input,
+    textarea,
+    select {
+        @apply transition-all duration-250;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    /* Scrollbar - Minimal  (Ma principle) */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        @apply bg-border rounded-full;
+        transition: background 0.25s;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        @apply bg-muted-foreground/20;
+    }
+
+    /* Selection */
+    ::selection {
+        @apply bg-primary/20;
+    }
 }
 
 /* ========================================
@@ -626,17 +623,17 @@ layer(base);
    WCAG AA Compliance (4.5:1 contrast)
    ======================================== */
 @layer components {
-  /* Keyboard shortcuts - improve contrast from bg-foreground/5 (2.02) to /15 (4.5+) */
-  kbd {
-    @apply bg-foreground/15;  /* Improved from /5 for better contrast */
-  }
+    /* Keyboard shortcuts - improve contrast from bg-foreground/5 (2.02) to /15 (4.5+) */
+    kbd {
+        @apply bg-foreground/15; /* Improved from /5 for better contrast */
+    }
 
-  /* Placeholder text - ensure minimum 4.5:1 contrast */
-  ::placeholder,
-  #placeholder {
-    opacity: 1 !important;  /* Don't reduce opacity */
-    @apply text-muted-foreground;
-  }
+    /* Placeholder text - ensure minimum 4.5:1 contrast */
+    ::placeholder,
+    #placeholder {
+        opacity: 1 !important; /* Don't reduce opacity */
+        @apply text-muted-foreground;
+    }
 }
 
 /* ========================================
@@ -646,46 +643,46 @@ layer(base);
 
 /* Safari-specific fixes */
 @supports (-webkit-backdrop-filter: blur(10px)) {
-  .glass {
-    -webkit-backdrop-filter: blur(60px);
-    backdrop-filter: blur(60px);
-  }
+    .glass {
+        -webkit-backdrop-filter: blur(60px);
+        backdrop-filter: blur(60px);
+    }
 }
 
 /* Firefox fixes */
 @-moz-document url-prefix() {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--border)) transparent;
-  }
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: hsl(var(--border)) transparent;
+    }
 }
 
 /* Edge fixes */
 @supports (-ms-ime-align: auto) {
-  .glass {
-    background-color: hsl(var(--background) / 0.8);
-  }
+    .glass {
+        background-color: hsl(var(--background) / 0.8);
+    }
 }
 
 /* Prevent text size adjustment on mobile */
 @media screen and (max-width: 767px) {
-  html {
-    -webkit-text-size-adjust: 100%;
-    -moz-text-size-adjust: 100%;
-    -ms-text-size-adjust: 100%;
-  }
+    html {
+        -webkit-text-size-adjust: 100%;
+        -moz-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+    }
 }
 
 /* Print styles */
 @media print {
-  *,
-  *::before,
-  *::after {
-    background: transparent !important;
-    color: #000 !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
-  }
+    *,
+    *::before,
+    *::after {
+        background: transparent !important;
+        color: #000 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
 }
 
 /* ========================================
@@ -694,210 +691,215 @@ layer(base);
    ======================================== */
 
 .grokipedia-article {
-  @apply max-w-none;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 15px;
-  line-height: 1.7;
-  color: #111827;
+    @apply max-w-none;
+    font-family:
+        'Inter',
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #111827;
 }
 
 /* Paragraphs */
 .grokipedia-article .grok-p {
-  @apply mb-6;
-  font-size: 15px;
-  line-height: 1.7;
-  color: #1f2937;
-  font-weight: 400;
-  max-width: 720px;
+    @apply mb-6;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #1f2937;
+    font-weight: 400;
+    max-width: 720px;
 }
 
 .grokipedia-article .grok-p:first-of-type {
-  font-size: 16px;
-  line-height: 1.8;
-  margin-bottom: 2rem;
-  font-weight: 400;
+    font-size: 16px;
+    line-height: 1.8;
+    margin-bottom: 2rem;
+    font-weight: 400;
 }
 
 /* H2 Headings */
 .grokipedia-article .grok-h2 {
-  font-family: 'Source Serif 4', Georgia, serif;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: #000000;
-  margin-top: 3.5rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  letter-spacing: -0.01em;
-  scroll-margin-top: 80px;
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #000000;
+    margin-top: 3.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    letter-spacing: -0.01em;
+    scroll-margin-top: 80px;
 }
 
 /* H3 Headings */
 .grokipedia-article .grok-h3 {
-  font-family: 'Source Serif 4', Georgia, serif;
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.3;
-  color: #000000;
-  margin-top: 2.5rem;
-  margin-bottom: 1rem;
-  letter-spacing: -0.01em;
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #000000;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    letter-spacing: -0.01em;
 }
 
 .grokipedia-article .grok-bold {
-  font-weight: 700;
-  color: #000000;
+    font-weight: 700;
+    color: #000000;
 }
 
 .grokipedia-article .grok-italic {
-  font-style: italic;
+    font-style: italic;
 }
 
 /* Citations */
 .grokipedia-article .grok-citation {
-  font-size: 11px;
-  font-weight: 600;
-  color: #2563eb;
-  vertical-align: super;
-  line-height: 0;
-  margin-left: 2px;
-  padding: 0 1px;
-  cursor: pointer;
-  transition: all 0.2s;
+    font-size: 11px;
+    font-weight: 600;
+    color: #2563eb;
+    vertical-align: super;
+    line-height: 0;
+    margin-left: 2px;
+    padding: 0 1px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 .grokipedia-article .grok-citation:hover {
-  color: #1d4ed8;
-  text-decoration: underline;
+    color: #1d4ed8;
+    text-decoration: underline;
 }
 
 /* Lists */
 .grokipedia-article .grok-ul {
-  margin-bottom: 1.5rem;
-  margin-left: 1.5rem;
-  padding-left: 0.5rem;
-  max-width: 720px;
+    margin-bottom: 1.5rem;
+    margin-left: 1.5rem;
+    padding-left: 0.5rem;
+    max-width: 720px;
 }
 
 .grokipedia-article .grok-li {
-  margin-bottom: 0.75rem;
-  padding-left: 0.5rem;
-  font-size: 15px;
-  line-height: 1.6;
-  color: #1f2937;
+    margin-bottom: 0.75rem;
+    padding-left: 0.5rem;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #1f2937;
 }
 
 .grokipedia-article .grok-quote {
-  border-left: 4px solid #000000;
-  padding-left: 2rem;
-  margin: 2.5rem 0;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-  font-family: 'Source Serif 4', serif;
-  font-style: italic;
-  color: #374151;
-  font-size: 17px;
-  line-height: 1.6;
+    border-left: 4px solid #000000;
+    padding-left: 2rem;
+    margin: 2.5rem 0;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    color: #374151;
+    font-size: 17px;
+    line-height: 1.6;
 }
 
 .grokipedia-article a {
-  color: #2563eb;
-  text-decoration: none;
-  transition: all 0.2s ease;
+    color: #2563eb;
+    text-decoration: none;
+    transition: all 0.2s ease;
 }
 
 .grokipedia-article a:hover {
-  color: #1d4ed8;
-  text-decoration: underline;
+    color: #1d4ed8;
+    text-decoration: underline;
 }
 
 /* Custom thin scrollbar for sidebar */
 .custom-scrollbar-mini::-webkit-scrollbar {
-  width: 4px;
+    width: 4px;
 }
 .custom-scrollbar-mini::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 .custom-scrollbar-mini::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 10px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
 }
 .custom-scrollbar-mini:hover::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 640px) {
-  .grokipedia-article .grok-p {
-    font-size: 14px;
-    line-height: 1.6;
-  }
-  
-  .grokipedia-article .grok-h2 {
-    font-size: 24px;
-    margin-top: 2.5rem;
-  }
-  
-  .grokipedia-article .grok-h3 {
-    font-size: 20px;
-  }
+    .grokipedia-article .grok-p {
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .grokipedia-article .grok-h2 {
+        font-size: 24px;
+        margin-top: 2.5rem;
+    }
+
+    .grokipedia-article .grok-h3 {
+        font-size: 20px;
+    }
 }
 
 /* Dark mode overrides for Grokipedia - matching grokipedia.com dark theme */
 .dark .grokipedia-article {
-  color: #e5e7eb;
+    color: #e5e7eb;
 }
 
 .dark .grokipedia-article .grok-p {
-  color: #d1d5db;
+    color: #d1d5db;
 }
 
 .dark .grokipedia-article .grok-p:first-of-type {
-  color: #e5e7eb;
+    color: #e5e7eb;
 }
 
 .dark .grokipedia-article .grok-h2 {
-  color: #ffffff;
-  border-bottom-color: #374151;
+    color: #ffffff;
+    border-bottom-color: #374151;
 }
 
 .dark .grokipedia-article .grok-h3 {
-  color: #ffffff;
+    color: #ffffff;
 }
 
 .dark .grokipedia-article .grok-bold {
-  color: #ffffff;
+    color: #ffffff;
 }
 
 .dark .grokipedia-article .grok-citation {
-  color: #60a5fa;
+    color: #60a5fa;
 }
 
 .dark .grokipedia-article .grok-citation:hover {
-  color: #93c5fd;
+    color: #93c5fd;
 }
 
 .dark .grokipedia-article .grok-li {
-  color: #d1d5db;
+    color: #d1d5db;
 }
 
 .dark .grokipedia-article .grok-quote {
-  border-left-color: #ffffff;
-  color: #d1d5db;
+    border-left-color: #ffffff;
+    color: #d1d5db;
 }
 
 .dark .grokipedia-article a {
-  color: #60a5fa;
+    color: #60a5fa;
 }
 
 .dark .grokipedia-article a:hover {
-  color: #93c5fd;
+    color: #93c5fd;
 }
 
 /* Dark mode scrollbar */
 .dark .custom-scrollbar-mini::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.05);
 }
 .dark .custom-scrollbar-mini:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1);
 }

@@ -2,7 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * APPLICATION CONSTANTS
  * ═══════════════════════════════════════════════════════════════════════════════
- * 
+ *
  * Central place for all app-wide constants.
  * Import from '@/constants' for cleaner imports.
  */
@@ -12,7 +12,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 export const APP_NAME = 'AssistMe';
 export const APP_VERSION = '2.0.0';
-export const APP_DESCRIPTION = 'AI Virtual Assistant with Chat, Voice, Images & Multilingual Support';
+export const APP_DESCRIPTION =
+    'AI Virtual Assistant with Chat, Voice, Images & Multilingual Support';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // API Configuration

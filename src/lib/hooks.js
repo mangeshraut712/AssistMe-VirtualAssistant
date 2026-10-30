@@ -209,11 +209,11 @@ export function useAsync(asyncFunction, immediate = true) {
         Promise.resolve()
             .then(() => asyncFunction())
             .then(
-                (response) => {
+                response => {
                     setValue(response);
                     setStatus('success');
                 },
-                (err) => {
+                err => {
                     setError(err);
                     setStatus('error');
                 }

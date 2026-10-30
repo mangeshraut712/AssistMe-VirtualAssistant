@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 
 const canUseDOM = () => typeof window !== 'undefined';
 
-const readMediaQuery = (query) => {
+const readMediaQuery = query => {
     if (!canUseDOM() || typeof window.matchMedia !== 'function') return false;
     return window.matchMedia(query).matches;
 };
@@ -22,9 +22,9 @@ const subscribeToMediaQuery = (query, onStoreChange) => {
 /**
  * useMediaQuery - Custom hook for responsive breakpoints
  */
-export const useMediaQuery = (query) => {
+export const useMediaQuery = query => {
     const subscribe = useCallback(
-        (onStoreChange) => subscribeToMediaQuery(query, onStoreChange),
+        onStoreChange => subscribeToMediaQuery(query, onStoreChange),
         [query]
     );
     const getSnapshot = useCallback(() => readMediaQuery(query), [query]);
@@ -62,9 +62,7 @@ export const useOrientation = () => {
     useEffect(() => {
         const handleOrientation = () => {
             setOrientation(
-                window.matchMedia('(orientation: portrait)').matches
-                    ? 'portrait'
-                    : 'landscape'
+                window.matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape'
             );
         };
 
@@ -87,9 +85,7 @@ export const useOrientation = () => {
 const detectTouchDevice = () => {
     if (!canUseDOM()) return false;
     return (
-        'ontouchstart' in window ||
-        navigator.maxTouchPoints > 0 ||
-        navigator.msMaxTouchPoints > 0
+        'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0
     );
 };
 

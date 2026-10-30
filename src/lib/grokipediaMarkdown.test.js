@@ -48,7 +48,11 @@ describe('isSafeHttpUrl', () => {
 describe('joinApiUrl', () => {
     it('joins a configured backend without a double slash', () => {
         expect(joinApiUrl('', '/api/gemini/key')).toBe('/api/gemini/key');
-        expect(joinApiUrl('https://api.example.com/', '/api/chat')).toBe('https://api.example.com/api/chat');
-        expect(joinApiUrl('https://api.example.com', 'api/chat')).toBe('https://api.example.com/api/chat');
+        expect(joinApiUrl('https://api.example.com/', '/api/chat')).toBe(
+            'https://api.example.com/api/chat'
+        );
+        expect(joinApiUrl('https://api.example.com', 'api/chat')).toBe(
+            'https://api.example.com/api/chat'
+        );
     });
 });

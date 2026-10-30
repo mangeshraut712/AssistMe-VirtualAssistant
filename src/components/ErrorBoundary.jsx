@@ -34,7 +34,7 @@ class ErrorBoundary extends React.Component {
             hasError: false,
             error: null,
             errorInfo: null,
-            eventId: null
+            eventId: null,
         };
     }
 
@@ -50,7 +50,7 @@ class ErrorBoundary extends React.Component {
         // Store error info for display
         this.setState({
             errorInfo,
-            eventId: `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            eventId: `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         });
 
         // In production, you might send this to an error tracking service
@@ -87,8 +87,8 @@ class ErrorBoundary extends React.Component {
                                 Oops! Something went wrong
                             </h1>
                             <p className="text-muted-foreground text-sm leading-relaxed">
-                                We're sorry, but something unexpected happened.
-                                Don't worry, your data is safe.
+                                We're sorry, but something unexpected happened. Don't worry, your
+                                data is safe.
                             </p>
                         </div>
 
@@ -133,19 +133,25 @@ class ErrorBoundary extends React.Component {
                                 <summary className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
                                     <Bug className="w-4 h-4" />
                                     <span>Technical Details</span>
-                                    <span className="ml-auto text-xs opacity-60 group-open:hidden">Click to expand</span>
+                                    <span className="ml-auto text-xs opacity-60 group-open:hidden">
+                                        Click to expand
+                                    </span>
                                 </summary>
                                 <div className="mt-3 bg-muted/50 rounded-lg p-4 overflow-hidden">
                                     <div className="space-y-3">
                                         <div>
-                                            <h4 className="text-xs font-medium text-foreground mb-1">Error Message</h4>
+                                            <h4 className="text-xs font-medium text-foreground mb-1">
+                                                Error Message
+                                            </h4>
                                             <pre className="text-xs text-red-500 dark:text-red-400 whitespace-pre-wrap wrap-break-word font-mono bg-background/50 p-2 rounded">
                                                 {this.state.error.toString()}
                                             </pre>
                                         </div>
                                         {this.state.errorInfo?.componentStack && (
                                             <div>
-                                                <h4 className="text-xs font-medium text-foreground mb-1">Component Stack</h4>
+                                                <h4 className="text-xs font-medium text-foreground mb-1">
+                                                    Component Stack
+                                                </h4>
                                                 <pre className="text-xs text-muted-foreground whitespace-pre-wrap wrap-break-word font-mono bg-background/50 p-2 rounded max-h-40 overflow-auto scrollbar-thin">
                                                     {this.state.errorInfo.componentStack}
                                                 </pre>
@@ -166,8 +172,8 @@ class ErrorBoundary extends React.Component {
                                 className="text-primary hover:underline"
                             >
                                 report an issue
-                            </a>
-                            {' '}with the error ID above.
+                            </a>{' '}
+                            with the error ID above.
                         </p>
                     </div>
                 </div>

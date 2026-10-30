@@ -5,18 +5,22 @@ export { joinApiUrl };
 export function createApiClient({ baseUrl = '' } = {}) {
     const base = String(baseUrl || '').replace(/\/+$/, '');
 
-    const buildUrl = (path) => joinApiUrl(base, path);
+    const buildUrl = path => joinApiUrl(base, path);
 
-    const parseErrorMessage = (payload) => {
+    const parseErrorMessage = payload => {
         if (!payload) return 'Request failed';
         if (typeof payload === 'string') return payload;
         if (payload.detail) return String(payload.detail);
-        if (payload.error) return typeof payload.error === 'string' ? payload.error : String(payload.error.message || payload.error);
+        if (payload.error) {
+            return typeof payload.error === 'string'
+                ? payload.error
+                : String(payload.error.message || payload.error);
+        }
         if (payload.message) return String(payload.message);
         return 'Request failed';
     };
 
-    const normalizeChatTextResponse = (payload) => {
+    const normalizeChatTextResponse = payload => {
         if (!payload || typeof payload !== 'object') {
             return { response: '', usage: { tokens: 0 }, model: null };
         }
@@ -39,7 +43,7 @@ export function createApiClient({ baseUrl = '' } = {}) {
         return { response: '', usage: { tokens: 0 }, model: payload.model ?? null };
     };
 
-    const readResponsePayload = async (response) => {
+    const readResponsePayload = async response => {
         const contentType = response.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
             return await response.json();
@@ -52,7 +56,14 @@ export function createApiClient({ baseUrl = '' } = {}) {
         }
     };
 
-    const chatText = async ({ messages, model, temperature, max_tokens, preferred_language, signal } = {}) => {
+    const chatText = async ({
+        messages,
+        model,
+        temperature,
+        max_tokens,
+        preferred_language,
+        signal,
+    } = {}) => {
         const response = await fetch(buildUrl('/api/chat/text'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -79,7 +90,18 @@ export function createApiClient({ baseUrl = '' } = {}) {
         return normalizeChatTextResponse(payload);
     };
 
-    const streamChat = async ({ messages, model, temperature, max_tokens, preferred_language, onDelta, onMetadata, onDone, onError, signal } = {}) => {
+    const streamChat = async ({
+        messages,
+        model,
+        temperature,
+        max_tokens,
+        preferred_language,
+        onDelta,
+        onMetadata,
+        onDone,
+        onError,
+        signal,
+    } = {}) => {
         const response = await fetch(buildUrl('/api/chat/stream'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -153,7 +175,7 @@ export function createApiClient({ baseUrl = '' } = {}) {
             }
         };
 
-        const processLine = (rawLine) => {
+        const processLine = rawLine => {
             const line = rawLine.trimEnd();
             if (!line.trim()) {
                 currentEvent = null;

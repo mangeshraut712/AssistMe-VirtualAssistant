@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialChatState, loadStoredConversations, trimForRegenerate } from './conversations';
+import {
+    createInitialChatState,
+    loadStoredConversations,
+    trimForRegenerate,
+} from './conversations';
 
 function memoryStorage(initial = {}) {
     const values = new Map(Object.entries(initial));
@@ -23,7 +27,11 @@ describe('loadStoredConversations', () => {
     it('drops messages that are not role/content pairs', () => {
         const storage = memoryStorage({
             conversations: JSON.stringify([
-                { id: 4, title: 'Kept', messages: [{ role: 'user', content: 'hi' }, { content: 'no role' }, null] },
+                {
+                    id: 4,
+                    title: 'Kept',
+                    messages: [{ role: 'user', content: 'hi' }, { content: 'no role' }, null],
+                },
             ]),
         });
         expect(loadStoredConversations(storage)).toEqual([

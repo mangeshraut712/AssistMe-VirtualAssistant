@@ -149,7 +149,7 @@ describe('React 19.3', () => {
 
 describe('lucide-react 1', () => {
     it('still exports every icon the interface renders', () => {
-        USED_ICONS.forEach((name) => {
+        USED_ICONS.forEach(name => {
             const Icon = icons[name];
             if (!Icon) {
                 throw new Error(`Missing lucide icon: ${name}`);
@@ -176,7 +176,7 @@ describe('lucide-react 1', () => {
     });
 
     it('does not export the brand icons removed in v1', () => {
-        REMOVED_BRAND_ICONS.forEach((name) => {
+        REMOVED_BRAND_ICONS.forEach(name => {
             if (icons[name] !== undefined) {
                 throw new Error(`Brand icon ${name} should have been removed in lucide-react 1`);
             }
@@ -200,7 +200,7 @@ describe('jsdom 30', () => {
     it('fires a PointerEvent from element.click() that is still a MouseEvent', () => {
         const button = document.createElement('button');
         const seen = [];
-        button.addEventListener('click', (event) => {
+        button.addEventListener('click', event => {
             seen.push(event);
         });
         document.body.appendChild(button);

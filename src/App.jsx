@@ -21,31 +21,97 @@ const SpeedtestPanel = lazy(() => import('./components/features/SpeedtestPanel')
 
 const MODELS = [
     // Default / Featured
-    { id: 'x-ai/grok-4.1-fast:free', name: 'xAI: Grok 4.1 Fast (Free)', provider: 'xAI', free: true },
+    {
+        id: 'x-ai/grok-4.1-fast:free',
+        name: 'xAI: Grok 4.1 Fast (Free)',
+        provider: 'xAI',
+        free: true,
+    },
 
     // Voice-Optimized with Gemini Native Audio
-    { id: 'google/gemini-2.5-flash', name: '🎤 Gemini 2.5 Flash (Native Audio)', provider: 'Google', free: false, voiceOptimized: true, nativeAudio: true },
-    { id: 'google/gemini-2.0-flash-001:free', name: '🎤 Gemini 2.0 Flash (Free)', provider: 'Google', free: true, voiceOptimized: true },
+    {
+        id: 'google/gemini-2.5-flash',
+        name: '🎤 Gemini 2.5 Flash (Native Audio)',
+        provider: 'Google',
+        free: false,
+        voiceOptimized: true,
+        nativeAudio: true,
+    },
+    {
+        id: 'google/gemini-2.0-flash-001:free',
+        name: '🎤 Gemini 2.0 Flash (Free)',
+        provider: 'Google',
+        free: true,
+        voiceOptimized: true,
+    },
 
     // Free Models (Priority 1)
-    { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Meta Llama 3.3 70B Instruct (Free)', provider: 'Meta', free: true },
-    { id: 'nvidia/nemotron-nano-9b-v2:free', name: 'NVIDIA: Nemotron Nano 9B V2 (Free)', provider: 'NVIDIA', free: true },
-    { id: 'nex-agi/deepseek-v3.1-nex-n1:free', name: 'Nex AGI: DeepSeek V3.1 Nex N1 (Free)', provider: 'Nex AGI', free: true },
-    { id: 'amazon/nova-2-lite-v1:free', name: 'Amazon: Nova 2 Lite (Free)', provider: 'Amazon', free: true },
-    { id: 'google/gemma-3-27b-it:free', name: 'Google: Gemma 3 27B IT (Free)', provider: 'Google', free: true },
-    { id: 'nvidia/nemotron-nano-12b-v2-vl:free', name: 'NVIDIA: Nemotron Nano 12B V2 VL (Free)', provider: 'NVIDIA', free: true },
-    { id: 'meituan/longcat-flash-chat:free', name: 'Meituan: LongCat Flash Chat (Free)', provider: 'Meituan', free: true },
-    { id: 'alibaba/tongyi-deepresearch-30b-a3b:free', name: 'Alibaba: Tongyi DeepResearch 30B A3B (Free)', provider: 'Alibaba', free: true },
+    {
+        id: 'meta-llama/llama-3.3-70b-instruct:free',
+        name: 'Meta Llama 3.3 70B Instruct (Free)',
+        provider: 'Meta',
+        free: true,
+    },
+    {
+        id: 'nvidia/nemotron-nano-9b-v2:free',
+        name: 'NVIDIA: Nemotron Nano 9B V2 (Free)',
+        provider: 'NVIDIA',
+        free: true,
+    },
+    {
+        id: 'nex-agi/deepseek-v3.1-nex-n1:free',
+        name: 'Nex AGI: DeepSeek V3.1 Nex N1 (Free)',
+        provider: 'Nex AGI',
+        free: true,
+    },
+    {
+        id: 'amazon/nova-2-lite-v1:free',
+        name: 'Amazon: Nova 2 Lite (Free)',
+        provider: 'Amazon',
+        free: true,
+    },
+    {
+        id: 'google/gemma-3-27b-it:free',
+        name: 'Google: Gemma 3 27B IT (Free)',
+        provider: 'Google',
+        free: true,
+    },
+    {
+        id: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        name: 'NVIDIA: Nemotron Nano 12B V2 VL (Free)',
+        provider: 'NVIDIA',
+        free: true,
+    },
+    {
+        id: 'meituan/longcat-flash-chat:free',
+        name: 'Meituan: LongCat Flash Chat (Free)',
+        provider: 'Meituan',
+        free: true,
+    },
+    {
+        id: 'alibaba/tongyi-deepresearch-30b-a3b:free',
+        name: 'Alibaba: Tongyi DeepResearch 30B A3B (Free)',
+        provider: 'Alibaba',
+        free: true,
+    },
 
     // Premium Models (Priority 2)
-    { id: 'google/gemini-2.5-pro', name: 'Google: Gemini 2.5 Pro', provider: 'Google', free: false },
+    {
+        id: 'google/gemini-2.5-pro',
+        name: 'Google: Gemini 2.5 Pro',
+        provider: 'Google',
+        free: false,
+    },
     { id: 'x-ai/grok-code-fast-1', name: 'xAI: Grok Code Fast 1', provider: 'xAI', free: false },
     { id: 'perplexity/sonar', name: 'Perplexity: Sonar', provider: 'Perplexity', free: false },
-    { id: 'anthropic/claude-3-haiku', name: 'Anthropic Claude 3 Haiku', provider: 'Anthropic', free: false },
+    {
+        id: 'anthropic/claude-3-haiku',
+        name: 'Anthropic Claude 3 Haiku',
+        provider: 'Anthropic',
+        free: false,
+    },
     { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini', provider: 'OpenAI', free: false },
 ];
-
-
 
 const LoadingOverlay = () => (
     <div className="fixed inset-0 bg-background/70 backdrop-blur-xs flex items-center justify-center z-50">
@@ -90,7 +156,7 @@ function App() {
         language: 'en',
         theme: 'light',
         advanced: false,
-        backendUrl: '' // Empty string for relative path (proxy)
+        backendUrl: '', // Empty string for relative path (proxy)
     });
 
     // Initialize marked
@@ -102,9 +168,12 @@ function App() {
     useEffect(() => {
         const root = window.document.documentElement;
         root.classList.remove('light', 'dark');
-        const theme = settings.theme === 'system'
-            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-            : settings.theme;
+        const theme =
+            settings.theme === 'system'
+                ? window.matchMedia('(prefers-color-scheme: dark)').matches
+                    ? 'dark'
+                    : 'light'
+                : settings.theme;
         root.classList.add(theme);
     }, [settings.theme]);
 
@@ -134,19 +203,17 @@ function App() {
         navigate('/');
     };
 
-    const selectChat = (chatId) => {
+    const selectChat = chatId => {
         setCurrentChatId(chatId);
         setShowSidebar(false); // Close sidebar on mobile after selecting chat
         navigate('/');
     };
 
     const renameChat = (chatId, newTitle) => {
-        setConversations(prev => prev.map(c =>
-            c.id === chatId ? { ...c, title: newTitle } : c
-        ));
+        setConversations(prev => prev.map(c => (c.id === chatId ? { ...c, title: newTitle } : c)));
     };
 
-    const deleteChat = (chatId) => {
+    const deleteChat = chatId => {
         const newConversations = conversations.filter(c => c.id !== chatId);
         if (newConversations.length === 0) {
             const newChat = { id: Date.now(), title: 'New Chat', messages: [] };
@@ -160,12 +227,21 @@ function App() {
         }
     };
 
-    const updateCurrentChatMessages = (newMessages) => {
-        setConversations(prev => prev.map(conv =>
-            conv.id === currentChatId
-                ? { ...conv, messages: newMessages, title: newMessages.length > 0 && conv.title === 'New Chat' ? newMessages[0].content.slice(0, 30) + '...' : conv.title }
-                : conv
-        ));
+    const updateCurrentChatMessages = newMessages => {
+        setConversations(prev =>
+            prev.map(conv =>
+                conv.id === currentChatId
+                    ? {
+                          ...conv,
+                          messages: newMessages,
+                          title:
+                              newMessages.length > 0 && conv.title === 'New Chat'
+                                  ? newMessages[0].content.slice(0, 30) + '...'
+                                  : conv.title,
+                      }
+                    : conv
+            )
+        );
     };
 
     const featureRoutes = {
@@ -175,11 +251,11 @@ function App() {
         aiStudio: '/ai-studio',
         speedtest: '/speedtest',
         fileUpload: '/files',
-        settings: '/settings'
+        settings: '/settings',
     };
 
     // Quick Action Handler
-    const handleQuickAction = (action) => {
+    const handleQuickAction = action => {
         if (action.key && featureRoutes[action.key]) {
             navigate(featureRoutes[action.key]);
             return;
@@ -190,7 +266,7 @@ function App() {
     };
 
     // Send Message (Streaming Implementation)
-    const streamAssistantReply = async (history) => {
+    const streamAssistantReply = async history => {
         const assistantMsg = { role: 'assistant', content: '' };
         const messagesWithPlaceholder = [...history, assistantMsg];
         updateCurrentChatMessages(messagesWithPlaceholder);
@@ -202,11 +278,11 @@ function App() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                    body: JSON.stringify({
+                body: JSON.stringify({
                     messages: history.map(msg => ({ role: msg.role, content: msg.content })),
                     model: selectedModel,
-                    preferred_language: settings.language
-                })
+                    preferred_language: settings.language,
+                }),
             });
 
             if (!response.ok) {
@@ -249,12 +325,16 @@ function App() {
                                     {
                                         ...assistantMsg,
                                         content: assistantContent,
-                                        metadata: metadata ? {
-                                            ...metadata,
-                                            latency: firstTokenTime ? firstTokenTime - startTime : 0,
-                                            totalTime: Date.now() - startTime
-                                        } : null
-                                    }
+                                        metadata: metadata
+                                            ? {
+                                                  ...metadata,
+                                                  latency: firstTokenTime
+                                                      ? firstTokenTime - startTime
+                                                      : 0,
+                                                  totalTime: Date.now() - startTime,
+                                              }
+                                            : null,
+                                    },
                                 ]);
                             } else if (data.metadata) {
                                 metadata = data.metadata;
@@ -265,10 +345,12 @@ function App() {
                                         content: assistantContent,
                                         metadata: {
                                             ...metadata,
-                                            latency: firstTokenTime ? firstTokenTime - startTime : 0,
-                                            totalTime: Date.now() - startTime
-                                        }
-                                    }
+                                            latency: firstTokenTime
+                                                ? firstTokenTime - startTime
+                                                : 0,
+                                            totalTime: Date.now() - startTime,
+                                        },
+                                    },
                                 ]);
                             } else if (data.error) {
                                 throw new Error(data.error.message || 'Stream error');
@@ -283,7 +365,7 @@ function App() {
             console.error('Chat error:', error);
             updateCurrentChatMessages([
                 ...history,
-                { role: 'assistant', content: `Error: ${error.message}. Please try again.` }
+                { role: 'assistant', content: `Error: ${error.message}. Please try again.` },
             ]);
         } finally {
             setIsLoading(false);
@@ -300,7 +382,7 @@ function App() {
         await streamAssistantReply(updatedMessages);
     };
 
-    const regenerateFrom = async (index) => {
+    const regenerateFrom = async index => {
         if (isLoading) return;
         const history = trimForRegenerate(messages, index);
         if (!history) return;
@@ -309,17 +391,20 @@ function App() {
     };
 
     // Render Markdown Content
-    const renderContent = (content) => {
+    const renderContent = content => {
         try {
             const html = marked.parse(String(content ?? ''));
             const safeHtml = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
-            return <div dangerouslySetInnerHTML={{ __html: safeHtml }} className="prose dark:prose-invert max-w-none" />;
+            return (
+                <div
+                    dangerouslySetInnerHTML={{ __html: safeHtml }}
+                    className="prose dark:prose-invert max-w-none"
+                />
+            );
         } catch {
             return <div>{content}</div>;
         }
     };
-
-
 
     return (
         <div
@@ -330,7 +415,7 @@ function App() {
                 show={showSidebar}
                 onClose={() => setShowSidebar(false)}
                 onNewChat={createNewChat}
-                onNavigate={(path) => {
+                onNavigate={path => {
                     navigate(path);
                     setShowSidebar(false);
                 }}
@@ -342,8 +427,11 @@ function App() {
                 activePath={location.pathname}
             />
 
-            <div className={`flex-1 flex flex-col relative min-w-0 transition-all duration-300 ${showSidebar ? 'md:ml-96' : 'md:ml-0'
-                }`}>
+            <div
+                className={`flex-1 flex flex-col relative min-w-0 transition-all duration-300 ${
+                    showSidebar ? 'md:ml-96' : 'md:ml-0'
+                }`}
+            >
                 <Header onOpenSidebar={() => setShowSidebar(true)} showSidebar={showSidebar} />
 
                 {/* Main content area - below fixed header */}
@@ -364,17 +452,17 @@ function App() {
                                         setInput,
                                         isLoading,
                                         sendMessage,
-                                        onFileUpload: (files) => {
+                                        onFileUpload: files => {
                                             if (Array.isArray(files) && files.length > 0) {
                                                 setPendingUploads(files);
                                             }
                                             navigate(featureRoutes.fileUpload);
                                         },
-                                        onVoiceTranscription: (text) => setInput(text),
+                                        onVoiceTranscription: text => setInput(text),
                                         onOpenVoiceMode: () => navigate(featureRoutes.voiceMode),
                                         models: MODELS,
                                         selectedModel,
-                                        onModelChange: (e) => setSelectedModel(e.target.value)
+                                        onModelChange: e => setSelectedModel(e.target.value),
                                     }}
                                 />
                             }
@@ -434,7 +522,9 @@ function App() {
                                         isOpen={true}
                                         onClose={() => navigate('/')}
                                         initialFiles={pendingUploads}
-                                        onFileProcess={(results) => console.log('Files processed:', results)}
+                                        onFileProcess={results =>
+                                            console.log('Files processed:', results)
+                                        }
                                     />
                                 </Suspense>
                             }
@@ -459,15 +549,15 @@ function App() {
                                         isOpen={true}
                                         onClose={() => navigate('/')}
                                         settings={settings}
-                                        onSettingsChange={(key, value) => setSettings(prev => ({ ...prev, [key]: value }))}
+                                        onSettingsChange={(key, value) =>
+                                            setSettings(prev => ({ ...prev, [key]: value }))
+                                        }
                                     />
                                 </Suspense>
                             }
                         />
                     </Routes>
                 </div>
-
-
             </div>
         </div>
     );

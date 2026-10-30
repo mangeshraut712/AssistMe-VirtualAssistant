@@ -1,6 +1,6 @@
 /**
  * Voice Mode Configuration 4.0
- * 
+ *
  * Centralized configuration for Voice Mode features.
  * These values are used by both AdvancedVoiceMode and useAdvancedVoiceDetection.
  */
@@ -128,9 +128,9 @@ export const VOICE_CONFIG = {
 // MUTE MODES
 // ═══════════════════════════════════════════════════════════════════════════
 export const MUTE_MODES = {
-    AUTO: 'auto',           // Auto-mute when AI speaks
-    MANUAL: 'manual',       // User controls mute manually
-    PUSH_TO_TALK: 'ptt',    // Hold/toggle to speak
+    AUTO: 'auto', // Auto-mute when AI speaks
+    MANUAL: 'manual', // User controls mute manually
+    PUSH_TO_TALK: 'ptt', // Hold/toggle to speak
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -178,7 +178,7 @@ export const VOICE_PERSONAS = {
 /**
  * Get adaptive silence timeout based on transcript length
  */
-export const getAdaptiveSilenceTimeout = (transcriptLength) => {
+export const getAdaptiveSilenceTimeout = transcriptLength => {
     const { pauseDetection } = VOICE_CONFIG;
 
     if (transcriptLength < pauseDetection.shortPhraseMaxChars) {
@@ -201,7 +201,7 @@ export const getThinkingDelay = () => {
 /**
  * Calculate RMS (Root Mean Square) for VAD
  */
-export const calculateRMS = (buffer) => {
+export const calculateRMS = buffer => {
     let sum = 0;
     for (let i = 0; i < buffer.length; i++) {
         sum += buffer[i] * buffer[i];
@@ -212,24 +212,46 @@ export const calculateRMS = (buffer) => {
 /**
  * Normalize text for TTS
  */
-export const normalizeForSpeech = (text) => {
+export const normalizeForSpeech = text => {
     if (!text) return '';
 
-    const numberWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
-        'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+    const numberWords = [
+        'zero',
+        'one',
+        'two',
+        'three',
+        'four',
+        'five',
+        'six',
+        'seven',
+        'eight',
+        'nine',
+        'ten',
+        'eleven',
+        'twelve',
+        'thirteen',
+        'fourteen',
+        'fifteen',
+        'sixteen',
+        'seventeen',
+        'eighteen',
+        'nineteen',
+        'twenty',
+    ];
 
     return text
-        .replace(/\*\*/g, '')           // Remove markdown bold
-        .replace(/\*/g, '')             // Remove markdown italic
-        .replace(/`/g, '')              // Remove code ticks
-        .replace(/#{1,6}\s?/g, '')      // Remove headers
+        .replace(/\*\*/g, '') // Remove markdown bold
+        .replace(/\*/g, '') // Remove markdown italic
+        .replace(/`/g, '') // Remove code ticks
+        .replace(/#{1,6}\s?/g, '') // Remove headers
         .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links to text
-        .replace(/\n+/g, '. ')          // Newlines to pauses
-        .replace(/(\d+)/g, (match) => { // Spell out small numbers
+        .replace(/\n+/g, '. ') // Newlines to pauses
+        .replace(/(\d+)/g, match => {
+            // Spell out small numbers
             const num = parseInt(match);
-            return num <= 20 ? (numberWords[num] || match) : match;
+            return num <= 20 ? numberWords[num] || match : match;
         })
-        .replace(/\s+/g, ' ')           // Normalize whitespace
+        .replace(/\s+/g, ' ') // Normalize whitespace
         .trim();
 };
 

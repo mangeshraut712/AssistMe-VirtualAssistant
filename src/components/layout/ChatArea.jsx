@@ -1,6 +1,6 @@
 /**
  * ChatArea Component - ChatGPT-Style Layout
- * 
+ *
  * Layout Structure:
  * - Fixed Header (handled by parent)
  * - Scrollable Messages (with proper top padding)
@@ -22,14 +22,13 @@ import {
     FileText,
     Globe,
     Zap,
-    ChevronDown
+    ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import InputArea from './InputArea';
 import MessageBubble from './MessageBubble';
 
 // Animation variants
-
 
 const itemVariants = {
     hidden: { opacity: 0, y: 30, filter: 'blur(10px)' },
@@ -43,17 +42,17 @@ const itemVariants = {
 
 const cardVariants = {
     hidden: { opacity: 0, y: 20, scale: 0.95 },
-    visible: (i) => ({
+    visible: i => ({
         opacity: 1,
         y: 0,
         scale: 1,
-        transition: { delay: i * 0.1, type: 'spring', stiffness: 300, damping: 25 }
+        transition: { delay: i * 0.1, type: 'spring', stiffness: 300, damping: 25 },
     }),
     hover: {
         y: -4,
         scale: 1.02,
-        transition: { type: 'spring', stiffness: 400, damping: 20 }
-    }
+        transition: { type: 'spring', stiffness: 400, damping: 20 },
+    },
 };
 
 // Floating Orb
@@ -91,16 +90,25 @@ const QuickActionCard = ({ icon: Icon, title, description, onClick, index, gradi
         whileHover="hover"
         custom={index}
     >
-        <motion.div className={cn('absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300', gradient)} />
+        <motion.div
+            className={cn(
+                'absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300',
+                gradient
+            )}
+        />
         <div className="relative z-10 flex items-center gap-2 w-full">
-            <div className={cn(
-                'h-8 w-8 rounded-lg flex items-center justify-center',
-                'bg-primary/10 group-hover:bg-primary/20 transition-colors'
-            )}>
+            <div
+                className={cn(
+                    'h-8 w-8 rounded-lg flex items-center justify-center',
+                    'bg-primary/10 group-hover:bg-primary/20 transition-colors'
+                )}
+            >
                 <Icon className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-sm group-hover:text-primary transition-colors truncate">{title}</h3>
+                <h3 className="font-medium text-sm group-hover:text-primary transition-colors truncate">
+                    {title}
+                </h3>
                 <p className="text-[11px] text-muted-foreground truncate">{description}</p>
             </div>
         </div>
@@ -135,7 +143,7 @@ const TypingIndicator = () => (
             <Bot className="h-4 w-4 text-primary" />
         </div>
         <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-card border border-border/50">
-            {[0, 1, 2].map((i) => (
+            {[0, 1, 2].map(i => (
                 <motion.div
                     key={i}
                     className="h-2.5 w-2.5 rounded-full bg-primary/50"
@@ -174,7 +182,15 @@ const ScrollToBottomButton = ({ onClick, show }) => (
     </AnimatePresence>
 );
 
-const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickAction, onRegenerate, inputProps }) => {
+const ChatArea = ({
+    messages,
+    isLoading,
+    renderContent,
+    showWelcome,
+    onQuickAction,
+    onRegenerate,
+    inputProps,
+}) => {
     const messagesEndRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const [greeting] = useState(getGreeting());
@@ -208,19 +224,55 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
     // Welcome Screen (Homepage)
     if (showWelcome) {
         const quickActionCards = [
-            { icon: ImageIcon, title: 'Create an image', description: 'Generate stunning visuals with AI', action: { key: 'imageGen' }, gradient: 'bg-linear-to-br from-pink-500/10 to-transparent' },
-            { icon: PenTool, title: 'Help me write', description: 'Essays, emails, stories & more', action: { text: 'Help me write...' }, gradient: 'bg-linear-to-br from-blue-500/10 to-transparent' },
-            { icon: Code2, title: 'Write code', description: 'Debug, explain, or create code', action: { text: 'Write code for...' }, gradient: 'bg-linear-to-br from-green-500/10 to-transparent' },
-            { icon: Lightbulb, title: 'Brainstorm ideas', description: 'Get creative suggestions', action: { text: 'I have an idea for...' }, gradient: 'bg-linear-to-br from-yellow-500/10 to-transparent' },
-            { icon: Search, title: 'Research a topic', description: 'Deep dive into any subject', action: { text: 'Research about...' }, gradient: 'bg-linear-to-br from-purple-500/10 to-transparent' },
-            { icon: FileText, title: 'Summarize content', description: 'Get key points quickly', action: { text: 'Summarize this:' }, gradient: 'bg-linear-to-br from-orange-500/10 to-transparent' }
+            {
+                icon: ImageIcon,
+                title: 'Create an image',
+                description: 'Generate stunning visuals with AI',
+                action: { key: 'imageGen' },
+                gradient: 'bg-linear-to-br from-pink-500/10 to-transparent',
+            },
+            {
+                icon: PenTool,
+                title: 'Help me write',
+                description: 'Essays, emails, stories & more',
+                action: { text: 'Help me write...' },
+                gradient: 'bg-linear-to-br from-blue-500/10 to-transparent',
+            },
+            {
+                icon: Code2,
+                title: 'Write code',
+                description: 'Debug, explain, or create code',
+                action: { text: 'Write code for...' },
+                gradient: 'bg-linear-to-br from-green-500/10 to-transparent',
+            },
+            {
+                icon: Lightbulb,
+                title: 'Brainstorm ideas',
+                description: 'Get creative suggestions',
+                action: { text: 'I have an idea for...' },
+                gradient: 'bg-linear-to-br from-yellow-500/10 to-transparent',
+            },
+            {
+                icon: Search,
+                title: 'Research a topic',
+                description: 'Deep dive into any subject',
+                action: { text: 'Research about...' },
+                gradient: 'bg-linear-to-br from-purple-500/10 to-transparent',
+            },
+            {
+                icon: FileText,
+                title: 'Summarize content',
+                description: 'Get key points quickly',
+                action: { text: 'Summarize this:' },
+                gradient: 'bg-linear-to-br from-orange-500/10 to-transparent',
+            },
         ];
 
         const capabilities = [
             { icon: Globe, label: 'Multilingual' },
             { icon: Mic, label: 'Voice Mode' },
             { icon: Zap, label: 'Fast Responses' },
-            { icon: Sparkles, label: 'AI-Powered' }
+            { icon: Sparkles, label: 'AI-Powered' },
         ];
 
         return (
@@ -239,7 +291,12 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
                         </motion.div>
 
                         {/* Headline - Compact */}
-                        <motion.div variants={itemVariants} initial="hidden" animate="visible" className="space-y-2">
+                        <motion.div
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            className="space-y-2"
+                        >
                             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight leading-tight">
                                 <span className="text-foreground">What can I help with </span>
                                 <motion.span
@@ -256,7 +313,12 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
                         </motion.div>
 
                         {/* Capability Pills - Inline */}
-                        <motion.div variants={itemVariants} initial="hidden" animate="visible" className="flex flex-wrap gap-1.5">
+                        <motion.div
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            className="flex flex-wrap gap-1.5"
+                        >
                             {capabilities.map((cap, index) => (
                                 <CapabilityPill key={cap.label} {...cap} index={index} />
                             ))}
@@ -266,7 +328,12 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
                         <motion.div variants={itemVariants} initial="hidden" animate="visible">
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {quickActionCards.map((card, index) => (
-                                    <QuickActionCard key={card.title} {...card} index={index} onClick={() => onQuickAction(card.action)} />
+                                    <QuickActionCard
+                                        key={card.title}
+                                        {...card}
+                                        index={index}
+                                        onClick={() => onQuickAction(card.action)}
+                                    />
                                 ))}
                             </div>
                         </motion.div>
@@ -314,7 +381,11 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
                                         <MessageBubble
                                             message={msg}
                                             renderContent={renderContent}
-                                            onRegenerate={msg.role === 'assistant' ? () => onRegenerate?.(idx) : undefined}
+                                            onRegenerate={
+                                                msg.role === 'assistant'
+                                                    ? () => onRegenerate?.(idx)
+                                                    : undefined
+                                            }
                                         />
                                     </motion.div>
                                 ))}
@@ -333,13 +404,15 @@ const ChatArea = ({ messages, isLoading, renderContent, showWelcome, onQuickActi
             </div>
 
             {/* FIXED INPUT AREA - Compact like ChatGPT */}
-            <div className={cn(
-                'shrink-0',
-                'border-t border-border/40',
-                'bg-background',
-                'px-4 sm:px-6 py-3',
-                'safe-area-bottom'
-            )}>
+            <div
+                className={cn(
+                    'shrink-0',
+                    'border-t border-border/40',
+                    'bg-background',
+                    'px-4 sm:px-6 py-3',
+                    'safe-area-bottom'
+                )}
+            >
                 <div className="max-w-3xl mx-auto">
                     {inputProps && <InputArea {...inputProps} variant="docked" />}
                 </div>

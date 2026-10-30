@@ -1,7 +1,7 @@
 /**
  * Enhanced Unified Tools Panel with Framer Motion
  * AI Studio with Writing & Indian AI Suites
- * 
+ *
  * Features:
  * - Animated sidebar navigation
  * - Smooth tab transitions
@@ -21,15 +21,15 @@ const panelVariants = {
     hidden: { opacity: 0 },
     visible: {
         opacity: 1,
-        transition: { duration: 0.3 }
+        transition: { duration: 0.3 },
     },
-    exit: { opacity: 0 }
+    exit: { opacity: 0 },
 };
 
 const sidebarItemVariants = {
     rest: { scale: 1 },
     hover: { scale: 1.02, x: 4 },
-    tap: { scale: 0.98 }
+    tap: { scale: 0.98 },
 };
 
 const contentVariants = {
@@ -37,13 +37,13 @@ const contentVariants = {
     visible: {
         opacity: 1,
         x: 0,
-        transition: { type: 'spring', stiffness: 300, damping: 30 }
+        transition: { type: 'spring', stiffness: 300, damping: 30 },
     },
     exit: {
         opacity: 0,
         x: -20,
-        transition: { duration: 0.2 }
-    }
+        transition: { duration: 0.2 },
+    },
 };
 
 // Suite Button Component
@@ -52,13 +52,13 @@ const SuiteButton = ({ active, onClick, icon: Icon, name, description, color }) 
         indigo: {
             active: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/20',
             iconActive: 'bg-indigo-100 dark:bg-indigo-900/40',
-            iconInactive: 'group-hover:border-indigo-200'
+            iconInactive: 'group-hover:border-indigo-200',
         },
         orange: {
             active: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 ring-1 ring-orange-500/20',
             iconActive: 'bg-orange-100 dark:bg-orange-900/40',
-            iconInactive: 'group-hover:border-orange-200'
-        }
+            iconInactive: 'group-hover:border-orange-200',
+        },
     };
 
     const styles = colorClasses[color] || colorClasses.indigo;
@@ -78,10 +78,14 @@ const SuiteButton = ({ active, onClick, icon: Icon, name, description, color }) 
             whileTap="tap"
         >
             <div className="flex items-center gap-3">
-                <div className={cn(
-                    'p-2.5 rounded-xl transition-colors',
-                    active ? styles.iconActive : `bg-background border border-border ${styles.iconInactive}`
-                )}>
+                <div
+                    className={cn(
+                        'p-2.5 rounded-xl transition-colors',
+                        active
+                            ? styles.iconActive
+                            : `bg-background border border-border ${styles.iconInactive}`
+                    )}
+                >
                     <Icon className="h-5 w-5" />
                 </div>
                 <div className="text-left">
@@ -158,10 +162,12 @@ const UnifiedToolsPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                 transition={{ delay: 0.1 }}
             >
                 {/* Header */}
-                <div className={cn(
-                    'h-16 flex items-center px-6 border-b border-border/50',
-                    'bg-background/50 backdrop-blur-xs'
-                )}>
+                <div
+                    className={cn(
+                        'h-16 flex items-center px-6 border-b border-border/50',
+                        'bg-background/50 backdrop-blur-xs'
+                    )}
+                >
                     <div className="flex items-center gap-3">
                         <motion.div
                             className="p-2 rounded-xl bg-primary/10 border border-primary/20"
@@ -282,7 +288,11 @@ const UnifiedToolsPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                             exit="exit"
                             className="h-full"
                         >
-                            <GrammarlyQuillbotPanel isOpen={true} isEmbedded={true} backendUrl={backendUrl} />
+                            <GrammarlyQuillbotPanel
+                                isOpen={true}
+                                isEmbedded={true}
+                                backendUrl={backendUrl}
+                            />
                         </motion.div>
                     )}
                     {activeSuite === 'indian' && (
@@ -294,7 +304,11 @@ const UnifiedToolsPanel = ({ isOpen, onClose, backendUrl = '' }) => {
                             exit="exit"
                             className="h-full"
                         >
-                            <AI4BharatPanel isOpen={true} isEmbedded={true} backendUrl={backendUrl} />
+                            <AI4BharatPanel
+                                isOpen={true}
+                                isEmbedded={true}
+                                backendUrl={backendUrl}
+                            />
                         </motion.div>
                     )}
                 </AnimatePresence>

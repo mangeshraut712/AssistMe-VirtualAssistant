@@ -18,9 +18,7 @@ export const Spinner = ({ size = 'md', className = '' }) => {
     };
 
     return (
-        <Loader2
-            className={cn('animate-spin text-primary', sizes[size] || sizes.md, className)}
-        />
+        <Loader2 className={cn('animate-spin text-primary', sizes[size] || sizes.md, className)} />
     );
 };
 
@@ -72,11 +70,7 @@ export const Skeleton = ({ className = '', variant = 'rectangle' }) => {
 export const SkeletonText = ({ lines = 3, className = '' }) => (
     <div className={cn('space-y-2', className)}>
         {Array.from({ length: lines }).map((_, i) => (
-            <Skeleton
-                key={i}
-                variant="text"
-                className={i === lines - 1 ? 'w-3/4' : 'w-full'}
-            />
+            <Skeleton key={i} variant="text" className={i === lines - 1 ? 'w-3/4' : 'w-full'} />
         ))}
     </div>
 );
@@ -96,11 +90,11 @@ export const Avatar = ({ src, alt = 'Avatar', fallback = '', size = 'md', classN
 
     const initials = fallback
         ? fallback
-            .split(' ')
-            .map(n => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2)
+              .split(' ')
+              .map(n => n[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2)
         : '?';
 
     return (
@@ -179,7 +173,8 @@ export const Button = React.forwardRef(
             default: 'bg-primary text-primary-foreground hover:opacity-90',
             secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
             ghost: 'hover:bg-accent hover:text-accent-foreground',
-            outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+            outline:
+                'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
             destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
             link: 'text-primary underline-offset-4 hover:underline',
         };
@@ -253,7 +248,12 @@ export const CardFooter = ({ children, className = '' }) => (
  * Empty State Component
  */
 export const EmptyState = ({ icon: Icon, title, description, action, className = '' }) => (
-    <div className={cn('flex flex-col items-center justify-center py-12 px-4 text-center', className)}>
+    <div
+        className={cn(
+            'flex flex-col items-center justify-center py-12 px-4 text-center',
+            className
+        )}
+    >
         {Icon && (
             <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
                 <Icon className="w-8 h-8 text-muted-foreground" />

@@ -1,31 +1,82 @@
 import { useState } from 'react';
 import {
-    X, Wand2, Copy, Check, Sparkles,
-    RefreshCw, Languages,
-    AlignLeft, CheckCircle,
-    Maximize2, SplitSquareHorizontal,
-    Type
+    X,
+    Wand2,
+    Copy,
+    Check,
+    Sparkles,
+    RefreshCw,
+    Languages,
+    AlignLeft,
+    CheckCircle,
+    Maximize2,
+    SplitSquareHorizontal,
+    Type,
 } from 'lucide-react';
 import { createApiClient } from '@/lib/apiClient';
 
 const TOOLS = [
-    { id: 'paraphrase', label: 'Paraphraser', icon: RefreshCw, description: 'Rewrite text with improved phrasing.' },
-    { id: 'grammar', label: 'Grammar Checker', icon: CheckCircle, description: 'Fix grammar, spelling, and punctuation.' },
-    { id: 'summarize', label: 'Summarizer', icon: AlignLeft, description: 'Condense text into key points.' },
-    { id: 'translate', label: 'Translator', icon: Languages, description: 'Translate text to another language.' },
+    {
+        id: 'paraphrase',
+        label: 'Paraphraser',
+        icon: RefreshCw,
+        description: 'Rewrite text with improved phrasing.',
+    },
+    {
+        id: 'grammar',
+        label: 'Grammar Checker',
+        icon: CheckCircle,
+        description: 'Fix grammar, spelling, and punctuation.',
+    },
+    {
+        id: 'summarize',
+        label: 'Summarizer',
+        icon: AlignLeft,
+        description: 'Condense text into key points.',
+    },
+    {
+        id: 'translate',
+        label: 'Translator',
+        icon: Languages,
+        description: 'Translate text to another language.',
+    },
 ];
 
 const PARAPHRASE_MODES = [
-    { id: 'standard', label: 'Standard', prompt: 'Rewrite this text to improve clarity and flow while maintaining the original meaning.' },
-    { id: 'fluency', label: 'Fluency', prompt: 'Rewrite this text to sound more natural and fluent.' },
+    {
+        id: 'standard',
+        label: 'Standard',
+        prompt: 'Rewrite this text to improve clarity and flow while maintaining the original meaning.',
+    },
+    {
+        id: 'fluency',
+        label: 'Fluency',
+        prompt: 'Rewrite this text to sound more natural and fluent.',
+    },
     { id: 'formal', label: 'Formal', prompt: 'Rewrite this text in a formal, professional tone.' },
-    { id: 'simple', label: 'Simple', prompt: 'Rewrite this text using simple language and short sentences.' },
-    { id: 'creative', label: 'Creative', prompt: 'Rewrite this text creatively, using more descriptive vocabulary.' },
+    {
+        id: 'simple',
+        label: 'Simple',
+        prompt: 'Rewrite this text using simple language and short sentences.',
+    },
+    {
+        id: 'creative',
+        label: 'Creative',
+        prompt: 'Rewrite this text creatively, using more descriptive vocabulary.',
+    },
 ];
 
 const SUMMARIZE_MODES = [
-    { id: 'paragraph', label: 'Paragraph', prompt: 'Summarize this text into a concise paragraph.' },
-    { id: 'bullets', label: 'Bullet Points', prompt: 'Summarize this text into key bullet points.' },
+    {
+        id: 'paragraph',
+        label: 'Paragraph',
+        prompt: 'Summarize this text into a concise paragraph.',
+    },
+    {
+        id: 'bullets',
+        label: 'Bullet Points',
+        prompt: 'Summarize this text into key bullet points.',
+    },
 ];
 
 const LANGUAGES = [
@@ -90,17 +141,21 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
             await api.streamChat({
                 model: 'x-ai/grok-4.1-fast:free',
                 messages: [
-                    { role: 'system', content: 'You are an expert writing assistant. Provide high-quality, direct responses without conversational filler.' },
-                    { role: 'user', content: getPrompt() }
+                    {
+                        role: 'system',
+                        content:
+                            'You are an expert writing assistant. Provide high-quality, direct responses without conversational filler.',
+                    },
+                    { role: 'user', content: getPrompt() },
                 ],
-                onDelta: (delta) => {
+                onDelta: delta => {
                     accumulatedContent += delta;
                     setOutputText(accumulatedContent);
                 },
-                onError: (err) => {
-                    const msg = typeof err === 'string' ? err : (err?.message || JSON.stringify(err));
+                onError: err => {
+                    const msg = typeof err === 'string' ? err : err?.message || JSON.stringify(err);
                     throw new Error(msg);
-                }
+                },
             });
         } catch (err) {
             setOutputText(`Error: ${err?.message || String(err)}`);
@@ -126,13 +181,15 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
     };
 
     const containerClasses = isEmbedded
-        ? "h-full flex flex-col font-sans text-foreground overflow-hidden"
-        : "fixed inset-0 bg-background z-50 flex flex-col font-sans text-foreground overflow-hidden";
+        ? 'h-full flex flex-col font-sans text-foreground overflow-hidden'
+        : 'fixed inset-0 bg-background z-50 flex flex-col font-sans text-foreground overflow-hidden';
 
     return (
         <div className={containerClasses}>
             {/* Top Bar - Indigo Theme */}
-            <header className={`flex items-center justify-between px-4 border-b border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 backdrop-blur-xl ${isEmbedded ? 'h-12' : 'h-14'}`}>
+            <header
+                className={`flex items-center justify-between px-4 border-b border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 backdrop-blur-xl ${isEmbedded ? 'h-12' : 'h-14'}`}
+            >
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                         <Wand2 className="h-5 w-5" />
@@ -144,10 +201,11 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
                             <button
                                 key={tool.id}
                                 onClick={() => setActiveTool(tool.id)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 whitespace-nowrap ${activeTool === tool.id
-                                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
-                                    : 'text-muted-foreground hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
-                                    }`}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                                    activeTool === tool.id
+                                        ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
+                                        : 'text-muted-foreground hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
+                                }`}
                             >
                                 <tool.icon className="h-3.5 w-3.5" />
                                 <span className="hidden lg:inline">{tool.label}</span>
@@ -160,13 +218,22 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
                         type="button"
                         onClick={() => setViewMode(viewMode === 'split' ? 'focus' : 'split')}
                         className="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 transition-colors hidden md:block"
-                        aria-label={viewMode === 'split' ? "Focus Mode" : "Split View"}
-                        title={viewMode === 'split' ? "Focus Mode" : "Split View"}
+                        aria-label={viewMode === 'split' ? 'Focus Mode' : 'Split View'}
+                        title={viewMode === 'split' ? 'Focus Mode' : 'Split View'}
                     >
-                        {viewMode === 'split' ? <Maximize2 className="h-4 w-4" /> : <SplitSquareHorizontal className="h-4 w-4" />}
+                        {viewMode === 'split' ? (
+                            <Maximize2 className="h-4 w-4" />
+                        ) : (
+                            <SplitSquareHorizontal className="h-4 w-4" />
+                        )}
                     </button>
                     {!isEmbedded && (
-                        <button type="button" onClick={onClose} aria-label="Close writing tools" className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-colors">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            aria-label="Close writing tools"
+                            className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-colors"
+                        >
                             <X className="h-5 w-5" aria-hidden="true" />
                         </button>
                     )}
@@ -177,15 +244,18 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
             <div className="h-12 border-b border-border bg-background/50 flex items-center px-4 gap-4 overflow-x-auto no-scrollbar">
                 {activeTool === 'paraphrase' && (
                     <div className="flex items-center gap-1">
-                        <span className="text-xs font-semibold text-muted-foreground mr-2 uppercase tracking-wider">Mode:</span>
+                        <span className="text-xs font-semibold text-muted-foreground mr-2 uppercase tracking-wider">
+                            Mode:
+                        </span>
                         {PARAPHRASE_MODES.map(mode => (
                             <button
                                 key={mode.id}
                                 onClick={() => setActiveMode(mode.id)}
-                                className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
-                                    ? 'bg-indigo-600 text-white shadow-xs'
-                                    : 'text-muted-foreground hover:bg-muted'
-                                    }`}
+                                className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                                    activeMode === mode.id
+                                        ? 'bg-indigo-600 text-white shadow-xs'
+                                        : 'text-muted-foreground hover:bg-muted'
+                                }`}
                             >
                                 {mode.label}
                             </button>
@@ -194,15 +264,18 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
                 )}
                 {activeTool === 'summarize' && (
                     <div className="flex items-center gap-1">
-                        <span className="text-xs font-semibold text-muted-foreground mr-2 uppercase tracking-wider">Length:</span>
+                        <span className="text-xs font-semibold text-muted-foreground mr-2 uppercase tracking-wider">
+                            Length:
+                        </span>
                         {SUMMARIZE_MODES.map(mode => (
                             <button
                                 key={mode.id}
                                 onClick={() => setActiveMode(mode.id)}
-                                className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${activeMode === mode.id
-                                    ? 'bg-indigo-600 text-white shadow-xs'
-                                    : 'text-muted-foreground hover:bg-muted'
-                                    }`}
+                                className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                                    activeMode === mode.id
+                                        ? 'bg-indigo-600 text-white shadow-xs'
+                                        : 'text-muted-foreground hover:bg-muted'
+                                }`}
                             >
                                 {mode.label}
                             </button>
@@ -211,14 +284,18 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
                 )}
                 {activeTool === 'translate' && (
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Target:</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Target:
+                        </span>
                         <select
                             value={targetLang}
-                            onChange={(e) => setTargetLang(e.target.value)}
+                            onChange={e => setTargetLang(e.target.value)}
                             className="bg-muted/50 border border-border text-xs rounded-md px-2 py-1 focus:ring-2 focus:ring-indigo-500 outline-hidden"
                         >
                             {LANGUAGES.map(lang => (
-                                <option key={lang.id} value={lang.id}>{lang.label}</option>
+                                <option key={lang.id} value={lang.id}>
+                                    {lang.label}
+                                </option>
                             ))}
                         </select>
                     </div>
@@ -228,11 +305,13 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
             {/* Main Editor Area */}
             <div className="flex-1 flex overflow-hidden bg-slate-50/50 dark:bg-neutral-950/50">
                 {/* Input Area */}
-                <div className={`flex-1 flex flex-col border-r border-border transition-all duration-300 ${viewMode === 'focus' && outputText ? 'hidden md:flex' : 'flex'}`}>
+                <div
+                    className={`flex-1 flex flex-col border-r border-border transition-all duration-300 ${viewMode === 'focus' && outputText ? 'hidden md:flex' : 'flex'}`}
+                >
                     <div className="flex-1 relative group">
                         <textarea
                             value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
+                            onChange={e => setInputText(e.target.value)}
                             placeholder="Start writing or paste text here..."
                             className="w-full h-full p-6 bg-transparent border-none resize-none focus:outline-hidden text-lg leading-relaxed font-serif placeholder:font-sans placeholder:text-muted-foreground/40"
                             spellCheck="false"
@@ -240,7 +319,9 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
                         {!inputText && (
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-4 opacity-50 pointer-events-none">
                                 <Type className="h-12 w-12 text-indigo-300" />
-                                <p className="text-sm font-medium text-indigo-400">Type or paste to begin</p>
+                                <p className="text-sm font-medium text-indigo-400">
+                                    Type or paste to begin
+                                </p>
                             </div>
                         )}
                         {inputText && (
@@ -254,7 +335,8 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
                     </div>
                     <div className="p-4 border-t border-border flex justify-between items-center bg-background/50 backdrop-blur-xs">
                         <div className="text-xs text-muted-foreground font-mono">
-                            {inputText.length} chars • {inputText.split(/\s+/).filter(w => w).length} words
+                            {inputText.length} chars •{' '}
+                            {inputText.split(/\s+/).filter(w => w).length} words
                         </div>
                         <div className="flex gap-2">
                             <button
@@ -268,8 +350,18 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
                                 disabled={!inputText.trim() || isProcessing}
                                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-md text-xs font-bold shadow-md shadow-indigo-500/20 disabled:opacity-50 disabled:shadow-none transition-all flex items-center gap-2"
                             >
-                                {isProcessing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                                {activeTool === 'paraphrase' ? 'Rewrite' : activeTool === 'grammar' ? 'Fix' : activeTool === 'summarize' ? 'Summarize' : 'Translate'}
+                                {isProcessing ? (
+                                    <RefreshCw className="h-3 w-3 animate-spin" />
+                                ) : (
+                                    <Sparkles className="h-3 w-3" />
+                                )}
+                                {activeTool === 'paraphrase'
+                                    ? 'Rewrite'
+                                    : activeTool === 'grammar'
+                                      ? 'Fix'
+                                      : activeTool === 'summarize'
+                                        ? 'Summarize'
+                                        : 'Translate'}
                             </button>
                         </div>
                     </div>
@@ -277,18 +369,24 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
 
                 {/* Output Area */}
                 {(viewMode === 'split' || outputText) && (
-                    <div className={`flex-1 flex flex-col bg-white dark:bg-neutral-900 transition-all duration-300 ${viewMode === 'focus' && !outputText ? 'hidden' : 'flex'}`}>
+                    <div
+                        className={`flex-1 flex flex-col bg-white dark:bg-neutral-900 transition-all duration-300 ${viewMode === 'focus' && !outputText ? 'hidden' : 'flex'}`}
+                    >
                         <div className="flex-1 p-6 overflow-y-auto">
                             {outputText ? (
                                 <div className="prose dark:prose-invert max-w-none">
-                                    <p className="text-lg leading-relaxed font-serif whitespace-pre-wrap">{outputText}</p>
+                                    <p className="text-lg leading-relaxed font-serif whitespace-pre-wrap">
+                                        {outputText}
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30">
                                     <div className="h-16 w-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 flex items-center justify-center mb-4">
                                         <Sparkles className="h-8 w-8 text-indigo-200" />
                                     </div>
-                                    <p className="text-sm font-medium">AI suggestions will appear here</p>
+                                    <p className="text-sm font-medium">
+                                        AI suggestions will appear here
+                                    </p>
                                 </div>
                             )}
                         </div>
@@ -302,7 +400,11 @@ const GrammarlyQuillbotPanel = ({ isOpen, onClose, isEmbedded = false, backendUr
                                         onClick={handleCopy}
                                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-md transition-colors"
                                     >
-                                        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                        {copied ? (
+                                            <Check className="h-3 w-3" />
+                                        ) : (
+                                            <Copy className="h-3 w-3" />
+                                        )}
                                         {copied ? 'Copied' : 'Copy'}
                                     </button>
                                 </div>

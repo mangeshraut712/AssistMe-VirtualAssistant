@@ -2,7 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * THEME CONTEXT
  * ═══════════════════════════════════════════════════════════════════════════════
- * 
+ *
  * Provides theme state (light/dark mode) to the entire application.
  */
 
@@ -23,7 +23,7 @@ import { STORAGE_KEYS } from '@/constants';
 
 const ThemeContext = createContext({
     theme: 'system',
-    setTheme: () => { },
+    setTheme: () => {},
     resolvedTheme: 'light',
 });
 
@@ -45,7 +45,9 @@ export function ThemeProvider({ children, defaultTheme = 'system' }) {
         const applyTheme = () => {
             let resolved;
             if (theme === 'system') {
-                resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                resolved = window.matchMedia('(prefers-color-scheme: dark)').matches
+                    ? 'dark'
+                    : 'light';
             } else {
                 resolved = theme;
             }
@@ -67,7 +69,7 @@ export function ThemeProvider({ children, defaultTheme = 'system' }) {
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, [theme]);
 
-    const updateTheme = (newTheme) => {
+    const updateTheme = newTheme => {
         setTheme(newTheme);
         localStorage.setItem(STORAGE_KEYS.THEME, newTheme);
     };

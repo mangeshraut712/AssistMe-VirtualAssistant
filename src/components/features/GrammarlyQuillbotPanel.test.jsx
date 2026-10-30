@@ -4,7 +4,7 @@ import GrammarlyQuillbotPanel from './GrammarlyQuillbotPanel';
 
 const renderPanel = () => render(<GrammarlyQuillbotPanel isOpen onClose={vi.fn()} />);
 
-const button = (name) => screen.getByRole('button', { name });
+const button = name => screen.getByRole('button', { name });
 
 describe('GrammarlyQuillbotPanel', () => {
     it('renders nothing while closed', () => {

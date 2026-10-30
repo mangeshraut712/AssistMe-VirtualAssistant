@@ -1,7 +1,7 @@
 /**
  * Animation Components & Utilities
  * Apple-style Motion with Japanese Design Philosophy
- * 
+ *
  * Design Principles:
  * - Ma (間) - Negative space and breathing room
  * - Kanso (簡素) - Simplicity and elimination of clutter
@@ -102,79 +102,71 @@ FadeIn.displayName = 'FadeIn';
 /**
  * Slide Up component - Content slides in from bottom
  */
-export const SlideUp = React.forwardRef(
-    ({ children, className, delay = 0, ...props }, ref) => (
-        <motion.div
-            ref={ref}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ ...appleSpring, delay }}
-            className={className}
-            {...props}
-        >
-            {children}
-        </motion.div>
-    )
-);
+export const SlideUp = React.forwardRef(({ children, className, delay = 0, ...props }, ref) => (
+    <motion.div
+        ref={ref}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ ...appleSpring, delay }}
+        className={className}
+        {...props}
+    >
+        {children}
+    </motion.div>
+));
 SlideUp.displayName = 'SlideUp';
 
 /**
  * Scale In component - Content scales in
  */
-export const ScaleIn = React.forwardRef(
-    ({ children, className, delay = 0, ...props }, ref) => (
-        <motion.div
-            ref={ref}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ ...appleSpring, delay }}
-            className={className}
-            {...props}
-        >
-            {children}
-        </motion.div>
-    )
-);
+export const ScaleIn = React.forwardRef(({ children, className, delay = 0, ...props }, ref) => (
+    <motion.div
+        ref={ref}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ ...appleSpring, delay }}
+        className={className}
+        {...props}
+    >
+        {children}
+    </motion.div>
+));
 ScaleIn.displayName = 'ScaleIn';
 
 /**
  * Stagger Container - For animating lists of items
  */
-export const StaggerContainer = React.forwardRef(
-    ({ children, className, ...props }, ref) => (
-        <motion.div
-            ref={ref}
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            className={className}
-            {...props}
-        >
-            {children}
-        </motion.div>
-    )
-);
+export const StaggerContainer = React.forwardRef(({ children, className, ...props }, ref) => (
+    <motion.div
+        ref={ref}
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        className={className}
+        {...props}
+    >
+        {children}
+    </motion.div>
+));
 StaggerContainer.displayName = 'StaggerContainer';
 
 /**
  * Stagger Item - Children of StaggerContainer
  */
-export const StaggerItem = React.forwardRef(
-    ({ children, className, ...props }, ref) => (
-        <motion.div
-            ref={ref}
-            variants={staggerItem}
-            transition={appleSpring}
-            className={className}
-            {...props}
-        >
-            {children}
-        </motion.div>
-    )
-);
+export const StaggerItem = React.forwardRef(({ children, className, ...props }, ref) => (
+    <motion.div
+        ref={ref}
+        variants={staggerItem}
+        transition={appleSpring}
+        className={className}
+        {...props}
+    >
+        {children}
+    </motion.div>
+));
 StaggerItem.displayName = 'StaggerItem';
 
 /**
@@ -227,7 +219,7 @@ export const Magnetic = ({ children, className, intensity = 0.3 }) => {
     const ref = React.useRef(null);
     const [position, setPosition] = React.useState({ x: 0, y: 0 });
 
-    const handleMouse = (e) => {
+    const handleMouse = e => {
         if (!ref.current) return;
         const { clientX, clientY } = e;
         const { left, top, width, height } = ref.current.getBoundingClientRect();
@@ -292,10 +284,7 @@ export const TypingText = ({ text, className, speed = 0.03 }) => {
  */
 export const Shimmer = ({ className, ...props }) => (
     <motion.div
-        className={cn(
-            'relative overflow-hidden bg-muted rounded-lg',
-            className
-        )}
+        className={cn('relative overflow-hidden bg-muted rounded-lg', className)}
         {...props}
     >
         <motion.div
@@ -321,9 +310,7 @@ export const PulseDot = ({ className, color = 'bg-green-500' }) => (
                 color
             )}
         />
-        <span
-            className={cn('relative inline-flex rounded-full h-3 w-3', color)}
-        />
+        <span className={cn('relative inline-flex rounded-full h-3 w-3', color)} />
     </span>
 );
 

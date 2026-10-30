@@ -1,7 +1,7 @@
 /**
  * Enhanced Sidebar Component with Framer Motion
  * Apple & Japanese Design Aesthetics
- * 
+ *
  * Features:
  * - Smooth slide animations
  * - Staggered list animations
@@ -26,7 +26,7 @@ import {
     ChevronLeft,
     LayoutGrid,
     Plus,
-    Sparkles
+    Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -90,10 +90,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, badge }) => (
         whileHover={{ scale: 1.02, x: 4 }}
         whileTap={{ scale: 0.98 }}
     >
-        <Icon className={cn(
-            'h-[18px] w-[18px] transition-all',
-            active && 'text-primary'
-        )} />
+        <Icon className={cn('h-[18px] w-[18px] transition-all', active && 'text-primary')} />
         <span className="flex-1 text-left">{label}</span>
         {badge && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/30 text-primary font-bold">
@@ -129,15 +126,15 @@ const ChatItem = ({
                     name="chat-title"
                     type="text"
                     value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
+                    onChange={e => setEditTitle(e.target.value)}
                     className="flex-1 bg-transparent text-sm focus:outline-hidden min-w-0"
                     autoFocus
                     autoComplete="off"
-                    onKeyDown={(e) => {
+                    onKeyDown={e => {
                         if (e.key === 'Enter') onSaveEdit();
                         if (e.key === 'Escape') onCancelEdit();
                     }}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={e => e.stopPropagation()}
                 />
                 <motion.button
                     onClick={onSaveEdit}
@@ -175,31 +172,29 @@ const ChatItem = ({
         >
             <div className="flex items-center gap-3">
                 {/* Icon */}
-                <div className={cn(
-                    'flex h-9 w-9 items-center justify-center rounded-xl border transition-colors',
-                    isActive
-                        ? 'border-primary/30 bg-primary/10 text-primary'
-                        : 'border-border/50 bg-background/50'
-                )}>
+                <div
+                    className={cn(
+                        'flex h-9 w-9 items-center justify-center rounded-xl border transition-colors',
+                        isActive
+                            ? 'border-primary/30 bg-primary/10 text-primary'
+                            : 'border-border/50 bg-background/50'
+                    )}
+                >
                     <MessageSquare className="h-4 w-4" />
                 </div>
 
                 {/* Title */}
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                        {chat.title || 'Untitled Chat'}
-                    </p>
+                    <p className="text-sm font-medium truncate">{chat.title || 'Untitled Chat'}</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                        {chat.messageCount
-                            ? `${chat.messageCount} messages`
-                            : `Chat #${index + 1}`}
+                        {chat.messageCount ? `${chat.messageCount} messages` : `Chat #${index + 1}`}
                     </p>
                 </div>
 
                 {/* Actions - visible on hover */}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <motion.button
-                        onClick={(e) => {
+                        onClick={e => {
                             e.stopPropagation();
                             onStartEdit(chat);
                         }}
@@ -210,7 +205,7 @@ const ChatItem = ({
                         <Edit2 className="h-3.5 w-3.5" />
                     </motion.button>
                     <motion.button
-                        onClick={(e) => {
+                        onClick={e => {
                             e.stopPropagation();
                             onDelete(chat.id);
                         }}
@@ -245,7 +240,7 @@ const Sidebar = ({
     onSelectChat,
     onRenameChat,
     onDeleteChat,
-    activePath
+    activePath,
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [editingChatId, setEditingChatId] = useState(null);
@@ -254,12 +249,10 @@ const Sidebar = ({
     const filteredConversations = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
         if (!term) return conversations;
-        return conversations.filter(chat =>
-            (chat.title || '').toLowerCase().includes(term)
-        );
+        return conversations.filter(chat => (chat.title || '').toLowerCase().includes(term));
     }, [searchTerm, conversations]);
 
-    const startEditing = (chat) => {
+    const startEditing = chat => {
         setEditingChatId(chat.id);
         setEditTitle(chat.title);
     };
@@ -372,7 +365,7 @@ const Sidebar = ({
                                     name="chat-search"
                                     type="search"
                                     value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onChange={e => setSearchTerm(e.target.value)}
                                     placeholder="Search chats..."
                                     aria-label="Search chats"
                                     className={cn(
@@ -396,7 +389,7 @@ const Sidebar = ({
                                 Features
                             </p>
                             <div className="space-y-1">
-                                {featureLinks.map((item) => (
+                                {featureLinks.map(item => (
                                     <NavItem
                                         key={item.path}
                                         icon={item.icon}

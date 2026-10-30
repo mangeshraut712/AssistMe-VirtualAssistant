@@ -1,14 +1,13 @@
 /**
  * Enhanced Settings Modal with Framer Motion
  * Apple-style settings with animations
- * 
+ *
  * Features:
  * - Animated modal entrance
  * - Interactive theme switcher
  * - Glass morphism backdrop
  * - Smooth transitions
  */
-
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sun, Moon, Monitor, Globe2, Palette, Server, Check } from 'lucide-react';
@@ -18,7 +17,7 @@ import { cn } from '@/lib/utils';
 const backdropVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1 },
-    exit: { opacity: 0 }
+    exit: { opacity: 0 },
 };
 
 const modalVariants = {
@@ -27,23 +26,23 @@ const modalVariants = {
         opacity: 1,
         scale: 1,
         y: 0,
-        transition: { type: 'spring', stiffness: 300, damping: 30 }
+        transition: { type: 'spring', stiffness: 300, damping: 30 },
     },
     exit: {
         opacity: 0,
         scale: 0.95,
         y: 20,
-        transition: { duration: 0.2 }
-    }
+        transition: { duration: 0.2 },
+    },
 };
 
 const itemVariants = {
     hidden: { opacity: 0, y: 10 },
-    visible: (i) => ({
+    visible: i => ({
         opacity: 1,
         y: 0,
-        transition: { delay: i * 0.1, type: 'spring', stiffness: 300, damping: 25 }
-    })
+        transition: { delay: i * 0.1, type: 'spring', stiffness: 300, damping: 25 },
+    }),
 };
 
 // Setting Card Component
@@ -84,10 +83,12 @@ const ThemeButton = ({ id, label, icon: Icon, swatch, selected, onClick }) => (
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
     >
-        <div className={cn(
-            'w-full h-10 rounded-lg flex items-center justify-center text-xs font-semibold relative',
-            swatch
-        )}>
+        <div
+            className={cn(
+                'w-full h-10 rounded-lg flex items-center justify-center text-xs font-semibold relative',
+                swatch
+            )}
+        >
             {label}
             {selected && (
                 <motion.div
@@ -110,9 +111,24 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
     if (!isOpen) return null;
 
     const themes = [
-        { id: 'light', label: 'Light', icon: Sun, swatch: 'bg-white text-black border border-neutral-200' },
-        { id: 'dark', label: 'Dark', icon: Moon, swatch: 'bg-neutral-900 text-white border border-neutral-700' },
-        { id: 'system', label: 'System', icon: Monitor, swatch: 'bg-linear-to-r from-white via-slate-300 to-neutral-900 text-black border' },
+        {
+            id: 'light',
+            label: 'Light',
+            icon: Sun,
+            swatch: 'bg-white text-black border border-neutral-200',
+        },
+        {
+            id: 'dark',
+            label: 'Dark',
+            icon: Moon,
+            swatch: 'bg-neutral-900 text-white border border-neutral-700',
+        },
+        {
+            id: 'system',
+            label: 'System',
+            icon: Monitor,
+            swatch: 'bg-linear-to-r from-white via-slate-300 to-neutral-900 text-black border',
+        },
     ];
 
     const languages = [
@@ -149,7 +165,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={e => e.stopPropagation()}
                 >
                     {/* Header */}
                     <motion.div
@@ -189,7 +205,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                                 id="language"
                                 name="language"
                                 value={settings.language}
-                                onChange={(e) => onSettingsChange('language', e.target.value)}
+                                onChange={e => onSettingsChange('language', e.target.value)}
                                 className={cn(
                                     'h-11 w-full rounded-xl border border-input',
                                     'bg-background px-3 text-sm',
@@ -197,7 +213,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                                     'transition-all cursor-pointer'
                                 )}
                             >
-                                {languages.map((lang) => (
+                                {languages.map(lang => (
                                     <option key={lang.code} value={lang.code}>
                                         {lang.name}
                                     </option>
@@ -213,12 +229,12 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                             index={1}
                         >
                             <div className="grid grid-cols-3 gap-2">
-                                {themes.map((theme) => (
+                                {themes.map(theme => (
                                     <ThemeButton
                                         key={theme.id}
                                         {...theme}
                                         selected={settings.theme === theme.id}
-                                        onClick={(id) => onSettingsChange('theme', id)}
+                                        onClick={id => onSettingsChange('theme', id)}
                                     />
                                 ))}
                             </div>
@@ -234,7 +250,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                             <input
                                 type="text"
                                 value={settings.backendUrl || ''}
-                                onChange={(e) => onSettingsChange('backendUrl', e.target.value)}
+                                onChange={e => onSettingsChange('backendUrl', e.target.value)}
                                 placeholder="https://your-backend.example.com"
                                 className={cn(
                                     'w-full rounded-xl border border-input',
@@ -259,7 +275,9 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                         >
                             <div>
                                 <p className="font-semibold text-sm">AssistMe</p>
-                                <p className="text-xs text-muted-foreground">AssistMe Virtual Assistant</p>
+                                <p className="text-xs text-muted-foreground">
+                                    AssistMe Virtual Assistant
+                                </p>
                             </div>
                             <motion.div
                                 className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold"

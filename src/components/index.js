@@ -2,7 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * COMPONENT EXPORTS
  * ═══════════════════════════════════════════════════════════════════════════════
- * 
+ *
  * Central barrel export for all components.
  * Import from '@/components' for cleaner imports.
  */

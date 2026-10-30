@@ -14,7 +14,7 @@ import {
     X,
     FileText,
     AudioLines,
-    ArrowUp
+    ArrowUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,17 +25,16 @@ const fileChipVariants = {
         opacity: 1,
         scale: 1,
         y: 0,
-        transition: { type: 'spring', stiffness: 400, damping: 25 }
+        transition: { type: 'spring', stiffness: 400, damping: 25 },
     },
     exit: {
         opacity: 0,
         scale: 0.8,
-        transition: { duration: 0.15 }
-    }
+        transition: { duration: 0.15 },
+    },
 };
 
 // Listening pulse animation
-
 
 const InputArea = ({
     input,
@@ -47,7 +46,7 @@ const InputArea = ({
     variant = 'docked',
     models = [],
     selectedModel,
-    onModelChange
+    onModelChange,
 }) => {
     const [isListening, setIsListening] = useState(false);
     const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -77,7 +76,7 @@ const InputArea = ({
 
             recognitionRef.current.onstart = () => resetSilenceTimer();
 
-            recognitionRef.current.onresult = (event) => {
+            recognitionRef.current.onresult = event => {
                 resetSilenceTimer();
                 let transcript = '';
                 for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -106,7 +105,8 @@ const InputArea = ({
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+            textareaRef.current.style.height =
+                Math.min(textareaRef.current.scrollHeight, 200) + 'px';
         }
     }, [input]);
 
@@ -124,7 +124,7 @@ const InputArea = ({
         }
     };
 
-    const handleFileUpload = (e) => {
+    const handleFileUpload = e => {
         const files = Array.from(e.target.files || []);
         setUploadedFiles(prev => [...prev, ...files]);
         if (onFileUpload) {
@@ -132,7 +132,7 @@ const InputArea = ({
         }
     };
 
-    const removeFile = (index) => {
+    const removeFile = index => {
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
     };
 
@@ -147,10 +147,7 @@ const InputArea = ({
     };
 
     return (
-        <div className={cn(
-            'w-full max-w-4xl mx-auto',
-            isHero ? '' : ''
-        )}>
+        <div className={cn('w-full max-w-4xl mx-auto', isHero ? '' : '')}>
             {/* Uploaded Files Preview */}
             <AnimatePresence>
                 {uploadedFiles.length > 0 && (
@@ -233,10 +230,10 @@ const InputArea = ({
                         name="message"
                         ref={textareaRef}
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        onChange={e => setInput(e.target.value)}
                         onFocus={() => setIsFocused(true)}
                         onBlur={() => setIsFocused(false)}
-                        onKeyDown={(e) => {
+                        onKeyDown={e => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
                                 handleSubmit();
@@ -300,16 +297,26 @@ const InputArea = ({
                                     )}
                                 >
                                     <optgroup label="Free Models">
-                                        {models.filter(m => m.free).map(m => (
-                                            <option key={m.id} value={m.id}>
-                                                {m.name.replace(' (Free)', '').replace('Google: ', '').replace('Meta ', '').replace('NVIDIA ', '')}
-                                            </option>
-                                        ))}
+                                        {models
+                                            .filter(m => m.free)
+                                            .map(m => (
+                                                <option key={m.id} value={m.id}>
+                                                    {m.name
+                                                        .replace(' (Free)', '')
+                                                        .replace('Google: ', '')
+                                                        .replace('Meta ', '')
+                                                        .replace('NVIDIA ', '')}
+                                                </option>
+                                            ))}
                                     </optgroup>
                                     <optgroup label="Premium Models">
-                                        {models.filter(m => !m.free).map(m => (
-                                            <option key={m.id} value={m.id}>{m.name}</option>
-                                        ))}
+                                        {models
+                                            .filter(m => !m.free)
+                                            .map(m => (
+                                                <option key={m.id} value={m.id}>
+                                                    {m.name}
+                                                </option>
+                                            ))}
                                     </optgroup>
                                 </select>
                                 <ChevronDown className="absolute right-2 h-3 w-3 text-muted-foreground pointer-events-none" />
@@ -392,7 +399,15 @@ const InputArea = ({
 
             {/* Hint Text - Compact, hidden on mobile */}
             <p className="hidden sm:block text-center text-[10px] text-muted-foreground/50 mt-2 pb-safe">
-                Press <kbd className="px-1 py-0.5 rounded bg-foreground/5 font-mono text-[9px]">Enter</kbd> to send, <kbd className="px-1 py-0.5 rounded bg-foreground/5 font-mono text-[9px]">Shift+Enter</kbd> for new line
+                Press{' '}
+                <kbd className="px-1 py-0.5 rounded bg-foreground/5 font-mono text-[9px]">
+                    Enter
+                </kbd>{' '}
+                to send,{' '}
+                <kbd className="px-1 py-0.5 rounded bg-foreground/5 font-mono text-[9px]">
+                    Shift+Enter
+                </kbd>{' '}
+                for new line
             </p>
         </div>
     );

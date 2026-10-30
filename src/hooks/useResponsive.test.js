@@ -14,7 +14,7 @@ let mediaMatches = false;
 
 const installMatchMedia = () => {
     listeners.clear();
-    window.matchMedia = vi.fn((query) => ({
+    window.matchMedia = vi.fn(query => ({
         get matches() {
             return mediaMatches;
         },
@@ -34,7 +34,7 @@ const installMatchMedia = () => {
     }));
 };
 
-const setUserAgent = (userAgent) => {
+const setUserAgent = userAgent => {
     Object.defineProperty(window.navigator, 'userAgent', {
         value: userAgent,
         configurable: true,
@@ -62,7 +62,7 @@ describe('useMediaQuery', () => {
 
         act(() => {
             mediaMatches = false;
-            listeners.forEach((listener) => listener());
+            listeners.forEach(listener => listener());
         });
 
         expect(result.current).toBe(false);
@@ -92,7 +92,9 @@ describe('static device hooks', () => {
     });
 
     it('detects Safari and iOS from the user agent once', () => {
-        setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1');
+        setUserAgent(
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1'
+        );
         const safari = renderHook(() => useIsSafari());
         const ios = renderHook(() => useIsIOS());
 
@@ -101,7 +103,9 @@ describe('static device hooks', () => {
     });
 
     it('does not treat Chrome as Safari', () => {
-        setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36');
+        setUserAgent(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36'
+        );
         const { result } = renderHook(() => useIsSafari());
         expect(result.current).toBe(false);
     });

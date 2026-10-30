@@ -6,19 +6,23 @@ function sanitizeMessage(message) {
     return {
         role: message.role,
         content: message.content,
-        ...(message.metadata && typeof message.metadata === 'object' ? { metadata: message.metadata } : {}),
+        ...(message.metadata && typeof message.metadata === 'object'
+            ? { metadata: message.metadata }
+            : {}),
         ...(Array.isArray(message.followUps) ? { followUps: message.followUps } : {}),
     };
 }
 
 function sanitizeConversation(conversation, index) {
     if (!conversation || typeof conversation !== 'object') return null;
-    const id = typeof conversation.id === 'number' && Number.isFinite(conversation.id)
-        ? conversation.id
-        : index + 1;
-    const title = typeof conversation.title === 'string' && conversation.title.trim()
-        ? conversation.title
-        : DEFAULT_TITLE;
+    const id =
+        typeof conversation.id === 'number' && Number.isFinite(conversation.id)
+            ? conversation.id
+            : index + 1;
+    const title =
+        typeof conversation.title === 'string' && conversation.title.trim()
+            ? conversation.title
+            : DEFAULT_TITLE;
     const messages = Array.isArray(conversation.messages)
         ? conversation.messages.map(sanitizeMessage).filter(Boolean)
         : [];
@@ -46,7 +50,7 @@ export function createInitialChatState(storage = globalThis.localStorage, now = 
         const saved = storage?.getItem('currentChatId');
         if (saved) {
             const id = Number(saved);
-            if (Number.isFinite(id) && conversations.some((conversation) => conversation.id === id)) {
+            if (Number.isFinite(id) && conversations.some(conversation => conversation.id === id)) {
                 currentChatId = id;
             }
         }
@@ -66,6 +70,6 @@ export function trimForRegenerate(messages, index) {
     if (index < 0 || index >= messages.length) return null;
     if (messages[index]?.role !== 'assistant') return null;
     const trimmed = messages.slice(0, index);
-    if (!trimmed.some((message) => message.role === 'user' && message.content.trim())) return null;
+    if (!trimmed.some(message => message.role === 'user' && message.content.trim())) return null;
     return trimmed;
 }

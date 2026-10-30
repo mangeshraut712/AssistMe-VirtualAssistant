@@ -16,18 +16,18 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
         setFiles(initialFiles);
     }, [initialFiles]);
 
-    const handleFileSelect = (event) => {
+    const handleFileSelect = event => {
         const selectedFiles = Array.from(event.target.files);
         setFiles(prev => [...prev, ...selectedFiles]);
     };
 
-    const handleDrop = (event) => {
+    const handleDrop = event => {
         event.preventDefault();
         const droppedFiles = Array.from(event.dataTransfer.files);
         setFiles(prev => [...prev, ...droppedFiles]);
     };
 
-    const removeFile = (index) => {
+    const removeFile = index => {
         setFiles(prev => prev.filter((_, i) => i !== index));
     };
 
@@ -41,7 +41,7 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
                     fileName: file.name,
                     fileType: file.type,
                     error: 'File exceeds the 10 MB limit',
-                    success: false
+                    success: false,
                 });
                 continue;
             }
@@ -57,13 +57,17 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
                     endpoint = '/api/vision/analyze';
                 } else if (kind.startsWith('video/')) {
                     endpoint = '/api/video/analyze';
-                } else if (kind === 'application/pdf' || kind.includes('document') || kind.startsWith('text/')) {
+                } else if (
+                    kind === 'application/pdf' ||
+                    kind.includes('document') ||
+                    kind.startsWith('text/')
+                ) {
                     endpoint = '/api/documents/extract';
                 }
 
                 const response = await fetch(endpoint, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
                 });
 
                 const data = await response.json().catch(() => ({}));
@@ -72,7 +76,7 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
                         fileName: file.name,
                         fileType: file.type,
                         error: data.detail || data.error || `Upload failed (${response.status})`,
-                        success: false
+                        success: false,
                     });
                     continue;
                 }
@@ -80,15 +84,21 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
                 nextResults.push({
                     fileName: file.name,
                     fileType: file.type,
-                    result: data.file ? { ...data.file, text: data.file.extracted_text, description: data.file.extracted_text } : data,
-                    success: true
+                    result: data.file
+                        ? {
+                              ...data.file,
+                              text: data.file.extracted_text,
+                              description: data.file.extracted_text,
+                          }
+                        : data,
+                    success: true,
                 });
             } catch (error) {
                 nextResults.push({
                     fileName: file.name,
                     fileType: file.type,
                     error: error.message,
-                    success: false
+                    success: false,
                 });
             }
         }
@@ -100,9 +110,15 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
 
     const getFileIcon = (type = '') => {
         const kind = type || '';
-        if (kind.startsWith('image/')) return <ImageIcon className="h-5 w-5" />;
-        if (kind.startsWith('video/')) return <Video className="h-5 w-5" />;
-        if (kind.includes('pdf') || kind.includes('document') || kind.startsWith('text/')) return <FileText className="h-5 w-5" />;
+        if (kind.startsWith('image/')) {
+            return <ImageIcon className="h-5 w-5" />;
+        }
+        if (kind.startsWith('video/')) {
+            return <Video className="h-5 w-5" />;
+        }
+        if (kind.includes('pdf') || kind.includes('document') || kind.startsWith('text/')) {
+            return <FileText className="h-5 w-5" />;
+        }
         return <File className="h-5 w-5" />;
     };
 
@@ -122,7 +138,12 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
                             Upload images, videos, documents, and more for AI processing
                         </p>
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Close file upload" className="p-2 hover:bg-accent rounded-lg transition-colors">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Close file upload"
+                        className="p-2 hover:bg-accent rounded-lg transition-colors"
+                    >
                         <X className="h-5 w-5" />
                     </button>
                 </div>
@@ -131,9 +152,9 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
                     {/* Drop Zone */}
                     <div
                         onDrop={handleDrop}
-                        onDragOver={(e) => e.preventDefault()}
+                        onDragOver={e => e.preventDefault()}
                         onClick={() => fileInputRef.current?.click()}
-                        onKeyDown={(event) => {
+                        onKeyDown={event => {
                             if (event.key === 'Enter' || event.key === ' ') {
                                 event.preventDefault();
                                 fileInputRef.current?.click();
@@ -145,9 +166,12 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
                         className="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary transition-colors bg-muted/20"
                     >
                         <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                        <p className="text-lg font-semibold mb-2">Drop files here or click to upload</p>
+                        <p className="text-lg font-semibold mb-2">
+                            Drop files here or click to upload
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                            Supports: Images (JPG, PNG, WebP), Videos (MP4, MOV), Documents (PDF, DOCX), and more
+                            Supports: Images (JPG, PNG, WebP), Videos (MP4, MOV), Documents (PDF,
+                            DOCX), and more
                         </p>
                         <input
                             id="file-upload-panel"
@@ -175,12 +199,15 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
                             </div>
                             <div className="space-y-2">
                                 {files.map((file, idx) => (
-                                    <div key={idx} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                                        <div className="text-primary">
-                                            {getFileIcon(file.type)}
-                                        </div>
+                                    <div
+                                        key={idx}
+                                        className="flex items-center gap-3 p-3 bg-muted rounded-lg"
+                                    >
+                                        <div className="text-primary">{getFileIcon(file.type)}</div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">{file.name}</p>
+                                            <p className="text-sm font-medium truncate">
+                                                {file.name}
+                                            </p>
                                             <p className="text-xs text-muted-foreground">
                                                 {(file.size / 1024 / 1024).toFixed(2)} MB
                                             </p>
@@ -206,7 +233,9 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
                             disabled={isProcessing}
                             className="w-full py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors font-medium"
                         >
-                            {isProcessing ? 'Processing...' : `Process ${files.length} File${files.length > 1 ? 's' : ''}`}
+                            {isProcessing
+                                ? 'Processing...'
+                                : `Process ${files.length} File${files.length > 1 ? 's' : ''}`}
                         </button>
                     )}
 
@@ -215,18 +244,28 @@ const FileUploadPanel = ({ isOpen, onClose, onFileProcess, initialFiles = [] }) 
                         <div className="space-y-3">
                             <h3 className="font-semibold">Processing Results</h3>
                             {results.map((result, idx) => (
-                                <div key={idx} className={`p-4 rounded-lg border ${result.success ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'
-                                    }`}>
+                                <div
+                                    key={idx}
+                                    className={`p-4 rounded-lg border ${
+                                        result.success
+                                            ? 'bg-green-500/10 border-green-500/20'
+                                            : 'bg-red-500/10 border-red-500/20'
+                                    }`}
+                                >
                                     <div className="flex items-start gap-3">
                                         {getFileIcon(result.fileType)}
                                         <div className="flex-1">
                                             <p className="font-medium mb-2">{result.fileName}</p>
                                             {result.success ? (
                                                 <div className="text-sm text-muted-foreground">
-                                                    {result.result.description || result.result.text || 'Processed successfully'}
+                                                    {result.result.description ||
+                                                        result.result.text ||
+                                                        'Processed successfully'}
                                                 </div>
                                             ) : (
-                                                <p className="text-sm text-red-500">{result.error}</p>
+                                                <p className="text-sm text-red-500">
+                                                    {result.error}
+                                                </p>
                                             )}
                                         </div>
                                     </div>

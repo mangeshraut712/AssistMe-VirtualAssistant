@@ -10,7 +10,10 @@ function escapeHtml(value) {
 }
 
 function headingId(text) {
-    const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const id = text
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
     return id || 'section';
 }
 
@@ -46,14 +49,21 @@ export function renderGrokipediaMarkdown(content) {
     html = html.replace(/((?:<li class="grok-li">.*?<\/li>\s*)+)/g, '<ul class="grok-ul">$1</ul>');
     html = html.replace(/^&gt; (.+)$/gm, '<blockquote class="grok-quote">$1</blockquote>');
 
-    html = html.split('\n\n').map((para) => {
-        const trimmed = para.trim();
-        if (!trimmed) return '';
-        if (trimmed.startsWith('<h') || trimmed.startsWith('<ul') || trimmed.startsWith('<blockquote')) {
-            return trimmed;
-        }
-        return `<p class="grok-p">${trimmed}</p>`;
-    }).join('\n');
+    html = html
+        .split('\n\n')
+        .map(para => {
+            const trimmed = para.trim();
+            if (!trimmed) return '';
+            if (
+                trimmed.startsWith('<h') ||
+                trimmed.startsWith('<ul') ||
+                trimmed.startsWith('<blockquote')
+            ) {
+                return trimmed;
+            }
+            return `<p class="grok-p">${trimmed}</p>`;
+        })
+        .join('\n');
 
     return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
 }

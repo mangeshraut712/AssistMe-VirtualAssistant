@@ -27,7 +27,9 @@ describe('API key endpoints', () => {
 
         const allowed = await call(geminiKey, 'https://mangeshraut712.github.io');
         expect(allowed.status).toBe(200);
-        expect(allowed.headers.get('access-control-allow-origin')).toBe('https://mangeshraut712.github.io');
+        expect(allowed.headers.get('access-control-allow-origin')).toBe(
+            'https://mangeshraut712.github.io'
+        );
         expect((await allowed.json()).apiKey).toBe('unit-test-google-key');
 
         const sameOrigin = await call(geminiKey);

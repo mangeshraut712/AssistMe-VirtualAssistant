@@ -162,8 +162,8 @@ export const hoverGlow = (isMobile = false) => ({
     whileHover: isMobile
         ? {}
         : {
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-        },
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+          },
     transition: { duration: duration.normal },
 });
 
@@ -248,7 +248,7 @@ export const shouldReduceMotion = () => {
 };
 
 // Conditional animation (respects user preferences)
-export const withReducedMotion = (animation) => {
+export const withReducedMotion = animation => {
     if (shouldReduceMotion()) {
         return {
             initial: animation.animate,

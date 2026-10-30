@@ -5,7 +5,7 @@ export function createSseReader() {
     let buffer = '';
     const decoder = new TextDecoder();
 
-    const parse = (flush) => {
+    const parse = flush => {
         const parts = buffer.split('\n');
         if (flush) {
             buffer = '';

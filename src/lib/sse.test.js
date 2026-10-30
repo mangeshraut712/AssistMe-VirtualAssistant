@@ -9,9 +9,7 @@ describe('createSseReader', () => {
         const reader = createSseReader();
 
         expect(reader.push(bytes.slice(0, splitAt))).toEqual([]);
-        expect(reader.push(bytes.slice(splitAt))).toEqual([
-            { type: 'content', delta: '🙂' },
-        ]);
+        expect(reader.push(bytes.slice(splitAt))).toEqual([{ type: 'content', delta: '🙂' }]);
     });
 
     it('emits done and keeps a trailing partial line until finish', () => {

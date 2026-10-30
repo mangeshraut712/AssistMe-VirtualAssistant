@@ -3,7 +3,6 @@
  * Apple-style blur and subtle animations
  */
 
-
 import { motion } from 'framer-motion';
 import { Menu, Sparkles, Command } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -53,7 +52,9 @@ const Header = ({ onOpenSidebar }) => {
                             transition={{ duration: 2, repeat: Infinity }}
                         >
                             <Sparkles className="h-3 w-3" />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">AI</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">
+                                AI
+                            </span>
                         </motion.div>
                     </div>
                 </motion.div>

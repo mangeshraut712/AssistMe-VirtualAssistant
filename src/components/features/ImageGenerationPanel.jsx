@@ -2,7 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * IMAGINE - AI Image Generation Studio
  * ═══════════════════════════════════════════════════════════════════════════════
- * 
+ *
  * Features:
  * - Premium: Gemini Flash AI for intelligent prompt enhancement
  * - Standard: Multiple Flux models via Pollinations (FREE)
@@ -10,17 +10,26 @@
  * - Style presets for quick generation
  * - Smooth hover effects & loading animations
  * - Glass morphism design
- * 
+ *
  * Both modes are 100% FREE!
  */
-
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Sparkles, Download,
-    ArrowUp, Settings2, Copy, ExternalLink, Check,
-    Loader2, Wand2, Zap, Crown, Trash2
+    X,
+    Sparkles,
+    Download,
+    ArrowUp,
+    Settings2,
+    Copy,
+    ExternalLink,
+    Check,
+    Loader2,
+    Wand2,
+    Zap,
+    Crown,
+    Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +40,13 @@ import { cn } from '@/lib/utils';
 // Available Models (via Pollinations.ai - ALL FREE! No API key needed)
 const MODELS = [
     { id: 'flux', name: 'Flux', description: 'High quality, fast', icon: Zap, free: true },
-    { id: 'flux-realism', name: 'Flux Realism', description: 'Photorealistic', icon: Sparkles, free: true },
+    {
+        id: 'flux-realism',
+        name: 'Flux Realism',
+        description: 'Photorealistic',
+        icon: Sparkles,
+        free: true,
+    },
     { id: 'flux-anime', name: 'Flux Anime', description: 'Anime style', icon: Wand2, free: true },
     { id: 'flux-3d', name: 'Flux 3D', description: '3D rendered', icon: Crown, free: true },
     { id: 'turbo', name: 'Turbo', description: 'Ultra fast', icon: Zap, free: true },
@@ -64,16 +79,18 @@ const ASPECT_RATIOS = [
 const panelVariants = {
     hidden: { opacity: 0, scale: 0.95 },
     visible: { opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } },
-    exit: { opacity: 0, scale: 0.95 }
+    exit: { opacity: 0, scale: 0.95 },
 };
 
 const imageVariants = {
     hidden: { opacity: 0, scale: 0.8, y: 20 },
-    visible: (i) => ({
-        opacity: 1, scale: 1, y: 0,
-        transition: { delay: i * 0.05, type: 'spring', stiffness: 300, damping: 25 }
+    visible: i => ({
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        transition: { delay: i * 0.05, type: 'spring', stiffness: 300, damping: 25 },
     }),
-    exit: { opacity: 0, scale: 0.8 }
+    exit: { opacity: 0, scale: 0.8 },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -136,7 +153,10 @@ const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete
                     <div className="text-center p-4">
                         <p className="text-sm text-muted-foreground">Failed to load</p>
                         <button
-                            onClick={() => { setHasError(false); setIsLoading(true); }}
+                            onClick={() => {
+                                setHasError(false);
+                                setIsLoading(true);
+                            }}
                             className="text-xs text-purple-500 hover:underline mt-2"
                         >
                             Retry
@@ -148,10 +168,13 @@ const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete
             {/* Image */}
             <motion.img
                 src={item.url}
-                alt={item.prompt || "Generated image"}
-                className={cn("w-full h-full object-cover", isLoading && "opacity-0")}
+                alt={item.prompt || 'Generated image'}
+                className={cn('w-full h-full object-cover', isLoading && 'opacity-0')}
                 onLoad={() => setIsLoading(false)}
-                onError={() => { setIsLoading(false); setHasError(true); }}
+                onError={() => {
+                    setIsLoading(false);
+                    setHasError(true);
+                }}
                 initial={{ scale: 1.1 }}
                 animate={{ scale: 1 }}
                 whileHover={{ scale: 1.05 }}
@@ -159,9 +182,7 @@ const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete
             />
 
             {/* Hover Overlay */}
-            <motion.div
-                className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
+            <motion.div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                 {/* Prompt */}
                 {item.prompt && (
                     <p className="text-white/80 text-xs mb-3 line-clamp-2">{item.prompt}</p>
@@ -172,7 +193,10 @@ const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete
                     <span className="text-white/60 text-xs">{item.model || 'Gemini'}</span>
                     <div className="flex items-center gap-2">
                         <motion.button
-                            onClick={(e) => { e.stopPropagation(); onViewFull(item.url); }}
+                            onClick={e => {
+                                e.stopPropagation();
+                                onViewFull(item.url);
+                            }}
                             className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white"
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
@@ -180,15 +204,25 @@ const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete
                             <ExternalLink className="h-4 w-4" />
                         </motion.button>
                         <motion.button
-                            onClick={(e) => { e.stopPropagation(); onCopyLink(item.url, item.id); }}
+                            onClick={e => {
+                                e.stopPropagation();
+                                onCopyLink(item.url, item.id);
+                            }}
                             className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white"
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
                         >
-                            {copiedId === item.id ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                            {copiedId === item.id ? (
+                                <Check className="h-4 w-4 text-green-400" />
+                            ) : (
+                                <Copy className="h-4 w-4" />
+                            )}
                         </motion.button>
                         <motion.button
-                            onClick={(e) => { e.stopPropagation(); onDownload(item.url, item.id); }}
+                            onClick={e => {
+                                e.stopPropagation();
+                                onDownload(item.url, item.id);
+                            }}
                             className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white"
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
@@ -196,7 +230,10 @@ const GalleryItem = ({ item, index, onDownload, onCopyLink, onViewFull, onDelete
                             <Download className="h-4 w-4" />
                         </motion.button>
                         <motion.button
-                            onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+                            onClick={e => {
+                                e.stopPropagation();
+                                onDelete(item.id);
+                            }}
                             className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/40 backdrop-blur-md border border-red-500/20 text-red-400"
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
@@ -291,7 +328,9 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
     // Handle Premium Toggle
     const handlePremiumToggle = () => {
         if (!isPremium && premiumAvailable === false) {
-            setStatusMessage('Premium requires GOOGLE_API_KEY. Add it to Vercel Environment Variables.');
+            setStatusMessage(
+                'Premium requires GOOGLE_API_KEY. Add it to Vercel Environment Variables.'
+            );
             setTimeout(() => setStatusMessage(''), 5000);
             return;
         }
@@ -299,7 +338,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
     };
 
     // Get aspect class
-    const getAspectClass = (ratio) => {
+    const getAspectClass = ratio => {
         const ar = ASPECT_RATIOS.find(a => a.id === ratio);
         return ar?.class || 'aspect-square';
     };
@@ -322,8 +361,8 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                     model: selectedModel,
                     size: aspectConfig?.size || '1024x1024',
                     style: style !== 'none' ? style : null,
-                    usePremium: isPremium
-                })
+                    usePremium: isPremium,
+                }),
             });
 
             const data = await response.json();
@@ -352,7 +391,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                     mode: img.mode || 'Standard',
                     isNew: true,
                     enhanced: img.enhanced,
-                    note: img.note
+                    note: img.note,
                 }));
                 setGallery(prev => [...newImages, ...prev]);
 
@@ -398,10 +437,10 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
     };
 
     // View Full
-    const handleViewFull = (url) => window.open(url, '_blank');
+    const handleViewFull = url => window.open(url, '_blank');
 
     // Delete Image
-    const handleDelete = (id) => {
+    const handleDelete = id => {
         setGallery(prev => prev.filter(img => img.id !== id));
     };
 
@@ -440,7 +479,11 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                         </motion.div>
                         <div>
                             <h1 className="font-bold text-lg">Imagine</h1>
-                            <p className="text-xs text-muted-foreground">{isPremium ? 'Premium AI Enhancement • Better Prompts' : 'AI Image Studio • Free & Unlimited'}</p>
+                            <p className="text-xs text-muted-foreground">
+                                {isPremium
+                                    ? 'Premium AI Enhancement • Better Prompts'
+                                    : 'AI Image Studio • Free & Unlimited'}
+                            </p>
                         </div>
                     </div>
 
@@ -454,13 +497,17 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                 isPremium
                                     ? 'bg-linear-to-r from-purple-500 to-pink-500 text-white border-purple-500 shadow-lg shadow-purple-500/25'
                                     : premiumAvailable === false
-                                        ? 'bg-background border-border text-muted-foreground/50 cursor-not-allowed'
-                                        : 'bg-background border-border text-muted-foreground hover:border-purple-500/50'
+                                      ? 'bg-background border-border text-muted-foreground/50 cursor-not-allowed'
+                                      : 'bg-background border-border text-muted-foreground hover:border-purple-500/50'
                             )}
                             whileHover={premiumAvailable !== false ? { scale: 1.05 } : {}}
                             whileTap={premiumAvailable !== false ? { scale: 0.95 } : {}}
                         >
-                            {isPremium ? <Crown className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
+                            {isPremium ? (
+                                <Crown className="h-3.5 w-3.5" />
+                            ) : (
+                                <Sparkles className="h-3.5 w-3.5" />
+                            )}
                             <span>{isPremium ? 'Premium AI' : 'Standard'}</span>
                             {premiumAvailable === false && !isPremium && (
                                 <span className="text-[10px] opacity-60">(Setup Required)</span>
@@ -503,7 +550,8 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                             </motion.div>
                             <h2 className="text-2xl font-bold mb-2">Start Creating</h2>
                             <p className="text-muted-foreground max-w-md">
-                                Describe what you want to create and AI will generate stunning images for you.
+                                Describe what you want to create and AI will generate stunning
+                                images for you.
                             </p>
                         </motion.div>
                     )}
@@ -555,7 +603,12 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                 className="mb-3 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-center gap-2"
                             >
                                 <span>⚠️ {error}</span>
-                                <button type="button" onClick={() => setError(null)} aria-label="Dismiss error" className="ml-auto hover:text-red-400">
+                                <button
+                                    type="button"
+                                    onClick={() => setError(null)}
+                                    aria-label="Dismiss error"
+                                    className="ml-auto hover:text-red-400"
+                                >
                                     <X className="h-4 w-4" aria-hidden="true" />
                                 </button>
                             </motion.div>
@@ -569,7 +622,12 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                 className="mb-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-600 dark:text-blue-400 text-sm flex items-center gap-2"
                             >
                                 <span>ℹ️ {statusMessage}</span>
-                                <button type="button" onClick={() => setStatusMessage('')} aria-label="Dismiss status" className="ml-auto hover:text-blue-500">
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusMessage('')}
+                                    aria-label="Dismiss status"
+                                    className="ml-auto hover:text-blue-500"
+                                >
                                     <X className="h-4 w-4" aria-hidden="true" />
                                 </button>
                             </motion.div>
@@ -592,7 +650,11 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                             <motion.div
                                 className="p-2.5 bg-linear-to-br from-purple-500/20 to-pink-500/20 rounded-full"
                                 animate={isGenerating ? { rotate: 360 } : {}}
-                                transition={{ duration: 2, repeat: isGenerating ? Infinity : 0, ease: 'linear' }}
+                                transition={{
+                                    duration: 2,
+                                    repeat: isGenerating ? Infinity : 0,
+                                    ease: 'linear',
+                                }}
                             >
                                 {isGenerating ? (
                                     <Loader2 className="h-5 w-5 text-purple-500 animate-spin" />
@@ -604,8 +666,8 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                             <input
                                 type="text"
                                 value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                                onChange={e => setPrompt(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleGenerate()}
                                 placeholder="Describe your imagination..."
                                 className="flex-1 bg-transparent border-none placeholder:text-muted-foreground/60 focus:outline-hidden h-12 text-base"
                                 disabled={isGenerating}
@@ -637,7 +699,9 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                         onClick={() => setShowSettings(!showSettings)}
                                         className={cn(
                                             'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors',
-                                            showSettings ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'
+                                            showSettings
+                                                ? 'bg-foreground/10 text-foreground'
+                                                : 'text-muted-foreground hover:text-foreground'
                                         )}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
@@ -659,19 +723,27 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                                 <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
                                                     <div className="flex items-center gap-2 text-green-600">
                                                         <Sparkles className="h-4 w-4" />
-                                                        <span className="text-sm font-bold">100% Free • No API Key</span>
+                                                        <span className="text-sm font-bold">
+                                                            100% Free • No API Key
+                                                        </span>
                                                     </div>
-                                                    <p className="text-xs text-green-600/70 mt-1">Powered by Pollinations.ai</p>
+                                                    <p className="text-xs text-green-600/70 mt-1">
+                                                        Powered by Pollinations.ai
+                                                    </p>
                                                 </div>
 
                                                 {/* Model */}
                                                 <div className="mb-4">
-                                                    <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Model</h4>
+                                                    <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">
+                                                        Model
+                                                    </h4>
                                                     <div className="space-y-2">
                                                         {MODELS.map(m => (
                                                             <button
                                                                 key={m.id}
-                                                                onClick={() => setSelectedModel(m.id)}
+                                                                onClick={() =>
+                                                                    setSelectedModel(m.id)
+                                                                }
                                                                 className={cn(
                                                                     'w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left',
                                                                     selectedModel === m.id
@@ -681,10 +753,16 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                                             >
                                                                 <m.icon className="h-4 w-4 text-green-500" />
                                                                 <div className="flex-1">
-                                                                    <div className="text-sm font-medium">{m.name}</div>
-                                                                    <div className="text-xs text-muted-foreground">{m.description}</div>
+                                                                    <div className="text-sm font-medium">
+                                                                        {m.name}
+                                                                    </div>
+                                                                    <div className="text-xs text-muted-foreground">
+                                                                        {m.description}
+                                                                    </div>
                                                                 </div>
-                                                                <span className="text-[10px] px-1.5 py-0.5 bg-green-500/20 text-green-600 rounded">FREE</span>
+                                                                <span className="text-[10px] px-1.5 py-0.5 bg-green-500/20 text-green-600 rounded">
+                                                                    FREE
+                                                                </span>
                                                             </button>
                                                         ))}
                                                     </div>
@@ -692,12 +770,16 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
 
                                                 {/* Aspect Ratio */}
                                                 <div>
-                                                    <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Aspect Ratio</h4>
+                                                    <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">
+                                                        Aspect Ratio
+                                                    </h4>
                                                     <div className="flex gap-2">
                                                         {ASPECT_RATIOS.map(ar => (
                                                             <button
                                                                 key={ar.id}
-                                                                onClick={() => setAspectRatio(ar.id)}
+                                                                onClick={() =>
+                                                                    setAspectRatio(ar.id)
+                                                                }
                                                                 className={cn(
                                                                     'flex-1 py-2 rounded-xl border text-xs font-medium transition-all',
                                                                     aspectRatio === ar.id

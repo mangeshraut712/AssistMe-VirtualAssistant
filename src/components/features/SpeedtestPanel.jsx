@@ -1,15 +1,36 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Play, Activity,
-    Monitor, Gamepad2, Video, Globe, ArrowDown,
-    Brain, MapPin, Download as DownloadIcon,
-    Upload as UploadIcon, Layers, AlertTriangle, FileDown,
-    Target, Waves, Zap as ZapIcon, Sparkles, Bot
+    X,
+    Play,
+    Activity,
+    Monitor,
+    Gamepad2,
+    Video,
+    Globe,
+    ArrowDown,
+    Brain,
+    MapPin,
+    Download as DownloadIcon,
+    Upload as UploadIcon,
+    Layers,
+    AlertTriangle,
+    FileDown,
+    Target,
+    Waves,
+    Zap as ZapIcon,
+    Sparkles,
+    Bot,
 } from 'lucide-react';
 import {
-    AreaChart, Area, ResponsiveContainer, RadarChart, PolarGrid,
-    PolarAngleAxis, PolarRadiusAxis, Radar
+    AreaChart,
+    Area,
+    ResponsiveContainer,
+    RadarChart,
+    PolarGrid,
+    PolarAngleAxis,
+    PolarRadiusAxis,
+    Radar,
 } from 'recharts';
 import { cn } from '@/lib/utils';
 
@@ -22,20 +43,27 @@ import { cn } from '@/lib/utils';
 
 // Simulates TCP Slow Start and Congestion Avoidance for realistic curves
 
-
 // Storage
-const saveTest = (r) => {
+const saveTest = r => {
     try {
         const h = JSON.parse(localStorage.getItem('speedtest_v8') || '[]');
         localStorage.setItem('speedtest_v8', JSON.stringify([r, ...h].slice(0, 100)));
         return [r, ...h].slice(0, 100);
-    } catch { return []; }
+    } catch {
+        return [];
+    }
 };
-const getHistory = () => { try { return JSON.parse(localStorage.getItem('speedtest_v8') || '[]'); } catch { return []; } };
+const getHistory = () => {
+    try {
+        return JSON.parse(localStorage.getItem('speedtest_v8') || '[]');
+    } catch {
+        return [];
+    }
+};
 
 const createAnalysisRef = () => crypto.randomUUID().replaceAll('-', '').slice(0, 10);
 
-const _getPingGrade = (ping) => {
+const _getPingGrade = ping => {
     if (ping <= 20) return 'A+';
     if (ping <= 50) return 'A';
     if (ping <= 100) return 'B';
@@ -45,20 +73,31 @@ const _getPingGrade = (ping) => {
 
 const getConnectionQuality = (download, upload, ping) => {
     const avgSpeed = (download + upload) / 2;
-    if (avgSpeed >= 100 && ping <= 20) return { quality: 'Excellent', color: 'text-emerald-500', icon: '🚀' };
-    if (avgSpeed >= 50 && ping <= 50) return { quality: 'Great', color: 'text-green-500', icon: '⭐' };
-    if (avgSpeed >= 25 && ping <= 100) return { quality: 'Good', color: 'text-yellow-500', icon: '👍' };
+    if (avgSpeed >= 100 && ping <= 20) {
+        return { quality: 'Excellent', color: 'text-emerald-500', icon: '🚀' };
+    }
+    if (avgSpeed >= 50 && ping <= 50) {
+        return { quality: 'Great', color: 'text-green-500', icon: '⭐' };
+    }
+    if (avgSpeed >= 25 && ping <= 100) {
+        return { quality: 'Good', color: 'text-yellow-500', icon: '👍' };
+    }
     if (avgSpeed >= 10) return { quality: 'Fair', color: 'text-orange-500', icon: '⚠️' };
     return { quality: 'Poor', color: 'text-red-500', icon: '❌' };
 };
 
-const getStatusMessage = (status) => {
+const getStatusMessage = status => {
     switch (status) {
-        case 'pinging': return '📡 Measuring latency...';
-        case 'download': return '⬇️ Testing download speed...';
-        case 'upload': return '⬆️ Testing upload speed...';
-        case 'complete': return '✅ Test complete!';
-        default: return 'Ready to test your connection';
+        case 'pinging':
+            return '📡 Measuring latency...';
+        case 'download':
+            return '⬇️ Testing download speed...';
+        case 'upload':
+            return '⬆️ Testing upload speed...';
+        case 'complete':
+            return '✅ Test complete!';
+        default:
+            return 'Ready to test your connection';
     }
 };
 
@@ -69,25 +108,24 @@ const GlassCard = ({ children, className, glow, active }) => (
         animate={{ opacity: 1, y: 0 }}
         whileHover={{ scale: 1.002, transition: { duration: 0.2 } }}
         className={cn(
-            "bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl rounded-2xl border border-neutral-200/50 dark:border-neutral-800/50 shadow-lg transition-all duration-300",
-            glow && active && "ring-2 ring-purple-500/30 shadow-purple-500/20",
+            'bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl rounded-2xl border border-neutral-200/50 dark:border-neutral-800/50 shadow-lg transition-all duration-300',
+            glow && active && 'ring-2 ring-purple-500/30 shadow-purple-500/20',
             className
-        )}>
+        )}
+    >
         {children}
     </motion.div>
 );
 
-
-
 const GradeBadge = ({ grade, size = 'md' }) => {
     const colors = {
         'A+': 'bg-linear-to-br from-emerald-400 to-green-600 shadow-emerald-500/30',
-        'A': 'bg-linear-to-br from-green-400 to-teal-600 shadow-green-500/30',
-        'B': 'bg-linear-to-br from-yellow-400 to-amber-600 shadow-amber-500/30',
-        'C': 'bg-linear-to-br from-orange-400 to-red-500 shadow-orange-500/30',
-        'D': 'bg-linear-to-br from-red-500 to-rose-600 shadow-red-500/30',
-        'F': 'bg-linear-to-br from-gray-600 to-gray-800 shadow-gray-500/30',
-        '-': 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400'
+        A: 'bg-linear-to-br from-green-400 to-teal-600 shadow-green-500/30',
+        B: 'bg-linear-to-br from-yellow-400 to-amber-600 shadow-amber-500/30',
+        C: 'bg-linear-to-br from-orange-400 to-red-500 shadow-orange-500/30',
+        D: 'bg-linear-to-br from-red-500 to-rose-600 shadow-red-500/30',
+        F: 'bg-linear-to-br from-gray-600 to-gray-800 shadow-gray-500/30',
+        '-': 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400',
     };
     const sizes = { sm: 'w-8 h-8 text-xs', md: 'w-12 h-12 text-lg', lg: 'w-16 h-16 text-2xl' };
 
@@ -95,7 +133,11 @@ const GradeBadge = ({ grade, size = 'md' }) => {
         <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className={cn("rounded-2xl flex items-center justify-center font-bold text-white shadow-lg", colors[grade] || colors['-'], sizes[size])}
+            className={cn(
+                'rounded-2xl flex items-center justify-center font-bold text-white shadow-lg',
+                colors[grade] || colors['-'],
+                sizes[size]
+            )}
         >
             {grade}
         </motion.div>
@@ -138,7 +180,10 @@ const SpeedGauge = ({ value, maxValue = 200, color, label, status }) => {
                 />
                 {/* Needle */}
                 <motion.line
-                    x1="100" y1="100" x2="100" y2="35"
+                    x1="100"
+                    y1="100"
+                    x2="100"
+                    y2="35"
                     stroke={color}
                     strokeWidth="3"
                     strokeLinecap="round"
@@ -156,7 +201,9 @@ const SpeedGauge = ({ value, maxValue = 200, color, label, status }) => {
                 >
                     {Math.round(value)}
                 </motion.span>
-                <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest -mt-1">{label}</span>
+                <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest -mt-1">
+                    {label}
+                </span>
             </div>
         </div>
     );
@@ -186,27 +233,46 @@ const SpeedChart = ({ data, color }) => (
 );
 
 const BoxPlot = ({ label, count, min, max, median, q1, q3, color }) => {
-    const scale = (v) => Math.min(100, (v / 200) * 100);
+    const scale = v => Math.min(100, (v / 200) * 100);
     return (
         <div className="space-y-2">
             <div className="flex justify-between items-end">
-                <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">{label}</span>
+                <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                    {label}
+                </span>
                 <span className="text-[10px] font-mono text-neutral-400">{count} samples</span>
             </div>
             <div className="relative h-10 bg-neutral-100/50 dark:bg-neutral-800/50 rounded-xl overflow-hidden border border-neutral-200/50 dark:border-neutral-800/50">
                 {/* Range Bar */}
                 {max > 0 && (
                     <>
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${scale(q3 - q1)}%` }}
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${scale(q3 - q1)}%` }}
                             className="absolute top-1/2 -translate-y-1/2 h-6 rounded-md z-10"
-                            style={{ left: `${scale(q1)}%`, backgroundColor: `${color}44` }} />
-                        <div className="absolute top-1/2 -translate-y-1/2 h-0.5 rounded-full z-0 opacity-50"
-                            style={{ left: `${scale(min)}%`, width: `${scale(max - min)}%`, backgroundColor: color }} />
-                        <div className="absolute top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full z-20 bg-neutral-900 dark:bg-white"
-                            style={{ left: `${scale(median)}%` }} />
+                            style={{ left: `${scale(q1)}%`, backgroundColor: `${color}44` }}
+                        />
+                        <div
+                            className="absolute top-1/2 -translate-y-1/2 h-0.5 rounded-full z-0 opacity-50"
+                            style={{
+                                left: `${scale(min)}%`,
+                                width: `${scale(max - min)}%`,
+                                backgroundColor: color,
+                            }}
+                        />
+                        <div
+                            className="absolute top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full z-20 bg-neutral-900 dark:bg-white"
+                            style={{ left: `${scale(median)}%` }}
+                        />
                         {/* Whiskers */}
-                        <div className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-neutral-400" style={{ left: `${scale(min)}%` }} />
-                        <div className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-neutral-400" style={{ left: `${scale(max)}%` }} />
+                        <div
+                            className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-neutral-400"
+                            style={{ left: `${scale(min)}%` }}
+                        />
+                        <div
+                            className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-neutral-400"
+                            style={{ left: `${scale(max)}%` }}
+                        />
                     </>
                 )}
             </div>
@@ -221,22 +287,50 @@ const BoxPlot = ({ label, count, min, max, median, q1, q3, color }) => {
 
 const MetricCard = ({ icon: Icon, label, value, unit, subtext, color, trend }) => (
     <GlassCard className="p-2.5 sm:p-3 md:p-3 flex flex-col justify-between h-20 sm:h-22 md:h-24 relative overflow-hidden group">
-        <div className={cn("absolute right-0 top-0 p-14 sm:p-16 rounded-full blur-3xl opacity-5 group-hover:opacity-10 transition-opacity", color.replace('text-', 'bg-'))} />
+        <div
+            className={cn(
+                'absolute right-0 top-0 p-14 sm:p-16 rounded-full blur-3xl opacity-5 group-hover:opacity-10 transition-opacity',
+                color.replace('text-', 'bg-')
+            )}
+        />
         <div className="flex justify-between items-start z-10">
             <div className="flex items-center gap-1.5">
-                <div className={cn("p-1 sm:p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800", color)}>
+                <div
+                    className={cn(
+                        'p-1 sm:p-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800',
+                        color
+                    )}
+                >
                     <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 </div>
-                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-400">{label}</span>
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
+                    {label}
+                </span>
             </div>
-            {trend && <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded-full", trend > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>{trend > 0 ? '+' : ''}{trend}%</span>}
+            {trend && (
+                <span
+                    className={cn(
+                        'text-[9px] font-bold px-1 py-0.5 rounded-full',
+                        trend > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    )}
+                >
+                    {trend > 0 ? '+' : ''}
+                    {trend}%
+                </span>
+            )}
         </div>
         <div className="z-10 mt-auto">
             <div className="flex items-baseline gap-1">
-                <span className="text-xl sm:text-2xl md:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white truncate">{value}</span>
+                <span className="text-xl sm:text-2xl md:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white truncate">
+                    {value}
+                </span>
                 <span className="text-xs sm:text-sm font-bold text-neutral-500">{unit}</span>
             </div>
-            {subtext && <div className="text-[10px] sm:text-[11px] text-neutral-500 mt-0.5 font-medium truncate">{subtext}</div>}
+            {subtext && (
+                <div className="text-[10px] sm:text-[11px] text-neutral-500 mt-0.5 font-medium truncate">
+                    {subtext}
+                </div>
+            )}
         </div>
     </GlassCard>
 );
@@ -249,14 +343,27 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
 
     // Core Metrics
     const [metrics, setMetrics] = useState({
-        down: 0, downPeak: 0, up: 0, upPeak: 0,
-        ping: 0, pingMin: 999, pingMax: 0,
-        jitter: 0, loss: 0
+        down: 0,
+        downPeak: 0,
+        up: 0,
+        upPeak: 0,
+        ping: 0,
+        pingMin: 999,
+        pingMax: 0,
+        jitter: 0,
+        loss: 0,
     });
 
     // Advanced Metrics
     const [bufferbloat, setBufferbloat] = useState({ grade: '-', color: 'text-neutral-500' });
-    const [geoInfo, setGeoInfo] = useState({ ip: 'Detecting...', city: '...', isp: '...', country: '...', ipv: 'IPv4', asn: '...' });
+    const [geoInfo, setGeoInfo] = useState({
+        ip: 'Detecting...',
+        city: '...',
+        isp: '...',
+        country: '...',
+        ipv: 'IPv4',
+        asn: '...',
+    });
     const [serverInfo] = useState({ city: 'Optimant', country: 'Global', dist: 0 });
 
     // Visualization Data
@@ -279,9 +386,14 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
             fetch(window.location.href, { method: 'HEAD', cache: 'no-store' })
                 .then(() => {
                     const realPing = Math.round(performance.now() - start);
-                    setMetrics(prev => ({ ...prev, ping: realPing, pingMin: realPing, pingMax: realPing }));
+                    setMetrics(prev => ({
+                        ...prev,
+                        ping: realPing,
+                        pingMin: realPing,
+                        pingMax: realPing,
+                    }));
                 })
-                .catch(() => { });
+                .catch(() => {});
 
             // Enhanced IP Detection
             fetch('https://ipapi.co/json/')
@@ -295,10 +407,10 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                         asn: d.asn,
                         ipv: d.ip?.includes(':') ? 'IPv6' : 'IPv4',
                         lat: d.latitude,
-                        lon: d.longitude
+                        lon: d.longitude,
                     });
                 })
-                .catch(e => console.error("IP Detect Failed", e));
+                .catch(e => console.error('IP Detect Failed', e));
         }
         return () => {
             stopRef.current = true;
@@ -314,7 +426,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
         if (isOpen) setHistory(getHistory());
     }
 
-    const generateAIAnalysis = (data) => {
+    const generateAIAnalysis = data => {
         setIsGeneratingAI(true);
         // Realistic analysis logic that sounds like AI
         setTimeout(() => {
@@ -322,30 +434,39 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
             const ping = data.ping;
             const jitter = metrics.jitter;
 
-            let insight = "";
-            let recommendation = "";
-            let rating = "";
+            let insight = '';
+            let recommendation = '';
+            let rating = '';
 
             if (down > 150 && ping < 20) {
-                insight = "Your connection is exceptional, performing in the top 5% of global consumer networks.";
-                recommendation = "Ideal for competitive gaming, 4K multi-stream hosting, and large-scale cloud operations.";
-                rating = "Tier 1 - Ultra Performance";
+                insight =
+                    'Your connection is exceptional, performing in the top 5% of global consumer networks.';
+                recommendation =
+                    'Ideal for competitive gaming, 4K multi-stream hosting, and large-scale cloud operations.';
+                rating = 'Tier 1 - Ultra Performance';
             } else if (down > 50 && ping < 40) {
-                insight = "Solid high-speed performance detected with healthy overhead for modern digital tasks.";
-                recommendation = "Perfectly handles simultaneous 4K streams and lag-free standard gaming.";
-                rating = "Tier 2 - High Performance";
+                insight =
+                    'Solid high-speed performance detected with healthy overhead for modern digital tasks.';
+                recommendation =
+                    'Perfectly handles simultaneous 4K streams and lag-free standard gaming.';
+                rating = 'Tier 2 - High Performance';
             } else if (down > 20) {
-                insight = "Your connection is stable and sufficient for standard professional use cases.";
-                recommendation = "Great for remote work, HD video calls, and typical streaming services.";
-                rating = "Tier 3 - Standard Reliability";
+                insight =
+                    'Your connection is stable and sufficient for standard professional use cases.';
+                recommendation =
+                    'Great for remote work, HD video calls, and typical streaming services.';
+                rating = 'Tier 3 - Standard Reliability';
             } else {
-                insight = "Network bandwidth is currently restricted, which may impact high-data activities.";
-                recommendation = "Consider checking for background updates or contacting your ISP for a line test.";
-                rating = "Tier 4 - Basic Connectivity";
+                insight =
+                    'Network bandwidth is currently restricted, which may impact high-data activities.';
+                recommendation =
+                    'Consider checking for background updates or contacting your ISP for a line test.';
+                rating = 'Tier 4 - Basic Connectivity';
             }
 
             if (ping > 60 || jitter > 15) {
-                insight += " However, detectable latency variance could affect real-time interaction quality.";
+                insight +=
+                    ' However, detectable latency variance could affect real-time interaction quality.';
             }
 
             setAiAnalysis({
@@ -371,7 +492,17 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
         setUploadChart(new Array(40).fill({ val: 0 }));
         setLatencyData({ unloaded: [], download: [], upload: [] });
 
-        setMetrics({ down: 0, downPeak: 0, up: 0, upPeak: 0, ping: 0, pingMin: 999, pingMax: 0, jitter: 0, loss: 0 });
+        setMetrics({
+            down: 0,
+            downPeak: 0,
+            up: 0,
+            upPeak: 0,
+            ping: 0,
+            pingMin: 999,
+            pingMax: 0,
+            jitter: 0,
+            loss: 0,
+        });
 
         const baseUrl = backendUrl || '';
 
@@ -386,19 +517,27 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                 const rtt = end - start;
                 pings.push(rtt);
 
-                const jitterVal = pings.length > 1
-                    ? Math.round(pings.reduce((sum, val, idx, arr) => idx === 0 ? 0 : sum + Math.abs(val - arr[idx - 1]), 0) / (pings.length - 1))
-                    : 0;
+                const jitterVal =
+                    pings.length > 1
+                        ? Math.round(
+                              pings.reduce(
+                                  (sum, val, idx, arr) =>
+                                      idx === 0 ? 0 : sum + Math.abs(val - arr[idx - 1]),
+                                  0
+                              ) /
+                                  (pings.length - 1)
+                          )
+                        : 0;
 
                 setMetrics(m => ({
                     ...m,
                     ping: Math.round(pings.reduce((a, b) => a + b, 0) / pings.length),
                     pingMin: Math.min(...pings),
                     pingMax: Math.max(...pings),
-                    jitter: jitterVal
+                    jitter: jitterVal,
                 }));
             } catch (e) {
-                console.error("Latency check failed", e);
+                console.error('Latency check failed', e);
             }
             setProgress(Math.round((i / 20) * 15));
             await new Promise(r => setTimeout(r, 60));
@@ -413,8 +552,10 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
         let lastReportTime = dlStartTime;
 
         try {
-            const response = await fetch(`${baseUrl}/api/speedtest/download?size=26214400`, { cache: 'no-store' });
-            if (!response.body) throw new Error("No body");
+            const response = await fetch(`${baseUrl}/api/speedtest/download?size=26214400`, {
+                cache: 'no-store',
+            });
+            if (!response.body) throw new Error('No body');
 
             const reader = response.body.getReader();
 
@@ -426,13 +567,14 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                 const now = performance.now();
                 const totalElapsed = (now - dlStartTime) / 1000;
 
-                if (now - lastReportTime > 150) { // Update UI every 150ms
+                if (now - lastReportTime > 150) {
+                    // Update UI every 150ms
                     const avgMbps = (downloadedBytes * 8) / (totalElapsed * 1000000);
 
                     setMetrics(m => ({
                         ...m,
                         down: Math.round(avgMbps * 10) / 10,
-                        downPeak: Math.max(m.downPeak, Math.round(avgMbps * 10) / 10)
+                        downPeak: Math.max(m.downPeak, Math.round(avgMbps * 10) / 10),
                     }));
                     setDownloadChart(prev => [...prev.slice(1), { val: avgMbps }]);
                     setProgress(15 + Math.min(40, (downloadedBytes / 26214400) * 40));
@@ -440,13 +582,16 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
 
                     // Sample latency under load
                     const pStart = performance.now();
-                    fetch(`${baseUrl}/api/speedtest/ping`, { method: 'HEAD', cache: 'no-store' }).then(() => {
+                    fetch(`${baseUrl}/api/speedtest/ping`, {
+                        method: 'HEAD',
+                        cache: 'no-store',
+                    }).then(() => {
                         dlPings.push(performance.now() - pStart);
                     });
                 }
             }
         } catch (e) {
-            console.error("Download test failed", e);
+            console.error('Download test failed', e);
         }
         setLatencyData(prev => ({ ...prev, download: dlPings }));
 
@@ -464,7 +609,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `${baseUrl}/api/speedtest/upload`);
 
-                xhr.upload.onprogress = (e) => {
+                xhr.upload.onprogress = e => {
                     if (e.lengthComputable && !stopRef.current) {
                         const now = performance.now();
                         const elapsed = (now - ulStartTime) / 1000;
@@ -473,14 +618,17 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                         setMetrics(m => ({
                             ...m,
                             up: Math.round(avgMbps * 10) / 10,
-                            upPeak: Math.max(m.upPeak, Math.round(avgMbps * 10) / 10)
+                            upPeak: Math.max(m.upPeak, Math.round(avgMbps * 10) / 10),
                         }));
                         setUploadChart(prev => [...prev.slice(1), { val: avgMbps }]);
                         setProgress(55 + Math.round((e.loaded / e.total) * 45));
 
                         if (now - lastReportTime > 200) {
                             const pStart = performance.now();
-                            fetch(`${baseUrl}/api/speedtest/ping`, { method: 'HEAD', cache: 'no-store' }).then(() => {
+                            fetch(`${baseUrl}/api/speedtest/ping`, {
+                                method: 'HEAD',
+                                cache: 'no-store',
+                            }).then(() => {
                                 ulPings.push(performance.now() - pStart);
                             });
                             lastReportTime = now;
@@ -489,7 +637,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                 };
 
                 xhr.onload = () => resolve(xhr.response);
-                xhr.onerror = () => reject(new Error("Upload failed"));
+                xhr.onerror = () => reject(new Error('Upload failed'));
                 xhr.onabort = () => resolve();
 
                 // Add abort listener
@@ -503,7 +651,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                 xhr.send(uploadBlob);
             });
         } catch (e) {
-            console.error("Upload test failed", e);
+            console.error('Upload test failed', e);
         }
         setLatencyData(prev => ({ ...prev, upload: ulPings }));
 
@@ -512,13 +660,22 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
         setProgress(100);
 
         // Final Calculations
-        const finalDown = downloadedBytes > 0 ? (downloadedBytes * 8) / (((performance.now() - dlStartTime) / 1000) * 1000000) : 0;
+        const finalDown =
+            downloadedBytes > 0
+                ? (downloadedBytes * 8) / (((performance.now() - dlStartTime) / 1000) * 1000000)
+                : 0;
         const finalUp = metrics.up; // Upload uses XHR progress which is accurate
         const finalPing = metrics.ping;
 
         const avgUnloaded = pings.length > 0 ? pings.reduce((a, b) => a + b, 0) / pings.length : 0;
-        const avgLoaded = ((dlPings.length > 0 ? dlPings.reduce((a, b) => a + b, 0) / dlPings.length : avgUnloaded) +
-            (ulPings.length > 0 ? ulPings.reduce((a, b) => a + b, 0) / ulPings.length : avgUnloaded)) / 2;
+        const avgLoaded =
+            ((dlPings.length > 0
+                ? dlPings.reduce((a, b) => a + b, 0) / dlPings.length
+                : avgUnloaded) +
+                (ulPings.length > 0
+                    ? ulPings.reduce((a, b) => a + b, 0) / ulPings.length
+                    : avgUnloaded)) /
+            2;
         const bufferbloatScore = Math.max(0, avgLoaded - avgUnloaded);
 
         let grade = 'A+';
@@ -536,7 +693,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
             up: Math.round(finalUp * 10) / 10,
             ping: Math.round(finalPing),
             jitter: Math.round(metrics.jitter),
-            grade: grade
+            grade: grade,
         };
 
         setMetrics(m => ({ ...m, down: finalResults.down, up: finalResults.up }));
@@ -549,10 +706,9 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
         if (timerRef.current) clearInterval(timerRef.current);
         setStatus('idle');
         setProgress(0);
-
     };
 
-    const getStats = useCallback((arr) => {
+    const getStats = useCallback(arr => {
         if (!arr.length) return { min: 0, max: 0, median: 0, q1: 0, q3: 0 };
         const s = [...arr].sort((a, b) => a - b);
         return {
@@ -560,7 +716,7 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
             max: s[s.length - 1],
             median: s[Math.floor(s.length / 2)],
             q1: s[Math.floor(s.length * 0.25)],
-            q3: s[Math.floor(s.length * 0.75)]
+            q3: s[Math.floor(s.length * 0.75)],
         };
     }, []);
 
@@ -587,7 +743,6 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-100 bg-[#f8f9fa] dark:bg-[#0a0a0a] overflow-y-auto font-sans"
             >
-
                 {/* Navbar */}
                 <header className="sticky top-0 z-50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-neutral-200/50 dark:border-neutral-800/50">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
@@ -596,8 +751,12 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                 <ZapIcon className="h-5 w-5" />
                             </div>
                             <div>
-                                <h1 className="text-base sm:text-lg font-bold tracking-tight text-neutral-900 dark:text-white">Speedtest Ultra</h1>
-                                <p className="hidden sm:block text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Pro Diagnostics</p>
+                                <h1 className="text-base sm:text-lg font-bold tracking-tight text-neutral-900 dark:text-white">
+                                    Speedtest Ultra
+                                </h1>
+                                <p className="hidden sm:block text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
+                                    Pro Diagnostics
+                                </p>
                             </div>
                         </div>
 
@@ -614,14 +773,43 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                             )}
                             {status !== 'idle' && (
                                 <div className="hidden md:flex items-center gap-3 px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs font-mono">
-                                    <span className={cn(status === 'pinging' ? "text-blue-500 font-bold" : "text-neutral-400")}>PING</span>
+                                    <span
+                                        className={cn(
+                                            status === 'pinging'
+                                                ? 'text-blue-500 font-bold'
+                                                : 'text-neutral-400'
+                                        )}
+                                    >
+                                        PING
+                                    </span>
                                     <span className="text-neutral-300">/</span>
-                                    <span className={cn(status === 'download' ? "text-orange-500 font-bold" : "text-neutral-400")}>DOWN</span>
+                                    <span
+                                        className={cn(
+                                            status === 'download'
+                                                ? 'text-orange-500 font-bold'
+                                                : 'text-neutral-400'
+                                        )}
+                                    >
+                                        DOWN
+                                    </span>
                                     <span className="text-neutral-300">/</span>
-                                    <span className={cn(status === 'upload' ? "text-purple-500 font-bold" : "text-neutral-400")}>UP</span>
+                                    <span
+                                        className={cn(
+                                            status === 'upload'
+                                                ? 'text-purple-500 font-bold'
+                                                : 'text-neutral-400'
+                                        )}
+                                    >
+                                        UP
+                                    </span>
                                 </div>
                             )}
-                            <button type="button" onClick={onClose} aria-label="Close speed test" className="p-2.5 sm:p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                aria-label="Close speed test"
+                                className="p-2.5 sm:p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
+                            >
                                 <X className="h-5 w-5 text-neutral-500" aria-hidden="true" />
                             </button>
                         </div>
@@ -631,13 +819,12 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                             className="h-1 bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500"
                             initial={{ width: 0 }}
                             animate={{ width: `${progress}%` }}
-                            transition={{ ease: "linear" }}
+                            transition={{ ease: 'linear' }}
                         />
                     )}
                 </header>
 
                 <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 space-y-3 sm:space-y-4 md:space-y-6">
-
                     {/* Hero Section - Central Gauge */}
                     <GlassCard className="p-6 md:p-8 flex flex-col items-center justify-center relative overflow-hidden min-h-[400px]">
                         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
@@ -647,46 +834,99 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                         <div className="relative z-10 w-full flex flex-col items-center">
                             {/* Selected Mode Indicator */}
                             <div className="flex gap-4 mb-8">
-                                <div className={cn("px-4 py-2 rounded-xl transition-all duration-500 flex items-center gap-2",
-                                    status === 'download' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-105" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 opacity-50")}>
+                                <div
+                                    className={cn(
+                                        'px-4 py-2 rounded-xl transition-all duration-500 flex items-center gap-2',
+                                        status === 'download'
+                                            ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-105'
+                                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 opacity-50'
+                                    )}
+                                >
                                     <DownloadIcon className="h-4 w-4" />
-                                    <span className="text-xs font-bold uppercase tracking-widest">Download</span>
+                                    <span className="text-xs font-bold uppercase tracking-widest">
+                                        Download
+                                    </span>
                                 </div>
-                                <div className={cn("px-4 py-2 rounded-xl transition-all duration-500 flex items-center gap-2",
-                                    status === 'upload' ? "bg-purple-500 text-white shadow-lg shadow-purple-500/30 scale-105" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 opacity-50")}>
+                                <div
+                                    className={cn(
+                                        'px-4 py-2 rounded-xl transition-all duration-500 flex items-center gap-2',
+                                        status === 'upload'
+                                            ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30 scale-105'
+                                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 opacity-50'
+                                    )}
+                                >
                                     <UploadIcon className="h-4 w-4" />
-                                    <span className="text-xs font-bold uppercase tracking-widest">Upload</span>
+                                    <span className="text-xs font-bold uppercase tracking-widest">
+                                        Upload
+                                    </span>
                                 </div>
                             </div>
 
                             <SpeedGauge
-                                value={status === 'download' ? metrics.down : status === 'upload' ? metrics.up : (status === 'complete' ? metrics.down : 0)}
+                                value={
+                                    status === 'download'
+                                        ? metrics.down
+                                        : status === 'upload'
+                                          ? metrics.up
+                                          : status === 'complete'
+                                            ? metrics.down
+                                            : 0
+                                }
                                 maxValue={300}
-                                color={status === 'download' ? '#f97316' : status === 'upload' ? '#a855f7' : '#6366f1'}
+                                color={
+                                    status === 'download'
+                                        ? '#f97316'
+                                        : status === 'upload'
+                                          ? '#a855f7'
+                                          : '#6366f1'
+                                }
                                 label="Mbps"
                                 status={status}
                             />
 
                             <div className="mt-8 flex gap-8">
                                 <div className="text-center">
-                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Ping</div>
-                                    <div className="text-xl font-bold text-neutral-900 dark:text-white tabular-nums">{metrics.ping}<span className="text-xs ml-0.5 opacity-50">ms</span></div>
+                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">
+                                        Ping
+                                    </div>
+                                    <div className="text-xl font-bold text-neutral-900 dark:text-white tabular-nums">
+                                        {metrics.ping}
+                                        <span className="text-xs ml-0.5 opacity-50">ms</span>
+                                    </div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Jitter</div>
-                                    <div className="text-xl font-bold text-neutral-900 dark:text-white tabular-nums">{metrics.jitter}<span className="text-xs ml-0.5 opacity-50">ms</span></div>
+                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">
+                                        Jitter
+                                    </div>
+                                    <div className="text-xl font-bold text-neutral-900 dark:text-white tabular-nums">
+                                        {metrics.jitter}
+                                        <span className="text-xs ml-0.5 opacity-50">ms</span>
+                                    </div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Loss</div>
-                                    <div className="text-xl font-bold text-neutral-900 dark:text-white tabular-nums">{metrics.loss}<span className="text-xs ml-0.5 opacity-50">/</span></div>
+                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">
+                                        Loss
+                                    </div>
+                                    <div className="text-xl font-bold text-neutral-900 dark:text-white tabular-nums">
+                                        {metrics.loss}
+                                        <span className="text-xs ml-0.5 opacity-50">/</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Bottom Charts Overlay */}
                         <div className="absolute inset-x-0 bottom-0 grid grid-cols-2 gap-0 h-24 opacity-20 pointer-events-none">
-                            <SpeedChart data={downloadChart} color="#f97316" isActive={status === 'download'} />
-                            <SpeedChart data={uploadChart} color="#a855f7" isActive={status === 'upload'} />
+                            <SpeedChart
+                                data={downloadChart}
+                                color="#f97316"
+                                isActive={status === 'download'}
+                            />
+                            <SpeedChart
+                                data={uploadChart}
+                                color="#a855f7"
+                                isActive={status === 'upload'}
+                            />
                         </div>
                     </GlassCard>
 
@@ -701,30 +941,56 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="text-3xl sm:text-4xl">
-                                            {getConnectionQuality(metrics.down, metrics.up, metrics.ping).icon}
+                                            {
+                                                getConnectionQuality(
+                                                    metrics.down,
+                                                    metrics.up,
+                                                    metrics.ping
+                                                ).icon
+                                            }
                                         </div>
                                         <div>
-                                            <div className="text-xs sm:text-sm font-semibold text-neutral-500 uppercase tracking-wider">Connection Quality</div>
-                                            <div className={cn(
-                                                "text-2xl sm:text-3xl font-bold",
-                                                getConnectionQuality(metrics.down, metrics.up, metrics.ping).color
-                                            )}>
-                                                {getConnectionQuality(metrics.down, metrics.up, metrics.ping).quality}
+                                            <div className="text-xs sm:text-sm font-semibold text-neutral-500 uppercase tracking-wider">
+                                                Connection Quality
+                                            </div>
+                                            <div
+                                                className={cn(
+                                                    'text-2xl sm:text-3xl font-bold',
+                                                    getConnectionQuality(
+                                                        metrics.down,
+                                                        metrics.up,
+                                                        metrics.ping
+                                                    ).color
+                                                )}
+                                            >
+                                                {
+                                                    getConnectionQuality(
+                                                        metrics.down,
+                                                        metrics.up,
+                                                        metrics.ping
+                                                    ).quality
+                                                }
                                             </div>
                                         </div>
                                     </div>
                                     <div className="hidden sm:flex flex-col items-end gap-1">
                                         <div className="flex items-center gap-4">
                                             <div className="text-xs text-neutral-500">Download</div>
-                                            <div className="font-mono font-bold text-sm">{metrics.down.toFixed(1)} Mbps</div>
+                                            <div className="font-mono font-bold text-sm">
+                                                {metrics.down.toFixed(1)} Mbps
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="text-xs text-neutral-500">Upload</div>
-                                            <div className="font-mono font-bold text-sm">{metrics.up.toFixed(1)} Mbps</div>
+                                            <div className="font-mono font-bold text-sm">
+                                                {metrics.up.toFixed(1)} Mbps
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="text-xs text-neutral-500">Latency</div>
-                                            <div className="font-mono font-bold text-sm">{metrics.ping} ms</div>
+                                            <div className="font-mono font-bold text-sm">
+                                                {metrics.ping} ms
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -734,24 +1000,58 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
 
                     {/* Secondary Metrics */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-                        <MetricCard icon={Activity} label="Ping" value={metrics.ping} unit="ms" color="text-emerald-500" subtext={`${metrics.pingMin} - ${metrics.pingMax} ms`} />
-                        <MetricCard icon={Waves} label="Jitter" value={metrics.jitter} unit="ms" color="text-amber-500" subtext="Variance" />
-                        <MetricCard icon={AlertTriangle} label="Loss" value={metrics.loss} unit="%" color="text-rose-500" subtext="Packet Loss" />
-                        <MetricCard icon={Globe} label="Server" value={serverInfo.city} unit="" color="text-blue-500" subtext={serverInfo.country} />
+                        <MetricCard
+                            icon={Activity}
+                            label="Ping"
+                            value={metrics.ping}
+                            unit="ms"
+                            color="text-emerald-500"
+                            subtext={`${metrics.pingMin} - ${metrics.pingMax} ms`}
+                        />
+                        <MetricCard
+                            icon={Waves}
+                            label="Jitter"
+                            value={metrics.jitter}
+                            unit="ms"
+                            color="text-amber-500"
+                            subtext="Variance"
+                        />
+                        <MetricCard
+                            icon={AlertTriangle}
+                            label="Loss"
+                            value={metrics.loss}
+                            unit="%"
+                            color="text-rose-500"
+                            subtext="Packet Loss"
+                        />
+                        <MetricCard
+                            icon={Globe}
+                            label="Server"
+                            value={serverInfo.city}
+                            unit=""
+                            color="text-blue-500"
+                            subtext={serverInfo.country}
+                        />
                         <div className="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-1">
                             <button
-                                onClick={status === 'idle' || status === 'complete' ? runTest : reset}
+                                onClick={
+                                    status === 'idle' || status === 'complete' ? runTest : reset
+                                }
                                 className="w-full h-20 sm:h-22 md:h-24 flex items-center justify-center gap-2.5 font-bold text-base sm:text-lg px-6 py-4 rounded-2xl bg-linear-to-br from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl active:scale-95"
                             >
                                 {status === 'idle' || status === 'complete' ? (
                                     <>
                                         <Play className="h-6 w-6 fill-current" />
-                                        <span className="font-bold uppercase tracking-wide">{status === 'complete' ? 'RETEST' : 'START'}</span>
+                                        <span className="font-bold uppercase tracking-wide">
+                                            {status === 'complete' ? 'RETEST' : 'START'}
+                                        </span>
                                     </>
                                 ) : (
                                     <>
                                         <X className="h-6 w-6" />
-                                        <span className="font-bold uppercase tracking-wide">STOP</span>
+                                        <span className="font-bold uppercase tracking-wide">
+                                            STOP
+                                        </span>
                                     </>
                                 )}
                             </button>
@@ -760,27 +1060,59 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
 
                     {/* Advanced Analysis Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-
                         {/* 1. Network Health Radar */}
                         <GlassCard className="p-3 sm:p-4 md:p-5 lg:p-6">
                             <div className="flex items-center gap-2 mb-3 sm:mb-4 md:mb-6">
                                 <Target className="h-5 w-5 text-neutral-500" />
-                                <h3 className="font-bold text-neutral-900 dark:text-white">Use Case Performance</h3>
+                                <h3 className="font-bold text-neutral-900 dark:text-white">
+                                    Use Case Performance
+                                </h3>
                             </div>
                             <div className="h-[180px] sm:h-[220px] md:h-[250px] w-full">
                                 {status === 'complete' ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
-                                            { subject: 'Gaming', A: qs.gaming, fullMark: 100 },
-                                            { subject: 'Stream', A: qs.streaming, fullMark: 100 },
-                                            { subject: 'Video Calls', A: qs.video, fullMark: 100 },
-                                            { subject: 'Browsing', A: qs.browsing, fullMark: 100 },
-                                            { subject: 'Cloud', A: qs.cloud, fullMark: 100 },
-                                        ]}>
+                                        <RadarChart
+                                            cx="50%"
+                                            cy="50%"
+                                            outerRadius="80%"
+                                            data={[
+                                                { subject: 'Gaming', A: qs.gaming, fullMark: 100 },
+                                                {
+                                                    subject: 'Stream',
+                                                    A: qs.streaming,
+                                                    fullMark: 100,
+                                                },
+                                                {
+                                                    subject: 'Video Calls',
+                                                    A: qs.video,
+                                                    fullMark: 100,
+                                                },
+                                                {
+                                                    subject: 'Browsing',
+                                                    A: qs.browsing,
+                                                    fullMark: 100,
+                                                },
+                                                { subject: 'Cloud', A: qs.cloud, fullMark: 100 },
+                                            ]}
+                                        >
                                             <PolarGrid stroke="#e5e7eb" />
-                                            <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} />
-                                            <Radar name="Score" dataKey="A" stroke="#6366f1" strokeWidth={2} fill="#6366f1" fillOpacity={0.3} />
+                                            <PolarAngleAxis
+                                                dataKey="subject"
+                                                tick={{ fill: '#9ca3af', fontSize: 11 }}
+                                            />
+                                            <PolarRadiusAxis
+                                                angle={30}
+                                                domain={[0, 100]}
+                                                tick={false}
+                                            />
+                                            <Radar
+                                                name="Score"
+                                                dataKey="A"
+                                                stroke="#6366f1"
+                                                strokeWidth={2}
+                                                fill="#6366f1"
+                                                fillOpacity={0.3}
+                                            />
                                         </RadarChart>
                                     </ResponsiveContainer>
                                 ) : (
@@ -797,9 +1129,13 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-2">
                                     <Layers className="h-5 w-5 text-neutral-500" />
-                                    <h3 className="font-bold text-neutral-900 dark:text-white">Latency Distribution</h3>
+                                    <h3 className="font-bold text-neutral-900 dark:text-white">
+                                        Latency Distribution
+                                    </h3>
                                 </div>
-                                {status === 'complete' && <GradeBadge grade={bufferbloat.grade} size="sm" />}
+                                {status === 'complete' && (
+                                    <GradeBadge grade={bufferbloat.grade} size="sm" />
+                                )}
                             </div>
 
                             <div className="space-y-6">
@@ -841,8 +1177,12 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                                     <Sparkles className="h-5 w-5" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-bold text-neutral-900 dark:text-white">AI Intelligence Insights</h3>
-                                                    <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Neural Network Evaluation</p>
+                                                    <h3 className="font-bold text-neutral-900 dark:text-white">
+                                                        AI Intelligence Insights
+                                                    </h3>
+                                                    <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">
+                                                        Neural Network Evaluation
+                                                    </p>
                                                 </div>
                                             </div>
                                             {aiAnalysis && (
@@ -884,7 +1224,9 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                                                     Evaluation Complete
                                                 </div>
-                                                <span className="uppercase">REF: {aiAnalysis.ref} • {aiAnalysis.timestamp}</span>
+                                                <span className="uppercase">
+                                                    REF: {aiAnalysis.ref} • {aiAnalysis.timestamp}
+                                                </span>
                                             </div>
                                         )}
                                     </GlassCard>
@@ -914,12 +1256,18 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
                                         <MapPin className="h-4 w-4 text-red-500" />
-                                        <span className="font-bold text-neutral-900 dark:text-white">{geoInfo.city}, {geoInfo.country}</span>
+                                        <span className="font-bold text-neutral-900 dark:text-white">
+                                            {geoInfo.city}, {geoInfo.country}
+                                        </span>
                                     </div>
-                                    <div className="text-xs text-neutral-500">{geoInfo.isp} • {geoInfo.ipv}</div>
+                                    <div className="text-xs text-neutral-500">
+                                        {geoInfo.isp} • {geoInfo.ipv}
+                                    </div>
                                 </div>
                                 <div className="text-right hidden sm:block">
-                                    <div className="text-xs uppercase font-bold text-neutral-400">Server</div>
+                                    <div className="text-xs uppercase font-bold text-neutral-400">
+                                        Server
+                                    </div>
                                     <div className="font-bold">{serverInfo.city}</div>
                                 </div>
                             </div>
@@ -930,7 +1278,9 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-2">
                                     <Brain className="h-5 w-5 text-indigo-500" />
-                                    <h3 className="font-bold text-neutral-900 dark:text-white">Neural Diagnostics</h3>
+                                    <h3 className="font-bold text-neutral-900 dark:text-white">
+                                        Neural Diagnostics
+                                    </h3>
                                 </div>
                                 {status === 'complete' && (
                                     <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-100 dark:bg-green-500/20 text-green-600 text-[10px] font-bold">
@@ -942,11 +1292,55 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
 
                             <div className="space-y-4">
                                 {[
-                                    { k: 'Video Streaming', v: metrics.down > 25 ? '4K Ultra HD' : metrics.down > 15 ? '1080p HD' : '720p', i: Monitor, c: metrics.down > 25 ? 'text-emerald-500' : 'text-amber-500' },
-                                    { k: 'Gaming Performance', v: metrics.ping < 30 ? 'E-Sports Ready' : metrics.ping < 60 ? 'Good' : 'Lags Likely', i: Gamepad2, c: metrics.ping < 30 ? 'text-emerald-500' : 'text-rose-500' },
-                                    { k: 'Cloud Workloads', v: metrics.up > 20 ? 'Optimal' : 'Slight Latency', i: UploadIcon, c: metrics.up > 20 ? 'text-blue-500' : 'text-neutral-400' },
-                                    { k: 'Download Time (5GB)', v: `${Math.round(40000 / (metrics.down || 1))}s`, i: FileDown, c: 'text-indigo-500' },
-                                    { k: 'Video Calls', v: metrics.jitter < 10 ? 'Crystal Clear' : 'Potential Choppiness', i: Video, c: metrics.jitter < 10 ? 'text-emerald-500' : 'text-amber-500' }
+                                    {
+                                        k: 'Video Streaming',
+                                        v:
+                                            metrics.down > 25
+                                                ? '4K Ultra HD'
+                                                : metrics.down > 15
+                                                  ? '1080p HD'
+                                                  : '720p',
+                                        i: Monitor,
+                                        c:
+                                            metrics.down > 25
+                                                ? 'text-emerald-500'
+                                                : 'text-amber-500',
+                                    },
+                                    {
+                                        k: 'Gaming Performance',
+                                        v:
+                                            metrics.ping < 30
+                                                ? 'E-Sports Ready'
+                                                : metrics.ping < 60
+                                                  ? 'Good'
+                                                  : 'Lags Likely',
+                                        i: Gamepad2,
+                                        c: metrics.ping < 30 ? 'text-emerald-500' : 'text-rose-500',
+                                    },
+                                    {
+                                        k: 'Cloud Workloads',
+                                        v: metrics.up > 20 ? 'Optimal' : 'Slight Latency',
+                                        i: UploadIcon,
+                                        c: metrics.up > 20 ? 'text-blue-500' : 'text-neutral-400',
+                                    },
+                                    {
+                                        k: 'Download Time (5GB)',
+                                        v: `${Math.round(40000 / (metrics.down || 1))}s`,
+                                        i: FileDown,
+                                        c: 'text-indigo-500',
+                                    },
+                                    {
+                                        k: 'Video Calls',
+                                        v:
+                                            metrics.jitter < 10
+                                                ? 'Crystal Clear'
+                                                : 'Potential Choppiness',
+                                        i: Video,
+                                        c:
+                                            metrics.jitter < 10
+                                                ? 'text-emerald-500'
+                                                : 'text-amber-500',
+                                    },
                                 ].map((item, idx) => (
                                     <motion.div
                                         key={idx}
@@ -956,12 +1350,21 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                         className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-200/50 dark:border-neutral-700/30 group hover:border-indigo-500/30 transition-colors"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className={cn("p-1.5 rounded-lg bg-white dark:bg-neutral-800 shadow-xs", item.c)}>
+                                            <div
+                                                className={cn(
+                                                    'p-1.5 rounded-lg bg-white dark:bg-neutral-800 shadow-xs',
+                                                    item.c
+                                                )}
+                                            >
                                                 <item.i className="h-4 w-4" />
                                             </div>
-                                            <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">{item.k}</span>
+                                            <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">
+                                                {item.k}
+                                            </span>
                                         </div>
-                                        <span className="text-xs font-bold text-neutral-900 dark:text-white">{item.v}</span>
+                                        <span className="text-xs font-bold text-neutral-900 dark:text-white">
+                                            {item.v}
+                                        </span>
                                     </motion.div>
                                 ))}
                             </div>
@@ -989,13 +1392,34 @@ const SpeedtestPanel = ({ isOpen, onClose, backendUrl }) => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                                        {history.slice(0, 3).map((h) => (
+                                        {history.slice(0, 3).map(h => (
                                             <tr key={h.id} className="group">
-                                                <td className="py-3 text-neutral-500">{new Date(h.date).toLocaleDateString()}</td>
-                                                <td className="py-3 font-bold">{h.down} <span className="text-[10px] text-neutral-400 font-normal">Mbps</span></td>
-                                                <td className="py-3 font-bold">{h.up} <span className="text-[10px] text-neutral-400 font-normal">Mbps</span></td>
-                                                <td className="py-3">{h.ping} <span className="text-[10px] text-neutral-400">ms</span></td>
-                                                <td className="py-3"><span className="text-xs font-bold px-2 py-1 bg-neutral-100 dark:bg-neutral-800 rounded">{h.grade || '-'}</span></td>
+                                                <td className="py-3 text-neutral-500">
+                                                    {new Date(h.date).toLocaleDateString()}
+                                                </td>
+                                                <td className="py-3 font-bold">
+                                                    {h.down}{' '}
+                                                    <span className="text-[10px] text-neutral-400 font-normal">
+                                                        Mbps
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 font-bold">
+                                                    {h.up}{' '}
+                                                    <span className="text-[10px] text-neutral-400 font-normal">
+                                                        Mbps
+                                                    </span>
+                                                </td>
+                                                <td className="py-3">
+                                                    {h.ping}{' '}
+                                                    <span className="text-[10px] text-neutral-400">
+                                                        ms
+                                                    </span>
+                                                </td>
+                                                <td className="py-3">
+                                                    <span className="text-xs font-bold px-2 py-1 bg-neutral-100 dark:bg-neutral-800 rounded">
+                                                        {h.grade || '-'}
+                                                    </span>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>

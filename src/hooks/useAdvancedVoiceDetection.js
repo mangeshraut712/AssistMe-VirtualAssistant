@@ -1,13 +1,13 @@
 /**
  * useAdvancedVoiceDetection Hook 4.0
- * 
+ *
  * Custom React hook for advanced speech recognition with:
  * 1. Voice Activity Detection (VAD) - RMS-based speech detection
  * 2. Adaptive Pause Detection - Context-aware silence thresholds
  * 3. Confidence Filtering - Only accept high-confidence results
  * 4. Auto-Mute Control - Mute during AI speech
  * 5. Audio Level Monitoring - For visualizations
- * 
+ *
  * Usage:
  * const {
  *   isListening,
@@ -30,7 +30,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import {
     VOICE_CONFIG,
     getAdaptiveSilenceTimeout,
-    calculateRMS
+    calculateRMS,
 } from '@/config/voice-detection.config';
 
 export const useAdvancedVoiceDetection = ({
@@ -83,46 +83,49 @@ export const useAdvancedVoiceDetection = ({
     // ─────────────────────────────────────────────────────────────────────────
     // AUDIO LEVEL MONITORING
     // ─────────────────────────────────────────────────────────────────────────
-    const startAudioMonitoring = useCallback((stream) => {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const analyser = ctx.createAnalyser();
-            analyser.fftSize = 256;
+    const startAudioMonitoring = useCallback(
+        stream => {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = ctx.createAnalyser();
+                analyser.fftSize = 256;
 
-            const source = ctx.createMediaStreamSource(stream);
-            source.connect(analyser);
+                const source = ctx.createMediaStreamSource(stream);
+                source.connect(analyser);
 
-            audioCtxRef.current = ctx;
-            analyserRef.current = analyser;
+                audioCtxRef.current = ctx;
+                analyserRef.current = analyser;
 
-            const dataArray = new Float32Array(analyser.fftSize);
+                const dataArray = new Float32Array(analyser.fftSize);
 
-            const updateLevel = () => {
-                if (!analyserRef.current) return;
+                const updateLevel = () => {
+                    if (!analyserRef.current) return;
 
-                analyser.getFloatTimeDomainData(dataArray);
-                const rms = calculateRMS(dataArray);
+                    analyser.getFloatTimeDomainData(dataArray);
+                    const rms = calculateRMS(dataArray);
 
-                // Smooth the level
-                smoothedLevelRef.current =
-                    smoothedLevelRef.current * VOICE_CONFIG.vad.smoothingFactor +
-                    rms * (1 - VOICE_CONFIG.vad.smoothingFactor);
+                    // Smooth the level
+                    smoothedLevelRef.current =
+                        smoothedLevelRef.current * VOICE_CONFIG.vad.smoothingFactor +
+                        rms * (1 - VOICE_CONFIG.vad.smoothingFactor);
 
-                const level = Math.min(1, smoothedLevelRef.current * 10);
-                const speaking = smoothedLevelRef.current > VOICE_CONFIG.vad.energyThreshold;
+                    const level = Math.min(1, smoothedLevelRef.current * 10);
+                    const speaking = smoothedLevelRef.current > VOICE_CONFIG.vad.energyThreshold;
 
-                setAudioLevel(level);
-                setIsSpeechDetected(speaking);
-                onAudioLevel?.(level, speaking);
+                    setAudioLevel(level);
+                    setIsSpeechDetected(speaking);
+                    onAudioLevel?.(level, speaking);
 
-                animationFrameRef.current = requestAnimationFrame(updateLevel);
-            };
+                    animationFrameRef.current = requestAnimationFrame(updateLevel);
+                };
 
-            updateLevel();
-        } catch (e) {
-            console.error('Audio monitoring error:', e);
-        }
-    }, [onAudioLevel]);
+                updateLevel();
+            } catch (e) {
+                console.error('Audio monitoring error:', e);
+            }
+        },
+        [onAudioLevel]
+    );
 
     const stopAudioMonitoring = useCallback(() => {
         if (animationFrameRef.current) {
@@ -130,7 +133,7 @@ export const useAdvancedVoiceDetection = ({
             animationFrameRef.current = null;
         }
         if (audioCtxRef.current) {
-            audioCtxRef.current.close().catch(() => { });
+            audioCtxRef.current.close().catch(() => {});
             audioCtxRef.current = null;
         }
         analyserRef.current = null;
@@ -159,7 +162,7 @@ export const useAdvancedVoiceDetection = ({
             transcriptRef.current = '';
         };
 
-        recognition.onresult = (event) => {
+        recognition.onresult = event => {
             if (isMuted) return;
 
             let interim = '';
@@ -225,7 +228,7 @@ export const useAdvancedVoiceDetection = ({
             }
         };
 
-        recognition.onerror = (event) => {
+        recognition.onerror = event => {
             if (event.error !== 'no-speech' && event.error !== 'aborted') {
                 console.error('Speech recognition error:', event.error);
                 onError?.(event.error);
@@ -237,7 +240,7 @@ export const useAdvancedVoiceDetection = ({
                     if (!isMuted && recognitionRef.current) {
                         try {
                             recognitionRef.current.start();
-                        } catch (e) { }
+                        } catch (e) {}
                     }
                 }, VOICE_CONFIG.recovery.autoRestartDelay);
             }
@@ -278,7 +281,7 @@ export const useAdvancedVoiceDetection = ({
         if (recognitionRef.current && isListening) {
             try {
                 recognitionRef.current.stop();
-            } catch { }
+            } catch {}
         }
 
         if (pauseTimerRef.current) {
@@ -299,7 +302,7 @@ export const useAdvancedVoiceDetection = ({
         setIsMuted(prev => !prev);
     }, []);
 
-    const forceMute = useCallback((muted) => {
+    const forceMute = useCallback(muted => {
         setIsMuted(muted);
     }, []);
 

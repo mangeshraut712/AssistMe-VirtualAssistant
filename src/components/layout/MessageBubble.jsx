@@ -1,7 +1,7 @@
 /**
  * Enhanced MessageBubble Component with Framer Motion
  * Apple & Japanese design aesthetics
- * 
+ *
  * Features:
  * - Smooth slide-in animations
  * - Interactive action buttons with hover effects
@@ -21,7 +21,7 @@ import {
     Clock,
     Cpu,
     Zap,
-    Bot
+    Bot,
 } from 'lucide-react';
 import { cn, copyToClipboard } from '@/lib/utils';
 
@@ -76,7 +76,7 @@ const ActionButton = ({ onClick, icon: Icon, title, isActive, activeColor = 'tex
 // Typing indicator component
 const TypingIndicator = () => (
     <div className="flex items-center gap-1 py-2">
-        {[0, 1, 2].map((i) => (
+        {[0, 1, 2].map(i => (
             <motion.div
                 key={i}
                 className="h-2 w-2 rounded-full bg-muted-foreground/50"
@@ -162,8 +162,8 @@ const MessageBubble = ({ message, renderContent, onRegenerate, isLoading = false
     const latency = metadata.latency
         ? `${(metadata.latency / 1000).toFixed(2)}s`
         : message.latency
-            ? `${message.latency.toFixed(1)}s`
-            : null;
+          ? `${message.latency.toFixed(1)}s`
+          : null;
     const model = metadata.model || null;
     const tokens = metadata.usage?.total_tokens || null;
     const followUps = message.followUps || [];

@@ -2,7 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * CONTEXT EXPORTS
  * ═══════════════════════════════════════════════════════════════════════════════
- * 
+ *
  * Central barrel export for all React contexts.
  * Import from '@/context' for cleaner imports.
  */

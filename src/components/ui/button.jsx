@@ -45,41 +45,33 @@ const buttonVariants = cva(
 );
 
 // Motion-enhanced Button
-const Button = React.forwardRef(
-    ({ className, variant, size, asChild = false, ...props }, ref) => {
-        const Comp = asChild ? Slot : 'button';
-        return (
-            <Comp
-                className={cn(buttonVariants({ variant, size, className }))}
-                ref={ref}
-                {...props}
-            />
-        );
-    }
-);
+const Button = React.forwardRef(({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : 'button';
+    return (
+        <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+    );
+});
 Button.displayName = 'Button';
 
 // Animated Button with spring physics (Apple-style)
-const MotionButton = React.forwardRef(
-    ({ className, variant, size, children, ...props }, ref) => {
-        return (
-            <motion.button
-                ref={ref}
-                className={cn(buttonVariants({ variant, size, className }))}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{
-                    type: 'spring',
-                    stiffness: 400,
-                    damping: 17,
-                }}
-                {...props}
-            >
-                {children}
-            </motion.button>
-        );
-    }
-);
+const MotionButton = React.forwardRef(({ className, variant, size, children, ...props }, ref) => {
+    return (
+        <motion.button
+            ref={ref}
+            className={cn(buttonVariants({ variant, size, className }))}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{
+                type: 'spring',
+                stiffness: 400,
+                damping: 17,
+            }}
+            {...props}
+        >
+            {children}
+        </motion.button>
+    );
+});
 MotionButton.displayName = 'MotionButton';
 
 export { Button, MotionButton, buttonVariants };

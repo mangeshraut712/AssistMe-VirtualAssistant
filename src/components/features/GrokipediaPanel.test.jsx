@@ -8,7 +8,10 @@ describe('GrokipediaPanel', () => {
     });
 
     it('shows saved searches loaded during the initial render', () => {
-        localStorage.setItem('grokipedia-history-v3', JSON.stringify(['quantum computing', 'drexel']));
+        localStorage.setItem(
+            'grokipedia-history-v3',
+            JSON.stringify(['quantum computing', 'drexel'])
+        );
         render(<GrokipediaPanel isOpen onClose={vi.fn()} />);
 
         fireEvent.focus(screen.getByPlaceholderText('Search anything...'));
