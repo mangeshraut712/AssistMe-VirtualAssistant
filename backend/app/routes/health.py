@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import time
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Request, Response
 
@@ -37,6 +37,8 @@ def _check_database() -> tuple[bool, str | None]:
         from ..database import SessionLocal
         from sqlalchemy import text
 
+        if SessionLocal is None:
+            return False, "Database session is unavailable"
         db = SessionLocal()
         try:
             db.execute(text("SELECT 1"))
@@ -97,7 +99,7 @@ async def health_check() -> HealthStatus:
     all_critical_ok = all(checks.get(c, True) for c in critical_checks)
 
     if all_critical_ok and all(checks.values()):
-        status = "healthy"
+        status: Literal["healthy", "degraded", "unhealthy"] = "healthy"
     elif all_critical_ok:
         status = "degraded"
     else:

@@ -104,9 +104,7 @@ jobs:
           
       - name: Type check with mypy
         working-directory: backend
-        continue-on-error: true
-        run: |
-          mypy app --ignore-missing-imports --no-error-summary || true
+        run: mypy app --config-file mypy.ini --no-pretty
           
       - name: Validate API structure
         run: |
@@ -138,15 +136,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          matches="$(git grep -IlE "(api_key|apikey|secret|password|token)[[:space:]]*[:=][[:space:]]*['\"][^'\"]+['\"]" -- src backend/app || true)"
-          if [[ -n "${matches}" ]]; then
-            echo "::error::Potential hard-coded secret assignments found in:"
-            while IFS= read -r file; do
-              printf '  - %s\n' "${file}"
-            done <<<"${matches}"
-            exit 1
-          fi
-          echo "No likely hard-coded secret assignments found."
+          set +e
+          matches="$(git grep -IlE "(api_key|apikey|secret|password|token)[[:space:]]*[:=][[:space:]]*['\"][^'\"]+['\"]" -- src backend/app)"
+          grep_status=$?
+          set -e
+          case "${grep_status}" in
+            0)
+              echo "::error::Potential hard-coded secret assignments found in:"
+              while IFS= read -r file; do
+                printf '  - %s\n' "${file}"
+              done <<<"${matches}"
+              exit 1
+              ;;
+            1)
+              echo "No likely hard-coded secret assignments found."
+              ;;
+            *)
+              echo "::error::Secret scan failed (git grep exit ${grep_status})."
+              exit "${grep_status}"
+              ;;
+          esac
 
   # Summary Job
   ci-success:

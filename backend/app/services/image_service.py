@@ -1,6 +1,6 @@
 """Image generation service using OpenAI DALL-E API."""
 
-from typing import Optional
+from typing import Any, Optional
 import logging
 import os
 import httpx
@@ -198,7 +198,7 @@ class ImageService:
     ) -> str:
         """Generate image using OpenRouter API via chat/completions."""
         logger.info(f"Attempting OpenRouter image generation with model: {model}")
-        payload = {
+        payload: dict[str, Any] = {
             "model": model,
             "messages": [
                 {
@@ -259,14 +259,14 @@ class ImageService:
         if size in size_map:
             return size_map[size]
         try:
-            w, h = size.lower().split("x")
-            w, h = int(w), int(h)
-            if h == 0:
+            width_text, height_text = size.lower().split("x")
+            width, height = int(width_text), int(height_text)
+            if height == 0:
                 return None
             # Reduce ratio to simplest form
             from math import gcd
-            g = gcd(w, h)
-            return f"{w // g}:{h // g}"
+            divisor = gcd(width, height)
+            return f"{width // divisor}:{height // divisor}"
         except Exception:
             return None
 

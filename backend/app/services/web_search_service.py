@@ -2,11 +2,20 @@
 
 import logging
 import os
-from typing import List, Dict, Optional
+from typing import List, Optional, TypedDict
 import aiohttp
 import asyncio
 
 logger = logging.getLogger(__name__)
+
+
+class SearchResult(TypedDict):
+    """A normalized web-search result returned to knowledge routes."""
+
+    title: str
+    url: str
+    content: str
+    score: float
 
 
 class WebSearchService:
@@ -21,7 +30,7 @@ class WebSearchService:
         query: str,
         max_results: int = 5,
         search_depth: str = "advanced"
-    ) -> List[Dict[str, str]]:
+    ) -> List[SearchResult]:
         """
         Search the web using Tavily API or DuckDuckGo fallback.
 
@@ -43,7 +52,7 @@ class WebSearchService:
         query: str,
         max_results: int,
         search_depth: str
-    ) -> List[Dict[str, str]]:
+    ) -> List[SearchResult]:
         """Search using Tavily API."""
         try:
             async with aiohttp.ClientSession() as session:
@@ -67,7 +76,7 @@ class WebSearchService:
 
                     data = await response.json()
 
-                    results = []
+                    results: List[SearchResult] = []
 
                     # Add the AI-generated answer if available
                     if data.get("answer"):
@@ -98,7 +107,7 @@ class WebSearchService:
         self,
         query: str,
         max_results: int
-    ) -> List[Dict[str, str]]:
+    ) -> List[SearchResult]:
         """Search using DuckDuckGo Instant Answer API with retry logic."""
         max_retries = 3
         base_delay = 1.0
@@ -106,7 +115,7 @@ class WebSearchService:
         for attempt in range(max_retries):
             try:
                 async with aiohttp.ClientSession() as session:
-                    params = {
+                    params: dict[str, str | int] = {
                         "q": query,
                         "format": "json",
                         "no_html": 1,
@@ -133,7 +142,7 @@ class WebSearchService:
                             return self._fallback_results(query)
 
                         data = await response.json()
-                        results = []
+                        results: List[SearchResult] = []
 
                         # Add abstract if available
                         if data.get("Abstract"):
@@ -193,7 +202,7 @@ class WebSearchService:
 
         return self._fallback_results(query)
 
-    def _fallback_results(self, query: str) -> List[Dict[str, str]]:
+    def _fallback_results(self, query: str) -> List[SearchResult]:
         """Fallback results when all search methods fail - use AI's own knowledge."""
         logger.warning(f"Web search unavailable for '{query}'. AI will use its own knowledge.")
         return [{
@@ -206,7 +215,7 @@ class WebSearchService:
     async def stream_answer(
         self,
         query: str,
-        context_results: Optional[List[Dict[str, str]]] = None,
+        context_results: Optional[List[SearchResult]] = None,
         model: str = "google/gemini-2.5-flash-preview-05-20"
     ):
         """
@@ -409,7 +418,7 @@ Generate your comprehensive article now:"""
             logger.error(f"Grokipedia streaming failed: {e}")
             yield "\n\n---\n\nError generating article. Please try again later."
 
-    def _fallback_format_answer(self, context_results: List[Dict[str, str]]) -> str:
+    def _fallback_format_answer(self, context_results: List[SearchResult]) -> str:
         """Fallback formatting if LLM fails."""
         if not context_results:
             return "No results found."

@@ -16,10 +16,16 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import (
-    Any,
     AsyncIterator,
     Generic,
+    Literal,
+    Mapping,
+    NotRequired,
+    Required,
+    Sequence,
+    TypedDict,
     TypeVar,
+    overload,
 )
 
 try:
@@ -28,6 +34,7 @@ try:
         stop_after_attempt,
         wait_exponential,
         retry_if_exception_type,
+        RetryCallState,
     )
     TENACITY_AVAILABLE = True
 except ImportError:
@@ -41,6 +48,35 @@ from ..logging_config import logger, log_ai_request
 # ==============================================================================
 
 T = TypeVar("T")
+
+
+ProviderMessage = Mapping[str, object]
+
+
+class ProviderResponse(TypedDict):
+    """Normalized non-streaming response returned by the provider boundary."""
+
+    response: str
+    tokens: int
+    model: str
+    error: NotRequired[str]
+
+
+class ProviderChunk(TypedDict, total=False):
+    """One normalized streaming response chunk."""
+
+    content: str
+    error: str
+
+
+class ProviderModel(TypedDict, total=False):
+    """Public model metadata supported by a provider."""
+
+    id: Required[str]
+    name: Required[str]
+    priority: int
+    voice_optimized: bool
+    native_audio: bool
 
 
 class FinishReason(str, Enum):
@@ -152,6 +188,16 @@ class ModelNotFoundError(ProviderError):
 # Retry Decorator (with tenacity fallback)
 # ==============================================================================
 
+def _log_retry(retry_state: RetryCallState) -> None:
+    """Log a retry without assuming tenacity has scheduled an action."""
+    next_action = retry_state.next_action
+    logger.warning(
+        "Retrying request",
+        attempt=retry_state.attempt_number,
+        wait=next_action.sleep if next_action is not None else None,
+    )
+
+
 def with_retry(
     max_attempts: int = 3,
     min_wait: float = 1,
@@ -163,11 +209,7 @@ def with_retry(
             stop=stop_after_attempt(max_attempts),
             wait=wait_exponential(multiplier=1, min=min_wait, max=max_wait),
             retry=retry_if_exception_type((RateLimitError, ConnectionError, TimeoutError)),
-            before_sleep=lambda retry_state: logger.warning(
-                "Retrying request",
-                attempt=retry_state.attempt_number,
-                wait=retry_state.next_action.sleep,
-            ),
+            before_sleep=_log_retry,
         )
     else:
         # Simple fallback without tenacity
@@ -221,26 +263,46 @@ class BaseProvider(ABC, Generic[T]):
         """Cleanup provider resources (override if needed)."""
         pass
 
-    @abstractmethod
+    @overload
     async def chat_completion(
         self,
-        messages: list[dict[str, str]],
+        messages: Sequence[ProviderMessage],
         model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        **kwargs: Any,
-    ) -> ChatCompletion:
-        """Generate chat completion (non-streaming).
+        stream: Literal[False] = False,
+    ) -> ProviderResponse: ...
+
+    @overload
+    async def chat_completion(
+        self,
+        messages: Sequence[ProviderMessage],
+        model: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        stream: Literal[True] = True,
+    ) -> AsyncIterator[ProviderChunk]: ...
+
+    @abstractmethod
+    async def chat_completion(
+        self,
+        messages: Sequence[ProviderMessage],
+        model: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        stream: bool = False,
+    ) -> ProviderResponse | AsyncIterator[ProviderChunk]:
+        """Generate either a normalized completion or stream.
 
         Args:
             messages: List of message dicts with 'role' and 'content'
             model: Model identifier (uses default if None)
             temperature: Randomness (0-2)
             max_tokens: Maximum output tokens
-            **kwargs: Additional provider-specific options
 
         Returns:
-            ChatCompletion response
+            A normalized response for ``stream=False`` or chunk iterator for
+            ``stream=True``.
 
         Raises:
             ProviderError: On API errors
@@ -252,11 +314,10 @@ class BaseProvider(ABC, Generic[T]):
     @abstractmethod
     async def chat_completion_stream(
         self,
-        messages: list[dict[str, str]],
+        messages: Sequence[ProviderMessage],
         model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        **kwargs: Any,
     ) -> AsyncIterator[StreamChunk]:
         """Generate streaming chat completion.
 
@@ -265,7 +326,6 @@ class BaseProvider(ABC, Generic[T]):
             model: Model identifier
             temperature: Randomness (0-2)
             max_tokens: Maximum output tokens
-            **kwargs: Additional options
 
         Yields:
             StreamChunk for each response delta
@@ -276,7 +336,7 @@ class BaseProvider(ABC, Generic[T]):
         ...
 
     @abstractmethod
-    async def list_models(self) -> list[dict[str, Any]]:
+    async def list_models(self) -> list[ProviderModel]:
         """List available models.
 
         Returns:
@@ -293,28 +353,46 @@ class BaseProvider(ABC, Generic[T]):
         """
         ...
 
-    # Convenience method that auto-selects streaming based on parameter
+    # Convenience method that auto-selects streaming based on parameter.
+    @overload
     async def complete(
         self,
-        messages: list[dict[str, str]],
+        messages: Sequence[ProviderMessage],
+        model: str | None = None,
+        stream: Literal[False] = False,
+    ) -> ProviderResponse: ...
+
+    @overload
+    async def complete(
+        self,
+        messages: Sequence[ProviderMessage],
+        model: str | None = None,
+        stream: Literal[True] = True,
+    ) -> AsyncIterator[StreamChunk]: ...
+
+    async def complete(
+        self,
+        messages: Sequence[ProviderMessage],
         model: str | None = None,
         stream: bool = False,
-        **kwargs: Any,
-    ) -> ChatCompletion | AsyncIterator[StreamChunk]:
+    ) -> ProviderResponse | AsyncIterator[StreamChunk]:
         """Unified completion method.
 
         Args:
             messages: Chat messages
             model: Model to use
             stream: Whether to stream response
-            **kwargs: Additional options
 
         Returns:
-            ChatCompletion for non-streaming, AsyncIterator for streaming
+            A normalized response for non-streaming, an async iterator for streaming
         """
         if stream:
-            return self.chat_completion_stream(messages, model, **kwargs)
-        return await self.chat_completion(messages, model, **kwargs)
+            return await self.chat_completion_stream(
+                messages=messages, model=model
+            )
+        return await self.chat_completion(
+            messages=messages, model=model, stream=False
+        )
 
     def _log_completion(
         self,

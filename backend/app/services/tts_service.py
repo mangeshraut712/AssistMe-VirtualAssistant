@@ -26,7 +26,7 @@ Reference: https://ai.google.dev/gemini-api/docs/speech-generation
 import logging
 import os
 import re
-from typing import Dict, List, Optional
+from typing import Any, Dict, Mapping, Optional, Sequence
 
 import httpx
 
@@ -164,14 +164,14 @@ class EmotionDetector:
                 return tag
 
         # Count emotion keyword matches
-        emotion_scores = {}
+        emotion_scores: dict[str, int] = {}
         for emotion, keywords in cls.EMOTION_KEYWORDS.items():
             score = sum(1 for kw in keywords if kw in text_lower)
             if score > 0:
                 emotion_scores[emotion] = score
 
         if emotion_scores:
-            return max(emotion_scores, key=emotion_scores.get)
+            return max(emotion_scores, key=lambda emotion: emotion_scores[emotion])
 
         return "neutral"
 
@@ -183,7 +183,7 @@ class EmotionDetector:
         return cls.EMOTION_STYLES.get(emotion, cls.EMOTION_STYLES["neutral"])
 
     @classmethod
-    def process_text_with_emotion(cls, text: str) -> tuple:
+    def process_text_with_emotion(cls, text: str) -> tuple[str, str, str]:
         """Process text and return (cleaned_text, style_prompt, emotion)."""
         emotion = cls.detect_emotion(text)
         style_prompt = cls.get_style_prompt(emotion)
@@ -300,7 +300,7 @@ class GeminiVoiceService:
         voice: str = "Puck",
         style: Optional[str] = None,
         auto_emotion: bool = True,
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """Convert text to speech using Gemini 2.5 Flash TTS.
 
         Features (inspired by Chatterbox Turbo):
@@ -393,12 +393,12 @@ class GeminiVoiceService:
     async def generate_voice_response(
         self,
         user_message: str,
-        conversation_history: List[Dict] = None,
+        conversation_history: Sequence[Mapping[str, Any]] | None = None,
         voice: str = "Puck",
         language: str = "en-US",
         stt_confidence: float = 1.0,
         model: str = "google/gemini-2.0-flash-001:free",
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """Complete voice AI pipeline: Understand + Generate + Speak.
 
         Pipeline:
@@ -504,9 +504,9 @@ class GeminiVoiceService:
     async def _generate_voice_optimized_response(
         self,
         user_message: str,
-        conversation_history: List[Dict] = None,
+        conversation_history: Sequence[Mapping[str, Any]] | None = None,
         language: str = "en-US",
-        detected_input_lang: str = None,
+        detected_input_lang: str | None = None,
     ) -> str:
         """Generate voice-optimized response using Gemini 2.5 Flash.
 

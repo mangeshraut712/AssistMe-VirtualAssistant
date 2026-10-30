@@ -2,6 +2,7 @@
 
 import json
 import logging
+from typing import TypedDict
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -12,6 +13,15 @@ from ..services.web_search_service import web_search_service
 
 router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 logger = logging.getLogger(__name__)
+
+
+class KnowledgeSearchResult(TypedDict, total=False):
+    """A local or web result normalized for the combined search response."""
+
+    text: str
+    score: float
+    source: str
+    url: str
 
 
 @router.post("/ingest")
@@ -40,7 +50,7 @@ async def search_knowledge(request: SearchRequest):
     This endpoint combines local RAG with web search for comprehensive results.
     """
     try:
-        results = []
+        results: list[KnowledgeSearchResult] = []
 
         # First, search local knowledge base if available
         if embedding_service.index:

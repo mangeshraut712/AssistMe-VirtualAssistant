@@ -25,8 +25,15 @@ class WhisperService:
             model_size: tiny, base, small, medium, large
         """
         self.model_size = model_size
-        self.model = None
+        self.model: Any | None = None
         self._is_loading = False
+
+    def _require_model(self) -> Any:
+        """Return the loaded model or fail before a request dereferences None."""
+        model = self.model
+        if model is None:
+            raise RuntimeError("Whisper model is unavailable")
+        return model
 
     def _load_model(self):
         """Load the model if not already loaded."""
@@ -67,6 +74,7 @@ class WhisperService:
         """
         if not self.model:
             await run_in_threadpool(self._load_model)
+        model = self._require_model()
 
         # Save to temp file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
@@ -76,7 +84,7 @@ class WhisperService:
         try:
             # Run blocking transcribe in threadpool
             def _do_transcribe():
-                return self.model.transcribe(
+                return model.transcribe(
                     tmp_path,
                     language=language,
                     task="transcribe",
@@ -109,6 +117,7 @@ class WhisperService:
         """
         if not self.model:
             await run_in_threadpool(self._load_model)
+        self._require_model()
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
             tmp.write(audio_file)
@@ -136,13 +145,14 @@ class WhisperService:
             )
 
         n_mels = 80
-        dims = getattr(self.model, "dims", None)
+        model = self._require_model()
+        dims = getattr(model, "dims", None)
         model_mels = getattr(dims, "n_mels", None)
         if model_mels in (80, 128):
             n_mels = model_mels
 
         mel = whisper.log_mel_spectrogram(audio, n_mels=n_mels)
-        device = getattr(self.model, "device", "cpu")
+        device = getattr(model, "device", "cpu")
         return mel.to(device)
 
     def _detect_language_file(self, tmp_path: str) -> str:
@@ -150,7 +160,7 @@ class WhisperService:
         audio = whisper.load_audio(tmp_path)
         audio = whisper.pad_or_trim(audio)
         mel = self._log_mel_spectrogram(audio)
-        _, probs = self.model.detect_language(mel)
+        _, probs = self._require_model().detect_language(mel)
         return max(probs, key=probs.get)
 
 

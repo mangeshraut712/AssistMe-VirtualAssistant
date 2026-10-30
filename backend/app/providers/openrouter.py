@@ -4,11 +4,20 @@ import asyncio
 import json
 import logging
 import os
-from typing import AsyncIterator, Dict, List, Union
+from collections.abc import AsyncIterator, Mapping, Sequence
+from typing import ClassVar, Literal, overload
 
 import httpx
 
-from .base import BaseProvider
+from .base import (
+    BaseProvider,
+    FinishReason,
+    ProviderChunk,
+    ProviderMessage,
+    ProviderModel,
+    ProviderResponse,
+    StreamChunk,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +26,7 @@ class OpenRouterProvider(BaseProvider):
     """OpenRouter AI provider."""
 
     # Gemini Live Native Audio Models - ONLY these for voice mode
-    VOICE_MODELS = [
+    VOICE_MODELS: ClassVar[list[str]] = [
         # Primary: Gemini 2.5 Flash Native Audio (Dec 2025 release via BYOK)
         "gemini-2.5-flash-native-audio-preview-12-2025",
         # Fallbacks in order of preference
@@ -29,7 +38,7 @@ class OpenRouterProvider(BaseProvider):
         "google/gemini-2.0-flash-lite-001",
     ]
 
-    DEFAULT_MODELS = [
+    DEFAULT_MODELS: ClassVar[list[ProviderModel]] = [
         # Gemini voice / BYOK (voice path only — not used as text paid fallback)
         {"id": "gemini-2.5-flash-native-audio-preview-12-2025",
          "name": "Gemini 2.5 Flash Native Audio (Dec 2025)",
@@ -54,7 +63,7 @@ class OpenRouterProvider(BaseProvider):
         {"id": "google/gemma-4-31b-it:free", "name": "Google Gemma 4 31B (Free)", "priority": 1},
     ]
 
-    FREE_TEXT_MODELS = [
+    FREE_TEXT_MODELS: ClassVar[list[str]] = [
         "openrouter/free",
         "nvidia/nemotron-3-ultra-550b-a55b:free",
         "google/gemma-4-26b-a4b-it:free",
@@ -77,7 +86,7 @@ class OpenRouterProvider(BaseProvider):
         self.app_name = os.getenv("APP_NAME", "AssistMe AI Assistant")
         self.dev_mode = os.getenv("DEV_MODE", "false").lower() == "true"
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers(self) -> dict[str, str]:
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -85,14 +94,39 @@ class OpenRouterProvider(BaseProvider):
             "X-Title": self.app_name,
         }
 
+    @staticmethod
+    def _model_priority(model: ProviderModel) -> int:
+        """Keep catalog ordering stable when optional priority is absent."""
+        return model.get("priority", 99)
+
+    @overload
     async def chat_completion(
         self,
-        messages: List[Dict[str, str]],
-        model: str,
+        messages: Sequence[ProviderMessage],
+        model: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 1024,
+        stream: Literal[False] = False,
+    ) -> ProviderResponse: ...
+
+    @overload
+    async def chat_completion(
+        self,
+        messages: Sequence[ProviderMessage],
+        model: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 1024,
+        stream: Literal[True] = True,
+    ) -> AsyncIterator[ProviderChunk]: ...
+
+    async def chat_completion(
+        self,
+        messages: Sequence[ProviderMessage],
+        model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 1024,
         stream: bool = False,
-    ) -> Union[Dict, AsyncIterator]:
+    ) -> ProviderResponse | AsyncIterator[ProviderChunk]:
         """Generate chat completion using OpenRouter with fallback mechanism."""
         if self.dev_mode:
             return self._mock_response(messages, model, stream)
@@ -101,10 +135,10 @@ class OpenRouterProvider(BaseProvider):
             raise ValueError("OpenRouter API key not configured")
 
         # Get models sorted by priority (lower number = higher priority)
-        available_models = sorted(self.DEFAULT_MODELS, key=lambda x: x.get("priority", 99))
+        available_models = sorted(self.DEFAULT_MODELS, key=self._model_priority)
 
         # Try the requested model first, then fallbacks
-        models_to_try = []
+        models_to_try: list[str] = []
 
         # Add requested model if specified
         if model:
@@ -113,8 +147,14 @@ class OpenRouterProvider(BaseProvider):
         # STRICT VOICE MODEL ISOLATION
         # If the requested model is one of our designated VOICE_MODELS, we MUST NOT fallback
         # to generic text models like Llama as they lack native audio/voice capabilities.
-        is_voice_request = model in self.VOICE_MODELS or model == "gemini-2.5-flash-native-audio-preview-12-2025" or model.startswith(
-            "google/gemini-2.5")
+        is_voice_request = bool(
+            model
+            and (
+                model in self.VOICE_MODELS
+                or model == "gemini-2.5-flash-native-audio-preview-12-2025"
+                or model.startswith("google/gemini-2.5")
+            )
+        )
 
         if is_voice_request:
             # Only add other VOICE_MODELS as fallbacks
@@ -140,7 +180,7 @@ class OpenRouterProvider(BaseProvider):
 
         url = f"{self.base_url}/chat/completions"
         if stream:
-            payload = {
+            payload: dict[str, object] = {
                 "model": models_to_try[0] if models_to_try else model,
                 "messages": messages,
                 "temperature": temperature,
@@ -180,7 +220,9 @@ class OpenRouterProvider(BaseProvider):
         # If we get here, all models failed
         raise Exception(f"All models failed. Last error: {last_error}")
 
-    async def _post_with_retry(self, url: str, payload: Dict) -> httpx.Response:
+    async def _post_with_retry(
+        self, url: str, payload: Mapping[str, object]
+    ) -> httpx.Response:
         """POST with small retry window for transient 429/5xx."""
         backoff = [0.5, 1.5]
         for attempt, delay in enumerate([0] + backoff):
@@ -201,7 +243,9 @@ class OpenRouterProvider(BaseProvider):
                 return response
         return response
 
-    async def _unary_response(self, url: str, payload: Dict) -> Dict:
+    async def _unary_response(
+        self, url: str, payload: Mapping[str, object]
+    ) -> ProviderResponse:
         response = await self._post_with_retry(url, payload)
 
         if response.status_code >= 400:
@@ -226,20 +270,22 @@ class OpenRouterProvider(BaseProvider):
             "model": data.get("model", payload["model"]),
         }
 
-    async def _stream_response(self, url: str, payload: Dict) -> AsyncIterator[Dict]:
+    async def _stream_response(
+        self, url: str, payload: Mapping[str, object]
+    ) -> AsyncIterator[ProviderChunk]:
         async with httpx.AsyncClient() as client:
             async with client.stream(
                 "POST", url, json=payload, headers=self._headers(), timeout=60.0
             ) as response:
                 if response.status_code >= 400:
-                    content = await response.aread()
+                    error_body = await response.aread()
                     try:
-                        error_data = json.loads(content)
+                        error_data = json.loads(error_body)
                         error_msg = error_data.get("error", {}).get(
-                            "message", content.decode()
+                            "message", error_body.decode()
                         )
                     except Exception:
-                        error_msg = content.decode()
+                        error_msg = error_body.decode()
                     yield {
                         "error": f"OpenRouter API Error {response.status_code}: {error_msg}"
                     }
@@ -264,19 +310,26 @@ class OpenRouterProvider(BaseProvider):
                             continue
 
     async def _stream_with_fallback(
-        self, url: str, payload: Dict, models_to_try: List[str]
-    ) -> AsyncIterator[Dict]:
+        self,
+        url: str,
+        payload: Mapping[str, object],
+        models_to_try: Sequence[str],
+    ) -> AsyncIterator[ProviderChunk]:
         """Stream with model fallback.
 
         This avoids surfacing transient transport/protocol errors (e.g. connection reset)
         as hard failures when a different model can serve the request.
         """
 
-        last_error = None
+        last_error: str | None = None
 
-        for attempt_model in models_to_try or [payload.get("model")]:
-            if not attempt_model:
-                continue
+        if models_to_try:
+            candidate_models = models_to_try
+        else:
+            payload_model = payload.get("model")
+            candidate_models = [payload_model] if isinstance(payload_model, str) else []
+
+        for attempt_model in candidate_models:
 
             attempt_payload = dict(payload)
             attempt_payload["model"] = attempt_model
@@ -312,9 +365,12 @@ class OpenRouterProvider(BaseProvider):
         yield {"error": last_error or "All models failed"}
 
     def _mock_response(
-        self, messages: List[Dict], model: str, stream: bool
-    ) -> Union[Dict, AsyncIterator]:
-        last_msg = messages[-1]["content"]
+        self,
+        messages: Sequence[ProviderMessage],
+        model: str | None,
+        stream: bool,
+    ) -> ProviderResponse | AsyncIterator[ProviderChunk]:
+        last_msg = str(messages[-1].get("content", ""))
         response_text = f"[MOCK] Response to: {last_msg[:50]}... (Model: {model})"
 
         if stream:
@@ -332,11 +388,11 @@ class OpenRouterProvider(BaseProvider):
                 "model": model or "mock-model",
             }
 
-    async def list_models(self) -> List[Dict]:
+    async def list_models(self) -> list[ProviderModel]:
         """List OpenRouter models."""
         return self.DEFAULT_MODELS
 
-    def get_voice_models_only(self) -> List[str]:
+    def get_voice_models_only(self) -> list[str]:
         """Get ONLY the Gemini audio models for voice mode.
 
         These are the ONLY models that should be used for voice conversations:
@@ -384,19 +440,18 @@ class OpenRouterProvider(BaseProvider):
 
     async def chat_completion_stream(
         self,
-        messages: list[dict[str, str]],
+        messages: Sequence[ProviderMessage],
         model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        **kwargs
-    ):
+    ) -> AsyncIterator[StreamChunk]:
         """Generate streaming chat completion (required by BaseProvider)."""
-        from .base import StreamChunk, FinishReason
 
         if self.dev_mode:
             # Mock streaming for dev mode
-            async def mock_stream():
-                response_text = f"[MOCK] Streaming response to: {messages[-1]['content'][:50]}..."
+            async def mock_stream() -> AsyncIterator[StreamChunk]:
+                message_content = str(messages[-1].get("content", ""))
+                response_text = f"[MOCK] Streaming response to: {message_content[:50]}..."
                 words = response_text.split()
                 for i, word in enumerate(words):
                     yield StreamChunk(
@@ -414,18 +469,21 @@ class OpenRouterProvider(BaseProvider):
         url = f"{self.base_url}/chat/completions"
 
         # Get models to try with fallback
-        models_to_try = []
+        models_to_try: list[str] = []
         if model:
             models_to_try.append(model)
 
         # Add fallbacks
-        available_models = sorted(self.DEFAULT_MODELS, key=lambda x: x.get("priority", 99))
+        available_models = sorted(self.DEFAULT_MODELS, key=self._model_priority)
         for fallback_model in available_models:
             if fallback_model["id"] not in models_to_try:
                 models_to_try.append(fallback_model["id"])
 
-        payload = {
-            "model": models_to_try[0] if models_to_try else (model or self.default_model),
+        selected_model = (
+            models_to_try[0] if models_to_try else (model or self.default_model)
+        )
+        payload: dict[str, object] = {
+            "model": selected_model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
@@ -433,7 +491,7 @@ class OpenRouterProvider(BaseProvider):
         }
 
         # Convert old stream format to new StreamChunk format
-        async def stream_generator():
+        async def stream_generator() -> AsyncIterator[StreamChunk]:
             chunk_id = 0
             async for chunk in self._stream_with_fallback(url, payload, models_to_try):
                 if isinstance(chunk, dict):
@@ -442,7 +500,7 @@ class OpenRouterProvider(BaseProvider):
                         yield StreamChunk(
                             id=f"chatcmpl-{chunk_id}",
                             delta=chunk["content"],
-                            model=models_to_try[0],
+                            model=selected_model,
                             finish_reason=None
                         )
                     elif "error" in chunk:
@@ -450,7 +508,7 @@ class OpenRouterProvider(BaseProvider):
                         yield StreamChunk(
                             id=f"chatcmpl-{chunk_id}-error",
                             delta="",
-                            model=models_to_try[0],
+                            model=selected_model,
                             finish_reason=FinishReason.ERROR
                         )
                         break
@@ -459,7 +517,7 @@ class OpenRouterProvider(BaseProvider):
             yield StreamChunk(
                 id=f"chatcmpl-{chunk_id}-final",
                 delta="",
-                model=models_to_try[0],
+                model=selected_model,
                 finish_reason=FinishReason.STOP
             )
 

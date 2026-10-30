@@ -61,6 +61,9 @@ async def get_db() -> AsyncGenerator:
     # Import here to avoid circular imports
     try:
         from .database import SessionLocal
+        if SessionLocal is None:
+            yield None
+            return
         db = SessionLocal()
         try:
             yield db
@@ -162,29 +165,19 @@ CurrentUser = Annotated[dict, Depends(get_current_user)]
 async def check_rate_limit(request: Request) -> None:
     """Check rate limit for current request.
 
-    Uses client_id from RateLimitContextMiddleware.
+    The current limiter is process-wide and exposes ``check_rate_limit``
+    without a client argument. Keep the dependency aligned with that public
+    contract instead of calling the removed per-client method.
     """
-    client_id = getattr(request.state, "client_id", "unknown")
-
-    # Import rate limit service
     try:
         from .services.rate_limit_service import rate_limit_service
 
-        allowed, remaining, reset_at = await rate_limit_service.check_limit(client_id)
-
-        # Add rate limit headers
-        request.state.rate_limit_remaining = remaining
-        request.state.rate_limit_reset = reset_at
+        allowed, detail = await rate_limit_service.check_rate_limit()
 
         if not allowed:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded",
-                headers={
-                    "X-RateLimit-Remaining": str(remaining),
-                    "X-RateLimit-Reset": str(reset_at),
-                    "Retry-After": str(max(1, reset_at - int(time.time()))),
-                },
+                detail=detail or "Rate limit exceeded",
             )
     except ImportError:
         # Rate limiting not configured

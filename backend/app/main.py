@@ -31,7 +31,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 # Load environment variables from .env files
 try:
@@ -39,7 +39,7 @@ try:
 except ImportError:  # pragma: no cover - optional in production
     load_dotenv = None  # type: ignore[assignment]
 
-if load_dotenv:
+if load_dotenv is not None:
     load_dotenv(".env")  # Load from .env file in current directory
     load_dotenv()  # Also load from system environment variables
 
@@ -393,8 +393,12 @@ def _persist_messages(
                 )
             )
 
-        if potential_title and _should_update_title(conversation.title):
-            conversation.title = potential_title
+        current_title = cast(Optional[str], conversation.title)
+        if potential_title and _should_update_title(current_title):
+            # This project uses SQLAlchemy's legacy Column descriptors. At
+            # runtime the loaded attribute is a string, while the descriptor
+            # itself is what static analysis sees.
+            setattr(conversation, "title", potential_title)
 
         db.commit()
     except Exception as exc:
@@ -427,20 +431,24 @@ def _prepare_conversation_context(
         )
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
-        history_records = _load_conversation_history(conversation.id, db)
-        current_conversation_id = conversation.id
+        conversation_id_value = cast(int, conversation.id)
+        history_records = _load_conversation_history(conversation_id_value, db)
+        current_conversation_id = conversation_id_value
     elif db and not conversation_id:
         title = generate_conversation_title_from_messages(request.messages)
         conversation = Conversation(title=title)  # type: ignore
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
-        current_conversation_id = conversation.id
+        current_conversation_id = cast(int, conversation.id)
     else:
         conversation = None
 
-    payload_messages = [
-        {"role": message.role, "content": message.content}
+    payload_messages: List[Dict[str, str]] = [
+        {
+            "role": cast(str, message.role),
+            "content": cast(str, message.content),
+        }
         for message in history_records
     ]
     payload_messages.extend(
@@ -604,23 +612,31 @@ async def _detect_and_adapt_language(
         if not user_message or len(user_message) < 10:
             return messages, None
 
-        # If user specified a preferred language, honor it first
+        # If user specified a preferred language, honor it first.
+        detected_lang: Optional[str]
         if preferred_language and preferred_language != "auto":
             detected_lang = preferred_language
-            detection_result = {
+            detection_result: Dict[str, object] = {
                 "success": True,
                 "detected_language": preferred_language,
             }
         else:
             # Detect language
             detection_result = await ai4bharat_client.detect_language(user_message)
-            detected_lang = detection_result.get("detected_language")
+            candidate_language = detection_result.get("detected_language")
+            detected_lang = (
+                candidate_language if isinstance(candidate_language, str) else None
+            )
 
         if not detection_result.get("success"):
             return messages, None
 
-        # Skip if English or unknown, unless preferred language is explicitly set
-        if (not detected_lang or detected_lang == "en") and (not preferred_language or preferred_language == "en"):
+        # Skip an unknown language, and skip English unless it was explicitly selected.
+        if not detected_lang:
+            return messages, None
+        if detected_lang == "en" and (
+            not preferred_language or preferred_language == "en"
+        ):
             return messages, None
 
         # Handle code-mix specially
@@ -1209,7 +1225,7 @@ async def voice_chat(websocket: WebSocket):
     - Server streams: {"type": "transcription", ...}, {"type": "text_chunk", ...}, {"type": "audio", ...}
     """
     await websocket.accept()
-    conversation_history = []
+    conversation_history: List[Dict[str, str]] = []
 
     try:
         from .services.voice_service import voice_service

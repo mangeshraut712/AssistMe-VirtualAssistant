@@ -179,3 +179,13 @@ def test_missing_whisper_library_is_reported(monkeypatch):
 
     with pytest.raises(RuntimeError, match="not installed"):
         anyio.run(service.transcribe, b"RIFFdata")
+
+
+def test_transcribe_reports_an_unavailable_model_after_a_concurrent_load(monkeypatch):
+    """A second request must not dereference None while the model is loading."""
+    _install_whisper(monkeypatch, {})
+    service = WhisperService()
+    service._is_loading = True
+
+    with pytest.raises(RuntimeError, match="model is unavailable"):
+        anyio.run(service.transcribe, b"RIFFdata")

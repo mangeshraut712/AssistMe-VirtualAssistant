@@ -3,7 +3,7 @@
 import json
 import logging
 import os
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import faiss
 import numpy as np
@@ -18,13 +18,13 @@ class EmbeddingService:
 
     def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
         self.model_name = model_name
-        self.model = None
-        self.index = None
-        self.documents = []
+        self.model: Any | None = None
+        self.index: Any | None = None
+        self.documents: List[str] = []
         self._is_loading = False
         self.source_ids: List[str] = []
 
-    def _load_model(self):
+    def _load_model(self) -> None:
         """Load the model if not already loaded."""
         if self.model:
             return
@@ -66,7 +66,7 @@ class EmbeddingService:
 
     async def build_index(
         self, documents: List[str], source_ids: Optional[List[str]] = None
-    ):
+    ) -> None:
         """Build FAISS index from documents."""
         self.documents = documents
         self.source_ids = source_ids or [f"doc-{i}" for i in range(len(documents))]
@@ -96,7 +96,7 @@ class EmbeddingService:
 
         distances, indices = await run_in_threadpool(_do_search)
 
-        results = []
+        results: List[Tuple[str, float]] = []
         for idx, distance in zip(indices[0], distances[0]):
             if idx < len(self.documents) and idx >= 0:
                 results.append((self.documents[idx], float(distance)))

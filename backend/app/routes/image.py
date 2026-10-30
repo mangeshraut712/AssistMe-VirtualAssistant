@@ -20,8 +20,8 @@ async def generate_image(request: ImageGenRequest):
     try:
         image_url = await image_service.generate_image(
             prompt=request.prompt,
-            model=request.model,
-            size=request.size,
+            model=request.model or "flux",
+            size=request.size or "1024x1024",
             style=request.style
         )
         return {

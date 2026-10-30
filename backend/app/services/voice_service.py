@@ -108,12 +108,9 @@ class VoiceService:
             tts_result = None
             tts_error = None
             try:
-                tts_result = await tts_service.synthesize(
+                tts_result = await tts_service.text_to_speech(
                     text=response_text,
-                    voice=voice,
-                    format="mp3",
-                    speed=speed,
-                    language=language or detected_language or "en",
+                    voice=voice or "Puck",
                 )
             except Exception as exc:
                 tts_error = str(exc)
@@ -129,7 +126,7 @@ class VoiceService:
                 "response": {
                     "text": response_text,
                     "audio": (tts_result or {}).get("audio"),
-                    "format": (tts_result or {}).get("format"),
+                    "format": (tts_result or {}).get("mimeType"),
                     "tts_error": tts_error,
                     "model": llm_result.get("model", model),
                     "tokens": llm_result.get("tokens", 0),
@@ -216,16 +213,14 @@ class VoiceService:
             if full_response:
                 logger.info("Synthesizing complete response...")
                 try:
-                    tts_result = await tts_service.synthesize(
+                    tts_result = await tts_service.text_to_speech(
                         text=full_response,
-                        format="mp3",
-                        speed=1.0,
-                        language=language or detected_language or "en",
+                        voice="Puck",
                     )
                     yield {
                         "type": "audio",
                         "audio": tts_result["audio"],
-                        "format": tts_result["format"],
+                        "format": tts_result["mimeType"],
                     }
                 except Exception as exc:
                     logger.warning(f"TTS synthesis failed (stream): {exc}")
