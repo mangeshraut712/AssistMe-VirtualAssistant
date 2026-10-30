@@ -659,7 +659,7 @@ const ImageGenerationPanel = ({ isOpen, onClose }) => {
                                                 <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
                                                     <div className="flex items-center gap-2 text-green-600">
                                                         <Sparkles className="h-4 w-4" />
-                                                        <span className="text-sm font-semibold">100% Free • No API Key</span>
+                                                        <span className="text-sm font-bold">100% Free • No API Key</span>
                                                     </div>
                                                     <p className="text-xs text-green-600/70 mt-1">Powered by Pollinations.ai</p>
                                                 </div>

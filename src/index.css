@@ -272,20 +272,6 @@ layer(base);
   @apply text-muted-foreground; /* Override low opacity with full opacity */
 }
 
-@utility bg-primary/20 {
-  /* Badge text - improve primary badge contrast */
-  &.text-primary {
-    @apply bg-primary/30; /* Darker background for better contrast */
-  }
-}
-
-@utility text-primary {
-  /* Badge text - improve primary badge contrast */
-  &.bg-primary\/20 {
-    @apply bg-primary/30; /* Darker background for better contrast */
-  }
-}
-
 @utility text-xs {
   /* Section headers with uppercase - already bold, ensure good contrast */
   &.font-bold.text-muted-foreground\/70 {
@@ -303,20 +289,6 @@ layer(base);
   }
   & p.text-xs.text-muted-foreground\/70 {
     @apply text-muted-foreground; /* Full opacity for headers */
-  }
-}
-
-@utility text-sm {
-  /* Fix any span with low contrast weight */
-  &span.font-semibold {
-    @apply font-bold; /* Weight 700 allows 3:1 for readability */
-  }
-}
-
-@utility font-semibold {
-  /* Fix any span with low contrast weight */
-  &span.text-sm {
-    @apply font-bold; /* Weight 700 allows 3:1 for readability */
   }
 }
 

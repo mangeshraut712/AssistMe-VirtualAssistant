@@ -96,7 +96,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, badge }) => (
         )} />
         <span className="flex-1 text-left">{label}</span>
         {badge && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-bold">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/30 text-primary font-bold">
                 {badge}
             </span>
         )}

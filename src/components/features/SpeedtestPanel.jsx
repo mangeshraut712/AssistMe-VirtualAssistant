@@ -234,7 +234,7 @@ const MetricCard = ({ icon: Icon, label, value, unit, subtext, color, trend }) =
         <div className="z-10 mt-auto">
             <div className="flex items-baseline gap-1">
                 <span className="text-xl sm:text-2xl md:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white truncate">{value}</span>
-                <span className="text-xs sm:text-sm font-semibold text-neutral-500">{unit}</span>
+                <span className="text-xs sm:text-sm font-bold text-neutral-500">{unit}</span>
             </div>
             {subtext && <div className="text-[10px] sm:text-[11px] text-neutral-500 mt-0.5 font-medium truncate">{subtext}</div>}
         </div>
