@@ -180,12 +180,12 @@ class ChatUsage(BaseSchema):
     completion_tokens: int = 0
     total_tokens: int = 0
 
-    @computed_field
-    @property
-    def estimated_cost(self) -> float:
+    def _estimated_cost(self) -> float:
         """Estimate cost based on typical pricing."""
         # Rough estimate: $0.001 per 1K tokens
         return self.total_tokens * 0.000001
+
+    estimated_cost = computed_field(property(_estimated_cost))
 
 
 class ChatChoice(BaseSchema):

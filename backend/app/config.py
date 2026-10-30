@@ -45,9 +45,7 @@ class DatabaseSettings(BaseSettings):
     pool_max_overflow: int = Field(default=10, ge=0, le=30)
     pool_timeout: int = Field(default=30, ge=5, le=120)
 
-    @computed_field
-    @property
-    def url(self) -> str | None:
+    def _url(self) -> str | None:
         """Resolve the final database URL with proper driver."""
         # Check explicit URLs first
         for url in [self.database_url, self.railway_database_url]:
@@ -70,6 +68,8 @@ class DatabaseSettings(BaseSettings):
             return "postgresql+psycopg://assistme_user:assistme_password@db:5432/assistme_db"
 
         return None
+
+    url = computed_field(property(_url))
 
     def _normalize_url(self, url: str) -> str:
         """Ensure SQLAlchemy-compatible URL format."""
@@ -114,11 +114,11 @@ class AISettings(BaseSettings):
     requests_per_minute: int = Field(default=60, ge=1, le=1000)
     tokens_per_minute: int = Field(default=100000, ge=1000)
 
-    @computed_field
-    @property
-    def is_configured(self) -> bool:
+    def _is_configured(self) -> bool:
         """Check if AI provider is properly configured."""
         return bool(self.openrouter_api_key)
+
+    is_configured = computed_field(property(_is_configured))
 
 
 class SecuritySettings(BaseSettings):
@@ -200,11 +200,11 @@ class AppSettings(BaseSettings):
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
-    @computed_field
-    @property
-    def is_production(self) -> bool:
+    def _is_production(self) -> bool:
         """Check if running in production mode."""
         return self.environment == "production"
+
+    is_production = computed_field(property(_is_production))
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "AppSettings":

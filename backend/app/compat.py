@@ -57,7 +57,7 @@ def _patch_forward_ref_evaluate() -> None:
             recursive_guard=recursive_guard,
         )
 
-    forward_ref._evaluate = _evaluate  # type: ignore[attr-defined]
+    setattr(forward_ref, "_evaluate", _evaluate)
 
 
 _patch_forward_ref_evaluate()

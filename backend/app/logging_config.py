@@ -16,7 +16,7 @@ import sys
 import time
 from contextvars import ContextVar
 from functools import wraps
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Protocol, cast
 from uuid import uuid4
 
 try:
@@ -24,6 +24,9 @@ try:
     STRUCTLOG_AVAILABLE = True
 except ImportError:
     STRUCTLOG_AVAILABLE = False
+
+if TYPE_CHECKING:
+    from structlog.typing import EventDict, Processor, WrappedLogger
 
 try:
     import orjson
@@ -64,10 +67,10 @@ def set_request_context(request_id: str | None = None, user_id: str | None = Non
 
 
 def add_request_context(
-    logger: logging.Logger,
+    logger: "WrappedLogger",
     method_name: str,
-    event_dict: dict[str, Any],
-) -> dict[str, Any]:
+    event_dict: "EventDict",
+) -> "EventDict":
     """Add request context to log entries."""
     request_id = request_id_var.get()
     user_id = user_id_var.get()
@@ -80,11 +83,69 @@ def add_request_context(
     return event_dict
 
 
+class EventLogger(Protocol):
+    """Common event API for structlog and the standard-library fallback."""
+
+    def info(self, event: str, *args: object, **fields: object) -> None:
+        """Record an informational event."""
+
+    def warning(self, event: str, *args: object, **fields: object) -> None:
+        """Record a warning event."""
+
+    def error(self, event: str, *args: object, **fields: object) -> None:
+        """Record an error event."""
+
+
+class _StructlogBackend(Protocol):
+    """Narrow runtime surface used from the dynamically typed structlog proxy."""
+
+    def info(self, event: str, *args: object, **fields: object) -> object:
+        """Record an informational event."""
+
+    def warning(self, event: str, *args: object, **fields: object) -> object:
+        """Record a warning event."""
+
+    def error(self, event: str, *args: object, **fields: object) -> object:
+        """Record an error event."""
+
+
+class _StructlogEventLogger:
+    """Keep structured fields intact when structlog is available."""
+
+    def __init__(self, backend: _StructlogBackend) -> None:
+        self._backend = backend
+
+    def info(self, event: str, *args: object, **fields: object) -> None:
+        self._backend.info(event, *args, **fields)
+
+    def warning(self, event: str, *args: object, **fields: object) -> None:
+        self._backend.warning(event, *args, **fields)
+
+    def error(self, event: str, *args: object, **fields: object) -> None:
+        self._backend.error(event, *args, **fields)
+
+
+class _StdlibEventLogger:
+    """Translate structured fields into standard logging's supported ``extra`` API."""
+
+    def __init__(self, backend: logging.Logger) -> None:
+        self._backend = backend
+
+    def info(self, event: str, *args: object, **fields: object) -> None:
+        self._backend.info(event, *args, extra=dict(fields) or None)
+
+    def warning(self, event: str, *args: object, **fields: object) -> None:
+        self._backend.warning(event, *args, extra=dict(fields) or None)
+
+    def error(self, event: str, *args: object, **fields: object) -> None:
+        self._backend.error(event, *args, extra=dict(fields) or None)
+
+
 def setup_logging(
     level: str = "INFO",
     format_type: str = "console",
     service_name: str = "assistme-backend",
-) -> logging.Logger:
+) -> EventLogger:
     """Configure structured logging.
 
     Args:
@@ -99,7 +160,7 @@ def setup_logging(
 
     if STRUCTLOG_AVAILABLE:
         # Structlog configuration (preferred)
-        processors = [
+        processors: list[Processor] = [
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
@@ -124,7 +185,9 @@ def setup_logging(
             cache_logger_on_first_use=True,
         )
 
-        return structlog.get_logger(service_name)
+        return _StructlogEventLogger(
+            cast(_StructlogBackend, structlog.get_logger(service_name))
+        )
     else:
         # Fallback to standard logging
         logger = logging.getLogger(service_name)
@@ -151,7 +214,7 @@ def setup_logging(
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-        return logger
+        return _StdlibEventLogger(logger)
 
 
 # Default logger instance
