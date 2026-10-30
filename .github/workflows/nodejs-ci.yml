@@ -135,14 +135,18 @@ jobs:
         run: npm audit --audit-level=moderate
         
       - name: Check for secrets
+        shell: bash
         run: |
-          echo "Checking for potential secrets in codebase..."
-          # Simple check for common secret patterns
-          if grep -rE "(api_key|apikey|secret|password|token)\s*[:=]\s*['\"][^'\"]+['\"]" --include="*.js" --include="*.jsx" --include="*.py" src/ backend/app/ 2>/dev/null | grep -v "example\|placeholder\|your_" | head -5; then
-            echo "⚠️ Potential secrets found. Please review."
-          else
-            echo "✅ No obvious secrets detected"
+          set -euo pipefail
+          matches="$(git grep -IlE "(api_key|apikey|secret|password|token)[[:space:]]*[:=][[:space:]]*['\"][^'\"]+['\"]" -- src backend/app || true)"
+          if [[ -n "${matches}" ]]; then
+            echo "::error::Potential hard-coded secret assignments found in:"
+            while IFS= read -r file; do
+              printf '  - %s\n' "${file}"
+            done <<<"${matches}"
+            exit 1
           fi
+          echo "No likely hard-coded secret assignments found."
 
   # Summary Job
   ci-success:
