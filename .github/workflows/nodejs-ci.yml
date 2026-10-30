@@ -39,6 +39,9 @@ jobs:
       - name: Lint frontend
         run: npm run lint
 
+      - name: Check frontend project configuration
+        run: npm run typecheck
+
       - name: Run unit tests
         run: npm test
         
@@ -129,7 +132,7 @@ jobs:
         run: npm install
         
       - name: Run npm audit
-        run: npm audit --audit-level=high || true
+        run: npm audit --audit-level=moderate
         
       - name: Check for secrets
         run: |
