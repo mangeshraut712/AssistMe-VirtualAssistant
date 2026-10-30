@@ -91,4 +91,4 @@ python-dateutil>=2.9.0        # Date parsing utilities
 # ruff>=0.8.0                  # Fast Python linter
 # mypy>=1.13.0                 # Type checking
 # emSign CA advisory: require patched CA bundle
-certifi>=2026.10.19
+certifi>=2026.10.23
