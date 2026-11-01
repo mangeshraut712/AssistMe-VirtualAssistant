@@ -34,7 +34,7 @@ jobs:
           cache: 'npm'
           
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Lint frontend
         run: npm run lint
@@ -127,7 +127,7 @@ jobs:
           cache: 'npm'
           
       - name: Install dependencies
-        run: npm install
+        run: npm ci
         
       - name: Run npm audit
         run: npm audit --audit-level=moderate
