@@ -80,7 +80,7 @@ numpy>=2.5.4,<3.0.0          # NumPy 2.x compatibility
 # Utilities
 # ============================================
 tenacity>=9.2.1,<10.0.0       # Retry logic with decorators
-python-dateutil>=2.9.0        # Date parsing utilities
+python-dateutil>=3.0.0        # Date parsing utilities
 
 # ============================================
 # Development & Testing (optional)
