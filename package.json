@@ -75,7 +75,7 @@
     "@radix-ui/react-switch": "^1.4.1",
     "@radix-ui/react-tooltip": "^1.4.1",
     "@tailwindcss/postcss": "^4.3.4",
-    "@vitejs/plugin-react": "^6.1.2",
+    "@vitejs/plugin-react": "^6.2.1",
     "chart.js": "^4.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
