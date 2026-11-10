@@ -4,6 +4,8 @@ import importlib
 import os
 import secrets
 import time
+import warnings
+from datetime import timedelta
 from io import BytesIO
 
 import anyio
@@ -283,9 +285,6 @@ def test_uploads_reject_traversal_oversize_and_hide_the_server_path(monkeypatch,
 
 def test_access_token_expiry_is_measured_from_utc_now():
     """exp is now + delta in UTC, without the deprecated naive utcnow()."""
-    import warnings
-    from datetime import timedelta
-
     with warnings.catch_warnings():
         warnings.simplefilter("error", DeprecationWarning)
         token = create_access_token("ada", expires_delta=timedelta(minutes=5))
