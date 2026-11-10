@@ -12,7 +12,7 @@ Use the FastAPI app in `backend/` for chat, health, TTS, images, and related rou
 
 ```bash
 cd backend
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
 See `backend/README.md` for dependencies and environment variables.

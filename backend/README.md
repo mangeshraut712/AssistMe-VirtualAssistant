@@ -103,10 +103,10 @@ Response ← Route Handler ← Service ← Provider ← Response
 ```bash
 # Development
 cd backend
-python -m uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8001
 
 # Production
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
 ## 🔑 Environment Variables
