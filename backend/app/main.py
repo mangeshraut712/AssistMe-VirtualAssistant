@@ -9,6 +9,7 @@ from .models import Conversation
 from .database import get_db
 from .ai4bharat import ai4bharat_client
 from .origins import allowed_origins_list, origin_is_allowed, strict_transport_security
+from .sampling import resolve_temperature
 from .debug_access import debug_endpoints_allowed
 from .schemas import ChatMessage, TextChatRequest
 from sqlalchemy.orm import Session as SessionType  # type: ignore[import-not-found]
