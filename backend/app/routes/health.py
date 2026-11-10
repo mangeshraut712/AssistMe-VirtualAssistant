@@ -12,7 +12,7 @@ Provides comprehensive health checks for:
 from __future__ import annotations
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal
 
 from fastapi import APIRouter, Request, Response
@@ -110,7 +110,7 @@ async def health_check() -> HealthStatus:
     return HealthStatus(
         status=status,
         version=settings.app_version,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         checks=checks,
     )
 

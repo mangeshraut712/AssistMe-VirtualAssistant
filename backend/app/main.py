@@ -30,7 +30,7 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple, cast
 
 # Load environment variables from .env files
@@ -1452,7 +1452,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "error": "Internal server error",
             "detail": str(exc) if os.getenv("DEBUG", "false").lower() == "true" else None,
             "request_id": request_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         },
     )
 
@@ -1468,7 +1468,7 @@ async def debug_health_check(request: Request):
             "status": "healthy",
             "service": "assistme-api",
             "version": "2.0.0",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "environment": os.getenv("ENVIRONMENT", "development"),
             "debug_mode": os.getenv("DEBUG", "false").lower() == "true",
             "request_id": getattr(request.state, "request_id", None),
@@ -1496,7 +1496,7 @@ async def debug_health_check(request: Request):
             content={
                 "status": "unhealthy",
                 "error": "Request failed",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
 
