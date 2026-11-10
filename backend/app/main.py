@@ -871,7 +871,7 @@ async def chat_text(
         if cache_service.enabled:
             cache_payload = {
                 "model": model,
-                "temperature": request.temperature or 0.7,
+                "temperature": resolve_temperature(request.temperature),
                 "max_tokens": request.max_tokens or 1024,
                 "messages": provider_messages,
             }
@@ -912,7 +912,7 @@ async def chat_text(
         result = await provider.chat_completion(
             messages=provider_messages,
             model=model,
-            temperature=request.temperature or 0.7,
+            temperature=resolve_temperature(request.temperature),
             max_tokens=request.max_tokens or 1024,
             stream=False,
         )
@@ -995,7 +995,7 @@ async def chat_text_stream(
     candidate_title = generate_conversation_title_from_messages(request.messages)
     user_messages = list(request.messages)
     model_id = request.model or None
-    temperature = request.temperature or 0.7
+    temperature = resolve_temperature(request.temperature)
     max_tokens = request.max_tokens or 1024
 
     async def async_event_generator():
