@@ -23,6 +23,15 @@ function corsHeadersFor(req) {
     };
 }
 
+export const MAX_TTS_CHARS = 4000;
+
+export function ttsPayloadLength(text, style) {
+    const trimmedText = typeof text === 'string' ? text.trim() : '';
+    const styleText = typeof style === 'string' ? style.trim() : '';
+    return trimmedText.length + (styleText ? styleText.length + 20 : 0);
+}
+
+
 export const config = {
     runtime: 'edge',
 };
@@ -112,10 +121,21 @@ export default async function handler(req) {
             speed = 1.0
         } = body;
 
-        if (!text || text.trim().length === 0) {
+        const trimmedText = typeof text === 'string' ? text.trim() : '';
+        const styleText = typeof style === 'string' ? style.trim() : '';
+        if (!trimmedText) {
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Text is required'
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+        }
+        if (trimmedText.length + (styleText ? styleText.length + 20 : 0) > MAX_TTS_CHARS) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: `Text exceeds the ${MAX_TTS_CHARS} character limit`
             }), {
                 status: 400,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -129,9 +149,9 @@ export default async function handler(req) {
         console.log(`[TTS] Model: ${selectedModel}, Voice: ${selectedVoice}, Language: ${language}`);
 
         // Build the prompt with style instructions if provided
-        let prompt = text;
+        let prompt = trimmedText;
         if (style) {
-            prompt = `[Speaking style: ${style}] ${text}`;
+            prompt = `[Speaking style: ${styleText}] ${trimmedText}`;
         }
 
         // Use Gemini TTS API with latest model
