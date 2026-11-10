@@ -8,16 +8,24 @@
  * If Premium fails, automatically uses enhanced standard mode.
  */
 
+import { resolveAllowedOrigin } from '../cors.js';
+
+function corsHeadersFor(req) {
+    const allowedOrigin = resolveAllowedOrigin(req.headers.get('origin'));
+    return {
+        'Vary': 'Origin',
+        ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+    };
+}
+
 export const config = {
     runtime: 'edge',
 };
 
 export default async function handler(req) {
-    const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-    };
+    const corsHeaders = corsHeadersFor(req);
 
     if (req.method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: corsHeaders });

@@ -11,15 +11,20 @@
  * @date December 2025
  */
 
+import { resolveAllowedOrigin } from './cors.js';
+
+function corsHeadersFor(req) {
+    const allowedOrigin = resolveAllowedOrigin(req.headers.get('origin'));
+    return {
+        'Vary': 'Origin',
+        ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+    };
+}
+
 export const config = {
     runtime: 'edge',
-};
-
-// CORS headers
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
 };
 
 // Latest Gemini TTS Models (December 2025) - Using UNLIMITED Live API
@@ -62,6 +67,8 @@ const SUPPORTED_LANGUAGES = [
 ];
 
 export default async function handler(req) {
+    const corsHeaders = corsHeadersFor(req);
+
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         return new Response(null, {
