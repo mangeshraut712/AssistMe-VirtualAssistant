@@ -27,7 +27,10 @@ def test_live_ready_and_ping_probes_are_mounted():
     expect(live.status_code == 200, "/health/live should be mounted")
     expect(live.json().get("status") == "alive", "/health/live should report alive")
     expect(ready.status_code == 200, "/health/ready should be mounted")
-    expect(ready.json().get("status") == "ready", "/health/ready should report ready when the app can start")
+    expect(
+        ready.json().get("status") == "ready",
+        "/health/ready should report ready when the app can start",
+    )
     expect(ping.status_code == 200 and ping.text == "pong", "/health/ping should return plain pong")
     expect(details.status_code == 200, "/health/details should expose the comprehensive check")
     expect(status.status_code == 200, "/health/status should be mounted")
