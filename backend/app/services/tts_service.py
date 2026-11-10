@@ -24,6 +24,7 @@ Reference: https://ai.google.dev/gemini-api/docs/speech-generation
 """
 
 import logging
+from app.tts_limits import assert_tts_payload_within_limit
 import os
 import re
 from typing import Any, Dict, Mapping, Optional, Sequence
@@ -323,6 +324,7 @@ class GeminiVoiceService:
         text = (text or "").strip()
         if not text:
             raise ValueError("Text is required")
+        assert_tts_payload_within_limit(text, style)
 
         # IMPORTANT: Normalize text for TTS
         text = self.normalizer.normalize_for_tts(text)

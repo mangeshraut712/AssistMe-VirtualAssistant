@@ -29,7 +29,7 @@ class TTSRequest(BaseModel):
     """Text-to-speech request with emotion support."""
     text: str = Field(..., min_length=1, max_length=5000)
     voice: Optional[str] = "Puck"
-    style: Optional[str] = None
+    style: Optional[str] = Field(default=None, max_length=200)
     auto_emotion: Optional[bool] = True  # Auto-detect emotion
 
 
