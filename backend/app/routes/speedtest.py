@@ -49,7 +49,8 @@ async def download(size: int = MAX_DOWNLOAD_BYTES):
         headers={
             "Content-Disposition": "attachment; filename=speedtest.bin",
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-            "X-Content-Length": str(payload_size)
+            "Content-Length": str(payload_size),
+            "X-Content-Length": str(payload_size),
         }
     )
 
