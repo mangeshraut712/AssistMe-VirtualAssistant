@@ -40,7 +40,7 @@ def _check_database() -> tuple[bool, str | None]:
     try:
         # Setup is lazy; a configured database must be initialized here
         # or a readiness probe can fail forever before any other request.
-        if not database_mod._ensure_database_setup() or database_mod.SessionLocal is None:
+        if not database_mod.ensure_database_setup() or database_mod.SessionLocal is None:
             return False, "Database session is unavailable"
         db = database_mod.SessionLocal()
         try:

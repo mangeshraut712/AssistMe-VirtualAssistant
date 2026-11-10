@@ -73,7 +73,7 @@ def test_ready_initializes_a_configured_database_before_probing(monkeypatch):
         called["setup"] = True
         return False
 
-    monkeypatch.setattr(health_routes.database_mod, "_ensure_database_setup", setup)
+    monkeypatch.setattr(health_routes.database_mod, "ensure_database_setup", setup)
     monkeypatch.setattr(health_routes.database_mod, "SessionLocal", None)
 
     settings = SimpleNamespace(
