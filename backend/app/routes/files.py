@@ -56,4 +56,5 @@ async def upload_multiple_files(files: List[UploadFile] = File(...)):
                 }
             )
 
-    return {"success": True, "files": results}
+    ok = [item for item in results if "error" not in item]
+    return {"success": bool(results) and len(ok) == len(results), "files": results}
