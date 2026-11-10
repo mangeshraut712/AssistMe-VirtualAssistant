@@ -2,13 +2,16 @@ import { resolveAllowedOrigin } from '../cors.js';
 
 const cases = [
   ['https://assist-me-virtual-assistant.vercel.app', true],
-  ['https://assist-me-virtual-assistant-abc123.vercel.app', true],
-  ['https://assist-me-virtual-assistant-git-fix-cors-team.vercel.app', true],
-  ['https://assist-me-virtual-assistant-my-feature.vercel.app', true],
+  ['https://assist-me-virtual-assistant-git-fix-cors-team.vercel.app', false],
+  ['https://assist-me-virtual-assistant-git-fix-cors-mangeshraut712.vercel.app', true],
+  ['https://assist-me-virtual-assistant-git-my-feature-mangeshraut712.vercel.app', true],
+  ['https://assist-me-virtual-assistant-abc123.vercel.app', false],
+  ['https://assist-me-virtual-assistant-my-feature.vercel.app', false],
   ['https://assist-me-virtual-assistant-.vercel.app', false],
   ['https://assist-me-virtual-assistant-Evil.vercel.app', false],
   ['https://evil-assist-me-virtual-assistant.vercel.app', false],
   ['https://assist-me-virtual-assistant.evil.vercel.app', false],
+  ['https://assist-me-virtual-assistant-git-x-otherteam.vercel.app', false],
 ];
 let failed = 0;
 for (const [origin, ok] of cases) {
