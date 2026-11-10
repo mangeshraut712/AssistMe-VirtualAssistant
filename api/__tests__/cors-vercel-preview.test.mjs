@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { resolveAllowedOrigin } from '../cors.js';
 
 const cases = [
@@ -13,14 +14,10 @@ const cases = [
   ['https://assist-me-virtual-assistant.evil.vercel.app', false],
   ['https://assist-me-virtual-assistant-git-x-otherteam.vercel.app', false],
 ];
-let failed = 0;
-for (const [origin, ok] of cases) {
-  const got = resolveAllowedOrigin(origin);
-  const allowed = got === origin;
-  if (allowed !== ok) {
-    console.error('FAIL', origin, 'expected', ok, 'got', got);
-    failed += 1;
-  }
-}
-if (failed) process.exit(1);
-console.log('ok', cases.length);
+
+describe('resolveAllowedOrigin', () => {
+  it.each(cases)('%s allowed=%s', (origin, ok) => {
+    const got = resolveAllowedOrigin(origin);
+    expect(got === origin).toBe(ok);
+  });
+});
