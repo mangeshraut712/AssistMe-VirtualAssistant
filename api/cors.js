@@ -8,7 +8,7 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 
 const VERCEL_ORIGIN_REGEX =
-    /^https:\/\/assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app$/;
+    /^https:\/\/assist-me-virtual-assistant(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?\.vercel\.app$/;
 
 export function normaliseOrigin(value) {
     if (!value) return null;
