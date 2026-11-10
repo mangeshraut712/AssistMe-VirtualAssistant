@@ -131,7 +131,7 @@ async def liveness() -> dict[str, str]:
     summary="Readiness Probe",
     description="Readiness check (for Kubernetes)",
 )
-async def readiness() -> dict[str, Any]:
+async def readiness() -> dict[str, Any] | JSONResponse:
     """Readiness check - confirms the app can serve traffic."""
     db_ok, _ = _check_database()
 
