@@ -1,4 +1,6 @@
 """POST /api/files/upload-multiple must not report success when every file is rejected."""
+import importlib
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -6,6 +8,7 @@ from tests.support import expect
 
 
 def test_upload_multiple_reports_failure_when_every_file_is_rejected():
+    """A batch of only rejected files is not a successful upload."""
     client = TestClient(app)
     response = client.post(
         "/api/files/upload-multiple",
@@ -22,7 +25,7 @@ def test_upload_multiple_reports_failure_when_every_file_is_rejected():
 
 
 def test_upload_multiple_reports_success_when_every_file_is_saved(monkeypatch, tmp_path):
-    import importlib
+    """A batch of only valid files reports success and hides the server path."""
     file_service_module = importlib.import_module("app.services.file_service")
     monkeypatch.setattr(file_service_module, "UPLOAD_DIR", tmp_path)
     client = TestClient(app)
@@ -39,7 +42,7 @@ def test_upload_multiple_reports_success_when_every_file_is_saved(monkeypatch, t
 
 
 def test_upload_multiple_is_not_success_when_the_batch_is_mixed(monkeypatch, tmp_path):
-    import importlib
+    """A mixed batch still lists both outcomes but is not a full success."""
     file_service_module = importlib.import_module("app.services.file_service")
     monkeypatch.setattr(file_service_module, "UPLOAD_DIR", tmp_path)
     client = TestClient(app)
