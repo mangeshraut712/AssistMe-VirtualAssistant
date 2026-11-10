@@ -16,6 +16,10 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 
 from fastapi import APIRouter, Request, Response
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
+
+from .. import database as database_mod
 
 from ..config import get_settings
 from ..logging_config import logger
@@ -34,12 +38,11 @@ def _check_database() -> tuple[bool, str | None]:
         return True, "Not configured (stateless mode)"
 
     try:
-        from ..database import SessionLocal
-        from sqlalchemy import text
-
-        if SessionLocal is None:
+        # Setup is lazy; a configured database must be initialized here
+        # or a readiness probe can fail forever before any other request.
+        if not database_mod.ensure_database_setup() or database_mod.SessionLocal is None:
             return False, "Database session is unavailable"
-        db = SessionLocal()
+        db = database_mod.SessionLocal()
         try:
             db.execute(text("SELECT 1"))
             return True, None
@@ -129,14 +132,19 @@ async def liveness() -> dict[str, str]:
     "/ready",
     summary="Readiness Probe",
     description="Readiness check (for Kubernetes)",
+    response_model=None,
 )
-async def readiness() -> dict[str, Any]:
+async def readiness() -> dict[str, Any] | JSONResponse:
     """Readiness check - confirms the app can serve traffic."""
     db_ok, _ = _check_database()
 
     if not db_ok:
-        # Return unhealthy but don't fail (database is optional)
-        return {"status": "ready", "database": "unavailable"}
+        # A configured database that cannot be reached must fail the probe.
+        # Stateless mode (no database URL) is already treated as ok by _check_database.
+        return JSONResponse(
+            {"status": "not_ready", "database": "unavailable"},
+            status_code=503,
+        )
 
     return {"status": "ready", "database": "connected"}
 

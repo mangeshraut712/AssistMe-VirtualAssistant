@@ -71,6 +71,11 @@ def _ensure_database_setup() -> bool:
     return SessionLocal is not None
 
 
+def ensure_database_setup() -> bool:
+    """Public wrapper so callers do not touch the lazy-setup helper directly."""
+    return _ensure_database_setup()
+
+
 def get_db():
     if not _ensure_database_setup() or SessionLocal is None:
         # Database setup failed or not configured, yield None to allow endpoints to degrade gracefully
