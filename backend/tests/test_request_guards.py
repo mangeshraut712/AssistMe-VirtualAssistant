@@ -4,6 +4,8 @@ import importlib
 import os
 import secrets
 import time
+import warnings
+from datetime import timedelta
 from io import BytesIO
 
 import anyio
@@ -279,3 +281,13 @@ def test_uploads_reject_traversal_oversize_and_hide_the_server_path(monkeypatch,
             raise AssertionError("an oversized upload should be rejected")
 
     anyio.run(scenario)
+
+
+def test_access_token_expiry_is_measured_from_utc_now():
+    """exp is now + delta in UTC, without the deprecated naive utcnow()."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        token = create_access_token("ada", expires_delta=timedelta(minutes=5))
+    remaining = jwt.get_unverified_claims(token)["exp"] - time.time()
+    expect(290 <= remaining <= 301, f"token should expire in ~300s, got {remaining:.0f}s")
+    expect(decode_access_token(token)["sub"] == "ada", "token should still verify")
