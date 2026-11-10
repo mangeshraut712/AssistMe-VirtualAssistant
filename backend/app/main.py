@@ -76,6 +76,7 @@ except ImportError:
 
 ALLOWED_ORIGINS = allowed_origins_list()
 
+
 # Startup validation (lifespan, not the deprecated on_event hook)
 async def startup_validation():
     """Validate critical environment variables and log warnings"""
@@ -285,7 +286,6 @@ try:
     logging.info("✓ Speedtest router registered")
 except Exception as e:
     logging.warning(f"Failed to register Speedtest router: {e}")
-
 
 
 # Configure CORS for cross-origin requests

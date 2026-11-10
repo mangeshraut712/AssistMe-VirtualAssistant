@@ -4,7 +4,7 @@ import warnings
 
 from fastapi.testclient import TestClient
 
-import app.main as main
+from app import main
 from app.main import app
 from tests.support import expect
 
