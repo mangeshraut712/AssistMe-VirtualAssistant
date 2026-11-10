@@ -19,7 +19,7 @@ export const APP_DESCRIPTION =
 // API Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 export const API_ENDPOINTS = {
-    BACKEND_URL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000',
+    BACKEND_URL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:8001',
     CHAT: '/api/chat',
     CHAT_STREAM: '/api/chat/stream',
     IMAGE_GENERATE: '/api/image/generate',

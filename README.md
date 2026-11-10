@@ -162,7 +162,7 @@ TAVILY_API_KEY=tvly-...       # For Grokipedia
 npm run dev
 
 # In Backend/
-python -m uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8001
 ```
 
 ---
@@ -181,7 +181,7 @@ GitHub Pages is **static only**. It does not run FastAPI, Node serverless functi
 
 API features (chat, TTS, images, auth) require a separate process:
 
-- **Local / self-host:** FastAPI in `backend/` (`uvicorn app.main:app --port 8000`). See `backend/README.md`.
+- **Local / self-host:** FastAPI in `backend/` (`uvicorn app.main:app --port 8001`). See `backend/README.md`.
 - **Former Vercel serverless:** files under `api/` were for Vercel and are **not** served by GitHub Pages. See `api/README.md`.
 
 Point the frontend at a backend URL you control (for example via env / settings) if you host the API elsewhere. There is no paid hosting in this setup.
