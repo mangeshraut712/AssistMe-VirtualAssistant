@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import (
     AsyncIterator,
@@ -126,7 +126,7 @@ class ChatCompletion:
     model: str
     choices: list[CompletionChoice]
     usage: Usage | None = None
-    created: datetime = field(default_factory=datetime.utcnow)
+    created: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property
     def content(self) -> str:

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from .database import Base
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class User(Base):
@@ -15,7 +19,7 @@ class User(Base):
     username = Column(String(100), unique=True, index=True, nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=_utc_now, nullable=False)
 
     conversations = relationship(
         "Conversation", back_populates="user", cascade="all, delete-orphan"
@@ -28,7 +32,7 @@ class Conversation(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     title = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=_utc_now, nullable=False, index=True)
 
     user = relationship("User", back_populates="conversations")
     messages = relationship(
@@ -45,6 +49,6 @@ class Message(Base):
     )
     role = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=_utc_now, nullable=False, index=True)
 
     conversation = relationship("Conversation", back_populates="messages")

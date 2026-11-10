@@ -510,7 +510,7 @@ def health(request: Request):
         "status": overall_status,
         "service": "assistme-api",
         "version": "v1",
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "components": {
             "database": {"status": db_status, "error": db_error},
             "chat_client": {
@@ -546,7 +546,7 @@ def api_status(request: Request):
             "status": "operational",
             "service": "AssistMe API",
             "version": "v1",
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "chat_available": CHAT_CLIENT_AVAILABLE,
             "database_connected": bool(os.getenv("DATABASE_URL")),
             "api_key_configured": bool(os.getenv("OPENROUTER_API_KEY")),

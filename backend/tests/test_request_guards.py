@@ -291,3 +291,42 @@ def test_access_token_expiry_is_measured_from_utc_now():
     remaining = jwt.get_unverified_claims(token)["exp"] - time.time()
     expect(290 <= remaining <= 301, f"token should expire in ~300s, got {remaining:.0f}s")
     expect(decode_access_token(token)["sub"] == "ada", "token should still verify")
+
+
+def test_remaining_timestamps_use_aware_utc():
+    """Models, schemas, providers, and status routes use aware UTC, not utcnow()."""
+    from datetime import timezone
+
+    from app.models import _utc_now
+    from app.providers.base import ChatCompletion
+    from app.schemas import HealthStatus, TimestampMixin
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        model_now = _utc_now()
+        mixin = TimestampMixin()
+        status = HealthStatus(status="healthy", version="v1")
+        completion = ChatCompletion(id="c1", model="demo", choices=[])
+
+    for label, value in (
+        ("model default", model_now),
+        ("schema mixin", mixin.created_at),
+        ("health schema", status.timestamp),
+        ("provider completion", completion.created),
+    ):
+        expect(value.tzinfo is not None, f"{label} should be timezone-aware")
+        expect(value.utcoffset() == timezone.utc.utcoffset(value), f"{label} should be UTC")
+
+    import inspect
+    from app import main as main_mod
+
+    for fn in (main_mod.health, main_mod.api_status):
+        source = inspect.getsource(fn)
+        expect(
+            "datetime.now(timezone.utc)" in source,
+            f"{fn.__name__} should stamp timezone.utc",
+        )
+        expect(
+            "datetime.now()" not in source.replace("datetime.now(timezone.utc)", ""),
+            f"{fn.__name__} should not use naive datetime.now()",
+        )
