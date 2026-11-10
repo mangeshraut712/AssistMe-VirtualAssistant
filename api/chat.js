@@ -38,9 +38,14 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
 const _rateLimitState = new Map();
 
-function getClientIp(headers) {
+export function getClientIp(headers) {
     const forwarded = headers.get('x-forwarded-for');
-    if (forwarded) return forwarded.split(',')[0].trim();
+    if (forwarded) {
+        const parts = forwarded.split(',').map((part) => part.trim()).filter(Boolean);
+        if (parts.length > 0) {
+            return parts[parts.length - 1];
+        }
+    }
     const realIp = headers.get('x-real-ip');
     if (realIp) return realIp.trim();
     return 'unknown';
