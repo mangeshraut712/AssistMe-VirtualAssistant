@@ -8,6 +8,7 @@ from .models import Conversation
 from .database import get_db
 from .ai4bharat import ai4bharat_client
 from .origins import allowed_origins_list, origin_is_allowed, strict_transport_security
+from .debug_access import debug_endpoints_allowed
 from .schemas import ChatMessage, TextChatRequest
 from sqlalchemy.orm import Session as SessionType  # type: ignore[import-not-found]
 from fastapi.responses import (  # type: ignore[import-not-found]
@@ -534,6 +535,8 @@ async def health_options(request: Request) -> Response:
 @app.get("/debug")
 def debug():
     """Ultra simple debug endpoint with minimal dependencies."""
+    if not debug_endpoints_allowed():
+        raise HTTPException(status_code=404, detail="Not found")
     return "OK"
 
 
@@ -1461,6 +1464,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/debug/health")
 async def debug_health_check(request: Request):
     """Enhanced health check for development with detailed diagnostics."""
+    if not debug_endpoints_allowed():
+        raise HTTPException(status_code=404, detail="Not found")
     try:
         cors_headers = _cors_headers(request)
 
