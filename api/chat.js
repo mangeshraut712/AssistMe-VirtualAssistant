@@ -38,6 +38,15 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
 const _rateLimitState = new Map();
 
+
+export function resolveChatMaxTokens(value, fallback = 2048, max = 128000) {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    const rounded = Math.trunc(n);
+    if (rounded < 1) return fallback;
+    return Math.min(max, rounded);
+}
+
 export function resolveChatTemperature(value, fallback = 0.7) {
     const n = typeof value === 'number' ? value : Number(value);
     if (!Number.isFinite(n)) return fallback;
@@ -232,7 +241,7 @@ export default async function handler(req) {
                         messages: messages,
                         stream: stream,
                         temperature: resolveChatTemperature(temperature),
-                        max_tokens: max_tokens || 2048,
+                        max_tokens: resolveChatMaxTokens(max_tokens),
                         provider: { sort: 'price' },
                         // When using openrouter/free, keep fallbacks free-only via models list.
                         ...(attemptModel === 'openrouter/free' ? { models: FALLBACK_MODELS.filter((m) => m !== 'openrouter/free') } : {}),
