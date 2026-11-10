@@ -99,7 +99,11 @@ class RateLimitService:
                 "requests_per_hour_limit": self.requests_per_hour,
                 "current_credits": round(self.current_credits, 4),
                 "max_credits": self.max_credits,
-                "credit_usage_percent": round((1 - self.current_credits / self.max_credits) * 100, 2),
+                "credit_usage_percent": (
+                    0.0
+                    if self.max_credits == 0
+                    else round((1 - self.current_credits / self.max_credits) * 100, 2)
+                ),
             }
 
     def reset_credits(self, amount: Optional[float] = None):
