@@ -7,7 +7,7 @@ import re
 from typing import List, Optional
 
 VERCEL_ORIGIN_PATTERN = re.compile(
-    r"https://assist-me-virtual-assistant(-[a-z0-9]+)?\.vercel\.app"
+    r"https://assist-me-virtual-assistant(?:-git-[a-z0-9-]+-mangeshraut712)?\.vercel\.app"
 )
 
 GITHUB_PAGES_ORIGIN = "https://mangeshraut712.github.io"

@@ -124,6 +124,18 @@ def test_browser_origins_and_hsts():
         "pages origin should be allowed",
     )
     expect(origin_is_allowed("https://evil.example") is False, "unknown origins should be rejected")
+    expect(
+        origin_is_allowed("https://assist-me-virtual-assistant-git-fix-cors-mangeshraut712.vercel.app") is True,
+        "this team's hyphenated git-branch preview should be allowed",
+    )
+    expect(
+        origin_is_allowed("https://assist-me-virtual-assistant-git-fix-cors-otherteam.vercel.app") is False,
+        "another team's preview of the same project name should be rejected",
+    )
+    expect(
+        origin_is_allowed("https://assist-me-virtual-assistant-abc123.vercel.app") is False,
+        "an unpinned hash-style vercel host should not match the regex",
+    )
     expect(strict_transport_security("http", None) is None, "local http should not set HSTS")
     expect(
         strict_transport_security("http", "https") == "max-age=31536000; includeSubDomains",
