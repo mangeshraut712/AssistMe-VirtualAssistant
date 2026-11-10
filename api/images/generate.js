@@ -20,6 +20,25 @@ function corsHeadersFor(req) {
     };
 }
 
+
+const ALLOWED_IMAGE_MODELS = new Set(['flux', 'flux-realism', 'flux-anime', 'flux-3d', 'turbo']);
+
+export function sanitizeImageModel(model) {
+    const name = String(model ?? 'flux').trim().toLowerCase();
+    return ALLOWED_IMAGE_MODELS.has(name) ? name : 'flux';
+}
+
+export function parseImageDimensions(size, fallback = 1024) {
+    const raw = String(size ?? `${fallback}x${fallback}`);
+    const [widthText, heightText] = raw.split('x');
+    const clamp = (value) => {
+        const n = Number.parseInt(value, 10);
+        if (!Number.isFinite(n)) return fallback;
+        return Math.min(2048, Math.max(64, n));
+    };
+    return { width: clamp(widthText), height: clamp(heightText) };
+}
+
 export const config = {
     runtime: 'edge',
 };
@@ -124,8 +143,9 @@ Enhanced:`
         }
 
         // Generate image (always succeeds)
-        const [width, height] = size.split('x');
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=true&seed=${Date.now()}`;
+        const safeModel = sanitizeImageModel(model);
+        const { width, height } = parseImageDimensions(size);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?model=${encodeURIComponent(safeModel)}&width=${width}&height=${height}&nologo=true&enhance=true&seed=${Date.now()}`;
 
         return new Response(JSON.stringify({
             success: true,
@@ -134,7 +154,7 @@ Enhanced:`
                 prompt: finalPrompt,
                 originalPrompt: prompt,
                 enhanced: wasEnhanced,
-                model: model,
+                model: safeModel,
                 provider: provider,
                 mode: mode,
                 free: true
@@ -147,8 +167,9 @@ Enhanced:`
     } catch (error) {
         // Even on error, try to generate something
         const { prompt = 'abstract art', model = 'flux', size = '1024x1024' } = await req.json().catch(() => ({}));
-        const [w, h] = (size || '1024x1024').split('x');
-        const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt || 'beautiful abstract art')}?model=${model}&width=${w}&height=${h}&nologo=true`;
+        const safeModel = sanitizeImageModel(model);
+        const { width: w, height: h } = parseImageDimensions(size);
+        const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt || 'beautiful abstract art')}?model=${encodeURIComponent(safeModel)}&width=${w}&height=${h}&nologo=true`;
 
         return new Response(JSON.stringify({
             success: true,
