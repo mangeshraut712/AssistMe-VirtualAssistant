@@ -11,7 +11,7 @@ Features:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Annotated, Any, Literal
 
@@ -64,7 +64,7 @@ class BaseSchema(BaseModel):
 
 class TimestampMixin(BaseModel):
     """Mixin for timestamp fields."""
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime | None = None
 
 
@@ -199,7 +199,7 @@ class ChatCompletionResponse(BaseSchema):
     """Chat completion response."""
     id: str
     object: Literal["chat.completion"] = "chat.completion"
-    created: int = Field(default_factory=lambda: int(datetime.utcnow().timestamp()))
+    created: int = Field(default_factory=lambda: int(datetime.now(timezone.utc).timestamp()))
     model: str
     choices: list[ChatChoice]
     usage: ChatUsage | None = None
@@ -244,7 +244,7 @@ class HealthStatus(BaseSchema):
     """Health check response."""
     status: Literal["healthy", "degraded", "unhealthy"]
     version: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     checks: dict[str, bool] = {}
 
 
