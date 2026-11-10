@@ -2,6 +2,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.routes import health as health_routes
 from tests.support import expect
 
 
@@ -40,8 +41,6 @@ def test_live_ready_and_ping_probes_are_mounted():
 
 def test_ready_is_not_ready_when_configured_database_is_down(monkeypatch):
     """A configured but unreachable database must fail the readiness probe."""
-    import app.routes.health as health_routes
-
     def down():
         return False, "connection refused"
 
