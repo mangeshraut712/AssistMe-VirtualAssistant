@@ -38,6 +38,12 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
 const _rateLimitState = new Map();
 
+export function resolveChatTemperature(value, fallback = 0.7) {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(2, Math.max(0, n));
+}
+
 export function getClientIp(headers) {
     const forwarded = headers.get('x-forwarded-for');
     if (forwarded) {
@@ -225,7 +231,7 @@ export default async function handler(req) {
                         model: attemptModel,
                         messages: messages,
                         stream: stream,
-                        temperature: temperature || 0.7,
+                        temperature: resolveChatTemperature(temperature),
                         max_tokens: max_tokens || 2048,
                         provider: { sort: 'price' },
                         // When using openrouter/free, keep fallbacks free-only via models list.
