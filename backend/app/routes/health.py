@@ -73,9 +73,9 @@ def _check_ai_provider() -> tuple[bool, str | None]:
 
 
 @router.get(
-    "",
+    "/details",
     response_model=HealthStatus,
-    summary="Health Check",
+    summary="Health Check Details",
     description="Comprehensive health check with component status",
 )
 async def health_check() -> HealthStatus:

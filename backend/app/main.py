@@ -287,6 +287,13 @@ try:
 except Exception as e:
     logging.warning(f"Failed to register Speedtest router: {e}")
 
+try:
+    from .routes import health as health_routes
+    app.include_router(health_routes.router)
+    logging.info("✓ Health router registered")
+except Exception as e:
+    logging.warning(f"Failed to register Health router: {e}")
+
 
 # Configure CORS for cross-origin requests
 app.add_middleware(
