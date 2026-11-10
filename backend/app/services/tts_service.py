@@ -24,7 +24,7 @@ Reference: https://ai.google.dev/gemini-api/docs/speech-generation
 """
 
 import logging
-from app.tts_limits import assert_tts_payload_within_limit
+from ..tts_limits import assert_tts_payload_within_limit
 import os
 import re
 from typing import Any, Dict, Mapping, Optional, Sequence
