@@ -19,7 +19,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from ..database import SessionLocal, _ensure_database_setup
+from .. import database as database_mod
 
 from ..config import get_settings
 from ..logging_config import logger
@@ -40,9 +40,9 @@ def _check_database() -> tuple[bool, str | None]:
     try:
         # Setup is lazy; a configured database must be initialized here
         # or a readiness probe can fail forever before any other request.
-        if not _ensure_database_setup() or SessionLocal is None:
+        if not database_mod._ensure_database_setup() or database_mod.SessionLocal is None:
             return False, "Database session is unavailable"
-        db = SessionLocal()
+        db = database_mod.SessionLocal()
         try:
             db.execute(text("SELECT 1"))
             return True, None
