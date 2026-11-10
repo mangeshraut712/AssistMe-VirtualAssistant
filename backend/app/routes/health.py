@@ -17,6 +17,9 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+
+from ..database import SessionLocal, _ensure_database_setup
 
 from ..config import get_settings
 from ..logging_config import logger
@@ -35,9 +38,6 @@ def _check_database() -> tuple[bool, str | None]:
         return True, "Not configured (stateless mode)"
 
     try:
-        from ..database import SessionLocal, _ensure_database_setup
-        from sqlalchemy import text
-
         # Setup is lazy; a configured database must be initialized here
         # or a readiness probe can fail forever before any other request.
         if not _ensure_database_setup() or SessionLocal is None:

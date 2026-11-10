@@ -1,9 +1,10 @@
 """Kubernetes-style /health probes must be mounted without replacing GET /health."""
+from types import SimpleNamespace
+
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routes import health as health_routes
-import app.database as database
 from tests.support import expect
 
 
@@ -72,17 +73,19 @@ def test_ready_initializes_a_configured_database_before_probing(monkeypatch):
         called["setup"] = True
         return False
 
-    monkeypatch.setattr(database, "_ensure_database_setup", setup)
-    monkeypatch.setattr(database, "SessionLocal", None)
+    monkeypatch.setattr(health_routes, "_ensure_database_setup", setup)
+    monkeypatch.setattr(health_routes, "SessionLocal", None)
 
-    class _Settings:
-        class database:
-            url = "postgresql://example/assistme"
-
-    monkeypatch.setattr(health_routes, "get_settings", lambda: _Settings)
+    settings = SimpleNamespace(
+        database=SimpleNamespace(url="postgresql://example/assistme")
+    )
+    monkeypatch.setattr(health_routes, "get_settings", lambda: settings)
 
     with TestClient(app) as client:
         response = client.get("/health/ready")
-    expect(called["setup"] is True, "/health/ready should initialize the database before probing")
+    expect(
+        called["setup"] is True,
+        "/health/ready should initialize the database before probing",
+    )
     expect(response.status_code == 503, "setup failure should still fail the probe")
     expect(response.json().get("status") == "not_ready", "status should be not_ready")
