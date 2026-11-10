@@ -1,5 +1,6 @@
 import uuid
 import time
+from contextlib import asynccontextmanager
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from .services.rate_limit_service import rate_limit_service
@@ -75,6 +76,95 @@ except ImportError:
 
 ALLOWED_ORIGINS = allowed_origins_list()
 
+# Startup validation (lifespan, not the deprecated on_event hook)
+async def startup_validation():
+    """Validate critical environment variables and log warnings"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
+    warnings = []
+    errors = []
+
+    # Check AI Provider configuration
+    try:
+        provider = get_provider()
+        if provider.is_available():
+            logging.info(f"✓ AI Provider configured: {provider.__class__.__name__}")
+        else:
+            warnings.append(
+                f"AI Provider {provider.__class__.__name__} is not fully configured (missing API key)"
+            )
+    except Exception as e:
+        errors.append(f"AI Provider error: {str(e)}")
+
+    # Check database configuration
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        logging.info("✓ Database URL configured")
+    else:
+        logging.info("ℹ Using SQLite fallback database")
+
+    # Check app URL for CORS
+    app_url = os.getenv("APP_URL")
+    if not app_url:
+        warnings.append("APP_URL not set - CORS may not work correctly in production")
+    else:
+        logging.info(f"✓ App URL configured: {app_url}")
+
+    # Check port configuration
+    port = os.getenv("PORT", "8001")
+    logging.info(f"✓ Server will bind to port {port}")
+
+    # Log all warnings
+    for warning in warnings:
+        logging.warning(f"⚠ {warning}")
+
+    # Log all errors
+    for error in errors:
+        logging.error(f"✗ {error}")
+
+    if errors:
+        logging.error("\n" + "=" * 60)
+        logging.error("CRITICAL: Application started with configuration errors!")
+        logging.error("Please fix the above errors for full functionality.")
+        logging.error("=" * 60 + "\n")
+    elif warnings:
+        logging.warning("\n" + "=" * 60)
+        logging.warning("Application started with warnings")
+        logging.warning("Some features may not work as expected.")
+        logging.warning("=" * 60 + "\n")
+    else:
+        logging.info("\n" + "=" * 60)
+        logging.info("✓ All environment variables configured correctly")
+        logging.info("✓ AssistMe API started successfully")
+        logging.info("=" * 60 + "\n")
+
+    # Load knowledge base if configured
+    try:
+        from .services.embedding_service import embedding_service
+
+        default_path = os.path.join(os.path.dirname(__file__), "data/grokipedia.json")
+        data_path = os.getenv("GROKIPEDIA_DATA_PATH", default_path)
+        loaded = await embedding_service.load_from_file(data_path)
+        if loaded:
+            logging.info(f"✓ Knowledge base loaded: {loaded} documents")
+        else:
+            logging.warning(
+                "⚠ Knowledge base not loaded; index will remain empty until ingestion"
+            )
+    except Exception as exc:
+        logging.warning(f"Failed to load knowledge base: {exc}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Run startup checks, then yield so FastAPI can serve requests."""
+    await startup_validation()
+    yield
+
+
 # Enhanced FastAPI configuration for localhost development
 app = FastAPI(
     title="AssistMe API",
@@ -85,6 +175,7 @@ app = FastAPI(
     openapi_url="/openapi.json",
     # Performance optimizations for localhost
     swagger_ui_parameters={"deepLinking": True, "displayRequestDuration": True},
+    lifespan=lifespan,
 )
 
 # Enhanced middleware for localhost development
@@ -195,88 +286,6 @@ try:
 except Exception as e:
     logging.warning(f"Failed to register Speedtest router: {e}")
 
-
-# Startup validation
-@app.on_event("startup")
-async def startup_validation():
-    """Validate critical environment variables and log warnings"""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-
-    warnings = []
-    errors = []
-
-    # Check AI Provider configuration
-    try:
-        provider = get_provider()
-        if provider.is_available():
-            logging.info(f"✓ AI Provider configured: {provider.__class__.__name__}")
-        else:
-            warnings.append(
-                f"AI Provider {provider.__class__.__name__} is not fully configured (missing API key)"
-            )
-    except Exception as e:
-        errors.append(f"AI Provider error: {str(e)}")
-
-    # Check database configuration
-    db_url = os.getenv("DATABASE_URL")
-    if db_url:
-        logging.info("✓ Database URL configured")
-    else:
-        logging.info("ℹ Using SQLite fallback database")
-
-    # Check app URL for CORS
-    app_url = os.getenv("APP_URL")
-    if not app_url:
-        warnings.append("APP_URL not set - CORS may not work correctly in production")
-    else:
-        logging.info(f"✓ App URL configured: {app_url}")
-
-    # Check port configuration
-    port = os.getenv("PORT", "8001")
-    logging.info(f"✓ Server will bind to port {port}")
-
-    # Log all warnings
-    for warning in warnings:
-        logging.warning(f"⚠ {warning}")
-
-    # Log all errors
-    for error in errors:
-        logging.error(f"✗ {error}")
-
-    if errors:
-        logging.error("\n" + "=" * 60)
-        logging.error("CRITICAL: Application started with configuration errors!")
-        logging.error("Please fix the above errors for full functionality.")
-        logging.error("=" * 60 + "\n")
-    elif warnings:
-        logging.warning("\n" + "=" * 60)
-        logging.warning("Application started with warnings")
-        logging.warning("Some features may not work as expected.")
-        logging.warning("=" * 60 + "\n")
-    else:
-        logging.info("\n" + "=" * 60)
-        logging.info("✓ All environment variables configured correctly")
-        logging.info("✓ AssistMe API started successfully")
-        logging.info("=" * 60 + "\n")
-
-    # Load knowledge base if configured
-    try:
-        from .services.embedding_service import embedding_service
-
-        default_path = os.path.join(os.path.dirname(__file__), "data/grokipedia.json")
-        data_path = os.getenv("GROKIPEDIA_DATA_PATH", default_path)
-        loaded = await embedding_service.load_from_file(data_path)
-        if loaded:
-            logging.info(f"✓ Knowledge base loaded: {loaded} documents")
-        else:
-            logging.warning(
-                "⚠ Knowledge base not loaded; index will remain empty until ingestion"
-            )
-    except Exception as exc:
-        logging.warning(f"Failed to load knowledge base: {exc}")
 
 
 # Configure CORS for cross-origin requests
