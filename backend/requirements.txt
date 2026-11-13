@@ -35,7 +35,7 @@ aiohttp>=3.11.0,<4.0.0
 # Performance & Serialization
 # ============================================
 orjson>=3.13.0,<4.0.0       # Fast JSON parsing (10x faster)
-ujson>=5.10.0,<6.0.0          # Alternative fast JSON
+ujson>=6.1.0,<7.0.0          # Alternative fast JSON
 aiofiles>=25.1.0,<26.0.0      # Async file operations
 python-multipart>=0.0.33      # Form/file uploads
 
