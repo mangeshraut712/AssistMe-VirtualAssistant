@@ -51,7 +51,7 @@ argon2-cffi>=25.1.0,<26.0.0   # Modern password hashing (PasswordHasher API)
 # Observability & Monitoring
 # ============================================
 structlog>=24.4.0,<25.0.0     # Structured logging
-python-json-logger>=2.0.7     # JSON log formatting
+python-json-logger>=4.2.0     # JSON log formatting
 # opentelemetry-api>=1.28.0   # Distributed tracing (optional)
 # opentelemetry-sdk>=1.28.0   # Tracing SDK (optional)
 # prometheus-fastapi-instrumentator>=7.0.0  # Metrics (optional)
