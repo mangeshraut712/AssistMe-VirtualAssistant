@@ -5,7 +5,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from .services.rate_limit_service import rate_limit_service
 from .models import Message as MessageModel
-from .models import Conversation
+from .models import Conversation, User
+from .conversation_access import optional_history_user, required_history_user
 from .database import get_db
 from .ai4bharat import ai4bharat_client
 from .origins import allowed_origins_list, origin_is_allowed, strict_transport_security
@@ -438,14 +439,22 @@ def _load_conversation_history(
 def _prepare_conversation_context(
     request: TextChatRequest,
     db: Optional[SessionType],
+    user: Optional[User] = None,
 ) -> Tuple[Optional[int], List[dict]]:
     conversation_id = getattr(request, "conversation_id", None)
+    if user is None:
+        if conversation_id is not None:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        # Anonymous chat stays available, but never reads or stores server history.
+        return None, [{"role": msg.role, "content": msg.content} for msg in request.messages]
     history_records: List[MessageModel] = []
     current_conversation_id: Optional[int] = conversation_id
 
     if db and conversation_id:
         conversation = (
-            db.query(Conversation).filter(Conversation.id == conversation_id).first()  # type: ignore
+            db.query(Conversation).filter(
+                Conversation.id == conversation_id, Conversation.user_id == user.id
+            ).first()
         )
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
@@ -454,7 +463,7 @@ def _prepare_conversation_context(
         current_conversation_id = conversation_id_value
     elif db and not conversation_id:
         title = generate_conversation_title_from_messages(request.messages)
-        conversation = Conversation(title=title)  # type: ignore
+        conversation = Conversation(title=title, user_id=user.id)  # type: ignore
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
@@ -811,7 +820,8 @@ Use this information to provide accurate and contextual responses. If the inform
 
 @app.post("/api/chat")
 async def chat_text(
-    request: TextChatRequest, db: Optional[SessionType] = Depends(get_db)
+    request: TextChatRequest, db: Optional[SessionType] = Depends(get_db),
+    user: Optional[User] = Depends(optional_history_user),
 ):
     logging.info(
         "Chat API called with messages: %s", [m.content for m in request.messages]
@@ -847,7 +857,7 @@ async def chat_text(
         return JSONResponse(content={"error": "Request failed"}, status_code=500)
 
     current_conversation_id, payload_messages = _prepare_conversation_context(
-        request, db
+        request, db, user
     )
 
     # Detect language and adapt for multilingual support
@@ -961,7 +971,8 @@ async def chat_text(
 
 @app.post("/api/chat/stream")
 async def chat_text_stream(
-    request: TextChatRequest, db: Optional[SessionType] = Depends(get_db)
+    request: TextChatRequest, db: Optional[SessionType] = Depends(get_db),
+    user: Optional[User] = Depends(optional_history_user),
 ):
     logging.info(
         "Chat stream API called with messages: %s",
@@ -981,7 +992,7 @@ async def chat_text_stream(
         return StreamingResponse(error_generator(), media_type="text/event-stream")
 
     current_conversation_id, payload_messages = _prepare_conversation_context(
-        request, db
+        request, db, user
     )
 
     # Detect language and adapt for multilingual support
@@ -1174,11 +1185,14 @@ async def openrouter_status_options(request: Request) -> Response:
 
 
 @app.get("/api/conversations")
-def get_conversations(db: Optional[SessionType] = Depends(get_db)) -> List[dict]:
+def get_conversations(
+    db: Optional[SessionType] = Depends(get_db),
+    user: User = Depends(required_history_user),
+) -> List[dict]:
     if not db:
         # No database, return empty list
         return []
-    conversations = db.query(Conversation).all()  # type: ignore
+    conversations = db.query(Conversation).filter(Conversation.user_id == user.id).all()  # type: ignore
     return [
         {"id": c.id, "title": c.title, "created_at": c.created_at}
         for c in conversations
@@ -1193,12 +1207,15 @@ async def conversations_options(request: Request) -> Response:
 
 @app.get("/api/conversations/{conversation_id}")
 def get_conversation_messages(
-    conversation_id: int, db: Optional[SessionType] = Depends(get_db)
+    conversation_id: int, db: Optional[SessionType] = Depends(get_db),
+    user: User = Depends(required_history_user),
 ):
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()  # type: ignore
+    conversation = db.query(Conversation).filter(
+        Conversation.id == conversation_id, Conversation.user_id == user.id
+    ).first()
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
