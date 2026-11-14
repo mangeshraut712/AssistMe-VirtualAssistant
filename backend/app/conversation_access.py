@@ -14,11 +14,13 @@ def optional_history_user(
     authorization: Optional[str] = Header(default=None),
     db: Optional[Session] = Depends(get_db),
 ) -> Optional[User]:
+    """Resolve an authenticated user from bearer token for history access."""
     if authorization is None:
         return None
     scheme, _, token = authorization.partition(" ")
     invalid = HTTPException(
-        status_code=401, detail="Invalid credentials",
+        status_code=401,
+        detail="Invalid credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     if scheme.lower() != "bearer" or not token:
@@ -40,9 +42,11 @@ def optional_history_user(
 def required_history_user(
     user: Optional[User] = Depends(optional_history_user),
 ) -> User:
+    """Require an authenticated user for history access or raise 401."""
     if user is None:
         raise HTTPException(
-            status_code=401, detail="Authentication required",
+            status_code=401,
+            detail="Authentication required",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
