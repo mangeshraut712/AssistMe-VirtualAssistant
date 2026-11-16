@@ -16,13 +16,13 @@ email-validator>=2.3.0
 sqlalchemy>=2.0.36,<2.1.0
 alembic>=1.20.1,<2.0.0
 # PostgreSQL (async-ready)
-psycopg[binary,pool]>=3.3.7,<4.0.0
+psycopg[binary,pool]>=3.3.8,<4.0.0
 asyncpg>=0.32.0,<1.0.0  # Async PostgreSQL driver
 
 # ============================================
 # Caching & Message Queue
 # ============================================
-redis[hiredis]>=5.2.0,<6.0.0
+redis[hiredis]>=8.1.0,<9.0.0
 
 # ============================================
 # HTTP Clients (async-first)
@@ -35,7 +35,7 @@ aiohttp>=3.11.0,<4.0.0
 # Performance & Serialization
 # ============================================
 orjson>=3.13.0,<4.0.0       # Fast JSON parsing (10x faster)
-ujson>=5.10.0,<6.0.0          # Alternative fast JSON
+ujson>=6.1.0,<7.0.0          # Alternative fast JSON
 aiofiles>=25.1.0,<26.0.0      # Async file operations
 python-multipart>=0.0.33      # Form/file uploads
 
@@ -51,7 +51,7 @@ argon2-cffi>=25.1.0,<26.0.0   # Modern password hashing (PasswordHasher API)
 # Observability & Monitoring
 # ============================================
 structlog>=24.4.0,<25.0.0     # Structured logging
-python-json-logger>=2.0.7     # JSON log formatting
+python-json-logger>=4.2.0     # JSON log formatting
 # opentelemetry-api>=1.28.0   # Distributed tracing (optional)
 # opentelemetry-sdk>=1.28.0   # Tracing SDK (optional)
 # prometheus-fastapi-instrumentator>=7.0.0  # Metrics (optional)
@@ -80,7 +80,7 @@ numpy>=2.5.4,<3.0.0          # NumPy 2.x compatibility
 # Utilities
 # ============================================
 tenacity>=9.2.1,<10.0.0       # Retry logic with decorators
-python-dateutil>=3.0.0        # Date parsing utilities
+python-dateutil>=4.0.0        # Date parsing utilities
 
 # ============================================
 # Development & Testing (optional)

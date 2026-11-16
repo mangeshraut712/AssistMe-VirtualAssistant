@@ -139,3 +139,18 @@ SECRET_KEY=your-secret-key
 ### Health
 - `GET /health` - Health check
 - `GET /api/speedtest/run` - Speed test
+
+## Stored conversation access
+
+Anonymous `/api/chat` and `/api/chat/stream` requests remain supported when no
+`conversation_id` is supplied. They do not save server-side history. Clients can
+send their current message context in the request as before.
+
+To save or resume server-side history, send the bearer token returned by login
+or registration. The verified token subject is resolved to the current account;
+new conversations belong to that account. History list/detail requests require
+authentication and return only the account's conversations. Missing, other-owner,
+and legacy ownerless conversation IDs are not available to the caller. Legacy
+rows are retained, not reassigned or deleted. Invalid/expired credentials are
+rejected rather than treated as anonymous requests. Authenticated history is
+unavailable when the database is unavailable.
