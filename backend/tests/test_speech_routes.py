@@ -2,6 +2,7 @@
 
 import importlib
 from unittest.mock import AsyncMock
+import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from tests.support import expect
@@ -100,3 +101,46 @@ def test_transcribe_audio_oversized_rejected(monkeypatch):
     )
     expect(response.status_code == 400, "oversized audio returns 400")
     expect("exceeds the upload size limit" in response.json()["detail"], "size limit detail")
+
+
+def test_transcribe_stream_ping_pong():
+    """WebSocket /api/speech/transcribe-stream responds to ping with pong."""
+    client = TestClient(app)
+    with client.websocket_connect("/api/speech/transcribe-stream") as websocket:
+        websocket.send_text("ping")
+        data = websocket.receive_text()
+        expect(data == "pong", "ping should respond with pong")
+
+
+def test_transcribe_stream_accumulates_and_transcribes(monkeypatch):
+    """WebSocket stream accumulates audio chunks and returns transcription on end."""
+    speech_route_module = importlib.import_module("app.routes.speech")
+    mock_service = AsyncMock()
+    mock_service.transcribe.return_value = {
+        "text": "Streaming speech recognition working",
+        "language": "en",
+        "segments": [{"id": 0, "text": "Streaming speech recognition working"}],
+    }
+    monkeypatch.setattr(speech_route_module, "whisper_service", mock_service)
+
+    client = TestClient(app)
+    with client.websocket_connect("/api/speech/transcribe-stream") as websocket:
+        websocket.send_bytes(b"RIFFchunk1")
+        websocket.send_bytes(b"chunk2")
+        websocket.send_text("end")
+        data = websocket.receive_json()
+        expect(data["success"] is True, "transcription stream success")
+        expect(data["text"] == "Streaming speech recognition working", "text matches")
+
+
+def test_transcribe_stream_oversized_closes_1009(monkeypatch):
+    """WebSocket stream exceeding MAX_AUDIO_BYTES closes with code 1009."""
+    speech_route_module = importlib.import_module("app.routes.speech")
+    monkeypatch.setattr(speech_route_module, "MAX_AUDIO_BYTES", 50)
+
+    client = TestClient(app)
+    with client.websocket_connect("/api/speech/transcribe-stream") as websocket:
+        websocket.send_bytes(b"A" * 60)
+        msg = websocket.receive()
+        expect(msg["type"] == "websocket.close", "type must be websocket.close")
+        expect(msg["code"] == 1009, "connection should close with 1009 code")
