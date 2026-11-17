@@ -1,8 +1,11 @@
+import logging
+from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
 
 from ..services.image_service import image_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/images", tags=["images"])
 
@@ -11,6 +14,7 @@ class ImageGenRequest(BaseModel):
     prompt: str
     model: Optional[str] = "flux"
     size: Optional[str] = "1024x1024"
+    quality: Optional[str] = "standard"
     style: Optional[str] = None
 
 
@@ -26,11 +30,15 @@ async def generate_image(request: ImageGenRequest):
             prompt=cleaned_prompt,
             model=request.model or "flux",
             size=request.size or "1024x1024",
-            style=request.style
+            quality=request.quality or "standard",
+            style=request.style,
         )
         return {
             "success": True,
-            "data": [{"url": image_url}]
+            "data": [{"url": image_url}],
         }
-    except Exception:
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Image generation failed: {e}")
         raise HTTPException(status_code=500, detail="Image generation failed")

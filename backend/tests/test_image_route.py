@@ -81,3 +81,43 @@ def test_image_route_returns_500_on_service_error(monkeypatch):
     )
     expect(response.status_code == 500, "service failure should return 500")
     expect(response.json()["detail"] == "Image generation failed", "standard error detail")
+
+
+def test_image_route_preserves_http_exceptions(monkeypatch):
+    """HTTP exceptions from image service (e.g. 429 rate limit) must be preserved."""
+    from fastapi import HTTPException
+
+    image_module = importlib.import_module("app.routes.image")
+
+    async def fail_rate_limit(**kwargs):
+        raise HTTPException(status_code=429, detail="Image generation rate limit exceeded")
+
+    monkeypatch.setattr(image_module.image_service, "generate_image", fail_rate_limit)
+    app = FastAPI()
+    app.include_router(image_module.router)
+    response = TestClient(app).post(
+        "/api/images/generate",
+        json={"prompt": "cyberpunk cat"},
+    )
+    expect(response.status_code == 429, "HTTPException 429 should be preserved")
+    expect(response.json()["detail"] == "Image generation rate limit exceeded", "detail preserved")
+
+
+def test_image_route_passes_quality_field(monkeypatch):
+    """Request quality parameter must be passed to image service."""
+    image_module = importlib.import_module("app.routes.image")
+    captured = {}
+
+    async def generate_image(**kwargs):
+        captured.update(kwargs)
+        return "offline-image"
+
+    monkeypatch.setattr(image_module.image_service, "generate_image", generate_image)
+    app = FastAPI()
+    app.include_router(image_module.router)
+    response = TestClient(app).post(
+        "/api/images/generate",
+        json={"prompt": "cyberpunk cat", "quality": "hd"},
+    )
+    expect(response.status_code == 200, "request should succeed")
+    expect(captured["quality"] == "hd", "custom quality must be forwarded")
