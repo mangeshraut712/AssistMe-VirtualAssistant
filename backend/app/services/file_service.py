@@ -66,12 +66,13 @@ def safe_upload_name(filename: str | None) -> str:
     return raw[:255]
 
 
-def safe_mime(content_type: str | None, fallback: str) -> str:
+def safe_mime(content_type: str | None, fallback: str | None = "application/octet-stream") -> str:
     """Keep only a single type/subtype so a content type cannot break a data URL."""
-    raw = (content_type or fallback).split(";")[0].strip().lower()
+    fallback_safe = fallback or "application/octet-stream"
+    raw = (content_type or fallback_safe).split(";")[0].strip().lower()
     if _MIME_PATTERN.fullmatch(raw):
         return raw
-    return fallback
+    return fallback_safe
 
 
 async def read_limited(file: UploadFile, limit: int = MAX_UPLOAD_BYTES) -> bytes:
@@ -91,8 +92,10 @@ async def read_limited(file: UploadFile, limit: int = MAX_UPLOAD_BYTES) -> bytes
     return b"".join(chunks)
 
 
-def public_file_record(record: dict) -> dict:
+def public_file_record(record: dict | None) -> dict:
     """Remove the server path before a file record is returned to a client."""
+    if not record:
+        return {}
     return {key: value for key, value in record.items() if key != "path"}
 
 
