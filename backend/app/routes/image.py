@@ -17,9 +17,13 @@ class ImageGenRequest(BaseModel):
 @router.post("/generate")
 async def generate_image(request: ImageGenRequest):
     """Generate an image from a text prompt."""
+    cleaned_prompt = (request.prompt or "").strip()
+    if not cleaned_prompt:
+        raise HTTPException(status_code=400, detail="Prompt must not be empty")
+
     try:
         image_url = await image_service.generate_image(
-            prompt=request.prompt,
+            prompt=cleaned_prompt,
             model=request.model or "flux",
             size=request.size or "1024x1024",
             style=request.style
