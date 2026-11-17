@@ -42,7 +42,7 @@ def test_live_ready_and_ping_probes_are_mounted():
     expect("uptime_seconds" in metrics_body, "/health/metrics should include uptime")
     expect("memory_mb" in metrics_body, "/health/metrics should include memory_mb")
     if metrics_body["memory_mb"] is not None:
-        expect(0 < metrics_body["memory_mb"] < 10000, "memory_mb should be a realistic positive number in MB")
+        expect(0 < metrics_body["memory_mb"] < 2000, "memory_mb should be a realistic positive number in MB")
 
 
 def test_ready_is_not_ready_when_configured_database_is_down(monkeypatch):
