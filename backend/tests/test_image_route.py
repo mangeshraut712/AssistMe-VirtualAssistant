@@ -121,3 +121,34 @@ def test_image_route_passes_quality_field(monkeypatch):
     )
     expect(response.status_code == 200, "request should succeed")
     expect(captured["quality"] == "hd", "custom quality must be forwarded")
+
+
+def test_image_route_normalizes_whitespace_and_casing(monkeypatch):
+    """Parameters with leading/trailing whitespace or uppercase should be normalized."""
+    image_module = importlib.import_module("app.routes.image")
+    captured = {}
+
+    async def generate_image(**kwargs):
+        captured.update(kwargs)
+        return "https://example.com/normalized.png"
+
+    monkeypatch.setattr(image_module.image_service, "generate_image", generate_image)
+    app = FastAPI()
+    app.include_router(image_module.router)
+    response = TestClient(app).post(
+        "/api/images/generate",
+        json={
+            "prompt": "  futuristic landscape  ",
+            "model": "  FLUX-3D  ",
+            "size": "  512X512  ",
+            "quality": "  HD  ",
+            "style": "  cyberpunk neon  ",
+        },
+    )
+    expect(response.status_code == 200, "request should succeed")
+    expect(captured["prompt"] == "futuristic landscape", "prompt must be stripped")
+    expect(captured["model"] == "flux-3d", "model must be trimmed and lowercased")
+    expect(captured["size"] == "512x512", "size must be trimmed and lowercased")
+    expect(captured["quality"] == "hd", "quality must be trimmed and lowercased")
+    expect(captured["style"] == "cyberpunk neon", "style must be stripped")
+
