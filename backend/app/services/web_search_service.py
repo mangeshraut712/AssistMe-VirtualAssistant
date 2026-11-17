@@ -42,10 +42,16 @@ class WebSearchService:
         Returns:
             List of search results with title, url, and content
         """
+        cleaned_query = (query or "").strip()
+        if not cleaned_query:
+            return []
+
+        safe_max_results = min(max(1, int(max_results or 5)), 50)
+
         if self.use_tavily:
-            return await self._search_tavily(query, max_results, search_depth)
+            return await self._search_tavily(cleaned_query, safe_max_results, search_depth)
         else:
-            return await self._search_duckduckgo(query, max_results)
+            return await self._search_duckduckgo(cleaned_query, safe_max_results)
 
     async def _search_tavily(
         self,
@@ -222,9 +228,14 @@ class WebSearchService:
         Stream a comprehensive Wikipedia-style article using search results.
         Designed to generate deep, insightful, well-researched content.
         """
+        cleaned_query = (query or "").strip()
+        if not cleaned_query:
+            yield "Please provide a search query."
+            return
+
         try:
             if not context_results:
-                context_results = await self.search_web(query, max_results=10)
+                context_results = await self.search_web(cleaned_query, max_results=10)
 
             # AI Knowledge Base is a valid fallback, so don't return an error
             if not context_results:
@@ -399,8 +410,9 @@ Generate your comprehensive article now:"""
                     )
 
                     async for chunk in stream_generator:
-                        if hasattr(chunk, 'delta') and chunk.delta:
-                            yield chunk.delta
+                        delta = chunk.delta if hasattr(chunk, "delta") else (chunk.get("delta") if isinstance(chunk, dict) else str(chunk))
+                        if delta:
+                            yield delta
 
                     # If we get here without error, break the loop
                     return
