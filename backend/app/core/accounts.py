@@ -29,15 +29,21 @@ def issue_bearer_token(subject: str) -> dict:
     """Return the access-token payload used by login and register."""
     expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     encoded = create_access_token(subject=subject, expires_delta=expires)
-    scheme = "bearer"
-    payload = {"access_token": encoded}
-    payload["token_type"] = scheme
-    return payload
+    return {
+        "access_token": encoded,
+        "token_type": "bearer",
+        "expires_in": int(expires.total_seconds()),
+    }
 
 
 def login_user(db: Any, username: str, password: str) -> Any:
-    """Return the user when the password matches, otherwise None."""
-    user = db.query(User).filter(User.username == username).first()
+    """Return the user when the password matches username or email, otherwise None."""
+    identifier = (username or "").strip()
+    user = (
+        db.query(User)
+        .filter((User.username == identifier) | (User.email == identifier))
+        .first()
+    )
     if authenticate_and_upgrade(user, password, db):
         return user
     return None
