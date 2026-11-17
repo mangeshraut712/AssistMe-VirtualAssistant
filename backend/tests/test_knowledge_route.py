@@ -166,3 +166,64 @@ def test_knowledge_stats_endpoint(client_and_modules, monkeypatch):
     expect(payload["documents"] == 3, "should report 3 indexed documents")
     expect(payload["web_search_enabled"] is True, "web search flag should be True")
     expect(payload["tavily_enabled"] is False, "tavily enabled should match service state")
+
+
+def test_grokipedia_stream_empty_query_400(client_and_modules):
+    """Empty or whitespace query to /grokipedia/stream must return 400 Bad Request."""
+    client, _ = client_and_modules
+
+    response = client.post(
+        "/api/knowledge/grokipedia/stream",
+        json={"query": "     \t\n  "},
+    )
+
+    expect(response.status_code == 400, "whitespace query must return 400")
+    expect("Search query must not be empty" in response.json()["detail"], "helpful detail")
+
+
+def test_grokipedia_stream_success(client_and_modules, monkeypatch):
+    """Streaming grokipedia yields metadata event, content chunks, and [DONE]."""
+    client, module = client_and_modules
+
+    async def fake_web_search(query, max_results, search_depth):
+        return [{"title": "Doc 1", "content": "RAG text", "url": "https://doc.example"}]
+
+    async def fake_stream_answer(query, context_results):
+        for chunk in ["Streaming ", "answer."]:
+            yield chunk
+
+    monkeypatch.setattr(module.web_search_service, "search_web", fake_web_search)
+    monkeypatch.setattr(module.web_search_service, "stream_answer", fake_stream_answer)
+
+    response = client.post(
+        "/api/knowledge/grokipedia/stream",
+        json={"query": "Neural networks", "max_results": 3, "search_depth": "basic"},
+    )
+
+    expect(response.status_code == 200, "stream endpoint should succeed")
+    expect(response.headers["content-type"].startswith("text/event-stream"), "must be text/event-stream")
+    body = response.text
+    expect("data: {\"type\": \"metadata\"" in body, "must yield metadata event")
+    expect("data: {\"type\": \"content\", \"delta\": \"Streaming \"}" in body, "must yield content delta 1")
+    expect("data: {\"type\": \"content\", \"delta\": \"answer.\"}" in body, "must yield content delta 2")
+    expect("data: [DONE]" in body, "must conclude with [DONE]")
+
+
+def test_grokipedia_stream_error_handling(client_and_modules, monkeypatch):
+    """Exceptions during stream generation yield error event followed by [DONE]."""
+    client, module = client_and_modules
+
+    async def failing_web_search(query, max_results, search_depth):
+        raise RuntimeError("Network disconnect")
+
+    monkeypatch.setattr(module.web_search_service, "search_web", failing_web_search)
+
+    response = client.post(
+        "/api/knowledge/grokipedia/stream",
+        json={"query": "Neural networks"},
+    )
+
+    expect(response.status_code == 200, "stream request initiates 200 SSE")
+    body = response.text
+    expect("data: {\"type\": \"error\", \"message\": \"Request failed\"}" in body, "must yield error event")
+    expect("data: [DONE]" in body, "must conclude with [DONE]")
