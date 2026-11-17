@@ -4,6 +4,7 @@ Tracks API usage and enforces rate limits to prevent exceeding credits
 """
 
 import asyncio
+from collections import defaultdict
 import logging
 import os
 import time
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class RateLimitService:
     def __init__(self):
-        # Rate limits (requests per minute)
+        # Rate limits (requests per minute and hour)
         self.requests_per_minute = int(os.getenv("RATE_LIMIT_RPM", "60"))
         self.requests_per_hour = int(os.getenv("RATE_LIMIT_RPH", "1000"))
 
@@ -22,9 +23,11 @@ class RateLimitService:
         self.max_credits = float(os.getenv("MAX_CREDITS", "10.0"))
         self.current_credits = self.max_credits
 
-        # Tracking
-        self.minute_requests = []
-        self.hour_requests = []
+        # Tracking (global and per-client)
+        self.minute_requests: list[float] = []
+        self.hour_requests: list[float] = []
+        self.client_minute_requests: dict[str, list[float]] = defaultdict(list)
+        self.client_hour_requests: dict[str, list[float]] = defaultdict(list)
         self.lock = asyncio.Lock()
 
         # Cost tracking per model (approximate costs) – OpenRouter-only
@@ -38,18 +41,31 @@ class RateLimitService:
         }
 
         logger.info(
-            f"Rate limit service initialized: {self.requests_per_minute} RPM, {self.requests_per_hour} RPH, ${self.max_credits} credits")
+            f"Rate limit service initialized: {self.requests_per_minute} RPM, {self.requests_per_hour} RPH, ${self.max_credits} credits"
+        )
 
-    async def check_rate_limit(self) -> tuple[bool, str]:
-        """Check if request is within rate limits."""
+    async def check_rate_limit(self, client_id: Optional[str] = None) -> tuple[bool, str]:
+        """Check if request is within global and optional per-client rate limits."""
         async with self.lock:
             now = time.time()
 
-            # Clean old requests
+            # Clean old global requests
             self.minute_requests = [t for t in self.minute_requests if now - t < 60]
             self.hour_requests = [t for t in self.hour_requests if now - t < 3600]
 
-            # Check rate limits
+            # Check optional per-client limits if client_id provided
+            if client_id:
+                client_min = [t for t in self.client_minute_requests[client_id] if now - t < 60]
+                self.client_minute_requests[client_id] = client_min
+                if len(client_min) >= self.requests_per_minute:
+                    return False, f"Client rate limit exceeded: {self.requests_per_minute} requests per minute"
+
+                client_hr = [t for t in self.client_hour_requests[client_id] if now - t < 3600]
+                self.client_hour_requests[client_id] = client_hr
+                if len(client_hr) >= self.requests_per_hour:
+                    return False, f"Client rate limit exceeded: {self.requests_per_hour} requests per hour"
+
+            # Check global rate limits
             if len(self.minute_requests) >= self.requests_per_minute:
                 return False, f"Rate limit exceeded: {self.requests_per_minute} requests per minute"
 
@@ -60,28 +76,35 @@ class RateLimitService:
 
     async def check_credits(self, model: str, estimated_tokens: int = 1000) -> tuple[bool, str]:
         """Check if request would exceed credit limits."""
-        cost_per_token = self.model_costs.get(model, 0.0001)  # Default small cost
-        estimated_cost = cost_per_token * (estimated_tokens / 1000)
+        safe_tokens = max(0, int(estimated_tokens or 0))
+        cost_per_token = self.model_costs.get(model, 0.0001)
+        estimated_cost = cost_per_token * (safe_tokens / 1000)
 
         if self.current_credits - estimated_cost < 0:
             return False, f"Insufficient credits. Current: ${self.current_credits:.4f}, Required: ${estimated_cost:.4f}"
 
         return True, ""
 
-    async def record_request(self, model: str, tokens_used: int = 0):
+    async def record_request(self, model: str, tokens_used: int = 0, client_id: Optional[str] = None):
         """Record a completed request for rate limiting."""
         async with self.lock:
             now = time.time()
             self.minute_requests.append(now)
             self.hour_requests.append(now)
 
+            if client_id:
+                self.client_minute_requests[client_id].append(now)
+                self.client_hour_requests[client_id].append(now)
+
             # Deduct credits
+            safe_tokens = max(0, int(tokens_used or 0))
             cost_per_token = self.model_costs.get(model, 0.0001)
-            cost = cost_per_token * (tokens_used / 1000)
-            self.current_credits -= cost
+            cost = cost_per_token * (safe_tokens / 1000)
+            self.current_credits = max(0.0, self.current_credits - cost)
 
             logger.info(
-                f"Request recorded: {model}, tokens: {tokens_used}, cost: ${cost:.6f}, credits remaining: ${self.current_credits:.4f}")
+                f"Request recorded: {model}, tokens: {safe_tokens}, cost: ${cost:.6f}, credits remaining: ${self.current_credits:.4f}"
+            )
 
     async def get_status(self) -> Dict:
         """Get current rate limit and credit status."""
@@ -110,6 +133,13 @@ class RateLimitService:
         """Reset credits (for testing or manual adjustment)."""
         self.current_credits = amount if amount is not None else self.max_credits
         logger.info(f"Credits reset to ${self.current_credits}")
+
+    def clear_history(self):
+        """Clear recorded timestamps and client histories."""
+        self.minute_requests.clear()
+        self.hour_requests.clear()
+        self.client_minute_requests.clear()
+        self.client_hour_requests.clear()
 
 
 # Global instance

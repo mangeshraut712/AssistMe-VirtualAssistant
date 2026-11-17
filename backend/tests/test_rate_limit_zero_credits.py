@@ -1,9 +1,7 @@
 import asyncio
 import importlib.util
-import os
 from pathlib import Path
-
-os.environ["MAX_CREDITS"] = "0"
+import pytest
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "app" / "services" / "rate_limit_service.py"
 
@@ -16,7 +14,8 @@ def _load_service_class():
     return module.RateLimitService
 
 
-def test_get_status_does_not_divide_by_zero_when_max_credits_is_zero() -> None:
+def test_get_status_does_not_divide_by_zero_when_max_credits_is_zero(monkeypatch) -> None:
+    monkeypatch.setenv("MAX_CREDITS", "0")
     service = _load_service_class()()
     assert service.max_credits == 0
     status = asyncio.run(service.get_status())
