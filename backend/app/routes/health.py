@@ -11,6 +11,8 @@ Provides comprehensive health checks for:
 
 from __future__ import annotations
 
+import os
+import sys
 import time
 from datetime import datetime, timezone
 from typing import Any, Literal
@@ -171,6 +173,20 @@ async def api_status(request: Request) -> APIStatus:
     )
 
 
+def _get_memory_mb() -> float | None:
+    """Calculate process peak RSS in MB across Linux and macOS (None on Windows)."""
+    if os.name == "nt":
+        return None
+    try:
+        import resource
+
+        # On macOS (Darwin) ru_maxrss is measured in bytes; on Linux it is in KiB.
+        divisor = 1024 * 1024 if sys.platform == "darwin" else 1024
+        return round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / divisor, 2)
+    except Exception:
+        return None
+
+
 @router.get(
     "/metrics",
     summary="Basic Metrics",
@@ -178,9 +194,6 @@ async def api_status(request: Request) -> APIStatus:
 )
 async def metrics() -> dict[str, Any]:
     """Get basic application metrics."""
-    import sys
-    import os
-
     uptime = time.time() - _start_time
     settings = get_settings()
 
@@ -188,12 +201,7 @@ async def metrics() -> dict[str, Any]:
         "uptime_seconds": round(uptime, 2),
         "python_version": sys.version.split()[0],
         "environment": settings.environment,
-        "memory_mb": round(
-            __import__("resource").getrusage(
-                __import__("resource").RUSAGE_SELF
-            ).ru_maxrss / 1024,
-            2
-        ) if os.name != "nt" else None,
+        "memory_mb": _get_memory_mb(),
     }
 
 

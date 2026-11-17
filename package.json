@@ -45,10 +45,11 @@
     "url": "https://github.com/mangeshraut712/AssistMe-VirtualAssistant/issues"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@vitejs/plugin-legacy": "^8.2.4",
-    "@eslint/js": "10.0.1",
-    "eslint": "10.14.0",
+    "eslint": "^9.39.5",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "17.14.0",
@@ -84,6 +85,8 @@
     "highlight.js": "^11.12.0",
     "lucide-react": "^1.72.0",
     "marked": "^18.2.0",
+    "motion-dom": "^14.14.0",
+    "motion-utils": "^14.7.0",
     "postcss": "^8.5.32",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
