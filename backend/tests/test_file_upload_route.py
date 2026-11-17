@@ -94,3 +94,22 @@ def test_upload_oversized_file_rejected(monkeypatch):
     )
     expect(response.status_code == 400, "oversized file returns 400")
     expect("exceeds the upload size limit" in response.json()["detail"], "helpful size error")
+
+
+def test_safe_upload_name_strips_control_chars_and_traversal():
+    """safe_upload_name removes ASCII control characters and path traversal."""
+    file_service_module = importlib.import_module("app.services.file_service")
+    expect(
+        file_service_module.safe_upload_name("injected\r\nheader\x07.txt") == "injectedheader.txt",
+        "safe_upload_name strips CRLF and bell chars",
+    )
+    expect(
+        file_service_module.safe_upload_name("test\x00file\tname.txt") == "testfilename.txt",
+        "safe_upload_name strips tab and null chars",
+    )
+    expect(
+        file_service_module.safe_upload_name("../../../secret.txt") == "secret.txt",
+        "safe_upload_name strips directory traversal",
+    )
+    expect(file_service_module.safe_upload_name("") == "upload", "empty fallback")
+    expect(file_service_module.safe_upload_name(None) == "upload", "none fallback")
