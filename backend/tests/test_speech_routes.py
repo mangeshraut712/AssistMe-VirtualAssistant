@@ -144,3 +144,27 @@ def test_transcribe_stream_oversized_closes_1009(monkeypatch):
         msg = websocket.receive()
         expect(msg["type"] == "websocket.close", "type must be websocket.close")
         expect(msg["code"] == 1009, "connection should close with 1009 code")
+
+
+def test_transcribe_audio_trims_language_and_handles_missing_keys(monkeypatch):
+    """POST /api/speech/transcribe trims language and handles sparse result gracefully."""
+    speech_route_module = importlib.import_module("app.routes.speech")
+    mock_service = AsyncMock()
+    mock_service.transcribe.return_value = {"text": "Trimming works"}
+    monkeypatch.setattr(speech_route_module, "whisper_service", mock_service)
+
+    client = TestClient(app)
+    fake_wav = b"RIFF" + b"\x00" * 100
+    response = client.post(
+        "/api/speech/transcribe",
+        files={"file": ("sample.wav", fake_wav, "audio/wav")},
+        data={"language": "  es  "},
+    )
+    expect(response.status_code == 200, "transcribe returns 200")
+    data = response.json()
+    expect(data["success"] is True, "success must be true")
+    expect(data["text"] == "Trimming works", "text matches")
+    expect(data["language"] == "es", "language falls back to cleaned input")
+    expect(data["segments"] == [], "segments defaults to empty list")
+    mock_service.transcribe.assert_awaited_once_with(fake_wav, "es")
+

@@ -25,13 +25,18 @@ async def generate_image(request: ImageGenRequest):
     if not cleaned_prompt:
         raise HTTPException(status_code=400, detail="Prompt must not be empty")
 
+    cleaned_model = (request.model.strip().lower() if request.model and request.model.strip() else "flux")
+    cleaned_size = (request.size.strip().lower() if request.size and request.size.strip() else "1024x1024")
+    cleaned_quality = (request.quality.strip().lower() if request.quality and request.quality.strip() else "standard")
+    cleaned_style = (request.style.strip() if request.style and request.style.strip() else None)
+
     try:
         image_url = await image_service.generate_image(
             prompt=cleaned_prompt,
-            model=request.model or "flux",
-            size=request.size or "1024x1024",
-            quality=request.quality or "standard",
-            style=request.style,
+            model=cleaned_model,
+            size=cleaned_size,
+            quality=cleaned_quality,
+            style=cleaned_style,
         )
         return {
             "success": True,

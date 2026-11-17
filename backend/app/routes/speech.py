@@ -41,15 +41,19 @@ async def transcribe_audio(
     """
     try:
         audio_bytes = await read_limited(file, MAX_AUDIO_BYTES)
+        cleaned_language = language.strip() if language and language.strip() else None
 
         # Transcribe
-        result = await whisper_service.transcribe(audio_bytes, language)
+        result = await whisper_service.transcribe(audio_bytes, cleaned_language)
+
+        if not isinstance(result, dict):
+            result = {}
 
         return {
             "success": True,
-            "text": result["text"],
-            "language": result["language"],
-            "segments": result["segments"],
+            "text": result.get("text", ""),
+            "language": result.get("language") or cleaned_language,
+            "segments": result.get("segments", []),
         }
     except UploadRejected as exc:
         raise HTTPException(
