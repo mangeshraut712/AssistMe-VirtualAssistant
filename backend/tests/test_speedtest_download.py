@@ -48,3 +48,38 @@ def test_download_content_length_follows_the_clamp(monkeypatch):
         "Content-Length should be the floor",
     )
     expect(len(tiny.content) == 32, "body should be padded to the floor")
+
+
+def test_ping_returns_pong_and_no_cache_headers():
+    """Ping endpoint returns pong status, timestamp, and aggressive no-cache headers."""
+    client = _client()
+    response = client.get("/api/speedtest/ping")
+    expect(response.status_code == 200, "ping should succeed")
+    data = response.json()
+    expect(data.get("status") == "pong", "status must be pong")
+    expect("timestamp" in data, "timestamp must be present")
+    cache_control = response.headers.get("cache-control", "")
+    expect("no-store" in cache_control and "no-cache" in cache_control, "no-cache headers required")
+
+
+def test_upload_calculates_size_and_speed():
+    """Upload endpoint consumes bytes, logs timing, and computes mbps throughput."""
+    client = _client()
+    payload = b"X" * 1024 * 64  # 64 KB upload
+    response = client.post("/api/speedtest/upload", content=payload)
+    expect(response.status_code == 200, "upload should succeed")
+    data = response.json()
+    expect(data.get("status") == "ok", "status should be ok")
+    expect(data.get("size_received") == 1024 * 64, "size received must match payload")
+    expect("duration" in data and data["duration"] >= 0, "duration must be non-negative")
+    expect("speed_mbps" in data and data["speed_mbps"] >= 0, "speed_mbps must be reported")
+
+
+def test_upload_rejects_payload_exceeding_limit(monkeypatch):
+    """Upload exceeding maximum byte limit must return HTTP 413."""
+    monkeypatch.setattr(speedtest_module, "MAX_UPLOAD_BYTES", 1024)
+    client = _client()
+    oversized = b"A" * 2048
+    response = client.post("/api/speedtest/upload", content=oversized)
+    expect(response.status_code == 413, "oversized upload should return 413")
+    expect("Upload exceeds" in response.json()["detail"], "helpful 413 error detail")

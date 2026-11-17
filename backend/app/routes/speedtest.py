@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import os
 import time
 import logging
@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 MIN_DOWNLOAD_BYTES = 1024
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+
+_CHUNK_SIZE = 256 * 1024
+_STATIC_PROBE_CHUNK = os.urandom(_CHUNK_SIZE)
 
 
 def clamp_download_size(size: int) -> int:
@@ -31,16 +34,10 @@ async def download(size: int = MAX_DOWNLOAD_BYTES):
     payload_size = clamp_download_size(size)
 
     def generate_random_bytes():
-        # Using a pre-generated chunk for performance (don't want CPU to bottleneck the network)
-        chunk_size = 512 * 1024  # 512KB chunks
-        chunk = os.urandom(chunk_size)
         bytes_sent = 0
         while bytes_sent < payload_size:
-            take = min(chunk_size, payload_size - bytes_sent)
-            if take == chunk_size:
-                yield chunk
-            else:
-                yield chunk[:take]
+            take = min(_CHUNK_SIZE, payload_size - bytes_sent)
+            yield _STATIC_PROBE_CHUNK[:take]
             bytes_sent += take
 
     return StreamingResponse(
@@ -71,12 +68,14 @@ async def upload(request: Request):
                 detail="Upload exceeds the 25 MB limit",
             )
 
-    duration = time.time() - start_time
+    duration = max(time.time() - start_time, 0.0001)
     logger.info("Speedtest Upload: %s bytes in %.2fs", size, duration)
+    speed_mbps = round((size * 8) / (duration * 1_000_000), 2)
 
     return {
         "size_received": size,
         "duration": duration,
+        "speed_mbps": speed_mbps,
         "status": "ok"
     }
 
@@ -84,4 +83,7 @@ async def upload(request: Request):
 @router.get("/ping")
 async def ping():
     """Simple ping for latency measurement."""
-    return {"status": "pong", "timestamp": time.time()}
+    return JSONResponse(
+        content={"status": "pong", "timestamp": time.time()},
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+    )
