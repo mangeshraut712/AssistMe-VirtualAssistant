@@ -184,16 +184,21 @@ async def metrics() -> dict[str, Any]:
     uptime = time.time() - _start_time
     settings = get_settings()
 
+    import resource
+
+    # On macOS (Darwin) ru_maxrss is measured in bytes; on Linux it is in KiB.
+    divisor = 1024 * 1024 if sys.platform == "darwin" else 1024
+    memory_mb = (
+        round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / divisor, 2)
+        if os.name != "nt"
+        else None
+    )
+
     return {
         "uptime_seconds": round(uptime, 2),
         "python_version": sys.version.split()[0],
         "environment": settings.environment,
-        "memory_mb": round(
-            __import__("resource").getrusage(
-                __import__("resource").RUSAGE_SELF
-            ).ru_maxrss / 1024,
-            2
-        ) if os.name != "nt" else None,
+        "memory_mb": memory_mb,
     }
 
 
