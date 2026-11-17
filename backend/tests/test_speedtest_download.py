@@ -83,3 +83,21 @@ def test_upload_rejects_payload_exceeding_limit(monkeypatch):
     response = client.post("/api/speedtest/upload", content=oversized)
     expect(response.status_code == 413, "oversized upload should return 413")
     expect("Upload exceeds" in response.json()["detail"], "helpful 413 error detail")
+
+
+def test_upload_empty_payload():
+    """Empty upload body returns 0 bytes received with status ok."""
+    client = _client()
+    response = client.post("/api/speedtest/upload", content=b"")
+    expect(response.status_code == 200, "empty upload should succeed")
+    data = response.json()
+    expect(data.get("size_received") == 0, "size received should be zero")
+    expect(data.get("status") == "ok", "status should be ok")
+
+
+def test_clamp_download_size_handles_invalid_types():
+    """Invalid non-integer size values safely default to MIN_DOWNLOAD_BYTES."""
+    from app.routes.speedtest import MIN_DOWNLOAD_BYTES, clamp_download_size
+    expect(clamp_download_size("invalid") == MIN_DOWNLOAD_BYTES, "string should fallback to min")
+    expect(clamp_download_size(None) == MIN_DOWNLOAD_BYTES, "None should fallback to min")
+    expect(clamp_download_size(-500) == MIN_DOWNLOAD_BYTES, "negative should clamp to min")
