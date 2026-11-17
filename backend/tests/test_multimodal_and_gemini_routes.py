@@ -118,3 +118,46 @@ def test_document_extract_empty_file_rejected():
     )
     expect(response.status_code == 400, "empty document returns 400")
     expect(response.json()["detail"] == "Empty file", "detail specifies Empty file")
+
+
+def test_gemini_key_origin_and_env_guards(monkeypatch):
+    """GET /api/gemini/key guards disallowed origin and missing/present API key."""
+    client = TestClient(app)
+
+    # 1. Disallowed origin returns 403
+    forbidden = client.get("/api/gemini/key", headers={"origin": "https://malicious-site.example"})
+    expect(forbidden.status_code == 403, "disallowed origin returns 403")
+
+    # 2. Allowed / same-origin without GOOGLE_API_KEY returns 503
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    missing = client.get("/api/gemini/key")
+    expect(missing.status_code == 503, "missing key returns 503")
+    expect("not configured" in missing.json()["detail"], "helpful detail")
+
+    # 3. Allowed with GOOGLE_API_KEY returns 200 with apiKey
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key-12345")
+    success = client.get("/api/gemini/key")
+    expect(success.status_code == 200, "configured key returns 200")
+    expect(success.json().get("apiKey") == "test-google-key-12345", "apiKey matches")
+
+
+def test_gemini_config_voice_parameter():
+    """GET /api/gemini/config supports voice query parameter with normalization and fallback."""
+    client = TestClient(app)
+
+    # Default voice
+    default_res = client.get("/api/gemini/config")
+    expect(default_res.status_code == 200, "default config returns 200")
+    expect(default_res.json()["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"] == "Puck", "default is Puck")
+
+    # Selected valid voice
+    charon_res = client.get("/api/gemini/config?voice=Charon")
+    expect(charon_res.json()["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"] == "Charon", "Charon voice selected")
+
+    # Case-insensitive match
+    kore_res = client.get("/api/gemini/config?voice=  kOre  ")
+    expect(kore_res.json()["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"] == "Kore", "kore normalized to Kore")
+
+    # Unknown voice fallback
+    unknown_res = client.get("/api/gemini/config?voice=NonExistentVoice")
+    expect(unknown_res.json()["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"] == "Puck", "unknown falls back to Puck")

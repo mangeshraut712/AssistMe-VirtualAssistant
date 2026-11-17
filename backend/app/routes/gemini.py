@@ -85,11 +85,18 @@ async def gemini_status():
 
 
 @router.get("/config")
-async def get_gemini_config():
+async def get_gemini_config(voice: str | None = None):
     """Get recommended Gemini Live configuration.
 
     Returns configuration suitable for voice conversations.
     """
+    selected_voice = "Puck"
+    if voice:
+        voice_clean = voice.strip()
+        all_voices = {v.lower(): v for voices in GEMINI_VOICES.values() for v in voices}
+        if voice_clean.lower() in all_voices:
+            selected_voice = all_voices[voice_clean.lower()]
+
     return {
         "model": LIVE_MODEL,
         "generationConfig": {
@@ -100,7 +107,7 @@ async def get_gemini_config():
         "speechConfig": {
             "voiceConfig": {
                 "prebuiltVoiceConfig": {
-                    "voiceName": "Puck"  # Default voice
+                    "voiceName": selected_voice
                 }
             }
         },
