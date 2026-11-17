@@ -58,9 +58,9 @@ def upload_client_detail(code: str) -> str:
 
 
 def safe_upload_name(filename: str | None) -> str:
-    """Drop directory components so a client filename cannot leave the upload dir."""
+    """Drop directory components and control characters so a client filename cannot leave the upload dir."""
     raw = (filename or "upload").replace("\\", "/").split("/")[-1]
-    raw = raw.replace("\x00", "").strip()
+    raw = re.sub(r"[\x00-\x1f\x7f]", "", raw).strip()
     if raw in {"", ".", ".."}:
         return "upload"
     return raw[:255]
