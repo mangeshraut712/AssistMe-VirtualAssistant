@@ -28,6 +28,8 @@ async def upload_file(file: UploadFile = File(...)):
         return {"success": True, "file": public}
     except UploadRejected as exc:
         raise HTTPException(status_code=400, detail=upload_client_detail(exc.code)) from exc
+    except HTTPException:
+        raise
     except _REQUEST_FAILURES as exc:
         raise HTTPException(status_code=500, detail="Request failed") from exc
 

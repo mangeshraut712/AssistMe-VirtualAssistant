@@ -30,6 +30,9 @@ ALLOWED_EXTENSIONS = {
     ".webm",
     ".mp4",
     ".mov",
+    ".json",
+    ".csv",
+    ".xml",
 }
 
 _MIME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9!#$&^_.+-]{0,126}/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$")

@@ -56,6 +56,8 @@ async def transcribe_audio(
             status_code=400,
             detail=upload_client_detail(exc.code),
         ) from exc
+    except HTTPException:
+        raise
     except _REQUEST_FAILURES as exc:
         raise HTTPException(status_code=500, detail="Transcription failed") from exc
 
@@ -109,8 +111,9 @@ async def transcribe_stream(websocket: WebSocket):
                 {"success": False, "error": "Transcription failed"}
             )
             await websocket.close(code=1011)
-        finally:
-            return
+        except Exception:
+            pass
+        return
 
 
 @router.post("/detect-language")
@@ -136,6 +139,8 @@ async def detect_language(file: UploadFile = File(...)):
             status_code=400,
             detail=upload_client_detail(exc.code),
         ) from exc
+    except HTTPException:
+        raise
     except _REQUEST_FAILURES as exc:
         raise HTTPException(
             status_code=500,
