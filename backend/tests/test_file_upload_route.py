@@ -127,3 +127,45 @@ def test_safe_mime_and_public_file_record():
     expect("path" not in public, "internal path must be stripped")
     expect(public.get("id") == "1", "id preserved")
     expect(public_file_record(None) == {}, "none record returns empty dict")
+
+
+def test_upload_multiple_files_success(monkeypatch, tmp_path):
+    """POST /api/files/upload-multiple with valid files returns status 200 with all files."""
+    file_service_module = importlib.import_module("app.services.file_service")
+    monkeypatch.setattr(file_service_module, "UPLOAD_DIR", tmp_path)
+    client = TestClient(app)
+
+    files = [
+        ("files", ("first.txt", b"First text file", "text/plain")),
+        ("files", ("second.json", b'{"key": "value"}', "application/json")),
+    ]
+    response = client.post("/api/files/upload-multiple", files=files)
+    expect(response.status_code == 200, "upload-multiple returns 200")
+    data = response.json()
+    expect(data.get("success") is True, "success should be true")
+    expect(len(data.get("files", [])) == 2, "two files returned")
+    names = [f.get("filename") for f in data.get("files", [])]
+    expect("first.txt" in names and "second.json" in names, "both filenames present")
+
+
+def test_upload_multiple_files_mixed_partial_failure(monkeypatch, tmp_path):
+    """POST /api/files/upload-multiple with a mix of valid and invalid files reports individual errors."""
+    file_service_module = importlib.import_module("app.services.file_service")
+    monkeypatch.setattr(file_service_module, "UPLOAD_DIR", tmp_path)
+    client = TestClient(app)
+
+    files = [
+        ("files", ("good.txt", b"Good content", "text/plain")),
+        ("files", ("blocked.exe", b"binary", "application/octet-stream")),
+    ]
+    response = client.post("/api/files/upload-multiple", files=files)
+    expect(response.status_code == 200, "upload-multiple returns 200 even with partial failure")
+    data = response.json()
+    expect(data.get("success") is False, "overall success is false because of blocked file")
+    results = data.get("files", [])
+    expect(len(results) == 2, "two results returned")
+    good_res = next(f for f in results if f.get("filename") == "good.txt")
+    expect("id" in good_res, "valid file has id")
+    blocked_res = next(f for f in results if f.get("filename") == "blocked.exe")
+    expect("error" in blocked_res, "blocked file reports error")
+
