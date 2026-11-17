@@ -161,3 +161,134 @@ def test_gemini_config_voice_parameter():
     # Unknown voice fallback
     unknown_res = client.get("/api/gemini/config?voice=NonExistentVoice")
     expect(unknown_res.json()["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"] == "Puck", "unknown falls back to Puck")
+
+
+def test_video_analyze_success(monkeypatch):
+    """POST /api/video/analyze with valid video returns analysis description."""
+    multimodal_module = importlib.import_module("app.routes.multimodal")
+    mock_provider = AsyncMock()
+    mock_provider.chat_completion.return_value = {
+        "response": "A video of a drone flying over a coastline.",
+        "model": "google/gemini-2.0-flash-001:free",
+    }
+    monkeypatch.setattr(multimodal_module, "get_provider", lambda: mock_provider)
+
+    client = TestClient(app)
+    fake_mp4 = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 40
+    response = client.post(
+        "/api/video/analyze",
+        files={"file": ("clip.mp4", fake_mp4, "video/mp4")},
+        data={"prompt": "What happens in this clip?"},
+    )
+    expect(response.status_code == 200, "video analyze returns 200")
+    data = response.json()
+    expect(data.get("description") == "A video of a drone flying over a coastline.", "description matches")
+    expect("model" in data, "model field returned")
+
+
+def test_video_analyze_service_error_500(monkeypatch):
+    """POST /api/video/analyze handles provider exception with 500 status."""
+    multimodal_module = importlib.import_module("app.routes.multimodal")
+    mock_provider = AsyncMock()
+    mock_provider.chat_completion.side_effect = RuntimeError("Upstream provider down")
+    monkeypatch.setattr(multimodal_module, "get_provider", lambda: mock_provider)
+
+    client = TestClient(app)
+    fake_mp4 = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 40
+    response = client.post(
+        "/api/video/analyze",
+        files={"file": ("clip.mp4", fake_mp4, "video/mp4")},
+    )
+    expect(response.status_code == 500, "service failure returns 500")
+    expect(response.json()["detail"] == "Request failed", "detail is Request failed")
+
+
+def test_vision_analyze_service_error_500(monkeypatch):
+    """POST /api/vision/analyze handles provider exception with 500 status."""
+    multimodal_module = importlib.import_module("app.routes.multimodal")
+    mock_provider = AsyncMock()
+    mock_provider.chat_completion.side_effect = RuntimeError("Vision service timeout")
+    monkeypatch.setattr(multimodal_module, "get_provider", lambda: mock_provider)
+
+    client = TestClient(app)
+    fake_png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 50
+    response = client.post(
+        "/api/vision/analyze",
+        files={"file": ("photo.png", fake_png, "image/png")},
+    )
+    expect(response.status_code == 500, "vision service failure returns 500")
+    expect(response.json()["detail"] == "Request failed", "detail is Request failed")
+
+
+def test_document_extract_success(monkeypatch):
+    """POST /api/documents/extract extracts text and produces AI summary."""
+    multimodal_module = importlib.import_module("app.routes.multimodal")
+    mock_provider = AsyncMock()
+    mock_provider.chat_completion.return_value = {
+        "response": "Summary of quarterly earnings report.",
+        "model": "google/gemini-2.0-flash-001:free",
+    }
+    monkeypatch.setattr(multimodal_module, "get_provider", lambda: mock_provider)
+
+    async def fake_save(file):
+        return {"path": "/tmp/test_report.pdf", "content_type": "application/pdf"}
+
+    async def fake_extract(path, ctype):
+        return "Q3 Revenue reached 50M with 20% YoY growth."
+
+    monkeypatch.setattr(multimodal_module.file_service, "save_file", fake_save)
+    monkeypatch.setattr(multimodal_module.file_service, "extract_text", fake_extract)
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/documents/extract",
+        files={"file": ("report.pdf", b"%PDF-1.4 sample content", "application/pdf")},
+        data={"prompt": "Provide executive summary."},
+    )
+    expect(response.status_code == 200, "document extraction returns 200")
+    data = response.json()
+    expect(data.get("text") == "Q3 Revenue reached 50M with 20% YoY growth.", "extracted text returned")
+    expect(data.get("description") == "Summary of quarterly earnings report.", "ai summary returned")
+
+
+def test_document_extract_no_text_fallback(monkeypatch):
+    """POST /api/documents/extract handles empty text extraction gracefully without calling provider."""
+    multimodal_module = importlib.import_module("app.routes.multimodal")
+
+    async def fake_save(file):
+        return {"path": "/tmp/empty.pdf", "content_type": "application/pdf"}
+
+    async def fake_extract(path, ctype):
+        return ""
+
+    monkeypatch.setattr(multimodal_module.file_service, "save_file", fake_save)
+    monkeypatch.setattr(multimodal_module.file_service, "extract_text", fake_extract)
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/documents/extract",
+        files={"file": ("empty.pdf", b"%PDF-1.4 empty", "application/pdf")},
+    )
+    expect(response.status_code == 200, "returns 200 with fallback message")
+    data = response.json()
+    expect("Could not extract text" in data.get("text", ""), "fallback text returned")
+    expect(data.get("description") == "No text found.", "fallback description returned")
+
+
+def test_document_extract_service_error_500(monkeypatch):
+    """POST /api/documents/extract returns 500 when file_service fails unexpectedly."""
+    multimodal_module = importlib.import_module("app.routes.multimodal")
+
+    async def failing_save(file):
+        raise OSError("Disk quota exceeded")
+
+    monkeypatch.setattr(multimodal_module.file_service, "save_file", failing_save)
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/documents/extract",
+        files={"file": ("report.pdf", b"sample content", "application/pdf")},
+    )
+    expect(response.status_code == 500, "disk failure returns 500")
+    expect(response.json()["detail"] == "Request failed", "standard error detail")
+
