@@ -13,8 +13,8 @@ import app.models  # noqa: F401 - ensure models are registered with Base.metadat
 from tests.support import expect
 
 
-@pytest.fixture
-def auth_client():
+@pytest.fixture(params=["app.routes.auth", "app.routes.auth_standalone"])
+def auth_client(request):
     """Create test client with in-memory SQLite and auth router."""
     engine = create_engine(
         "sqlite://",
@@ -31,7 +31,7 @@ def auth_client():
         finally:
             db.close()
 
-    auth_module = importlib.import_module("app.routes.auth")
+    auth_module = importlib.import_module(request.param)
     app = FastAPI()
     app.include_router(auth_module.router)
     app.dependency_overrides[get_db] = override_get_db
