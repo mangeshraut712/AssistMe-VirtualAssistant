@@ -80,6 +80,8 @@ class EmbeddingService:
         self, documents: List[str], source_ids: Optional[List[str]] = None
     ) -> None:
         """Build FAISS index from documents."""
+        if faiss is None:
+            raise RuntimeError("faiss is unavailable")
         self.documents = documents
         self.source_ids = source_ids or [f"doc-{i}" for i in range(len(documents))]
         embeddings = await self.embed_batch(documents)
@@ -96,7 +98,7 @@ class EmbeddingService:
 
     async def search(self, query: str, top_k: int = 3) -> List[Tuple[str, float]]:
         """Search for similar documents."""
-        if not self.index:
+        if not self.index or top_k <= 0 or not query.strip():
             return []
 
         query_embedding = await self.embed_text(query)
@@ -132,9 +134,17 @@ class EmbeddingService:
         with open(resolved, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        if not isinstance(data, list):
+            logger.warning(
+                "Knowledge base file %s does not contain a list", resolved
+            )
+            return 0
+
         documents: List[str] = []
         source_ids: List[str] = []
         for entry in data:
+            if not isinstance(entry, dict):
+                continue
             # combine title + content for better recall
             text = " ".join(
                 str(entry.get(key, "")).strip()
