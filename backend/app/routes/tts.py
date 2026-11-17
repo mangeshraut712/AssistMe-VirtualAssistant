@@ -67,6 +67,8 @@ async def synthesize(req: TTSRequest):
         return {"success": True, **result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except _REQUEST_FAILURES as exc:
         raise HTTPException(
             status_code=500, detail="Speech synthesis failed"
@@ -98,6 +100,8 @@ async def voice_response(req: VoiceConversationRequest):
         return {"success": True, **result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except _REQUEST_FAILURES as exc:
         raise HTTPException(
             status_code=500, detail="Voice response failed"

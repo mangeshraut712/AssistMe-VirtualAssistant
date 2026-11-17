@@ -318,13 +318,13 @@ class GeminiVoiceService:
         Returns:
             Dict with base64 WAV audio data and emotion info
         """
-        if not self.api_key:
-            raise ValueError("GOOGLE_API_KEY not configured")
-
         text = (text or "").strip()
         if not text:
             raise ValueError("Text is required")
         assert_tts_payload_within_limit(text, style)
+
+        if not self.api_key:
+            raise ValueError("GOOGLE_API_KEY not configured")
 
         # IMPORTANT: Normalize text for TTS
         text = self.normalizer.normalize_for_tts(text)
