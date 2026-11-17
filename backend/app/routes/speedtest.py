@@ -19,7 +19,7 @@ def clamp_download_size(size: int) -> int:
     """Keep a download probe inside a fixed window."""
     try:
         size = int(size)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return MIN_DOWNLOAD_BYTES
     if size < MIN_DOWNLOAD_BYTES:
         return MIN_DOWNLOAD_BYTES
