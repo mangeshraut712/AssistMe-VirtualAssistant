@@ -175,6 +175,8 @@ async def extract_document(
             status_code=400,
             detail=upload_client_detail(exc.code),
         ) from exc
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Document analysis failed: {e}")
         raise HTTPException(status_code=500, detail="Request failed")
