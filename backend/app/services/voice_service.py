@@ -67,8 +67,8 @@ class VoiceService:
 
             logger.info(f"Transcribed: {user_text[:100]}... (Language: {detected_language})")
 
-            # Step 2: Prepare messages for LLM
-            messages = conversation_history or []
+            # Step 2: Prepare messages for LLM without mutating caller state
+            messages = [dict(msg) for msg in conversation_history] if conversation_history else []
 
             # Add system message for voice chat if not present
             if not any(msg.get("role") == "system" for msg in messages):
@@ -169,8 +169,8 @@ class VoiceService:
                 "language": detected_language,
             }
 
-            # Step 2: Prepare messages
-            messages = conversation_history or []
+            # Step 2: Prepare messages without mutating caller state
+            messages = [dict(msg) for msg in conversation_history] if conversation_history else []
             if not any(msg.get("role") == "system" for msg in messages):
                 messages.insert(
                     0,
@@ -219,8 +219,8 @@ class VoiceService:
                     )
                     yield {
                         "type": "audio",
-                        "audio": tts_result["audio"],
-                        "format": tts_result["mimeType"],
+                        "audio": tts_result.get("audio"),
+                        "format": tts_result.get("mimeType") or tts_result.get("format", "audio/wav"),
                     }
                 except Exception as exc:
                     logger.warning(f"TTS synthesis failed (stream): {exc}")
