@@ -96,8 +96,11 @@ def test_upload_empty_payload():
 
 
 def test_clamp_download_size_handles_invalid_types():
-    """Invalid non-integer size values safely default to MIN_DOWNLOAD_BYTES."""
+    """Invalid non-integer and overflow size values safely default to MIN_DOWNLOAD_BYTES."""
     from app.routes.speedtest import MIN_DOWNLOAD_BYTES, clamp_download_size
     expect(clamp_download_size("invalid") == MIN_DOWNLOAD_BYTES, "string should fallback to min")
     expect(clamp_download_size(None) == MIN_DOWNLOAD_BYTES, "None should fallback to min")
     expect(clamp_download_size(-500) == MIN_DOWNLOAD_BYTES, "negative should clamp to min")
+    expect(clamp_download_size(float("inf")) == MIN_DOWNLOAD_BYTES, "positive infinity should fallback to min without overflow")
+    expect(clamp_download_size(float("-inf")) == MIN_DOWNLOAD_BYTES, "negative infinity should fallback to min without overflow")
+    expect(clamp_download_size(float("nan")) == MIN_DOWNLOAD_BYTES, "NaN should fallback to min")
