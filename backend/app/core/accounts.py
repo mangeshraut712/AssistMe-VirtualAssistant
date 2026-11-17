@@ -14,9 +14,11 @@ from .security import (
 
 def register_user(db: Any, email: str, username: str, password: str) -> Any:
     """Persist a new user and return the stored row."""
+    clean_email = (email or "").strip().lower()
+    clean_username = (username or "").strip()
     user = User(
-        email=email,
-        username=username,
+        email=clean_email,
+        username=clean_username,
         hashed_password=get_password_hash(password),
     )
     db.add(user)

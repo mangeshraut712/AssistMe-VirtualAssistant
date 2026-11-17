@@ -77,6 +77,35 @@ def test_register_duplicate_email_rejected(auth_client):
     expect("already exists" in res2.json()["detail"], "helpful duplicate detail")
 
 
+def test_register_email_case_insensitivity_and_whitespace(auth_client):
+    """Registration normalizes email casing and trims whitespace."""
+    user_payload = {
+        "email": "  MixedCase@Example.COM  ",
+        "username": "  cased_user  ",
+        "password": "Password123",
+    }
+    res1 = auth_client.post("/api/auth/register", json=user_payload)
+    expect(res1.status_code == 200, "mixed case registration should succeed")
+
+    # Duplicate with lowercase returns 400
+    res2 = auth_client.post(
+        "/api/auth/register",
+        json={
+            "email": "mixedcase@example.com",
+            "username": "other_user",
+            "password": "Password123",
+        },
+    )
+    expect(res2.status_code == 400, "duplicate lowercase email must return 400")
+
+    # Login works with both username and lowercase email
+    login_res = auth_client.post(
+        "/api/auth/login",
+        data={"username": "mixedcase@example.com", "password": "Password123"},
+    )
+    expect(login_res.status_code == 200, "login with normalized email must succeed")
+
+
 def test_register_duplicate_username_rejected(auth_client):
     """Attempting to register with an already existing username returns HTTP 400."""
     user_payload = {
