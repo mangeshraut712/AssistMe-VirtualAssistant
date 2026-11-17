@@ -27,19 +27,23 @@ class KnowledgeSearchResult(TypedDict, total=False):
 @router.post("/ingest")
 async def ingest_documents(request: IngestRequest):
     """Ingest documents into the knowledge base."""
-    try:
-        if not request.documents:
-            raise HTTPException(status_code=400, detail="No documents provided")
+    valid_documents = [doc.strip() for doc in request.documents if doc and doc.strip()]
+    if not valid_documents:
+        raise HTTPException(status_code=400, detail="No non-empty documents provided")
 
-        await embedding_service.build_index(request.documents)
+    try:
+        await embedding_service.build_index(valid_documents)
 
         return {
             "success": True,
-            "count": len(request.documents),
+            "count": len(valid_documents),
             "message": "Knowledge base updated",
         }
-    except Exception:
-        raise HTTPException(status_code=500, detail="Request failed")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Failed to ingest documents: {exc}")
+        raise HTTPException(status_code=500, detail="Request failed") from exc
 
 
 @router.post("/search")
@@ -49,12 +53,16 @@ async def search_knowledge(request: SearchRequest):
 
     This endpoint combines local RAG with web search for comprehensive results.
     """
+    query = request.normalized_query()
+    if not query:
+        raise HTTPException(status_code=400, detail="Search query must not be empty")
+
     try:
         results: list[KnowledgeSearchResult] = []
 
         # First, search local knowledge base if available
         if embedding_service.index:
-            local_results = await embedding_service.search(request.query, request.top_k)
+            local_results = await embedding_service.search(query, request.top_k)
             results.extend([
                 {
                     "text": text,
@@ -67,7 +75,7 @@ async def search_knowledge(request: SearchRequest):
         # Then, search the web if enabled
         if request.use_web_search:
             web_results = await web_search_service.search_web(
-                request.query,
+                query,
                 max_results=request.top_k
             )
             results.extend([
@@ -85,8 +93,11 @@ async def search_knowledge(request: SearchRequest):
         results = results[:request.top_k * 2]  # Return more results when combining sources
 
         return {"success": True, "results": results}
-    except Exception:
-        raise HTTPException(status_code=500, detail="Request failed")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Knowledge search failed: {exc}")
+        raise HTTPException(status_code=500, detail="Request failed") from exc
 
 
 @router.post("/grokipedia/stream")
@@ -130,27 +141,34 @@ async def grokipedia_search(request: GrokipediaRequest):
     """
     Grokipedia-style deep search with AI-generated answers.
     """
+    query = request.normalized_query()
+    if not query:
+        raise HTTPException(status_code=400, detail="Search query must not be empty")
+
     try:
         search_results = await web_search_service.search_web(
-            request.query,
+            query,
             max_results=request.max_results,
             search_depth=request.search_depth
         )
 
         # For non-streaming, collect the streamed answer.
         answer = ""
-        async for chunk in web_search_service.stream_answer(request.query, context_results=search_results):
+        async for chunk in web_search_service.stream_answer(query, context_results=search_results):
             answer += chunk
 
         return {
             "success": True,
-            "query": request.query,
+            "query": query,
             "answer": answer,
             "sources": search_results,
             "search_depth": request.search_depth
         }
-    except Exception:
-        raise HTTPException(status_code=500, detail="Request failed")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Grokipedia search failed: {exc}")
+        raise HTTPException(status_code=500, detail="Request failed") from exc
 
 
 @router.get("/stats")
