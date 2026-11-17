@@ -48,7 +48,9 @@ class TextNormalizer:
     def normalize_for_tts(text: str) -> str:
         """Normalize text for natural TTS output."""
         if not text:
-            return text
+            return ""
+
+        text = str(text)
 
         # 1. Replace common abbreviations
         abbrevs = {
@@ -98,13 +100,15 @@ class TextNormalizer:
     @staticmethod
     def normalize_for_emergency(text: str) -> Optional[str]:
         """Check for emergency keywords and return fixed script."""
+        if not text:
+            return None
         emergency_keywords = {
             'emergency': "Please contact emergency services immediately. Call 911 or your local emergency number.",
             'suicide': "If you're in crisis, please contact a crisis helpline. You're not alone.",
             'heart attack': "Call emergency services immediately. Sit down and stay calm.",
             'fire': "Leave the building immediately and call emergency services.",
         }
-        text_lower = text.lower()
+        text_lower = str(text).lower()
         for keyword, response in emergency_keywords.items():
             if keyword in text_lower:
                 return response
@@ -157,7 +161,9 @@ class EmotionDetector:
     @classmethod
     def detect_emotion(cls, text: str) -> str:
         """Detect the primary emotion in text."""
-        text_lower = text.lower()
+        if not text:
+            return "neutral"
+        text_lower = str(text).lower()
 
         # Check for paralinguistic tags first
         for tag in cls.PARALINGUISTIC_TAGS:
@@ -186,11 +192,12 @@ class EmotionDetector:
     @classmethod
     def process_text_with_emotion(cls, text: str) -> tuple[str, str, str]:
         """Process text and return (cleaned_text, style_prompt, emotion)."""
-        emotion = cls.detect_emotion(text)
+        safe_text = "" if text is None else str(text)
+        emotion = cls.detect_emotion(safe_text)
         style_prompt = cls.get_style_prompt(emotion)
 
         # Remove paralinguistic tags from text
-        cleaned_text = text
+        cleaned_text = safe_text
         for tag in cls.PARALINGUISTIC_TAGS:
             cleaned_text = cleaned_text.replace(tag, "")
         cleaned_text = cleaned_text.strip()
