@@ -22,21 +22,23 @@ def register(
     db: Session = Depends(get_db),
 ) -> Any:
     """Register a new user."""
-    by_email = db.query(User).filter(User.email == user_in.email).first()
+    clean_email = (user_in.email or "").strip().lower()
+    clean_username = (user_in.username or "").strip()
+    by_email = db.query(User).filter(User.email == clean_email).first()
     if by_email is not None:
         raise HTTPException(
             status_code=400,
             detail="The user with this email already exists in the system.",
         )
 
-    by_name = db.query(User).filter(User.username == user_in.username).first()
+    by_name = db.query(User).filter(User.username == clean_username).first()
     if by_name is not None:
         raise HTTPException(
             status_code=400,
             detail="The user with this username already exists in the system.",
         )
 
-    created = register_user(db, user_in.email, user_in.username, user_in.password)
+    created = register_user(db, clean_email, clean_username, user_in.password)
     return issue_bearer_token(created.username)
 
 
