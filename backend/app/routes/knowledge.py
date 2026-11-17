@@ -105,12 +105,16 @@ async def grokipedia_stream(request: GrokipediaRequest):
     """
     Streamed Grokipedia article with real-time web search integration.
     """
+    query = request.normalized_query()
+    if not query:
+        raise HTTPException(status_code=400, detail="Search query must not be empty")
+
     async def stream_generator():
         try:
             # 1. Search (First step is non-streamed for context gathering)
-            logger.info(f"Grokipedia search for: {request.query}")
+            logger.info(f"Grokipedia search for: {query}")
             search_results = await web_search_service.search_web(
-                request.query,
+                query,
                 max_results=request.max_results,
                 search_depth=request.search_depth
             )
@@ -121,7 +125,7 @@ async def grokipedia_stream(request: GrokipediaRequest):
 
             # 3. Stream the answer
             async for chunk in web_search_service.stream_answer(
-                request.query,
+                query,
                 context_results=search_results
             ):
                 if chunk:
