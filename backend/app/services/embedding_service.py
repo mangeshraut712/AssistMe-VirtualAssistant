@@ -5,9 +5,18 @@ import logging
 import os
 from typing import Any, List, Optional, Tuple
 
-import faiss
+try:
+    import faiss
+except ImportError:
+    faiss = None
+
 import numpy as np
-from sentence_transformers import SentenceTransformer
+
+try:
+    from sentence_transformers import SentenceTransformer
+except Exception:
+    SentenceTransformer = None
+
 from starlette.concurrency import run_in_threadpool
 
 logger = logging.getLogger(__name__)
@@ -28,6 +37,9 @@ class EmbeddingService:
         """Load the model if not already loaded."""
         if self.model:
             return
+
+        if SentenceTransformer is None:
+            raise RuntimeError("sentence-transformers is unavailable")
 
         if self._is_loading:
             logger.warning("Embedding model is already loading...")
