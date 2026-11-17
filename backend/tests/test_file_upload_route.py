@@ -113,3 +113,17 @@ def test_safe_upload_name_strips_control_chars_and_traversal():
     )
     expect(file_service_module.safe_upload_name("") == "upload", "empty fallback")
     expect(file_service_module.safe_upload_name(None) == "upload", "none fallback")
+
+
+def test_safe_mime_and_public_file_record():
+    """safe_mime normalizes MIME types and public_file_record strips paths safely."""
+    from app.services.file_service import public_file_record, safe_mime
+    expect(safe_mime("text/plain; charset=utf-8", "application/octet-stream") == "text/plain", "normalize charset")
+    expect(safe_mime("invalid-mime-format", "text/plain") == "text/plain", "fallback on invalid")
+    expect(safe_mime(None, None) == "application/octet-stream", "fallback on None")
+
+    record = {"id": "1", "filename": "doc.pdf", "path": "/secret/storage/doc.pdf", "size": 100}
+    public = public_file_record(record)
+    expect("path" not in public, "internal path must be stripped")
+    expect(public.get("id") == "1", "id preserved")
+    expect(public_file_record(None) == {}, "none record returns empty dict")
