@@ -1,6 +1,6 @@
 """Helpers shared by backend tests."""
 
-import bcrypt
+import pytest
 
 
 def expect(condition, detail):
@@ -15,5 +15,6 @@ def legacy_bcrypt_hash(plain: str) -> str:
 
     Only the first 72 bytes are part of the hash, matching bcrypt itself.
     """
+    bcrypt = pytest.importorskip("bcrypt")
     raw = plain.encode("utf-8")[:72]
     return bcrypt.hashpw(raw, bcrypt.gensalt()).decode("ascii")
