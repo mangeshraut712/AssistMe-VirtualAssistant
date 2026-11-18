@@ -90,6 +90,19 @@ def test_malformed_hashes_do_not_authenticate():
     expect(verify_password(phrase, b"\xff") is False, "binary garbage should not verify")
     expect(password_needs_rehash(b"\xff") is True, "binary garbage should need rehash")
 
+    for malformed_argon in ("$argon2", "$argon2id$corrupt", b"$argon2id$v=19$truncated"):
+        expect(
+            verify_password(phrase, malformed_argon) is False,
+            f"malformed argon2 prefix {malformed_argon!r} should fail closed",
+        )
+        expect(
+            password_needs_rehash(malformed_argon) is True,
+            f"malformed argon2 prefix {malformed_argon!r} should need rehash",
+        )
+        valid_mal, upgraded_mal = authenticate_password(phrase, malformed_argon)
+        expect(valid_mal is False, "malformed argon2 should not authenticate")
+        expect(upgraded_mal is None, "failed malformed argon2 auth should not upgrade")
+
     valid, upgraded = authenticate_password(phrase, "not-a-hash")
     expect(valid is False, "garbage should not authenticate")
     expect(upgraded is None, "failed auth should not return a new hash")

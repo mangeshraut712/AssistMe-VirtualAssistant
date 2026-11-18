@@ -9,12 +9,16 @@ replaces them with Argon2.
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Tuple, Union
 
-import bcrypt
 from argon2 import PasswordHasher
-from argon2.exceptions import VerificationError
+from argon2.exceptions import InvalidHashError, VerificationError
 from jose import jwt
 
 from .signing_key import get_secret_key
+
+try:
+    import bcrypt
+except ImportError:  # pragma: no cover - optional when only Argon2 hashes are exercised
+    bcrypt = None  # type: ignore[assignment]
 
 _argon2 = PasswordHasher()
 
@@ -42,6 +46,8 @@ def _verify_legacy_bcrypt(plain_password: str, hashed_password: str) -> bool:
     long secret that probe uses. The library itself still verifies the hashes
     already stored for this app. Only the first 72 bytes are significant.
     """
+    if bcrypt is None:
+        return False
     secret = plain_password.encode("utf-8")[:72]
     try:
         return bcrypt.checkpw(secret, hashed_password.encode("ascii"))
@@ -59,7 +65,7 @@ def verify_password(plain_password: str, hashed_password: Union[str, bytes]) -> 
     if encoded.startswith("$argon2"):
         try:
             return bool(_argon2.verify(encoded, plain_password))
-        except VerificationError:
+        except (VerificationError, InvalidHashError):
             return False
 
     return _verify_legacy_bcrypt(plain_password, encoded)
@@ -74,11 +80,14 @@ def password_needs_rehash(hashed_password: Union[str, bytes]) -> bool:
     """Return whether a stored hash should be replaced with current Argon2 parameters.
 
     argon2-cffi 25 accepts bytes here, matching the rest of PasswordHasher.
-    Non-Argon2 hashes, including legacy bcrypt, always need a rehash.
+    Non-Argon2 or malformed hashes always need a rehash.
     """
     if not _is_argon2_hash(hashed_password):
         return True
-    return _argon2.check_needs_rehash(hashed_password)
+    try:
+        return _argon2.check_needs_rehash(hashed_password)
+    except InvalidHashError:
+        return True
 
 
 def authenticate_password(
