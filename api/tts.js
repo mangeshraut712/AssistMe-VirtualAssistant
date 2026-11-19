@@ -187,9 +187,13 @@ export default async function handler(req) {
                 console.log('[TTS] Trying fallback to flash model...');
                 // Recursively try with flash model
                 const fallbackBody = { ...body, model: 'flash' };
+                // Keep the caller's Origin so the fallback response still carries CORS headers.
+                const fallbackHeaders = { 'Content-Type': 'application/json' };
+                const origin = req.headers.get('origin');
+                if (origin) fallbackHeaders.Origin = origin;
                 const fallbackReq = new Request(req.url, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: fallbackHeaders,
                     body: JSON.stringify(fallbackBody)
                 });
                 return handler(fallbackReq);
