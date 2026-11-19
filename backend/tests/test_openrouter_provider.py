@@ -68,3 +68,31 @@ def test_openrouter_accepts_an_omitted_model_without_a_network_request(monkeypat
         captured["payload"]["model"] == "openrouter/free",
         "an omitted model should select the free default before request dispatch",
     )
+
+
+def test_openrouter_stream_fallbacks_stay_free(monkeypatch):
+    """Streaming must follow the same free-first fallback policy as unary chat."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.delenv("OPENROUTER_ALLOW_PAID_FALLBACK", raising=False)
+    provider = OpenRouterProvider()
+    captured = {}
+
+    async def fake_stream(url, payload, models_to_try):
+        captured["payload"] = dict(payload)
+        captured["models"] = list(models_to_try)
+        yield {"content": "ok"}
+
+    monkeypatch.setattr(provider, "_stream_with_fallback", fake_stream)
+
+    async def scenario():
+        stream = await provider.chat_completion_stream([{"role": "user", "content": "hello"}], None)
+        return [chunk async for chunk in stream]
+
+    anyio.run(scenario)
+
+    expect(captured["models"] == provider._models_to_try(None), "stream should reuse the unary fallback list")
+    expect(
+        all(m == "openrouter/free" or m.endswith(":free") for m in captured["models"]),
+        f"stream fallbacks must be free models only, got {captured['models']}",
+    )
+    expect(captured["payload"]["model"] == "openrouter/free", "an omitted model should start with the free default")

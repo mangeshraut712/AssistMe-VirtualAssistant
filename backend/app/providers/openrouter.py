@@ -134,47 +134,7 @@ class OpenRouterProvider(BaseProvider):
         if not self.api_key:
             raise ValueError("OpenRouter API key not configured")
 
-        # Get models sorted by priority (lower number = higher priority)
-        available_models = sorted(self.DEFAULT_MODELS, key=self._model_priority)
-
-        # Try the requested model first, then fallbacks
-        models_to_try: list[str] = []
-
-        # Add requested model if specified
-        if model:
-            models_to_try.append(model)
-
-        # STRICT VOICE MODEL ISOLATION
-        # If the requested model is one of our designated VOICE_MODELS, we MUST NOT fallback
-        # to generic text models like Llama as they lack native audio/voice capabilities.
-        is_voice_request = bool(
-            model
-            and (
-                model in self.VOICE_MODELS
-                or model == "gemini-2.5-flash-native-audio-preview-12-2025"
-                or model.startswith("google/gemini-2.5")
-            )
-        )
-
-        if is_voice_request:
-            # Only add other VOICE_MODELS as fallbacks
-            for voice_model in self.VOICE_MODELS:
-                if voice_model not in models_to_try:
-                    models_to_try.append(voice_model)
-        else:
-            # Text chat: free-only fallbacks (never cascade into paid models).
-            allow_paid = os.getenv("OPENROUTER_ALLOW_PAID_FALLBACK", "false").lower() == "true"
-            if model and not (model == "openrouter/free" or model.endswith(":free")) and not allow_paid:
-                logger.warning("Dropping paid requested model %s; free-first policy", model)
-                models_to_try = [m for m in models_to_try if m == "openrouter/free" or str(m).endswith(":free")]
-            for free_id in self.FREE_TEXT_MODELS:
-                if free_id not in models_to_try:
-                    models_to_try.append(free_id)
-            if allow_paid:
-                for fallback_model in available_models:
-                    mid = fallback_model["id"]
-                    if mid not in models_to_try:
-                        models_to_try.append(mid)
+        models_to_try = self._models_to_try(model)
 
         last_error = None
 
@@ -438,6 +398,51 @@ class OpenRouterProvider(BaseProvider):
         """
         return "gemini-2.5-flash-native-audio-preview-12-2025"
 
+    def _models_to_try(self, model: str | None) -> list[str]:
+        """Requested model first, then fallbacks under the free-first policy."""
+        # Get models sorted by priority (lower number = higher priority)
+        available_models = sorted(self.DEFAULT_MODELS, key=self._model_priority)
+
+        # Try the requested model first, then fallbacks
+        models_to_try: list[str] = []
+
+        # Add requested model if specified
+        if model:
+            models_to_try.append(model)
+
+        # STRICT VOICE MODEL ISOLATION
+        # If the requested model is one of our designated VOICE_MODELS, we MUST NOT fallback
+        # to generic text models like Llama as they lack native audio/voice capabilities.
+        is_voice_request = bool(
+            model
+            and (
+                model in self.VOICE_MODELS
+                or model == "gemini-2.5-flash-native-audio-preview-12-2025"
+                or model.startswith("google/gemini-2.5")
+            )
+        )
+
+        if is_voice_request:
+            # Only add other VOICE_MODELS as fallbacks
+            for voice_model in self.VOICE_MODELS:
+                if voice_model not in models_to_try:
+                    models_to_try.append(voice_model)
+        else:
+            # Text chat: free-only fallbacks (never cascade into paid models).
+            allow_paid = os.getenv("OPENROUTER_ALLOW_PAID_FALLBACK", "false").lower() == "true"
+            if model and not (model == "openrouter/free" or model.endswith(":free")) and not allow_paid:
+                logger.warning("Dropping paid requested model %s; free-first policy", model)
+                models_to_try = [m for m in models_to_try if m == "openrouter/free" or str(m).endswith(":free")]
+            for free_id in self.FREE_TEXT_MODELS:
+                if free_id not in models_to_try:
+                    models_to_try.append(free_id)
+            if allow_paid:
+                for fallback_model in available_models:
+                    mid = fallback_model["id"]
+                    if mid not in models_to_try:
+                        models_to_try.append(mid)
+        return models_to_try
+
     async def chat_completion_stream(
         self,
         messages: Sequence[ProviderMessage],
@@ -468,16 +473,8 @@ class OpenRouterProvider(BaseProvider):
         # Use existing streaming implementation
         url = f"{self.base_url}/chat/completions"
 
-        # Get models to try with fallback
-        models_to_try: list[str] = []
-        if model:
-            models_to_try.append(model)
-
-        # Add fallbacks
-        available_models = sorted(self.DEFAULT_MODELS, key=self._model_priority)
-        for fallback_model in available_models:
-            if fallback_model["id"] not in models_to_try:
-                models_to_try.append(fallback_model["id"])
+        # Same free-first fallback policy as chat_completion: never cascade into paid models.
+        models_to_try = self._models_to_try(model)
 
         selected_model = (
             models_to_try[0] if models_to_try else (model or self.default_model)
