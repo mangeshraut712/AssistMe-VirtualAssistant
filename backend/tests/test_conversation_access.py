@@ -226,8 +226,10 @@ def test_chat_preserves_completion_and_only_persists_signed_in(
     async def augment(messages):
         return messages
 
+    recorded = []
+
     async def record(*args):
-        pass
+        recorded.append(args)
 
     class SyntheticProvider:
         """Synthetic AI provider for chat completion tests."""
@@ -254,6 +256,9 @@ def test_chat_preserves_completion_and_only_persists_signed_in(
     )
     assert result.status_code == 200
     assert 'synthetic answer' in result.text
+    if path == '/api/chat/stream':
+        # /api/chat may answer from its response cache; the stream always calls the model.
+        assert len(recorded) == 1 and recorded[0][1] == 2, 'streamed usage must be recorded'
     assert db.query(Conversation).count() == before + (1 if identity else 0)
     if identity:
         new = db.query(Conversation).order_by(Conversation.id.desc()).first()
@@ -290,3 +295,17 @@ def test_authenticated_history_fails_closed_without_database(history_client):
             'messages': [{'role': 'user', 'content': 'synthetic'}],
         })
         assert result.status_code == 503
+
+
+@pytest.mark.parametrize('path', ['/api/chat', '/api/chat/stream'])
+@pytest.mark.parametrize('gate,status', [('check_rate_limit', 429), ('check_credits', 402)])
+def test_chat_endpoints_share_rate_and_credit_limits(history_client, chat_ready, monkeypatch, path, gate, status):
+    """The streaming endpoint is gated exactly like /api/chat."""
+    client, _, _ = history_client
+
+    async def denied(*args):
+        return False, 'synthetic limit'
+
+    monkeypatch.setattr(main.rate_limit_service, gate, denied)
+    result = client.post(path, json={'messages': [{'role': 'user', 'content': 'synthetic'}]})
+    assert result.status_code == status

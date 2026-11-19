@@ -979,6 +979,22 @@ async def chat_text_stream(
         [m.content for m in request.messages],
     )
 
+    # Same rate-limit and credit gates as /api/chat.
+    rate_limit_ok, rate_limit_msg = await rate_limit_service.check_rate_limit()
+    if not rate_limit_ok:
+        return JSONResponse(
+            content={"error": f"Rate limit exceeded: {rate_limit_msg}"},
+            status_code=429,
+        )
+
+    usage_model = request.model or "google/gemini-2.0-flash"
+    credit_ok, credit_msg = await rate_limit_service.check_credits(usage_model)
+    if not credit_ok:
+        return JSONResponse(
+            content={"error": f"Credit limit exceeded: {credit_msg}"},
+            status_code=402,
+        )
+
     if not CHAT_CLIENT_AVAILABLE:
 
         async def error_generator():
@@ -1056,6 +1072,8 @@ async def chat_text_stream(
         final_tokens_value = final_tokens or (
             len(final_text.split()) if final_text else 0
         )
+        # Record usage for rate limiting, as /api/chat does.
+        await rate_limit_service.record_request(usage_model, final_tokens_value)
 
         yield _sse_event(
             "done",
