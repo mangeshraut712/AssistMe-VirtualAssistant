@@ -84,7 +84,7 @@
     "framer-motion": "^14.14.0",
     "highlight.js": "^11.12.0",
     "lucide-react": "^1.72.0",
-    "marked": "^18.2.0",
+    "marked": "^18.2.1",
     "motion-dom": "^14.14.0",
     "motion-utils": "^14.7.0",
     "postcss": "^8.5.32",
