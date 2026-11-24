@@ -1,6 +1,9 @@
 const js = require('@eslint/js');
 const globals = require('globals');
 const reactHooks = require('eslint-plugin-react-hooks');
+// eslint-plugin-react's `version: 'detect'` calls context.getFilename(), which
+// ESLint 10 removed. Resolve the installed React version here instead.
+const { version: reactVersion } = require('react/package.json');
 
 const legacyReactRuleNames = [
     'display-name',
@@ -64,7 +67,7 @@ module.exports = [
         },
         settings: {
             react: {
-                version: 'detect',
+                version: reactVersion,
             },
         },
         plugins: {
