@@ -72,7 +72,7 @@ class TextNormalizer:
         # 2. Handle phone numbers (read digit by digit)
         def phone_to_digits(match):
             number = match.group()
-            return ' '.join(number.replace('-', '').replace('(', '').replace(')', '').replace(' ', ''))
+            return ' '.join(re.sub(r'\D', '', number))
         text = re.sub(r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', phone_to_digits, text)
 
         # 3. Handle URLs (just say "link" or domain)
@@ -110,7 +110,8 @@ class TextNormalizer:
         }
         text_lower = str(text).lower()
         for keyword, response in emergency_keywords.items():
-            if keyword in text_lower:
+            # Whole words (plural allowed), so "fired", "fireplace" and "Firefox" don't match "fire".
+            if re.search(rf'\b{re.escape(keyword)}(?:s|es)?\b', text_lower):
                 return response
         return None
 

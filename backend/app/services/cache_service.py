@@ -64,7 +64,7 @@ class CacheService:
                 await self.redis.set(key, serialized, ex=ttl)
             else:
                 now = time.time()
-                if len(self._memory_cache) >= self._max_memory_entries:
+                if key not in self._memory_cache and len(self._memory_cache) >= self._max_memory_entries:
                     self._prune_expired(now)
                     if len(self._memory_cache) >= self._max_memory_entries:
                         first_key = next(iter(self._memory_cache))
