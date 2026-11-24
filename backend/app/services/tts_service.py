@@ -110,7 +110,7 @@ class TextNormalizer:
         }
         text_lower = str(text).lower()
         for keyword, response in emergency_keywords.items():
-            # Whole words (plural allowed), so "fired", "fireplace" and "Firefox" don't match "fire".
+            # Whole words, plural allowed: "fired" and "fireplace" do not match "fire".
             if re.search(rf'\b{re.escape(keyword)}(?:s|es)?\b', text_lower):
                 return response
         return None

@@ -77,6 +77,7 @@ async def test_cache_service_capacity_eviction(monkeypatch):
 
 @pytest.mark.anyio
 async def test_cache_service_overwrite_at_capacity_keeps_other_entries(monkeypatch):
+    """Updating a key in a full cache must not evict a different key."""
     monkeypatch.setenv("CACHE_MAX_MEMORY_ENTRIES", "2")
     cache = CacheService()
     await cache.clear()

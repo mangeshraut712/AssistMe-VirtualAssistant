@@ -73,13 +73,16 @@ def test_process_text_with_emotion():
 
 
 def test_dotted_phone_number_is_read_as_digits_only():
+    """Dots in 555.123.4567 are not spoken."""
     normalized = TextNormalizer.normalize_for_tts("Call 555.123.4567 now")
     expect("5 5 5 1 2 3 4 5 6 7" in normalized, "dots are not spoken as separators")
     expect("." not in normalized, "no stray periods remain in the phone number")
 
 
 def test_emergency_keywords_match_whole_words_only():
+    """Emergency keywords match whole words, so "fired" is not a fire."""
     for text in ("I got fired today", "Which fireplace should I buy?", "Is Firefox faster?"):
         expect(TextNormalizer.normalize_for_emergency(text) is None, f"no emergency for: {text}")
-    for text in ("The house is on fire!", "There are fires near us", "Two heart attacks this year", "EMERGENCY"):
+    emergencies = ("The house is on fire!", "There are fires near us", "Two heart attacks this year", "EMERGENCY")
+    for text in emergencies:
         expect(TextNormalizer.normalize_for_emergency(text) is not None, f"emergency for: {text}")
