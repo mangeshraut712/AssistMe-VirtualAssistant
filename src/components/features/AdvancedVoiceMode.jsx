@@ -793,7 +793,7 @@ export default function AdvancedVoiceMode({ isOpen, onClose, backendUrl = '' }) 
                             return;
                         }
                     }
-                    throw new Error('Fallback failed');
+                    throw new Error('Fallback failed', { cause: err });
                 } catch (fallbackErr) {
                     console.error('[Voice] Fallback error:', fallbackErr);
                     setErrorMessage('Unable to connect. Please try again.');
