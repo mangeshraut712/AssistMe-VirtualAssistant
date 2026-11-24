@@ -72,13 +72,11 @@ class TextNormalizer:
         # 2. Handle phone numbers (read digit by digit)
         def phone_to_digits(match):
             number = match.group()
+            # A single dot and no other separator is a decimal such as -122.4194155.
+            if number.count('.') == 1 and not re.search(r'[-\s()]', number):
+                return number
             return ' '.join(re.sub(r'\D', '', number))
-        # Both separators must match (or be absent), so a decimal such as
-        # -122.4194155 is not taken for 122.419.4155.
-        phone_pattern = (
-            r'(?<![\d.])(?:\(\d{3}\)\s?\d{3}[-.\s]\d{4}'
-            r'|\d{3}([-.\s]?)\d{3}\1\d{4})(?![\d.]\d|\d)'
-        )
+        phone_pattern = r'(?<![\d.])\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?!\d|\.\d)'
         text = re.sub(phone_pattern, phone_to_digits, text)
 
         # 3. Handle URLs (just say "link" or domain)

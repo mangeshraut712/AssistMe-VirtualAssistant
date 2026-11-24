@@ -97,6 +97,10 @@ def test_decimal_coordinates_are_not_read_as_phone_numbers():
     """A longitude such as -122.4194155 keeps its decimal point."""
     normalized = TextNormalizer.normalize_for_tts("Longitude -122.4194155 here")
     expect("122.4194155" in normalized, "decimal number left alone")
-    for raw in ("555-123-4567", "555 123 4567", "5551234567", "(555)123-4567"):
+    phones = (
+        "555-123-4567", "555 123 4567", "5551234567",
+        "(555)123-4567", "555 123-4567", "(555)1234567",
+    )
+    for raw in phones:
         normalized = TextNormalizer.normalize_for_tts(f"Call {raw} now")
         expect("5 5 5 1 2 3 4 5 6 7" in normalized, f"phone read as digits: {raw}")
