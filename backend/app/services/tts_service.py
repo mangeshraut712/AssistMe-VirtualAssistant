@@ -117,7 +117,7 @@ class TextNormalizer:
                 "If you're in crisis, please contact a crisis helpline. You're not alone."
             ),
             r'\bheart attacks?\b': "Call emergency services immediately. Sit down and stay calm.",
-            r'\bfires?\b': "Leave the building immediately and call emergency services.",
+            r'\b(?:wild|bush|forest|brush)?fires?\b': "Leave the building immediately and call emergency services.",
         }
         text_lower = str(text).lower()
         for pattern, response in emergency_patterns.items():
