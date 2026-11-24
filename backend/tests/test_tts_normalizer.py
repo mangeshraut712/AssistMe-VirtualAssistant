@@ -83,6 +83,20 @@ def test_emergency_keywords_match_whole_words_only():
     """Emergency keywords match whole words, so "fired" is not a fire."""
     for text in ("I got fired today", "Which fireplace should I buy?", "Is Firefox faster?"):
         expect(TextNormalizer.normalize_for_emergency(text) is None, f"no emergency for: {text}")
-    emergencies = ("The house is on fire!", "There are fires near us", "Two heart attacks this year", "EMERGENCY")
+    emergencies = (
+        "The house is on fire!",
+        "There are fires near us",
+        "Two heart attacks this year",
+        "EMERGENCY",
+    )
     for text in emergencies:
         expect(TextNormalizer.normalize_for_emergency(text) is not None, f"emergency for: {text}")
+
+
+def test_decimal_coordinates_are_not_read_as_phone_numbers():
+    """A longitude such as -122.4194155 keeps its decimal point."""
+    normalized = TextNormalizer.normalize_for_tts("Longitude -122.4194155 here")
+    expect("122.4194155" in normalized, "decimal number left alone")
+    for raw in ("555-123-4567", "555 123 4567", "5551234567", "(555)123-4567"):
+        normalized = TextNormalizer.normalize_for_tts(f"Call {raw} now")
+        expect("5 5 5 1 2 3 4 5 6 7" in normalized, f"phone read as digits: {raw}")

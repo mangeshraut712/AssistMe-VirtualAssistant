@@ -73,7 +73,13 @@ class TextNormalizer:
         def phone_to_digits(match):
             number = match.group()
             return ' '.join(re.sub(r'\D', '', number))
-        text = re.sub(r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', phone_to_digits, text)
+        # Both separators must match (or be absent), so a decimal such as
+        # -122.4194155 is not taken for 122.419.4155.
+        phone_pattern = (
+            r'(?<![\d.])(?:\(\d{3}\)\s?\d{3}[-.\s]\d{4}'
+            r'|\d{3}([-.\s]?)\d{3}\1\d{4})(?![\d.]\d|\d)'
+        )
+        text = re.sub(phone_pattern, phone_to_digits, text)
 
         # 3. Handle URLs (just say "link" or domain)
         text = re.sub(r'https?://[^\s]+', 'link', text)
