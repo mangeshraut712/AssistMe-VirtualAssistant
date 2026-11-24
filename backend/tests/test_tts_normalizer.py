@@ -88,6 +88,9 @@ def test_emergency_keywords_match_whole_words_only():
         "There are fires near us",
         "Two heart attacks this year",
         "EMERGENCY",
+        "I feel suicidal",
+        "two emergencies at once",
+        "thinking about suicide",
     )
     for text in emergencies:
         expect(TextNormalizer.normalize_for_emergency(text) is not None, f"emergency for: {text}")

@@ -106,16 +106,22 @@ class TextNormalizer:
         """Check for emergency keywords and return fixed script."""
         if not text:
             return None
-        emergency_keywords = {
-            'emergency': "Please contact emergency services immediately. Call 911 or your local emergency number.",
-            'suicide': "If you're in crisis, please contact a crisis helpline. You're not alone.",
-            'heart attack': "Call emergency services immediately. Sit down and stay calm.",
-            'fire': "Leave the building immediately and call emergency services.",
+        # Whole words with their common forms, so "fired", "fireplace" and
+        # "Firefox" do not match fire, while "suicidal" and "emergencies" do match.
+        emergency_patterns = {
+            r'\bemergenc(?:y|ies)\b': (
+                "Please contact emergency services immediately. "
+                "Call 911 or your local emergency number."
+            ),
+            r'\bsuicid(?:e|es|al)\b': (
+                "If you're in crisis, please contact a crisis helpline. You're not alone."
+            ),
+            r'\bheart attacks?\b': "Call emergency services immediately. Sit down and stay calm.",
+            r'\bfires?\b': "Leave the building immediately and call emergency services.",
         }
         text_lower = str(text).lower()
-        for keyword, response in emergency_keywords.items():
-            # Whole words, plural allowed: "fired" and "fireplace" do not match "fire".
-            if re.search(rf'\b{re.escape(keyword)}(?:s|es)?\b', text_lower):
+        for pattern, response in emergency_patterns.items():
+            if re.search(pattern, text_lower):
                 return response
         return None
 
