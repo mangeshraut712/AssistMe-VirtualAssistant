@@ -72,8 +72,12 @@ class TextNormalizer:
         # 2. Handle phone numbers (read digit by digit)
         def phone_to_digits(match):
             number = match.group()
-            return ' '.join(number.replace('-', '').replace('(', '').replace(')', '').replace(' ', ''))
-        text = re.sub(r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', phone_to_digits, text)
+            # A single dot and no other separator is a decimal such as -122.4194155.
+            if number.count('.') == 1 and not re.search(r'[-\s()]', number):
+                return number
+            return ' '.join(re.sub(r'\D', '', number))
+        phone_pattern = r'(?<![\d.])\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?!\d|\.\d)'
+        text = re.sub(phone_pattern, phone_to_digits, text)
 
         # 3. Handle URLs (just say "link" or domain)
         text = re.sub(r'https?://[^\s]+', 'link', text)
@@ -102,15 +106,24 @@ class TextNormalizer:
         """Check for emergency keywords and return fixed script."""
         if not text:
             return None
-        emergency_keywords = {
-            'emergency': "Please contact emergency services immediately. Call 911 or your local emergency number.",
-            'suicide': "If you're in crisis, please contact a crisis helpline. You're not alone.",
-            'heart attack': "Call emergency services immediately. Sit down and stay calm.",
-            'fire': "Leave the building immediately and call emergency services.",
+        # Whole words with their common forms, so "fired", "fireplace" and
+        # "Firefox" do not match fire, while "suicidal" and "emergencies" do match.
+        emergency_patterns = {
+            r'\bemergenc(?:y|ies)\b': (
+                "Please contact emergency services immediately. "
+                "Call 911 or your local emergency number."
+            ),
+            r'\bsuicid(?:e|es|al)\b': (
+                "If you're in crisis, please contact a crisis helpline. You're not alone."
+            ),
+            r'\bheart attacks?\b': "Call emergency services immediately. Sit down and stay calm.",
+            r'\b(?:wild|bush|forest|brush)?fires?\b': (
+                "Leave the building immediately and call emergency services."
+            ),
         }
         text_lower = str(text).lower()
-        for keyword, response in emergency_keywords.items():
-            if keyword in text_lower:
+        for pattern, response in emergency_patterns.items():
+            if re.search(pattern, text_lower):
                 return response
         return None
 
