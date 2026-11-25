@@ -191,12 +191,13 @@ export function createApiClient({ baseUrl = '' } = {}) {
                 const jsonText = line.slice('data:'.length).trim();
                 if (!jsonText || jsonText === '[DONE]') return;
 
+                let data;
                 try {
-                    const data = JSON.parse(jsonText);
-                    handleData(currentEvent, data);
+                    data = JSON.parse(jsonText);
                 } catch {
                     return;
                 }
+                handleData(currentEvent, data);
             }
         };
 

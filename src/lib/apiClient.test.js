@@ -43,4 +43,27 @@ describe('createApiClient streamChat', () => {
         expect(onDone).toHaveBeenCalledTimes(1);
         expect(onDone).toHaveBeenCalledWith({ id: 'request-1', usage: { tokens: 4 } });
     });
+
+    it('surfaces server error events even when the message mentions JSON', async () => {
+        const onError = vi.fn((err) => {
+            const message = typeof err === 'string' ? err : err?.message || 'Stream error';
+            throw new Error(message);
+        });
+        const onDelta = vi.fn();
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue(
+                streamingResponse([
+                    'data: {"content":"Hello"}\n\n',
+                    'data: {"error":{"message":"Upstream model returned invalid JSON"}}\n\n',
+                ])
+            )
+        );
+
+        await expect(
+            createApiClient().streamChat({ messages: [], onDelta, onError })
+        ).rejects.toThrow('Upstream model returned invalid JSON');
+        expect(onDelta).toHaveBeenCalledWith('Hello', expect.anything());
+        expect(onError).toHaveBeenCalledTimes(1);
+    });
 });
