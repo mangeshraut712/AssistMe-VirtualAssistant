@@ -62,3 +62,28 @@ describe('trimForRegenerate', () => {
         expect(trimForRegenerate(messages, 3)).toBeNull();
     });
 });
+
+describe('blocked localStorage access', () => {
+    it('degrades when merely reading localStorage throws', () => {
+        const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+        Object.defineProperty(globalThis, 'localStorage', {
+            configurable: true,
+            get() {
+                throw new DOMException('Access denied', 'SecurityError');
+            },
+        });
+        try {
+            expect(loadStoredConversations()).toBeNull();
+            expect(createInitialChatState(undefined, 42)).toEqual({
+                conversations: [{ id: 42, title: 'New Chat', messages: [] }],
+                currentChatId: 42,
+            });
+        } finally {
+            if (previous) {
+                Object.defineProperty(globalThis, 'localStorage', previous);
+            } else {
+                delete globalThis.localStorage;
+            }
+        }
+    });
+});
