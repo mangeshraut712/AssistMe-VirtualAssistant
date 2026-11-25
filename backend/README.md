@@ -115,7 +115,7 @@ Required in `backend/.env`:
 ```env
 OPENROUTER_API_KEY=sk-or-...
 TAVILY_API_KEY=tvly-...
-GEMINI_API_KEY=...
+GOOGLE_API_KEY=...
 SECRET_KEY=your-secret-key
 ```
 
@@ -130,15 +130,15 @@ SECRET_KEY=your-secret-key
 - `POST /api/knowledge/search` - Search knowledge
 
 ### Image
-- `POST /api/image/generate` - Generate image
+- `POST /api/images/generate` - Generate image
 
 ### Voice
 - `POST /api/tts/synthesize` - Text to speech
-- `POST /api/stt/transcribe` - Speech to text
+- `POST /api/speech/transcribe` - Speech to text
 
 ### Health
 - `GET /health` - Health check
-- `GET /api/speedtest/run` - Speed test
+- `GET /api/speedtest/ping`, `GET /api/speedtest/download`, `POST /api/speedtest/upload` - Speed test
 
 ## Stored conversation access
 
