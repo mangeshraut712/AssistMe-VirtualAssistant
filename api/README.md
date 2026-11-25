@@ -30,4 +30,4 @@ See `backend/README.md` for dependencies and environment variables.
 Required secrets belong on the **backend host**, not GitHub Pages:
 
 - `OPENROUTER_API_KEY`
-- `GEMINI_API_KEY` (or `GOOGLE_API_KEY`)
+- `GOOGLE_API_KEY`

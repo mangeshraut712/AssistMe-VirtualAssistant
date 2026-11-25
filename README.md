@@ -109,7 +109,7 @@ graph TD
 |-----------|---------|
 | `src/components/features` | Standalone feature modules (Voice, Speedtest, Grokipedia) |
 | `src/services` | Centralized API wrappers and data fetching logic |
-| `src/context` | Global state management (Theme, Auth) |
+| `src/context` | Global state management (Theme) |
 | `backend/app/routes` | API endpoint definitions |
 | `backend/app/providers` | LLM provider abstraction layer |
 
