@@ -57,8 +57,10 @@ class DatabaseSettings(BaseSettings):
         if self.pg_host and self.pg_user and self.pg_password and self.pg_database:
             # Percent-encode the credentials so '@', ':', '/', '#' in a password stay inside it.
             # SQLAlchemy decodes user and password but not the database path, so leave that as-is.
+            user = quote(self.pg_user, safe="")
+            password = quote(self.pg_password, safe="")
             return (
-                f"postgresql+psycopg://{quote(self.pg_user, safe='')}:{quote(self.pg_password, safe='')}"
+                f"postgresql+psycopg://{user}:{password}"
                 f"@{self.pg_host}:{self.pg_port}/{self.pg_database}"
             )
 

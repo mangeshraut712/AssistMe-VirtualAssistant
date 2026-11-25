@@ -7,6 +7,7 @@ from app.settings import get_database_url
 
 
 def test_pg_credentials_with_reserved_characters_round_trip(monkeypatch):
+    """Both DSN builders keep reserved characters inside the password."""
     for name in ("DATABASE_URL", "RAILWAY_DATABASE_URL"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("PGHOST", "db.internal")
