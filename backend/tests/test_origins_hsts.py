@@ -43,4 +43,4 @@ def test_env_origins_are_normalised_and_deduplicated(monkeypatch):
     origins = allowed_origins_list()
     # APP_URL and the bare CORS entry are the same origin: one entry.
     assert origins.count("https://app.example.com") == 1
-    assert "https://other.example.com" in origins
+    assert origins.count("https://other.example.com") == 1
