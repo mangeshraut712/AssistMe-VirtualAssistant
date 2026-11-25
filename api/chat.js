@@ -48,7 +48,12 @@ export function resolveChatMaxTokens(value, fallback = 2048, max = 128000) {
 }
 
 export function resolveChatTemperature(value, fallback = 0.7) {
-    const n = typeof value === 'number' ? value : Number(value);
+    // Number(null), Number('') and Number(false) are all 0, so only numbers and
+    // non-blank strings count as an explicit temperature; anything else is "unset".
+    let n;
+    if (typeof value === 'number') n = value;
+    else if (typeof value === 'string' && value.trim() !== '') n = Number(value);
+    else return fallback;
     if (!Number.isFinite(n)) return fallback;
     return Math.min(2, Math.max(0, n));
 }
