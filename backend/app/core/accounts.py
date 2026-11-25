@@ -3,6 +3,8 @@
 from datetime import timedelta
 from typing import Any
 
+from sqlalchemy import func
+
 from ..models import User
 from .security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -43,8 +45,9 @@ def login_user(db: Any, username: str, password: str) -> Any:
     identifier = (username or "").strip()
     user = (
         db.query(User)
-        # Emails are stored lower-cased at registration; usernames stay case-sensitive.
-        .filter((User.username == identifier) | (User.email == identifier.lower()))
+        # Emails match case-insensitively (older rows may predate lower-casing at
+        # registration); usernames stay case-sensitive.
+        .filter((User.username == identifier) | (func.lower(User.email) == identifier.lower()))
         .first()
     )
     if authenticate_and_upgrade(user, password, db):
