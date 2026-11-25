@@ -79,14 +79,17 @@ export const knowledgeService = {
                     if (line.startsWith('data: ')) {
                         const dataStr = line.slice(6).trim();
                         if (dataStr === '[DONE]') return;
+                        // Parse separately so a server error event whose message
+                        // mentions "JSON" is not mistaken for a malformed line.
+                        let data;
                         try {
-                            const data = JSON.parse(dataStr);
-                            if (data.type === 'metadata') onMetadata?.(data.sources);
-                            else if (data.type === 'content') onContent?.(data.delta);
-                            else if (data.type === 'error') throw new Error(data.message);
-                        } catch (e) {
-                            if (!e.message?.includes('JSON')) throw e;
+                            data = JSON.parse(dataStr);
+                        } catch {
+                            continue;
                         }
+                        if (data.type === 'metadata') onMetadata?.(data.sources);
+                        else if (data.type === 'content') onContent?.(data.delta);
+                        else if (data.type === 'error') throw new Error(data.message);
                     }
                 }
             }
