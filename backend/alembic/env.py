@@ -23,7 +23,11 @@ config = context.config
 
 # Allow environment variables to override the alembic.ini value
 sqlalchemy_url = get_database_url()
-config.set_main_option("sqlalchemy.url", sqlalchemy_url)
+# ConfigParser treats '%' as interpolation, and percent-encoded credentials contain it.
+config.set_main_option(
+    "sqlalchemy.url",
+    sqlalchemy_url.replace("%", "%%") if sqlalchemy_url else sqlalchemy_url,
+)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
