@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from urllib.parse import quote
 
 
 @lru_cache(maxsize=1)
@@ -30,9 +31,11 @@ def get_database_url() -> str | None:
     pg_db = os.getenv("PGDATABASE")
     pg_port = os.getenv("PGPORT", "5432")
 
-    if all([pg_host, pg_user, pg_password, pg_db]):
+    if pg_host and pg_user and pg_password and pg_db:
+        # Percent-encode the credentials (SQLAlchemy decodes them; it does not decode the path).
         return (
-            f"postgresql+psycopg://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+            f"postgresql+psycopg://{quote(pg_user, safe='')}:{quote(pg_password, safe='')}"
+            f"@{pg_host}:{pg_port}/{pg_db}"
         )
 
     # Only provide fallback for local development
