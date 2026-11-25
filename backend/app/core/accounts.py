@@ -43,7 +43,8 @@ def login_user(db: Any, username: str, password: str) -> Any:
     identifier = (username or "").strip()
     user = (
         db.query(User)
-        .filter((User.username == identifier) | (User.email == identifier))
+        # Emails are stored lower-cased at registration; usernames stay case-sensitive.
+        .filter((User.username == identifier) | (User.email == identifier.lower()))
         .first()
     )
     if authenticate_and_upgrade(user, password, db):
