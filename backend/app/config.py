@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from typing import Any, Literal
+from urllib.parse import quote
 
 from pydantic import Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -55,8 +56,9 @@ class DatabaseSettings(BaseSettings):
         # Build from individual PG vars
         if all([self.pg_host, self.pg_user, self.pg_password, self.pg_database]):
             return (
-                f"postgresql+psycopg://{self.pg_user}:{self.pg_password}"
-                f"@{self.pg_host}:{self.pg_port}/{self.pg_database}"
+                # Percent-encode credentials so '@', ':', '/', '#' etc. in a password stay inside it.
+                f"postgresql+psycopg://{quote(self.pg_user, safe='')}:{quote(self.pg_password, safe='')}"
+                f"@{self.pg_host}:{self.pg_port}/{quote(self.pg_database, safe='')}"
             )
 
         # Dev mode fallback
