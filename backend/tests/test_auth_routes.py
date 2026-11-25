@@ -105,6 +105,13 @@ def test_register_email_case_insensitivity_and_whitespace(auth_client):
     )
     expect(login_res.status_code == 200, "login with normalized email must succeed")
 
+    # ...and with the email exactly as it was typed at registration
+    typed_res = auth_client.post(
+        "/api/auth/login",
+        data={"username": "MixedCase@Example.COM", "password": "Password123"},
+    )
+    expect(typed_res.status_code == 200, "login with the registered email casing must succeed")
+
 
 def test_register_duplicate_username_rejected(auth_client):
     """Attempting to register with an already existing username returns HTTP 400."""

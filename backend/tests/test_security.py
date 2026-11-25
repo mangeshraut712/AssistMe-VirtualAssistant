@@ -122,6 +122,14 @@ class _Query:
         """Return the stubbed user."""
         return self._user
 
+    def all(self):
+        """Return the stubbed user as a result list."""
+        return [self._user] if self._user is not None else []
+
+    def limit(self, *_args):
+        """Ignore the limit and keep this query."""
+        return self
+
 
 class _Database:
     """Session stub that records whether commit was called."""
