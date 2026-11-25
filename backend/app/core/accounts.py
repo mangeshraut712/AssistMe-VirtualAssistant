@@ -43,13 +43,21 @@ def issue_bearer_token(subject: str) -> dict:
 def login_user(db: Any, username: str, password: str) -> Any:
     """Return the user when the password matches username or email, otherwise None."""
     identifier = (username or "").strip()
-    user = (
+    folded = identifier.lower()
+    candidates = (
         db.query(User)
-        # Emails match case-insensitively (older rows may predate lower-casing at
-        # registration); usernames stay case-sensitive.
-        .filter((User.username == identifier) | (func.lower(User.email) == identifier.lower()))
-        .first()
+        .filter((User.username == identifier) | (func.lower(User.email) == folded))
+        .all()
     )
+    # Prefer an exact username, then the exact stored email; fall back to a
+    # case-insensitive email only when it identifies a single account (older
+    # rows may predate lower-casing at registration).
+    user = next((u for u in candidates if u.username == identifier), None)
+    if user is None:
+        user = next((u for u in candidates if u.email in (identifier, folded)), None)
+    if user is None:
+        email_matches = [u for u in candidates if (u.email or "").lower() == folded]
+        user = email_matches[0] if len(email_matches) == 1 else None
     if authenticate_and_upgrade(user, password, db):
         return user
     return None

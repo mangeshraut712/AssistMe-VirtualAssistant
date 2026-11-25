@@ -26,3 +26,18 @@ def test_login_finds_legacy_mixed_case_email():
             expect(user is not None and user.username == "legacy_user", f"login as {typed} must succeed")
     finally:
         db.close()
+
+
+def test_login_refuses_an_ambiguous_case_insensitive_email():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    db = sessionmaker(bind=engine)()
+    try:
+        db.add_all([
+            User(email="Dup@Example.com", username="first", hashed_password=get_password_hash("Password123")),
+            User(email="DUP@example.com", username="second", hashed_password=get_password_hash("Password123")),
+        ])
+        db.commit()
+        expect(login_user(db, "dup@example.com", "Password123") is None, "ambiguous email must not pick an account")
+    finally:
+        db.close()
