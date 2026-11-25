@@ -44,19 +44,21 @@ def login_user(db: Any, username: str, password: str) -> Any:
     """Return the user when the password matches username or email, otherwise None."""
     identifier = (username or "").strip()
     folded = identifier.lower()
+    # Indexed lookups first: the exact username, or the email as typed / lower-cased.
     candidates = (
         db.query(User)
-        .filter((User.username == identifier) | (func.lower(User.email) == folded))
+        .filter((User.username == identifier) | User.email.in_([identifier, folded]))
         .all()
     )
-    # Prefer an exact username, then the exact stored email; fall back to a
-    # case-insensitive email only when it identifies a single account (older
-    # rows may predate lower-casing at registration).
     user = next((u for u in candidates if u.username == identifier), None)
     if user is None:
-        user = next((u for u in candidates if u.email in (identifier, folded)), None)
+        user = next((u for u in candidates if u.email == identifier), None)
     if user is None:
-        email_matches = [u for u in candidates if (u.email or "").lower() == folded]
+        user = next((u for u in candidates if u.email == folded), None)
+    if user is None and "@" in identifier:
+        # Older rows may predate lower-casing at registration. Fall back to a
+        # case-insensitive match only when it identifies a single account.
+        email_matches = db.query(User).filter(func.lower(User.email) == folded).limit(2).all()
         user = email_matches[0] if len(email_matches) == 1 else None
     if authenticate_and_upgrade(user, password, db):
         return user
