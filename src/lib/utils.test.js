@@ -44,7 +44,8 @@ describe('formatRelativeTime', () => {
         );
         expect(formatted).not.toContain('2024');
 
-        expect(formatRelativeTime(new Date('2023-06-01T12:00:00Z'))).toBe('Jun 1, 2023');
+        // Local noon, so the expected calendar day holds in every timezone.
+        expect(formatRelativeTime(new Date(2023, 5, 1, 12))).toBe('Jun 1, 2023');
     });
 });
 
