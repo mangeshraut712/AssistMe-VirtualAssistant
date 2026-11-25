@@ -1,5 +1,6 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { createInitialChatState, trimForRegenerate } from './lib/conversations';
+import { createApiClient } from './lib/apiClient';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
@@ -272,95 +273,49 @@ function App() {
         updateCurrentChatMessages(messagesWithPlaceholder);
         setIsLoading(true);
 
-        try {
-            const response = await fetch(`${settings.backendUrl}/api/chat/stream`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+        const startTime = Date.now();
+        let assistantContent = '';
+        let firstTokenTime = null;
+        let metadata = null;
+
+        const paint = () => {
+            updateCurrentChatMessages([
+                ...history,
+                {
+                    ...assistantMsg,
+                    content: assistantContent,
+                    metadata: metadata
+                        ? {
+                              ...metadata,
+                              latency: firstTokenTime ? firstTokenTime - startTime : 0,
+                              totalTime: Date.now() - startTime,
+                          }
+                        : null,
                 },
-                body: JSON.stringify({
-                    messages: history.map(msg => ({ role: msg.role, content: msg.content })),
-                    model: selectedModel,
-                    preferred_language: settings.language,
-                }),
+            ]);
+        };
+
+        try {
+            const api = createApiClient({ baseUrl: settings.backendUrl });
+            await api.streamChat({
+                messages: history.map(msg => ({ role: msg.role, content: msg.content })),
+                model: selectedModel,
+                preferred_language: settings.language,
+                onDelta: content => {
+                    if (!firstTokenTime) firstTokenTime = Date.now();
+                    assistantContent += content;
+                    paint();
+                },
+                onMetadata: meta => {
+                    metadata = meta;
+                    paint();
+                },
+                onError: err => {
+                    const message =
+                        typeof err === 'string' ? err : err?.message || 'Stream error';
+                    throw new Error(message);
+                },
             });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.detail || response.statusText);
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let assistantContent = '';
-            let buffer = '';
-            const startTime = Date.now();
-            let firstTokenTime = null;
-            let metadata = null;
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value, { stream: true });
-                buffer += chunk;
-
-                const lines = buffer.split('\n');
-                // Keep the last line in the buffer if it's incomplete
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (line.trim() === '') continue;
-
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const data = JSON.parse(line.slice(6));
-
-                            if (data.content) {
-                                if (!firstTokenTime) firstTokenTime = Date.now();
-                                assistantContent += data.content;
-                                // Update the UI with the accumulated content
-                                updateCurrentChatMessages([
-                                    ...history,
-                                    {
-                                        ...assistantMsg,
-                                        content: assistantContent,
-                                        metadata: metadata
-                                            ? {
-                                                  ...metadata,
-                                                  latency: firstTokenTime
-                                                      ? firstTokenTime - startTime
-                                                      : 0,
-                                                  totalTime: Date.now() - startTime,
-                                              }
-                                            : null,
-                                    },
-                                ]);
-                            } else if (data.metadata) {
-                                metadata = data.metadata;
-                                updateCurrentChatMessages([
-                                    ...history,
-                                    {
-                                        ...assistantMsg,
-                                        content: assistantContent,
-                                        metadata: {
-                                            ...metadata,
-                                            latency: firstTokenTime
-                                                ? firstTokenTime - startTime
-                                                : 0,
-                                            totalTime: Date.now() - startTime,
-                                        },
-                                    },
-                                ]);
-                            } else if (data.error) {
-                                throw new Error(data.error.message || 'Stream error');
-                            }
-                        } catch (e) {
-                            console.warn('Error parsing stream data:', e);
-                        }
-                    }
-                }
-            }
         } catch (error) {
             console.error('Chat error:', error);
             updateCurrentChatMessages([
