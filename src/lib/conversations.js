@@ -29,9 +29,10 @@ function sanitizeConversation(conversation, index) {
     return { id, title, messages };
 }
 
-export function loadStoredConversations(storage = globalThis.localStorage) {
+export function loadStoredConversations(storage) {
     try {
-        const saved = storage?.getItem('conversations');
+        const store = storage ?? globalThis.localStorage;
+        const saved = store?.getItem('conversations');
         if (!saved) return null;
         const parsed = JSON.parse(saved);
         if (!Array.isArray(parsed)) return null;
@@ -42,12 +43,13 @@ export function loadStoredConversations(storage = globalThis.localStorage) {
     }
 }
 
-export function createInitialChatState(storage = globalThis.localStorage, now = Date.now()) {
+export function createInitialChatState(storage, now = Date.now()) {
     const stored = loadStoredConversations(storage);
     const conversations = stored || [{ id: now, title: DEFAULT_TITLE, messages: [] }];
     let currentChatId = conversations[0].id;
     try {
-        const saved = storage?.getItem('currentChatId');
+        const store = storage ?? globalThis.localStorage;
+        const saved = store?.getItem('currentChatId');
         if (saved) {
             const id = Number(saved);
             if (Number.isFinite(id) && conversations.some(conversation => conversation.id === id)) {
