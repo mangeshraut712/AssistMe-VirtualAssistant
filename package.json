@@ -83,7 +83,7 @@
     "dompurify": "^3.5.0",
     "framer-motion": "^14.14.0",
     "highlight.js": "^11.12.0",
-    "lucide-react": "^1.74.0",
+    "lucide-react": "^1.79.0",
     "marked": "^18.3.0",
     "motion-dom": "^14.14.0",
     "motion-utils": "^14.7.0",
