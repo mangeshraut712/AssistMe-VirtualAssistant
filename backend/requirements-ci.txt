@@ -39,7 +39,7 @@ tenacity>=9.2.1,<10.0.0
 orjson>=3.13.0,<4.0.0
 
 # Embedding tests import numpy (embedding_service does too)
-numpy>=2.5.4,<3.0.0
+numpy>=2.5.5,<3.0.0
 
 # Linting (installed in CI step)
 # flake8 and mypy are installed separately in the workflow
