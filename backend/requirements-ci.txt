@@ -44,4 +44,4 @@ numpy>=2.5.4,<3.0.0
 # Linting (installed in CI step)
 # flake8 and mypy are installed separately in the workflow
 # emSign CA advisory: require patched CA bundle
-certifi>=2026.10.23
+certifi>=2026.11.20
